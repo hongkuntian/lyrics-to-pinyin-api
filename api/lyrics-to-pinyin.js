@@ -1,7 +1,7 @@
-import { pinyin } from 'pinyin-pro';
-import fetch from 'node-fetch';
+const { pinyin } = require('pinyin-pro');
+const fetch = require('node-fetch');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Only POST allowed' });
   }
@@ -13,7 +13,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // STEP 1: Search NetEase
     const searchURL = `https://netease-cloud-music-api-seven-rho-51.vercel.app/search?keywords=${encodeURIComponent(`${artist} ${title}`)}`;
     const searchRes = await fetch(searchURL);
     const searchData = await searchRes.json();
@@ -23,14 +22,12 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Song not found' });
     }
 
-    // STEP 2: Fetch lyrics
     const lyricURL = `https://netease-cloud-music-api-seven-rho-51.vercel.app/lyric?id=${song.id}`;
     const lyricRes = await fetch(lyricURL);
     const lyricData = await lyricRes.json();
 
     const rawLyrics = lyricData.lrc?.lyric || '';
 
-    // STEP 3: Parse + pinyin
     const lines = rawLyrics
       .split('\n')
       .map(line => line.replace(/\[\d{2}:\d{2}(?:\.\d{2})?\]/g, '').trim())
@@ -52,4 +49,4 @@ export default async function handler(req, res) {
     console.error('API error:', err);
     return res.status(500).json({ error: 'Server error' });
   }
-}
+};
