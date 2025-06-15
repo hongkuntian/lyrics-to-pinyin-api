@@ -1,7 +1,7 @@
-const { pinyin } = require("pinyin-pro");
-const fetch = require("node-fetch");
+import { pinyin } from "pinyin-pro";
+import fetch from "node-fetch";
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json");
 
   if (req.method !== "POST") {
@@ -26,7 +26,6 @@ module.exports = async function handler(req, res) {
     }
 
     const song = searchData.result.songs[0];
-
     const lyricURL = `https://netease-cloud-music-api-seven-rho-51.vercel.app/lyric?id=${song.id}`;
     const lyricRes = await fetch(lyricURL);
     const lyricData = await lyricRes.json();
@@ -58,4 +57,4 @@ module.exports = async function handler(req, res) {
     console.error("API error:", err);
     return res.status(500).json({ error: "Server error" });
   }
-};
+}

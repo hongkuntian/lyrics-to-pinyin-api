@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "private": true,
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "pinyin-pro": "^3.26.0",
     "node-fetch": "^3.3.2"
