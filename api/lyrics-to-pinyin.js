@@ -36,13 +36,46 @@ export default async function handler(req, res) {
 
     const rawLyrics = lyricData.lrc.lyric;
 
+    // Robust timestamp pattern
+    const timestampRegex = /\[(\d{1,2}:\d{2}(?:\.\d{2,3})?)\]/g;
+
+    // Metadata filtering patterns
+    const metadataPatterns = [
+      /^作[词曲] *:/,
+      /^编曲 *:/,
+      /^制作人 *:/,
+      /^配唱编写 *:/,
+      /^制作协力 *:/,
+      /^键盘 *:/,
+      /^吉他 *:/,
+      /^弦乐 *:/,
+      /^和声编写 *:/,
+      /^和声 *:/,
+      /^录音[师室] *:/,
+      /^混音[师室] *:/,
+      /^母带后期处理.*:/,
+      /^OP *:/,
+      /^SP *:/,
+      /^ISRC/,
+      /^[A-Z]{2,}$/, // All uppercase, e.g. "OP"
+      /^[a-zA-Z\s\/()]+$/, // English-only lines
+    ];
+
+    const isMetadata = (line) =>
+      metadataPatterns.some((pattern) => pattern.test(line));
+
     const lines = rawLyrics
       .split("\n")
-      .map((line) => line.replace(/\[\d{2}:\d{2}(?:\.\d{2})?\]/g, "").trim())
-      .filter(Boolean)
+      .map((line) => line.replace(timestampRegex, "").trim())
+      .filter((line) => {
+        return line.length > 0 && !isMetadata(line);
+      })
       .map((line) => ({
         original: line,
-        pinyin: pinyin(line, { toneType: "symbol", type: "array" }).join(" "),
+        pinyin: pinyin(line, {
+          toneType: "symbol",
+          type: "array",
+        }).join(" "),
       }));
 
     return res.status(200).json({
@@ -58,3 +91,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Server error" });
   }
 }
+s;
