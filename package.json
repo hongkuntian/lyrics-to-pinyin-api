@@ -1,17 +1,14 @@
 {
   "name": "lyrics-to-pinyin-api",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
+  "private": true,
   "type": "commonjs",
   "dependencies": {
-    "node-fetch": "^3.3.2",
-    "pinyin-pro": "^3.26.0"
+    "pinyin-pro": "^3.26.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@vercel/node": "^2.9.6"
   }
 }
