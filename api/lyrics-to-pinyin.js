@@ -41,8 +41,8 @@ export default async function handler(req, res) {
 
     const lines = rawLyrics
       .split("\n")
-      .map((line) => line.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, "").trim()) // remove timestamps
-      .filter((line) => line && !line.includes(":")) // filter metadata lines
+      .map((line) => line.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, "").trim())
+      .filter((line) => line && !/[：:]/.test(line)) // filter out metadata lines with either colon
       .map((line) => ({
         original: line,
         pinyin: pinyin(line, { toneType: "symbol", type: "array" }).join(" "),
