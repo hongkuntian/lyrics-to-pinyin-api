@@ -6,7 +6,8 @@
   "type": "module",
   "dependencies": {
     "pinyin-pro": "^3.26.0",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "chinese-conv": "^1.0.5"
   },
   "devDependencies": {
     "@vercel/node": "^2.9.6"
