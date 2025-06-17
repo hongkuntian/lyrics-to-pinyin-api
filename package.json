@@ -5,9 +5,12 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "pinyin-pro": "^3.26.0",
+    "@upstash/redis": "^1.35.0",
+    "chinese-conv": "^1.0.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
     "node-fetch": "^3.3.2",
-    "chinese-conv": "^1.0.5"
+    "pinyin-pro": "^3.26.0"
   },
   "devDependencies": {
     "@vercel/node": "^2.9.6"

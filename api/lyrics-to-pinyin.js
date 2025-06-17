@@ -1,7 +1,16 @@
 import { pinyin } from "pinyin-pro";
 import fetch from "node-fetch";
+import { Redis } from "@upstash/redis";
+import "dotenv/config";
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 export default async function handler(req, res) {
+  console.log("🔑 Redis URL:", process.env.UPSTASH_REDIS_REST_URL);
+
   res.setHeader("Content-Type", "application/json");
 
   if (req.method !== "POST") {
@@ -14,7 +23,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing title or artist" });
   }
 
+  const cacheKey = `lyrics:${artist.trim()}-${title.trim()}`;
+
   try {
+    // Check cache
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
+    // Proceed with lookup if not cached
     const searchURL = `https://netease-cloud-music-api-seven-rho-51.vercel.app/search?keywords=${encodeURIComponent(
       `${artist} ${title}`
     )}`;
@@ -42,13 +60,13 @@ export default async function handler(req, res) {
     const lines = rawLyrics
       .split("\n")
       .map((line) => line.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, "").trim())
-      .filter((line) => line && !/[：:]/.test(line)) // filter out metadata lines with either colon
+      .filter((line) => line && !/[：:]/.test(line))
       .map((line) => ({
         original: line,
         pinyin: pinyin(line, { toneType: "symbol", type: "array" }).join(" "),
       }));
 
-    return res.status(200).json({
+    const response = {
       song: {
         title: {
           original: songTitle,
@@ -66,7 +84,12 @@ export default async function handler(req, res) {
         id: song.id,
       },
       lines,
-    });
+    };
+
+    // Store in Redis (no expiry)
+    await redis.set(cacheKey, response);
+
+    return res.status(200).json(response);
   } catch (err) {
     console.error("API error:", err);
     return res.status(500).json({ error: "Server error" });
