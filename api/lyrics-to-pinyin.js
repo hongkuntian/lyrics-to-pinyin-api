@@ -10,6 +10,14 @@ const redis = new Redis({
 
 export default async function handler(req, res) {
   console.log("🔑 Redis URL:", process.env.UPSTASH_REDIS_REST_URL);
+  
+  // Validate Redis configuration
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    console.error("❌ Missing Upstash Redis environment variables");
+    return res.status(500).json({ 
+      error: "Redis configuration missing. Please check your environment variables." 
+    });
+  }
 
   res.setHeader("Content-Type", "application/json");
 
