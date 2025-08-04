@@ -91,7 +91,21 @@ export default async function handler(req, res) {
           /^bass recorded at/i,
           /^drums recorded at/i,
           /^music publishing/i,
-          /^ltd\.?$/i
+          /^ltd\.?$/i,
+          /produced by/i,
+          /arranged by/i,
+          /conducted by/i,
+          /recorded at/i,
+          /engineered by/i,
+          /mixed by/i,
+          /mastered by/i,
+          /strings arranged by/i,
+          /vocals recorded at/i,
+          /piano recorded at/i,
+          /guitar recorded at/i,
+          /bass recorded at/i,
+          /drums recorded at/i,
+          /music publishing/i
         ];
         
         if (technicalCreditPatterns.some(pattern => pattern.test(line.trim()))) {
