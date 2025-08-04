@@ -4,15 +4,15 @@ import { Redis } from "@upstash/redis";
 import "dotenv/config";
 
 const redis = new Redis({
-  url: process.env.REDIS_URL,
+  url: process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
 });
 
 export default async function handler(req, res) {
-  console.log("🔑 Redis URL:", process.env.REDIS_URL);
+  console.log("🔑 Redis URL:", process.env.KV_REST_API_URL);
   
   // Validate Redis configuration
-  if (!process.env.REDIS_URL || !process.env.KV_REST_API_TOKEN) {
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
     console.error("❌ Missing Upstash Redis environment variables");
     return res.status(500).json({ 
       error: "Redis configuration missing. Please check your environment variables." 
