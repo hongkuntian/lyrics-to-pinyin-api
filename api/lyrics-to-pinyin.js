@@ -68,7 +68,38 @@ export default async function handler(req, res) {
     const lines = rawLyrics
       .split("\n")
       .map((line) => line.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, "").trim())
-      .filter((line) => line && !/[：:]/.test(line))
+      .filter((line) => {
+        if (!line) return false;
+        
+        // Filter out metadata lines with colons
+        if (/[：:]/.test(line)) return false;
+        
+        // Filter out only very specific technical credit patterns
+        // These have near 100% success rate in identifying useless lines
+        const technicalCreditPatterns = [
+          /^produced by/i,
+          /^arranged by/i,
+          /^conducted by/i,
+          /^recorded at/i,
+          /^engineered by/i,
+          /^mixed by/i,
+          /^mastered by/i,
+          /^strings arranged by/i,
+          /^vocals recorded at/i,
+          /^piano recorded at/i,
+          /^guitar recorded at/i,
+          /^bass recorded at/i,
+          /^drums recorded at/i,
+          /^music publishing/i,
+          /^ltd\.?$/i
+        ];
+        
+        if (technicalCreditPatterns.some(pattern => pattern.test(line.trim()))) {
+          return false;
+        }
+        
+        return true;
+      })
       .map((line) => ({
         original: line,
         pinyin: pinyin(line, { toneType: "symbol", type: "array" }).join(" "),
