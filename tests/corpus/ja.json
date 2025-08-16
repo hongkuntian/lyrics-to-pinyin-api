@@ -1,0 +1,41 @@
+{
+  "language": "ja",
+  "description": "Japanese test cases",
+  "cases": [
+    {
+      "input": "こんにちは",
+      "expected": "konnichiwa",
+      "description": "Basic hiragana"
+    },
+    {
+      "input": "おおきい",
+      "expected": "ōkii",
+      "description": "Long vowels with macron"
+    },
+    {
+      "input": "がっこう",
+      "expected": "gakkō",
+      "description": "Sokuon and chōon"
+    }
+  ],
+  "options_tests": [
+    {
+      "description": "Case variations",
+      "input": "こんにちは",
+      "cases": [
+        {
+          "options": { "case": "lower" },
+          "expected": "konnichiwa"
+        },
+        {
+          "options": { "case": "title" },
+          "expected": "Konnichiwa"
+        },
+        {
+          "options": { "case": "upper" },
+          "expected": "KONNICHIWA"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "language": "ko",
+  "description": "Korean test cases",
+  "cases": [
+    {
+      "input": "국물",
+      "expected": "gukmul",
+      "description": "받침 assimilation"
+    },
+    {
+      "input": "한국",
+      "expected": "hanguk",
+      "description": "Basic Hangul"
+    },
+    {
+      "input": "안녕하세요",
+      "expected": "annyeonghaseyo",
+      "description": "Common greeting"
+    }
+  ],
+  "options_tests": [
+    {
+      "description": "Separator variations",
+      "input": "안녕하세요",
+      "cases": [
+        {
+          "options": { "separator": " " },
+          "expected": "annyeong haseyo"
+        },
+        {
+          "options": { "separator": "-" },
+          "expected": "annyeong-haseyo"
+        }
+      ]
+    }
+  ]
+}

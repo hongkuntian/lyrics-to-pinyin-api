@@ -1,0 +1,21 @@
+{
+  "language": "yue",
+  "description": "Cantonese test cases",
+  "cases": [
+    {
+      "input": "行",
+      "expected": "haang4",
+      "description": "Polyphonic character"
+    },
+    {
+      "input": "更",
+      "expected": "gaang1",
+      "description": "Polyphonic character"
+    },
+    {
+      "input": "嘅咗咁",
+      "expected": "ge3 zo2 gam3",
+      "description": "Cantonese particles"
+    }
+  ]
+}

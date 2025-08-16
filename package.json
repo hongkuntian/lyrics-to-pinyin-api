@@ -1,12 +1,28 @@
 {
   "name": "lyrics-to-pinyin-api",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "license": "MIT",
   "private": true,
   "type": "module",
+  "description": "A generic romanization API supporting five core languages with music platform integrations",
+  "main": "api/romanize.js",
+  "scripts": {
+    "dev": "node scripts/dev-server.js",
+    "test": "node tests/api-tests.js",
+    "test:zh": "node tests/run-language-tests.js zh",
+    "test:ja": "node tests/run-language-tests.js ja",
+    "test:ko": "node tests/run-language-tests.js ko",
+    "test:ru": "node tests/run-language-tests.js ru",
+    "test:yue": "node tests/run-language-tests.js yue",
+    "test:music": "node tests/music-tests.js",
+    "build": "echo 'No build step required'",
+    "start": "node scripts/dev-server.js",
+    "deploy": "vercel --prod"
+  },
   "dependencies": {
     "@upstash/redis": "^1.35.0",
     "chinese-conv": "^1.0.5",
+    "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "node-fetch": "^3.3.2",
@@ -14,5 +30,27 @@
   },
   "devDependencies": {
     "@vercel/node": "^2.9.6"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "romanization",
+    "pinyin",
+    "jyutping",
+    "romaji",
+    "lyrics",
+    "music",
+    "api",
+    "mandarin",
+    "cantonese",
+    "japanese",
+    "korean",
+    "russian"
+  ],
+  "author": "Your Name",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/lyrics-to-pinyin-api.git"
   }
 }

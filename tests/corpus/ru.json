@@ -1,0 +1,21 @@
+{
+  "language": "ru",
+  "description": "Russian test cases",
+  "cases": [
+    {
+      "input": "привет",
+      "expected": "privet",
+      "description": "Basic Cyrillic"
+    },
+    {
+      "input": "хороший",
+      "expected": "khoroshij",
+      "description": "щ and ый handling"
+    },
+    {
+      "input": "ёлка",
+      "expected": "ëlka",
+      "description": "ё vs е distinction"
+    }
+  ]
+}

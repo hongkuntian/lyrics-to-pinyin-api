@@ -1,0 +1,41 @@
+{
+  "language": "zh",
+  "description": "Mandarin Chinese test cases",
+  "cases": [
+    {
+      "input": "不对",
+      "expected": "bú duì",
+      "description": "Basic tone marks"
+    },
+    {
+      "input": "很好",
+      "expected": "hěn hǎo",
+      "description": "Tone marks with third tone"
+    },
+    {
+      "input": "一共有",
+      "expected": "yí gòng yǒu",
+      "description": "First tone and third tone"
+    }
+  ],
+  "options_tests": [
+    {
+      "description": "Tone style variations",
+      "input": "你好",
+      "cases": [
+        {
+          "options": { "tone_style": "marks" },
+          "expected": "nǐ hǎo"
+        },
+        {
+          "options": { "tone_style": "numbers" },
+          "expected": "ni3 hao3"
+        },
+        {
+          "options": { "tone_style": "none" },
+          "expected": "ni hao"
+        }
+      ]
+    }
+  ]
+}
