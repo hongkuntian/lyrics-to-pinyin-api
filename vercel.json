@@ -2,14 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/**/*.js",
+      "src": "api/romanize.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/music-romanize.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/romanize",
+      "dest": "/api/romanize.js"
+    },
+    {
+      "src": "/api/music-romanize",
+      "dest": "/api/music-romanize.js"
     }
   ]
 }
