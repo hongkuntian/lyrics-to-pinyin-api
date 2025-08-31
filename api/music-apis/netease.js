@@ -3,7 +3,7 @@ import { BaseMusicAPI } from "./base.js";
 
 export class NeteaseAPI extends BaseMusicAPI {
   constructor() {
-    super("NeteaseAPI", ["zh", "yue"]); // Supports Chinese (Mandarin and Cantonese)
+    super("NeteaseAPI", ["zh", "yue", "en"]); // Supports Chinese (Mandarin and Cantonese) and English
     this.baseURL = "https://netease-cloud-music-api-gules-mu.vercel.app";
   }
 

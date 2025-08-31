@@ -19,7 +19,7 @@ const scriptPlatformMap = {
   "ja": ["lrclib"],            // Japanese - LRC Lib only
   "ko": ["lrclib"],            // Korean - LRC Lib only
   "ru": [],                    // Russian (no API available yet)
-  "en": ["lrclib"]             // English - LRC Lib only
+  "en": ["netease", "lrclib"]  // English - NetEase first, then LRC Lib
 };
 
 export function getMusicAPI(script, platform = null) {
