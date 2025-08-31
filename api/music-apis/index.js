@@ -1,23 +1,25 @@
 import { NeteaseAPI } from "./netease.js";
 import { SpotifyAPI } from "./spotify.js";
 import { GeniusAPI } from "./genius.js";
+import { LRCAPI } from "./lrclib.js";
 
 // Music API registry
 const musicAPIs = new Map();
 
 // Initialize APIs
+musicAPIs.set("lrclib", new LRCAPI());
 musicAPIs.set("netease", new NeteaseAPI());
 // musicAPIs.set("spotify", new SpotifyAPI());
 // musicAPIs.set("genius", new GeniusAPI());
 
-// Script to platform mapping for MVP
+// Script to platform mapping - LRC Lib as primary, Netease as backup
 const scriptPlatformMap = {
-  "zh": ["netease"], // Mandarin Chinese
-  "yue": ["netease"],           // Cantonese
-  "ja": [],                     // Japanese (no API available yet)
-  "ko": [],                     // Korean (no API available yet)
-  "ru": [],                     // Russian (no API available yet)
-  "en": []                      // English (no API available yet)
+  "zh": ["lrclib", "netease"], // Mandarin Chinese - LRC Lib first, then Netease
+  "yue": ["netease"],          // Cantonese - Netease only
+  "ja": ["lrclib"],            // Japanese - LRC Lib
+  "ko": ["lrclib"],            // Korean - LRC Lib
+  "ru": [],                    // Russian (no API available yet)
+  "en": ["lrclib"]             // English - LRC Lib
 };
 
 export function getMusicAPI(script, platform = null) {
@@ -41,6 +43,23 @@ export function getMusicAPI(script, platform = null) {
   }
   
   return null;
+}
+
+// New function to get all available APIs for a script (for fallback logic)
+export function getAvailableAPIs(script) {
+  const availablePlatforms = scriptPlatformMap[script] || [];
+  const apis = [];
+  
+  for (const platformName of availablePlatforms) {
+    if (musicAPIs.has(platformName)) {
+      const api = musicAPIs.get(platformName);
+      if (api.supportsLanguage(script)) {
+        apis.push(api);
+      }
+    }
+  }
+  
+  return apis;
 }
 
 export function registerMusicAPI(platformName, api) {
