@@ -12,14 +12,14 @@ musicAPIs.set("netease", new NeteaseAPI());
 // musicAPIs.set("spotify", new SpotifyAPI());
 // musicAPIs.set("genius", new GeniusAPI());
 
-// Script to platform mapping - LRC Lib as primary, Netease as backup
+// Script to platform mapping - NetEase as primary, LRC Lib as backup
 const scriptPlatformMap = {
-  "zh": ["lrclib", "netease"], // Mandarin Chinese - LRC Lib first, then Netease
-  "yue": ["netease"],          // Cantonese - Netease only
-  "ja": ["lrclib"],            // Japanese - LRC Lib
-  "ko": ["lrclib"],            // Korean - LRC Lib
+  "zh": ["netease", "lrclib"], // Mandarin Chinese - NetEase first, then LRC Lib
+  "yue": ["netease"],          // Cantonese - NetEase only
+  "ja": ["lrclib"],            // Japanese - LRC Lib only
+  "ko": ["lrclib"],            // Korean - LRC Lib only
   "ru": [],                    // Russian (no API available yet)
-  "en": ["lrclib"]             // English - LRC Lib
+  "en": ["lrclib"]             // English - LRC Lib only
 };
 
 export function getMusicAPI(script, platform = null) {

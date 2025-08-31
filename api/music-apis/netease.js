@@ -31,7 +31,7 @@ export class NeteaseAPI extends BaseMusicAPI {
         title: song.name,
         artist: song.artists?.[0]?.name || artist,
         album: song.album?.name,
-        duration: song.duration,
+        duration: song.duration ? Math.floor(song.duration / 1000) : null, // Convert from milliseconds to seconds
         source: "netease"
       };
     } catch (error) {

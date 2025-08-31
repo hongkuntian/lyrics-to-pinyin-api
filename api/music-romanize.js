@@ -89,7 +89,7 @@ export default async function handler(req, res) {
       songData = await musicAPI.searchSong(artist, title);
       usedAPI = musicAPI;
     } else {
-      // Try APIs in order (LRC Lib first, then Netease)
+      // Try APIs in order (NetEase first, then LRC Lib as fallback)
       for (const api of availableAPIs) {
         console.log(`Trying ${api.name} for song search...`);
         songData = await api.searchSong(artist, title);
