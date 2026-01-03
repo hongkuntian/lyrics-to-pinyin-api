@@ -190,8 +190,8 @@ Create a `.env.local` file in your project root:
 
 ```bash
 # Required: Upstash Redis
-UPSTASH_REDIS_REST_URL=your_upstash_redis_rest_url_here
-UPSTASH_REDIS_REST_TOKEN=your_upstash_redis_rest_token_here
+LYRICS_KV_REST_API_URL=your_kv_rest_api_url_here
+LYRICS_KV_REST_API_TOKEN=your_kv_rest_api_token_here
 
 # Optional: Music API credentials
 SPOTIFY_CLIENT_ID=your_spotify_client_id_here

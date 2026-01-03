@@ -6,16 +6,16 @@ import { getCacheKey, getCached, setCached } from "./utils/cache.js";
 
 // Initialize Redis only if environment variables are available
 let redis = null;
-if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+if (process.env.LYRICS_KV_REST_API_URL && process.env.LYRICS_KV_REST_API_TOKEN) {
   redis = new Redis({
-    url: process.env.KV_REST_API_URL,
-    token: process.env.KV_REST_API_TOKEN,
+    url: process.env.LYRICS_KV_REST_API_URL,
+    token: process.env.LYRICS_KV_REST_API_TOKEN,
   });
 }
 
 export default async function handler(req, res) {
   // Log Redis status but don't fail if missing (for local development)
-  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+  if (!process.env.LYRICS_KV_REST_API_URL || !process.env.LYRICS_KV_REST_API_TOKEN) {
     console.error("❌ Missing Upstash Redis environment variables");
     // Don't return error - continue without caching
   }
