@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MusicRomanizeSuccessResponse",
+  "type": "object",
+  "required": ["song", "lines", "quality", "metadata"],
+  "properties": {
+    "song": {
+      "type": "object",
+      "required": ["title", "artist", "id", "language", "romanization_system"],
+      "properties": {
+        "title": {
+          "type": "object",
+          "required": ["original", "romanized"],
+          "properties": {
+            "original": { "type": "string" },
+            "romanized": { "type": "string" }
+          }
+        },
+        "artist": {
+          "type": "object",
+          "required": ["original", "romanized"],
+          "properties": {
+            "original": { "type": "string" },
+            "romanized": { "type": "string" }
+          }
+        },
+        "id": {
+          "anyOf": [
+            { "type": "number" },
+            { "type": "string" }
+          ]
+        },
+        "language": { "type": "string" },
+        "romanization_system": { "type": "string" }
+      }
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["original", "romanized", "timestamp"],
+        "properties": {
+          "original": { "type": "string" },
+          "romanized": { "type": "string" },
+          "timestamp": {
+            "anyOf": [
+              { "type": "number" },
+              { "type": "null" }
+            ]
+          }
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "required": ["synced"],
+      "properties": {
+        "synced": { "type": "boolean" }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["timestamp", "version", "source"],
+      "properties": {
+        "timestamp": { "type": "string" },
+        "version": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    }
+  }
+}

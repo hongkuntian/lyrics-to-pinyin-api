@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RomanizeSuccessResponse",
+  "type": "object",
+  "required": [
+    "original",
+    "romanized",
+    "language",
+    "romanization_system",
+    "confidence",
+    "spans",
+    "metadata"
+  ],
+  "properties": {
+    "original": { "type": "string" },
+    "romanized": { "type": "string" },
+    "language": { "type": "string" },
+    "romanization_system": { "type": "string" },
+    "confidence": { "type": "number" },
+    "spans": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["timestamp", "version"],
+      "properties": {
+        "timestamp": { "type": "string" },
+        "version": { "type": "string" },
+        "detected_script": { "type": "string" },
+        "processing_time": { "type": "number" },
+        "processor": { "type": "string" }
+      }
+    }
+  }
+}

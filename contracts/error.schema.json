@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GenericErrorResponse",
+  "type": "object",
+  "required": ["error"],
+  "properties": {
+    "error": { "type": "string" },
+    "details": { "type": "string" },
+    "supported_scripts": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "supported_combinations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["script", "platforms"],
+        "properties": {
+          "script": { "type": "string" },
+          "platforms": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -73,3 +73,17 @@ export function getSupportedLanguages() {
 export function getSupportedPlatforms() {
   return Array.from(musicAPIs.keys());
 }
+
+export function getSupportedCombinations() {
+  return Object.entries(scriptPlatformMap).map(([script, platforms]) => ({
+    script,
+    platforms: platforms.filter((platformName) => {
+      if (!musicAPIs.has(platformName)) {
+        return false;
+      }
+
+      const api = musicAPIs.get(platformName);
+      return api.supportsLanguage(script);
+    })
+  }));
+}

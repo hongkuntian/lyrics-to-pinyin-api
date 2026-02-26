@@ -1,72 +1,29 @@
-# Generic Romanization API - MVP
+# Lyrics Romanization API
 
-A serverless API that converts text from five core languages to their romanized forms, with support for multiple romanization systems and music platform integrations.
+A Node.js serverless backend (Vercel) for romanizing multilingual lyrics and text.
 
-## Features
+## Current Scope
 
-- **Five Core Languages**: Mandarin (zh), Cantonese (yue), Japanese (ja), Korean (ko), Russian (ru)
-- **Automatic Language Detection**: Detects the language of input text automatically
-- **Multiple Romanization Systems**: Choose from different romanization standards for each language
-- **Music Platform Integration**: Fetch and romanize lyrics from Netease Cloud Music, Spotify, Genius
-- **Redis Caching**: Caches results in Upstash Redis for improved performance
-- **Plugin Architecture**: Easy to extend with new languages and romanization systems
-- **Deployed on Vercel**
+- Languages: `zh`, `yue`, `ja`, `ko`, `ru`
+- Endpoints:
+  - `POST /api/romanize`
+  - `POST /api/music-romanize`
+- Music sources currently enabled in runtime registry:
+  - `netease`
+  - `lrclib`
 
-## API Endpoints
+## Endpoints
 
-### 1. Generic Romanization (`/api/romanize`)
+### `POST /api/romanize`
+Romanize text with optional language override and per-language options.
 
-Convert any text to its romanized form.
+Example request:
 
-**Request:**
 ```json
 {
   "text": "你好世界",
-  "language": "zh", // optional, auto-detected if not provided
-  "romanization_system": "pinyin", // optional, defaults to standard for script
-  "options": {
-    "tone_style": "marks", // marks, numbers, none (for zh, yue)
-    "separator": " ", // space or hyphen
-    "case": "lower", // lower, upper, title
-    "normalize_variants": true, // zh: normalize trad/simp before romanizing
-    "long_vowels": "macron" // macron, circumflex, double (for ja)
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "original": "你好世界",
-  "romanized": "nǐ hǎo shì jiè",
   "language": "zh",
   "romanization_system": "pinyin",
-  "confidence": 0.95,
-  "spans": [
-    { "range": [0, 4], "script": "zh", "romanized": "nǐ hǎo shì jiè" }
-  ],
-  "metadata": {
-    "detected_script": "zh",
-    "processing_time": 45,
-    "processor": "ChineseProcessor",
-    "timestamp": "2024-01-01T00:00:00.000Z",
-    "version": "2.0.0"
-  }
-}
-```
-
-### 2. Music Romanization (`/api/music-romanize`)
-
-Fetch and romanize song lyrics from music platforms.
-
-**Request:**
-```json
-{
-  "artist": "周杰伦",
-  "title": "稻香",
-  "language": "zh", // optional
-  "romanization_system": "pinyin", // optional
-  "music_platform": "netease", // optional, auto-selected based on script
   "options": {
     "tone_style": "marks",
     "separator": " ",
@@ -75,224 +32,106 @@ Fetch and romanize song lyrics from music platforms.
 }
 ```
 
-**Response:**
+### `POST /api/music-romanize`
+Fetch and romanize song title/artist/lyrics.
+
+Example request:
+
 ```json
 {
-  "song": {
-    "title": {
-      "original": "稻香",
-      "romanized": "dào xiāng"
-    },
-    "artist": {
-      "original": "周杰伦",
-      "romanized": "zhōu jié lún"
-    },
-    "id": "123456",
-    "language": "zh",
-    "romanization_system": "pinyin"
-  },
-  "lines": [
-    {
-      "original": "对这个世界如果你有太多的抱怨",
-      "romanized": "duì zhè ge shì jiè rú guǒ nǐ yǒu tài duō de bào yuàn",
-      "timestamp": 0
-    }
-  ],
-  "quality": {
-    "synced": true
-  },
-  "metadata": {
-    "timestamp": "2024-01-01T00:00:00.000Z",
-    "version": "2.0.0",
-    "source": "netease",
-    "detected_script": "zh",
-    "processing_time": 120,
-    "processor": "ChineseProcessor",
-    "music_api": "NeteaseAPI"
+  "artist": "周杰伦",
+  "title": "稻香",
+  "language": "zh",
+  "romanization_system": "pinyin",
+  "music_platform": "netease",
+  "options": {
+    "tone_style": "marks",
+    "separator": " ",
+    "case": "lower"
   }
 }
 ```
 
-## Migration from v1.0
+## Setup
 
-### Endpoint Changes
-- **Old**: `/api/lyrics-to-pinyin`
-- **New**: `/api/music-romanize`
-
-### Response Structure Changes
-- `pinyin` field → `romanized` field (more generic)
-- New `quality` object with `synced` flag
-- New `metadata` object with processing information
-- `timestamp` field added to lyric lines
-
-### Minimal Migration Example (Swift)
-
-```swift
-// Old endpoint
-let url = URL(string: "https://lyrics-to-pinyin-api.vercel.app/api/lyrics-to-pinyin")
-
-// New endpoint
-let url = URL(string: "https://lyrics-to-pinyin-api.vercel.app/api/music-romanize")
-
-// Old response model
-struct LyricLine: Codable {
-    let original: String
-    let pinyin: String
-}
-
-// New response model
-struct LyricLine: Codable {
-    let original: String
-    let romanized: String // Changed from "pinyin"
-    let timestamp: Double? // New field
-}
-```
-
-## Supported Scripts and Systems
-
-### Mandarin (zh)
-- **Pinyin** (default): Standard Chinese romanization with tone marks
-- **Options**: `tone_style` (marks/numbers/none), `normalize_variants`
-
-### Cantonese (yue)
-- **Jyutping** (default): Cantonese romanization with tone numbers
-- **Options**: Always returns tone numbers
-
-### Japanese (ja)
-- **Hepburn** (default): Most common romanization system
-- **Options**: `long_vowels` (macron/circumflex/double)
-
-### Korean (ko)
-- **Revised** (default): South Korean government standard
-- **Features**: Handles 받침 assimilation (e.g., 국물 → gukmul)
-
-### Russian (ru)
-- **ISO 9** (default): International standard
-- **BGN/PCGN** (optional): Alternative system
-- **Features**: Handles ё vs е, ый endings, щ/ь/ъ
-
-## Music Platform Support
-
-| Script | Platforms |
-|--------|-----------|
-| Mandarin (zh) | Netease Cloud Music, Spotify |
-| Cantonese (yue) | Spotify |
-| Japanese (ja) | Spotify |
-| Korean (ko) | Spotify |
-| Russian (ru) | Spotify, Genius |
-| English (en) | Spotify, Genius |
-
-## Setup Instructions
-
-### 1. Environment Variables
-
-Create a `.env.local` file in your project root:
+1. Install:
 
 ```bash
-# Required: Upstash Redis
+npm ci
+```
+
+2. Optional `.env.local`:
+
+```bash
+# Optional Redis cache (disabled locally if missing)
 LYRICS_KV_REST_API_URL=your_kv_rest_api_url_here
 LYRICS_KV_REST_API_TOKEN=your_kv_rest_api_token_here
 
-# Optional: Music API credentials
+# Optional creds for not-yet-enabled integrations
 SPOTIFY_CLIENT_ID=your_spotify_client_id_here
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
 GENIUS_ACCESS_TOKEN=your_genius_access_token_here
 ```
 
-### 2. Installation
-
-```bash
-npm install
-```
-
-### 3. Development
+3. Start local server:
 
 ```bash
 npm run dev
 ```
 
-### 4. Deployment
+## Quick Start For Agents
 
-The project is configured for Vercel deployment with automatic environment variable linking.
+1. Sync and install:
 
-## Architecture
-
+```bash
+git pull --rebase
+npm ci
 ```
-/api/
-├── romanize.js              # Generic romanization endpoint
-├── music-romanize.js        # Music romanization endpoint
-├── processors/              # Script processors
-│   ├── index.js            # Processor registry
-│   ├── chinese.js          # Mandarin romanization
-│   ├── cantonese.js        # Cantonese romanization
-│   ├── japanese.js         # Japanese romanization
-│   ├── korean.js           # Korean romanization
-│   └── russian.js          # Russian romanization
-├── music-apis/             # Music platform integrations
-│   ├── index.js            # API registry
-│   ├── netease.js          # Netease Cloud Music
-│   ├── spotify.js          # Spotify
-│   └── genius.js           # Genius
-└── utils/                  # Utility modules
-    ├── language-detection.js
-    ├── cache.js
-    └── response-formatter.js
+
+2. Make one scoped change.
+3. Update tests first (or alongside code).
+4. Run required gates:
+
+```bash
+npm test
 ```
+
+5. Include test evidence in PR.
 
 ## Testing
 
-The project includes a golden test corpus (`tests/golden-test-corpus.json`) with sample text for each language:
+This repo uses a gated, hermetic-first test model.
 
-- **Mandarin**: "不对", "很好", "一共有"
-- **Cantonese**: "行", "更" (polyphonic characters)
-- **Japanese**: Words with long vowels, sokuon, chōon
-- **Korean**: 받침 assimilation (e.g., 국물 → gukmul)
-- **Russian**: ё vs е, ый endings, щ/ь/ъ handling
+- `npm test`: runs all required hermetic gates
+- `npm run test:unit`: pure module tests
+- `npm run test:integration`: handler-level tests with mocked dependencies
+- `npm run test:contract`: schema + compatibility checks
+- `npm run test:live`: optional live upstream smoke tests (non-blocking)
+- `npm run test:legacy`: original ad hoc API script
 
-## Implementation Notes
+### Contract and compatibility tests
 
-### Language Libraries
-- **Mandarin (zh)**: `pinyin-pro` + `chinese-conv` for normalization
-- **Cantonese (yue)**: `jyutping` or `cantonese.js` dictionaries
-- **Japanese (ja)**: `kuroshiro` + `kuromoji`
-- **Korean (ko)**: `hangul-romanization` or `korean-romanizer`
-- **Russian (ru)**: `cyrillic-to-translit-js` or mapping table
+- JSON schemas are in `contracts/`
+- Contract tests are in `tests/contracts/`
+- Lyra compatibility test verifies decode-critical response fields used by the app model
 
-### Rollout Order
-1. ✅ Mandarin + Japanese (base libraries are stable)
-2. ✅ Korean
-3. ✅ Russian
-4. ✅ Cantonese
+## CI
 
-## Caching Strategy
+GitHub Actions runs `npm test` on push/PR to `main`.
 
-- **Cache Keys**: SHA-256 hash of text, script, system, and options
-- **TTL**: Configurable per endpoint (default: no expiration)
-- **Pattern**: `romanize:{hash}` for generic, `music:{hash}` for music
+Workflow file:
 
-## Error Handling
+- `.github/workflows/ci.yml`
 
-The API provides detailed error responses with:
-- HTTP status codes
-- Error messages
-- Timestamps
-- API version information
+## Agent-first workflow
 
-## Performance
+- `AGENTS.md` defines operating rules and definition of done.
+- `CONTRIBUTING.md` defines PR checklist and review expectations.
 
-- **Script Detection**: ~5ms
-- **Romanization**: ~10-50ms per line
-- **Music API Calls**: ~100-500ms
-- **Cache Hits**: ~1-5ms
+## Deployment
 
-## Dependencies
+```bash
+npm run deploy
+```
 
-- `@upstash/redis`: Redis client for Upstash
-- `pinyin-pro`: Chinese to pinyin conversion
-- `chinese-conv`: Chinese character conversion utilities
-- `express`: Web framework (via Vercel's serverless functions)
-- `node-fetch`: HTTP client for API calls
-
-## License
-
-MIT License - see LICENSE file for details. 
+Configured for Vercel via `vercel.json`.
