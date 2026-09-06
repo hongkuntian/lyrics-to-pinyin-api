@@ -22,7 +22,10 @@ Keep this backend safe for agent-first iteration with deterministic tests and st
 - All relevant tests updated.
 - `npm test` passes locally.
 - API response shape remains contract-compatible or contract files are intentionally updated.
-- PR includes a short testing evidence section with commands run.
+- Commit or PR includes short testing evidence with commands run.
+
+## Checkpoint Delivery
+- At satisfactory, verified checkpoints, merge into `main` and push `main` without asking for additional approval. The user authorizes direct mainline delivery during this project's current development phase; a pull request is optional.
 
 ## Execution Loop
 1. Make one focused change.
