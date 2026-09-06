@@ -31,6 +31,8 @@ export function getMusicAPI(script, platform = null) {
     }
   }
   
+  if (platform) return null;
+
   // Otherwise, get the best available API for the script
   const availablePlatforms = scriptPlatformMap[script] || [];
   for (const platformName of availablePlatforms) {

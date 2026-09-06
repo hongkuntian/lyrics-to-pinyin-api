@@ -30,6 +30,8 @@
             { "type": "string" }
           ]
         },
+        "album": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "duration": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
         "language": { "type": "string" },
         "romanization_system": { "type": "string" }
       }

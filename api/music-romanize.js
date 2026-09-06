@@ -1,186 +1,78 @@
-import { Redis } from "@upstash/redis";
-import { detectLanguage, getDefaultRomanizationSystem } from "./utils/language-detection.js";
-import { getProcessor } from "./processors/index.js";
-import { formatMusicResponse } from "./utils/response-formatter.js";
-import { getCacheKey, getCached, setCached } from "./utils/cache.js";
-import { getMusicAPI, getAvailableAPIs, getSupportedCombinations } from "./music-apis/index.js";
-
-function createRedisFromEnv() {
-  if (process.env.LYRICS_KV_REST_API_URL && process.env.LYRICS_KV_REST_API_TOKEN) {
-    return new Redis({
-      url: process.env.LYRICS_KV_REST_API_URL,
-      token: process.env.LYRICS_KV_REST_API_TOKEN,
-    });
-  }
-
-  return null;
+import {Redis} from '@upstash/redis';
+import {detectLanguage,getDefaultRomanizationSystem} from './utils/language-detection.js';
+import {getProcessor} from './processors/index.js';
+import {formatMusicResponse} from './utils/response-formatter.js';
+import {getCacheKey,getCached,setCached} from './utils/cache.js';
+import {getMusicAPI,getAvailableAPIs,getSupportedCombinations} from './music-apis/index.js';
+import {withDeadline} from './utils/fetch-json.js';
+import {recordingScore,RecordingMismatchError} from './utils/recording-match.js';
+const RESPONSE_VERSION='2.1.0';
+function redisFromEnv() {
+  return process.env.LYRICS_KV_REST_API_URL && process.env.LYRICS_KV_REST_API_TOKEN ? new Redis({url:process.env.LYRICS_KV_REST_API_URL,token:process.env.LYRICS_KV_REST_API_TOKEN}):null;
 }
-
-function getSupportedMusicAPIs() {
-  return getSupportedCombinations();
-}
-
-export function createMusicRomanizeHandler(dependencies = {}) {
-  const {
-    redis = createRedisFromEnv(),
-    detectLanguageFn = detectLanguage,
-    getDefaultRomanizationSystemFn = getDefaultRomanizationSystem,
-    getProcessorFn = getProcessor,
-    formatMusicResponseFn = formatMusicResponse,
-    getCacheKeyFn = getCacheKey,
-    getCachedFn = getCached,
-    setCachedFn = setCached,
-    getMusicAPIFn = getMusicAPI,
-    getAvailableAPIsFn = getAvailableAPIs,
-    getSupportedMusicAPIsFn = getSupportedMusicAPIs,
-    logger = console
-  } = dependencies;
-
-  return async function handler(req, res) {
-    if (!process.env.LYRICS_KV_REST_API_URL || !process.env.LYRICS_KV_REST_API_TOKEN) {
-      logger.error("❌ Missing Upstash Redis environment variables");
-    }
-
-    res.setHeader("Content-Type", "application/json");
-
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Only POST allowed" });
-    }
-
-    const {
-      artist,
-      title,
-      language,
-      romanization_system,
-      music_platform,
-      options = {}
-    } = req.body || {};
-
-    if (!artist || !title) {
-      return res.status(400).json({ error: "Missing 'artist' or 'title' parameter" });
-    }
-
+export function createMusicRomanizeHandler(dependencies={}) {
+  const {redis=redisFromEnv(),detectLanguageFn=detectLanguage,getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,getCacheKeyFn=getCacheKey,getCachedFn=getCached,setCachedFn=setCached,getMusicAPIFn=getMusicAPI,getAvailableAPIsFn=getAvailableAPIs,getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,logger=console}=dependencies;
+  return async (req,res)=> {
+    res.setHeader('Content-Type','application/json');
+    if(req.method!=='POST') return res.status(405).json({error:'Only POST allowed'});
+    const {artist,title,album,duration,language,romanization_system,music_platform,options={}}=req.body || {};
+    if(typeof artist!=='string' || !artist.trim() || typeof title!=='string' || !title.trim()) return res.status(400).json({error:"Missing 'artist' or 'title' parameter"});
+    if(artist.length>300 || title.length>500 || (album!=null && typeof album!=='string') || (duration!=null && (!Number.isFinite(duration) || duration<=0)) || (language!=null && typeof language!=='string') || (romanization_system!=null && typeof romanization_system!=='string') || (music_platform!=null && typeof music_platform!=='string') || !options || typeof options!=='object' || Array.isArray(options)) return res.status(400).json({error:'Invalid request fields'});
     try {
-      const detectedScript = language || await detectLanguageFn(`${artist} ${title}`);
-      let musicAPI = null;
-      if (music_platform) {
-        musicAPI = getMusicAPIFn(detectedScript, music_platform);
-        if (!musicAPI) {
-          return res.status(400).json({
-            error: `Platform '${music_platform}' not available for script '${detectedScript}'`,
-            supported_combinations: getSupportedMusicAPIsFn()
-          });
+      const script=language || await detectLanguageFn(`${artist} ${title}`);
+      const system=romanization_system || getDefaultRomanizationSystemFn(script);
+      const available=getAvailableAPIsFn(script);
+      const preferred=music_platform ? getMusicAPIFn(script,music_platform):null;
+      if(music_platform && !preferred) return res.status(400).json({error:`Platform '${music_platform}' not available for script '${script}'`,supported_combinations:getSupportedMusicAPIsFn()});
+      const apis=preferred ? [preferred,...available.filter(api=>api!==preferred)]:available;
+      if(!apis.length) return res.status(400).json({error:`No music API available for script '${script}' and platform '${music_platform}'`,supported_combinations:getSupportedMusicAPIsFn()});
+      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION}),script,system,options);
+      if(redis) {
+        const cached=await withDeadline(()=>getCachedFn(redis,key),800).catch(()=>null);
+        if(cached?.metadata?.version===RESPONSE_VERSION) return res.status(200).json(cached);
+      }
+      const processor=getProcessorFn(script);
+      // Latin lyrics need no romanization processor.
+      if(!processor && script!=='en') return res.status(400).json({error:`Script '${script}' is not supported for romanization`});
+      const romanize=async text=>processor ? processor.romanize(text,system,options):{romanized:text};
+      const request={artist,title,album,duration};
+      let matched=false,mismatch=false,timedOut=false,unavailable=false;
+      for(const api of apis) {
+        try {
+          const result=await withDeadline(async signal=> {
+            const song=await api.searchSong(artist,title,{album,duration,signal});
+            if(!song) return null;
+            if(recordingScore(song,request)<0) throw new RecordingMismatchError();
+            matched=true;
+            const lyrics=await api.getLyrics(song.id,{signal,song});
+            return lyrics?.lines?.some(line=>line.text?.trim()) ? {song,lyrics}:null;
+          },providerTimeoutMs);
+          if(!result) continue;
+          const {song,lyrics}=result;
+          const [romanizedTitle,romanizedArtist,lines]=await Promise.all([
+            romanize(song.title),romanize(song.artist),Promise.all(lyrics.lines.filter(line=>line.text?.trim()).map(async line=>({original:line.text,romanized:(await romanize(line.text)).romanized,timestamp:Number.isFinite(line.timestamp) && line.timestamp>=0 ? line.timestamp:null})))
+          ]);
+          const response=formatMusicResponseFn({...song,source:api.name},{title:romanizedTitle.romanized,artist:romanizedArtist.romanized,language:script,system,lines});
+          response.song.album=song.album ?? null;
+          response.song.duration=song.duration ?? null;
+          response.metadata.version=RESPONSE_VERSION;
+          if(redis) await withDeadline(()=>setCachedFn(redis,key,response,86400),800).catch(()=>{});
+          return res.status(200).json(response);
+        } catch(error) {
+          if(error.code==='recording_mismatch') mismatch=true;
+          else if(error.code==='provider_timeout' || error.name==='AbortError') timedOut=true;
+          else { unavailable=true; logger.error('Lyrics provider failed',api.name,error.message); }
         }
       }
-
-      const system = romanization_system || getDefaultRomanizationSystemFn(detectedScript);
-      const cacheKey = getCacheKeyFn(`${artist}-${title}`, detectedScript, system, options);
-
-      if (redis) {
-        const cached = await getCachedFn(redis, cacheKey);
-        if (cached) {
-          return res.status(200).json(cached);
-        }
-      }
-
-      const availableAPIs = getAvailableAPIsFn(detectedScript);
-      if (!availableAPIs.length) {
-        return res.status(400).json({
-          error: `No music API available for script '${detectedScript}' and platform '${music_platform}'`,
-          supported_combinations: getSupportedMusicAPIsFn()
-        });
-      }
-
-      const startTime = Date.now();
-      let songData = null;
-      let usedAPI = null;
-
-      if (musicAPI) {
-        songData = await musicAPI.searchSong(artist, title);
-        usedAPI = musicAPI;
-      } else {
-        for (const api of availableAPIs) {
-          logger.log(`Trying ${api.name} for song search...`);
-          songData = await api.searchSong(artist, title);
-          if (songData) {
-            usedAPI = api;
-            logger.log(`Found song using ${api.name}`);
-            break;
-          }
-        }
-      }
-
-      if (!songData) {
-        return res.status(404).json({
-          error: "Song not found",
-          details: `Tried ${availableAPIs.map(api => api.name).join(", ")}`
-        });
-      }
-
-      const processor = getProcessorFn(detectedScript);
-      if (!processor) {
-        return res.status(400).json({
-          error: `Script '${detectedScript}' is not supported for romanization`
-        });
-      }
-
-      const [lyricsData, titleRomanized, artistRomanized] = await Promise.all([
-        usedAPI.getLyrics(songData.id),
-        processor.romanize(songData.title, system, options),
-        processor.romanize(songData.artist, system, options)
-      ]);
-
-      if (!lyricsData) {
-        return res.status(404).json({ error: "Lyrics not found" });
-      }
-
-      const romanizationPromises = lyricsData.lines
-        .filter(line => line.text && line.text.trim())
-        .map(async (line) => {
-          const romanized = await processor.romanize(line.text, system, options);
-          return {
-            original: line.text,
-            romanized: romanized.romanized,
-            timestamp: line.timestamp || null
-          };
-        });
-
-      const romanizedLines = await Promise.all(romanizationPromises);
-      const processingTime = Date.now() - startTime;
-
-      const response = formatMusicResponseFn(
-        {
-          title: songData.title,
-          artist: songData.artist,
-          id: songData.id,
-          source: usedAPI.name
-        },
-        {
-          title: titleRomanized.romanized,
-          artist: artistRomanized.romanized,
-          language: detectedScript,
-          system,
-          lines: romanizedLines,
-          metadata: {
-            detected_script: detectedScript,
-            processing_time: processingTime,
-            processor: processor.name,
-            music_api: usedAPI.name
-          }
-        }
-      );
-
-      if (redis) {
-        await setCachedFn(redis, cacheKey, response);
-      }
-
-      return res.status(200).json(response);
-    } catch (err) {
-      logger.error("Music romanization API error:", err);
-      return res.status(500).json({ error: "Server error", details: err.message });
+      if(timedOut) return res.status(504).json({error:'Lyrics providers timed out',code:'provider_timeout'});
+      if(unavailable) return res.status(502).json({error:'Lyrics providers are unavailable',code:'provider_unavailable'});
+      if(mismatch) return res.status(409).json({error:'Could not verify the requested recording',code:'recording_mismatch'});
+      if(matched) return res.status(404).json({error:'Lyrics not found'});
+      return res.status(404).json({error:'Song not found',details:`Tried ${apis.map(api=>api.name).join(', ')}`});
+    } catch(error) {
+      logger.error('Music romanization failed',error.message);
+      return res.status(500).json({error:'Server error'});
     }
   };
 }
-
-const handler = createMusicRomanizeHandler();
-export default handler;
+export default createMusicRomanizeHandler();

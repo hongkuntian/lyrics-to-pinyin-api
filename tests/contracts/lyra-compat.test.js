@@ -4,7 +4,7 @@ import { createMusicRomanizeHandler } from "../../api/music-romanize.js";
 import { createMockReq, createMockRes } from "../helpers/mock-http.js";
 
 function assertLyraCompatibility(payload) {
-  // Mirrors decode-critical fields in Lyra/Lyra/ContentView.swift.
+  // Mirrors decode-critical fields in Lyra/Lyra/LyricsResponse.swift.
   assert.equal(typeof payload.song.title.original, "string");
   assert.equal(typeof payload.song.title.romanized, "string");
   assert.equal(typeof payload.song.artist.original, "string");
@@ -16,6 +16,9 @@ function assertLyraCompatibility(payload) {
   assert.equal(typeof payload.quality.synced, "boolean");
   assert.equal(typeof payload.metadata.timestamp, "string");
   assert.equal(typeof payload.metadata.version, "string");
+  assert.equal(payload.metadata.version, "2.1.0");
+  assert.ok(payload.song.album === null || typeof payload.song.album === "string");
+  assert.ok(payload.song.duration === null || typeof payload.song.duration === "number");
 }
 
 test("music endpoint response stays compatible with Lyra decode model", async () => {

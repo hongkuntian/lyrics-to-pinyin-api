@@ -82,7 +82,7 @@ test("returns 404 when lyrics are missing for found song", async () => {
     getProcessorFn: () => createProcessor(),
     logger: { error() {}, log() {} }
   });
-  const req = createMockReq({ body: { artist: "X", title: "Y", language: "zh" } });
+  const req = createMockReq({ body: { artist: "Artist", title: "Song", language: "zh" } });
   const res = createMockRes();
 
   await handler(req, res);
@@ -92,7 +92,7 @@ test("returns 404 when lyrics are missing for found song", async () => {
 });
 
 test("returns cached payload on cache hit", async () => {
-  const cached = { song: { id: "cached" }, lines: [] };
+  const cached = { song: { id: "cached" }, lines: [], metadata: { version: "2.1.0" } };
   const handler = createMusicRomanizeHandler({
     redis: {},
     getCachedFn: async () => cached,
