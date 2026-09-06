@@ -35,6 +35,12 @@ export async function detectLanguage(text) {
     throw new Error('Invalid text input for language detection');
   }
 
+  // Kana disambiguates Japanese lyrics containing Han characters. Latin words in
+  // multilingual lyrics must not outweigh the script needing pronunciation.
+  if (/[\u3040-\u30ff]/.test(text)) return 'ja';
+  if (/[\uac00-\ud7af]/.test(text)) return 'ko';
+  if (/[\u4e00-\u9fff]/.test(text)) return distinguishChineseDialect(text);
+
   const scores = {};
   let totalChars = 0;
 
@@ -91,7 +97,7 @@ function distinguishChineseDialect(text) {
   // Check for Cantonese-specific characters/patterns
   const cantonesePatterns = [
     /[嘅咗咁啲嘢]/g, // Common Cantonese particles
-    /[唔係]/g,      // Cantonese negation
+    /唔/g,         // 係 alone also occurs in standard Chinese words such as 關係.
     /[佢哋]/g       // Cantonese pronouns
   ];
   

@@ -66,7 +66,18 @@
       "properties": {
         "timestamp": { "type": "string" },
         "version": { "type": "string" },
-        "source": { "type": "string" }
+        "source": { "type": "string" },
+        "recording_match": {
+          "type": "object",
+          "required": ["method", "catalog_id", "artist", "title", "duration"],
+          "properties": {
+            "method": { "type": "string", "const": "catalog_alias" },
+            "catalog_id": { "type": "string", "pattern": "^[0-9]{1,20}$" },
+            "artist": { "type": "string" },
+            "title": { "type": "string" },
+            "duration": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
       }
     }
   }

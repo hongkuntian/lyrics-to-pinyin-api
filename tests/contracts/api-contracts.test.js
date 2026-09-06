@@ -91,3 +91,15 @@ test("music error response matches contract schema", async () => {
   assert.equal(res.statusCode, 400);
   assertSchemaMatch(errorSchema, res.body);
 });
+
+test("catalog alias identity is an additive typed response contract", async () => {
+  const original={artist:'Eric Chou',title:'Unbreakable Love',duration:258.264,catalog_id:'1321295664'};
+  const localized={artist:'周興哲',title:'永不失聯的愛',duration:258.264};
+  const api={name:'Fixture',searchSong:async artist=>artist===localized.artist ? {...localized,id:1}:null,getLyrics:async()=>({lines:[{text:'一起唱',timestamp:0}]})};
+  const handler=createMusicRomanizeHandler({redis:null,getAvailableAPIsFn:()=>[api],resolveCatalogAliasesFn:async()=>[localized],logger:{error(){}}});
+  const res=createMockRes();
+  await handler(createMockReq({body:original}),res);
+  assert.equal(res.statusCode,200);
+  assertSchemaMatch(musicSuccessSchema,res.body);
+  assert.deepEqual(res.body.metadata.recording_match,{method:'catalog_alias',...original});
+});
