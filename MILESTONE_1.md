@@ -12,11 +12,12 @@ LRC parsing preserves zero, interprets decimal fractions correctly, expands repe
 
 ## Verification
 
-- `npm test`: hermetic unit, integration and response-contract coverage.
+- `npm test`: 41 hermetic unit, integration and response-contract tests pass.
 - Local handler against live providers, September 5, 2026: 晴天 / 葉惠美 / 269 s (53 lines), 稻香 / 魔杰座 / 223 s (44 lines), 七里香 / 七里香 / 299.23 s (35 lines), all artist 周杰倫. All returned 200 through LRCLIB in 1.6–2.2 seconds, with matching recording metadata and response version 2.1.0.
 - These are provider checks, not an Apple Music audio-sync test.
-- Production publication still requires access to the existing Vercel project. The current connected account lists no projects; local CLI is signed out. Do not substitute a newly created project for `lyrics-to-pinyin-api`.
+- Preview and production verified through the existing Vercel project on September 5, 2026. Production returned all three matching songs in 2.1–2.3 seconds; wrong duration returned 409, empty input 400, and nonexistent song 404.
+- The old Upstash hostname no longer resolves. Optional cache failures now open a 60-second backoff per client; requests continue through providers. Restoring persistent caching requires a working cache resource and updated Vercel environment variables.
 
 ## Deployment check
 
-After authenticating the owning account, link the existing project, publish a preview, verify success/mismatch/missing responses and metadata version, then promote the tested deployment. Repeat the three-song checks through the production URL. Do not claim the deployed service is repaired until this succeeds.
+Project: `prj_88IMRZ5X5Fd1LAR8NfEC3pKYJIDy`. Primary production URL: https://lyrics-to-pinyin-api.vercel.app. Initial verified release: `dpl_92p1FpWPJsmPmihy5agctdQcJdkB`, ready in 13 seconds. The Vercel connector publishes only API source, package manifests and Vercel configuration; credentials and local dependencies are excluded. Follow-up cache backoff release is recorded below once verified.

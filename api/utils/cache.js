@@ -1,5 +1,13 @@
 import crypto from 'crypto';
 
+// Cache outages must not add repeated DNS/network work to every lyrics request.
+const retryAfter = new WeakMap();
+const cacheUnavailable = redis => (retryAfter.get(redis) || 0) > Date.now();
+function suspendCache(redis, error) {
+  retryAfter.set(redis, Date.now() + 60_000);
+  console.warn('Optional cache unavailable; bypassing for 60 seconds:', error.message);
+}
+
 // Cache key generation
 export function getCacheKey(text, language, romanizationSystem, options = {}) {
   const keyData = {
@@ -19,6 +27,7 @@ export function getCacheKey(text, language, romanizationSystem, options = {}) {
 
 // Get cached data
 export async function getCached(redis, key) {
+  if (cacheUnavailable(redis)) return null;
       try {
       const cached = await redis.get(key);
       if (cached) {
@@ -26,13 +35,14 @@ export async function getCached(redis, key) {
       }
       return null;
   } catch (error) {
-    console.error('Cache retrieval error:', error);
+    suspendCache(redis, error);
     return null;
   }
 }
 
 // Set cached data
 export async function setCached(redis, key, data, ttl = null) {
+  if (cacheUnavailable(redis)) return;
   try {
     if (ttl) {
       await redis.setex(key, ttl, data);
@@ -41,7 +51,7 @@ export async function setCached(redis, key, data, ttl = null) {
     }
 
   } catch (error) {
-    console.error('Cache storage error:', error);
+    suspendCache(redis, error);
     // Don't throw - caching failure shouldn't break the API
   }
 }
