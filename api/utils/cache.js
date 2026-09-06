@@ -2,8 +2,8 @@ import crypto from 'crypto';
 
 // Cache outages must not add repeated DNS/network work to every lyrics request.
 const retryAfter = new WeakMap();
-const cacheUnavailable = redis => (retryAfter.get(redis) || 0) > Date.now();
-function suspendCache(redis, error) {
+export const cacheUnavailable = redis => (retryAfter.get(redis) || 0) > Date.now();
+export function suspendCache(redis, error) {
   retryAfter.set(redis, Date.now() + 60_000);
   console.warn('Optional cache unavailable; bypassing for 60 seconds:', error.message);
 }
