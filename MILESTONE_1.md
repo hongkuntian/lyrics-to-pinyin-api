@@ -20,4 +20,4 @@ LRC parsing preserves zero, interprets decimal fractions correctly, expands repe
 
 ## Deployment check
 
-Project: `prj_88IMRZ5X5Fd1LAR8NfEC3pKYJIDy`. Primary production URL: https://lyrics-to-pinyin-api.vercel.app. Initial verified release: `dpl_92p1FpWPJsmPmihy5agctdQcJdkB`, ready in 13 seconds. The Vercel connector publishes only API source, package manifests and Vercel configuration; credentials and local dependencies are excluded. Follow-up cache backoff release is recorded below once verified.
+Project: `prj_88IMRZ5X5Fd1LAR8NfEC3pKYJIDy`. Primary production URL: https://lyrics-to-pinyin-api.vercel.app. Initial verified release: `dpl_92p1FpWPJsmPmihy5agctdQcJdkB`, ready in 13 seconds. The Vercel connector publishes only API source, package manifests and Vercel configuration; credentials and local dependencies are excluded. Final cache backoff release: `dpl_F8yV1rqiUocdXeikzrBk35Hhm8Wb` from commit `759d2d4`, ready in 11 seconds. Preview and production both passed matching-song checks after the update.
