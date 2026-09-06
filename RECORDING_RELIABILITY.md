@@ -19,4 +19,8 @@ Romanization is selected from the fetched lyrics instead of the search labels, u
 
 All 52 hermetic tests pass: 23 unit, 23 integration, 6 contract. Fixtures use actual provider metadata with original test lyrics. Coverage includes playlist-style missing album metadata, equivalent versus conflicting duplicates, English labels with Mandarin lyrics, preserved Latin lines, trusted versus mismatched catalog identity, explicit language selection, malformed input and deadlines.
 
-Live local checks resolved Unbreakable Love through LRCLIB with English metadata and through NetEase with catalog-verified Chinese metadata. Both return Mandarin pinyin. Publication and device results are recorded after the final checks.
+Live local checks resolved Unbreakable Love through LRCLIB with English metadata and through NetEase with catalog-verified Chinese metadata. Both return Mandarin pinyin.
+
+Code checkpoint `dc99cd0` passed preview probes and was deployed to production at https://lyrics-to-pinyin-api.vercel.app. Both the older request without album metadata and the enriched catalog request return HTTP 200 with 33 timed lines and Mandarin pinyin. An incorrect 90-second duration remains rejected with 409; 晴天 returns 200 with 53 lines. The production error-log check returned no errors for the checked window.
+
+Lyra's physical-device acceptance test opened My Playlist #3 on T-Phone, selected Unbreakable Love, loaded timed lyrics, sought beyond one minute and resumed playback by tapping a lyric. The test passed, and its screenshot was inspected for pinyin. Lyra's full gate also passed all 23 unit and 7 UI smoke tests. Details and local evidence paths are recorded in the Lyra repository's `docs/RECORDING_RELIABILITY.md`.
