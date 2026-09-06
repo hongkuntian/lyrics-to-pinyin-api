@@ -14,4 +14,6 @@ Response headers:
 - `X-Lyrics-Cache`: `MISS`, `MEMORY`, `REDIS`, or `COALESCED`.
 - `Server-Timing`: cache read, provider search/lyrics, alias resolution, romanization, shared wait and total durations as applicable. Canceled provider spans may finish after the response; logs and headers reflect only completed stages.
 
-`npm test` passes 59 hermetic tests. New coverage checks real reuse, coalescing, losing-request cancellation, slow primary fallback, mismatch rejection, timed preference, explicit sources, hanging cache, detached writes, cache expiry/eviction and parent deadlines.
+`npm test` passes 61 hermetic tests. New coverage checks real reuse, coalescing, losing-request cancellation, slow primary fallback, mismatch rejection, timed preference, explicit sources, hanging cache, detached writes, cache expiry/eviction and parent deadlines.
+
+Both `/api/music-romanize` and `/api/romanize` now use the same replacement-cache configuration and bounded per-command clients. Text-only romanization also treats cache reads/writes as optional and registers background writes with `waitUntil`.

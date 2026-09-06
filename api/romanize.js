@@ -1,19 +1,10 @@
-import { Redis } from "@upstash/redis";
+import {createRedisFromEnv} from './utils/redis-client.js';
+import {withDeadline} from './utils/fetch-json.js';
+import {waitUntil} from '@vercel/functions';
 import { detectLanguage, getDefaultRomanizationSystem } from "./utils/language-detection.js";
 import { getProcessor, getSupportedLanguages as getSupportedProcessorLanguages } from "./processors/index.js";
 import { formatResponse } from "./utils/response-formatter.js";
-import { getCacheKey, getCached, setCached } from "./utils/cache.js";
-
-function createRedisFromEnv() {
-  if (process.env.LYRICS_KV_REST_API_URL && process.env.LYRICS_KV_REST_API_TOKEN) {
-    return new Redis({
-      url: process.env.LYRICS_KV_REST_API_URL,
-      token: process.env.LYRICS_KV_REST_API_TOKEN,
-    });
-  }
-
-  return null;
-}
+import { getCacheKey, getCached, setCached, cacheUnavailable, suspendCache } from "./utils/cache.js";
 
 function getSupportedScripts() {
   return getSupportedProcessorLanguages();
@@ -30,14 +21,12 @@ export function createRomanizeHandler(dependencies = {}) {
     getCachedFn = getCached,
     setCachedFn = setCached,
     getSupportedScriptsFn = getSupportedScripts,
-    logger = console
+    logger = console,
+    cacheTimeoutMs = 300,
+    waitUntilFn = waitUntil
   } = dependencies;
 
   return async function handler(req, res) {
-    if (!process.env.LYRICS_KV_REST_API_URL || !process.env.LYRICS_KV_REST_API_TOKEN) {
-      logger.error("❌ Missing Upstash Redis environment variables");
-    }
-
     res.setHeader("Content-Type", "application/json");
 
     if (req.method !== "POST") {
@@ -63,8 +52,9 @@ export function createRomanizeHandler(dependencies = {}) {
       const system = romanization_system || getDefaultRomanizationSystemFn(detectedScript);
       const cacheKey = getCacheKeyFn(text, detectedScript, system, options);
 
-      if (redis) {
-        const cached = await getCachedFn(redis, cacheKey);
+      if (redis && !cacheUnavailable(redis)) {
+        const cached = await withDeadline(() => getCachedFn(redis, cacheKey), cacheTimeoutMs)
+          .catch(error => { suspendCache(redis, error); return null; });
         if (cached) {
           return res.status(200).json(cached);
         }
@@ -87,8 +77,9 @@ export function createRomanizeHandler(dependencies = {}) {
         }
       });
 
-      if (redis) {
-        await setCachedFn(redis, cacheKey, response);
+      if (redis && !cacheUnavailable(redis)) {
+        waitUntilFn(withDeadline(() => setCachedFn(redis, cacheKey, response, 86400), cacheTimeoutMs)
+          .catch(error => suspendCache(redis, error)));
       }
 
       return res.status(200).json(response);

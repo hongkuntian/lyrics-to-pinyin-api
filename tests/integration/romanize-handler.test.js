@@ -96,3 +96,21 @@ test("computes and stores response on cache miss", async () => {
   assert.equal(res.body.metadata.processor, "TestProcessor");
   assert.equal(setCachedCalled, true);
 });
+
+test('optional cache timeouts do not delay text romanization repeatedly or block writes', async () => {
+  let reads = 0;
+  const background = [];
+  const redis = { get() { reads++; return new Promise(() => {}); } };
+  const handler = createRomanizeHandler({
+    redis, cacheTimeoutMs: 5, waitUntilFn: p => background.push(p),
+    getProcessorFn: () => ({name: 'Fixture', romanize: async text => ({romanized: text,system:'pinyin'})}),
+    logger: {error(){},info(){}}
+  });
+  for (let i=0;i<2;i++) {
+    const res=createMockRes();
+    await handler(createMockReq({body:{text:'你好',language:'zh'}}),res);
+    assert.equal(res.statusCode,200);
+  }
+  assert.equal(reads,1);
+  assert.equal(background.length,0);
+});

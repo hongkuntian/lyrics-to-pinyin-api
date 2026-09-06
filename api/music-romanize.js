@@ -1,4 +1,4 @@
-import {Redis} from '@upstash/redis';
+import {createRedisFromEnv} from './utils/redis-client.js';
 import {detectLanguage,getDefaultRomanizationSystem} from './utils/language-detection.js';
 import {getProcessor} from './processors/index.js';
 import {formatMusicResponse} from './utils/response-formatter.js';
@@ -13,16 +13,9 @@ import {performance} from 'node:perf_hooks';
 import {BoundedCache} from './utils/bounded-cache.js';
 import {hedgedLookup} from './utils/hedged-lookup.js';
 const RESPONSE_VERSION='2.2.0';
-function redisFromEnv() {
-  const url=process.env.LYRA_CACHE_KV_REST_API_URL || process.env.LYRICS_KV_REST_API_URL;
-  const token=process.env.LYRA_CACHE_KV_REST_API_TOKEN || process.env.LYRICS_KV_REST_API_TOKEN;
-  if(!url || !token) return null;
-  const client=()=>new Redis({url,token,retry:false,signal:AbortSignal.timeout(300)});
-  return {get:key=>client().get(key),setex:(key,ttl,value)=>client().setex(key,ttl,value)};
-}
 export function createMusicRomanizeHandler(dependencies={}) {
   const {
-    redis=redisFromEnv(),detectLanguageFn=detectLanguage,getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,
+    redis=createRedisFromEnv(),detectLanguageFn=detectLanguage,getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,
     getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,getCacheKeyFn=getCacheKey,
     getCachedFn=getCached,setCachedFn=setCached,getMusicAPIFn=getMusicAPI,getAvailableAPIsFn=getAvailableAPIs,
     getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,hedgeDelayMs=350,cacheTimeoutMs=300,
