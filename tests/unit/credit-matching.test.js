@@ -28,3 +28,12 @@ test('exact album remains stronger than a release-suffix fallback when lyrics co
  const alternate={...exact,id:2,album:'Song',lyricsData:{lines:[{text:'different lyric',timestamp:0}]}};
  assert.equal(findRecording([alternate,exact],request).id,1);
 });
+test('soundtrack descriptions are not recording versions',()=>{
+ const base={title:'小幸运',artist:'田馥甄',duration:265.5};
+ assert.ok(recordingScore({...base,title:'小幸運 (電影《我的少女時代》主題曲)'},base)>=0);
+ assert.ok(recordingScore({...base,title:'小幸运 (抖音热歌)'},base)>=0);
+ const english={title:'A Little Happiness',artist:'Hebe Tien',duration:265.5};
+ assert.ok(recordingScore({...english,title:'A Little Happiness (From "Our Times")'},english)>=0);
+ for(const suffix of ['Live','Remastered','Instrumental','Acapella','Cover','主題曲 Live','From Our Times - Remastered']) assert.equal(recordingScore({...english,title:`A Little Happiness (${suffix})`},english),-1);
+ assert.equal(recordingScore({...base,title:'小幸運 (電影《我的少女時代》主題曲)',duration:300},base),-1);
+});

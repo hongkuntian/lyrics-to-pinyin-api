@@ -6,6 +6,7 @@ export class RecordingMismatchError extends Error {
   constructor() { super('No unambiguous matching recording found'); this.code='recording_mismatch'; }
 }
 const unwrappedAlbum=value=>value.replace(/^Optional\("(.*)"\)$/, '$1');
+export const stripTitleDescription=value=>value.normalize('NFKC').replace(/\s*\((?:from\s+[^()]+|(?:love\s+)?theme\s+(?:song\s+)?from\s+[^()]+|[^()]*(?:主题曲|主題曲|插曲|片尾曲|片頭曲|片头曲|主题歌|主題歌)[^()]*|抖音热歌)\)/gi,description=>/\b(live|remaster(?:ed)?|instrumental|karaoke|acapella|cover|remix|demo)\b|现场|現場|演唱会|演唱會|重制|重製|伴奏|翻唱/i.test(description) ? description : '').trim();
 export function normalizedAlbum(value) {
   return normalizeRecordingText(unwrappedAlbum(value).replace(/\s+-\s+(single|ep)$/i,''));
 }
@@ -13,7 +14,7 @@ export function normalizedAlbum(value) {
 // recording, unnamed guest, remix or live suffix is never silently discarded.
 export function recordingNames({title='',artist=''}) {
   const guests=[];
-  const base=title.normalize('NFKC').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
+  const base=stripTitleDescription(title).replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
   const credits=[artist,...guests].flatMap(value=>value.normalize('NFKC').split(/\s*(?:&|,|\/|、|\bfeat\.?\s+|\bft\.?\s+|\bfeaturing\s+|\bwith\s+)\s*/i))
     .map(normalizeRecordingText).filter(Boolean).sort();
   return {title:normalizeRecordingText(base),credits};
@@ -23,7 +24,7 @@ export function sameRecordingNames(a,b) {
   return left.title===right.title && JSON.stringify(left.credits)===JSON.stringify(right.credits);
 }
 export function searchTitle(value) {
-  return value.normalize('NFKC').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+[^()]+\)/gi,'').trim();
+  return stripTitleDescription(value).replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+[^()]+\)/gi,'').trim();
 }
 function isLive(value) {
   return /\blive\b|演唱会|现场/i.test(chinese.sify(value));
