@@ -34,3 +34,25 @@ test('NetEase discovers featured songs by base title and still validates every g
  assert.equal(result.id,1);
  await assert.rejects(()=>new NeteaseAPI().searchSong('鄭可為','小幸運 (feat. Other)',{duration:320.227,fetchFn}),/recording/i);
 });
+
+
+test('NetEase verifies performer translations against the same artist IDs and caches them',async()=>{
+ const {NeteaseAPI}=await import('../../api/music-apis/netease.js');
+ const api=new NeteaseAPI();let details=0;
+ const fetchFn=async url=>({ok:true,json:async()=>{
+  if(url.includes('/artist/detail')) {details++;assert.equal(new URL(url).searchParams.get('id'),'10');return {code:200,data:{artist:{id:10,name:'郑可为',transNames:['Tay Kewei'],alias:[]}}};}
+  return {code:200,result:{songs:[{id:1,name:'小幸运',artists:[{id:10,name:'郑可为'},{id:20,name:'沈志豪'}],album:{name:'七年之氧'},duration:320226}]}};
+ }});
+ for(let i=0;i<2;i++) {
+  const song=await api.searchSong('Tay Kewei','小幸运 (feat. 沈志豪)',{duration:320.227,fetchFn});
+  assert.equal(song.artist,'Tay Kewei & 沈志豪');assert.equal(song.id,1);
+ }
+ assert.equal(details,1);
+});
+test('NetEase artist aliases cannot hide wrong IDs, singers, guests or durations',async()=>{
+ const {NeteaseAPI}=await import('../../api/music-apis/netease.js');
+ for(const change of [{id:999,transNames:['Tay Kewei']},{id:10,transNames:['Other Singer']},{id:10,transNames:['Tay Kewei'],duration:330000},{id:10,transNames:['Tay Kewei'],guest:'Other Guest'}]) {
+  const fetchFn=async url=>({ok:true,json:async()=>url.includes('/artist/detail') ? {code:200,data:{artist:{name:'郑可为',...change}}} : {code:200,result:{songs:[{id:1,name:'小幸运',artists:[{id:10,name:'郑可为'},{id:20,name:change.guest || '沈志豪'}],album:{name:'七年之氧'},duration:change.duration || 320226}]}}});
+  await assert.rejects(()=>new NeteaseAPI().searchSong('Tay Kewei','小幸运 (feat. 沈志豪)',{duration:320.227,fetchFn}),/recording/i);
+ }
+});

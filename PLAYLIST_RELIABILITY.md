@@ -13,13 +13,14 @@ The library audit reproduces failures using the Mac Music export's artist, title
 - Catalog aliases can have an English artist and Chinese title. Validate each component against localizations of the same catalog ID. Add Simplified Chinese lookup alongside Traditional Chinese.
 - Metadata-only requests may discover a catalog ID only when full names, duration and album match a unique authoritative result. Return the new `metadata_alias` proof bound to the original artist, title, duration and album. A supplied catalog ID never falls back to a different discovered ID.
 - A failed LRCLIB discovery query no longer discards successful sibling queries. Transient upstream HTTP 502/503/504 responses receive one cancellation-aware, 150 ms delayed retry inside the existing deadline. No retry loop or rate-limit bypass.
+- NetEase can verify translated performer names from `artist/detail` using the artist IDs in a plausible search result. Only exact aliases are accepted; all guests, duration and version guards remain. Artist metadata is bounded and cached, and unrelated titles/durations do not trigger artist lookups.
 - NetEase receives Simplified Chinese query text when Han characters are available. English titles are never guessed into Chinese.
 
 API version 2.3.0 invalidates cached responses from the older matching policy. `recording_match.method` now permits `metadata_alias`; `recording_match.album` binds that proof to metadata-only requests. Updated Lyra validates it before accepting differently localized provider names.
 
 ## Verification
 
-80 hermetic checks pass: 39 unit, 35 integration and 6 contract tests. Fixtures cover wrong singers, missing/extra guests, different durations, live/instrumental versions, conflicting lyric duplicates, ambiguous catalog discovery, stale catalog IDs, partial outages and cancellation.
+82 hermetic checks pass: 39 unit, 37 integration and 6 contract tests. Fixtures cover wrong singers, missing/extra guests, different durations, live/instrumental versions, conflicting lyric duplicates, ambiguous catalog discovery, stale catalog IDs, partial outages and cancellation.
 
 The reported duet resolves to LRCLIB 5657609, 222 seconds, with 36 timed lines. Additional live catalog checks outside the library pass for Left and Right (Charlie Puth & Jung Kook), Perfect Duet (with Beyoncé), and 珊瑚海 (feat. 梁心頤). Test fixtures use original lyric snippets; provider lyric text is not committed.
 
