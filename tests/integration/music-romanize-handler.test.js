@@ -138,3 +138,18 @@ test("uses fallback APIs and returns formatted response", async () => {
   assert.equal(res.body.lines.length, 2);
   assert.equal(res.body.lines[0].romanized, "你好-r");
 });
+
+
+test("accepts complete ensemble credits while retaining a bounded artist field", async () => {
+  const artist = Array.from({length: 60}, (_, i) => `Performer ${i}`).join(', ');
+  let received;
+  const api = { name: 'Fixture', async searchSong(value) { received = value; return null; } };
+  const handler = createMusicRomanizeHandler({redis: null, resolveCatalogAliasesFn: async () => [], getAvailableAPIsFn: () => [api], logger: {error() {}}});
+  const result = createMockRes();
+  await handler(createMockReq({body: {artist, title: 'Ensemble song', language: 'en'}}), result);
+  assert.equal(result.statusCode, 404);
+  assert.equal(received, artist);
+  const oversized = createMockRes();
+  await handler(createMockReq({body: {artist: 'x'.repeat(1025), title: 'Song'}}), oversized);
+  assert.equal(oversized.statusCode, 400);
+});
