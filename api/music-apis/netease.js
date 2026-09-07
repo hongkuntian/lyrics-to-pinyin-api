@@ -2,10 +2,11 @@ import {BaseMusicAPI} from './base.js';
 import {fetchJSON} from '../utils/fetch-json.js';
 import {parseLRC} from '../utils/lrc.js';
 import {findRecording} from '../utils/recording-match.js';
+import chinese from 'chinese-conv';
 export class NeteaseAPI extends BaseMusicAPI {
   constructor() { super('NeteaseAPI',['zh','yue','en']); this.baseURL='https://netease-cloud-music-api-gules-mu.vercel.app'; }
   async searchSong(artist,title,context={}) {
-    const data=await fetchJSON(`${this.baseURL}/search?limit=30&keywords=${encodeURIComponent(`${artist} ${title}`)}`,context);
+    const data=await fetchJSON(`${this.baseURL}/search?limit=30&keywords=${encodeURIComponent(chinese.sify(`${artist} ${title}`))}`,context);
     if(data.code!==200) throw new Error('NetEase search unavailable');
     const songs=(data.result?.songs || []).map(song=>({id:song.id,title:song.name,artist:song.artists?.map(x=>x.name).join(' & ') || '',album:song.album?.name,duration:song.duration ? song.duration/1000:null,source:'netease'}));
     return findRecording(songs,{artist,title,...context});

@@ -47,3 +47,9 @@ test('explicit pronunciation language remains authoritative',async()=> {
   assert.equal(res.body.song.romanization_system,'none');
   assert.equal(res.body.lines[0].romanized,'一起唱');
 });
+test('legacy metadata-only requests receive album-bound evidence after verified discovery',async()=>{
+ const api={name:'Fixture',searchSong:async(a,t)=>t===localized.title ? {...localized,id:1}:null,getLyrics:async()=>({lines:[{text:'一起唱',timestamp:0}]})};
+ const res=await run(api,{artist:request.artist,title:request.title,duration:request.duration,album:'The Chaos After You'});
+ assert.equal(res.statusCode,200);
+ assert.deepEqual(res.body.metadata.recording_match,{method:'metadata_alias',catalog_id:localized.catalog_id,artist:request.artist,title:request.title,duration:request.duration,album:'The Chaos After You'});
+});

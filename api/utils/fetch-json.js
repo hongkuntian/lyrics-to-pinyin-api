@@ -1,6 +1,12 @@
 import fetch from 'node-fetch';
+import {setTimeout as delay} from 'node:timers/promises';
 export async function fetchJSON(url, {signal, fetchFn=fetch}={}) {
-  const response=await fetchFn(url,{signal});
+  let response=await fetchFn(url,{signal});
+  if(!response.ok && [502,503,504].includes(response.status)) {
+    // One transient retry shares the caller's deadline and cancellation budget.
+    await delay(150,undefined,{signal});
+    response=await fetchFn(url,{signal});
+  }
   if (!response.ok) throw new Error(`Lyrics provider returned HTTP ${response.status}`);
   return response.json();
 }

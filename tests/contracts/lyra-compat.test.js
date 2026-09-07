@@ -16,7 +16,7 @@ function assertLyraCompatibility(payload) {
   assert.equal(typeof payload.quality.synced, "boolean");
   assert.equal(typeof payload.metadata.timestamp, "string");
   assert.equal(typeof payload.metadata.version, "string");
-  assert.equal(payload.metadata.version, "2.2.0");
+  assert.equal(payload.metadata.version, "2.3.0");
   assert.ok(payload.song.album === null || typeof payload.song.album === "string");
   assert.ok(payload.song.duration === null || typeof payload.song.duration === "number");
 }
@@ -44,7 +44,7 @@ test("music endpoint response stays compatible with Lyra decode model", async ()
     }
   };
 
-  const handler = createMusicRomanizeHandler({
+  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
     getAvailableAPIsFn: () => [api],
     getProcessorFn: () => processor,
     logger: { error() {}, log() {} }

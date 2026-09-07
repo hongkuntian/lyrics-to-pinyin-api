@@ -13,7 +13,7 @@ function createProcessor() {
 }
 
 test("returns 405 for non-POST requests", async () => {
-  const handler = createMusicRomanizeHandler({ logger: { error() {}, log() {} } });
+  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[], logger: { error() {}, log() {} } });
   const req = createMockReq({ method: "GET", body: {} });
   const res = createMockRes();
 
@@ -24,7 +24,7 @@ test("returns 405 for non-POST requests", async () => {
 });
 
 test("returns 400 when artist or title is missing", async () => {
-  const handler = createMusicRomanizeHandler({ logger: { error() {}, log() {} } });
+  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[], logger: { error() {}, log() {} } });
   const req = createMockReq({ body: { artist: "Jay Chou" } });
   const res = createMockRes();
 
@@ -35,7 +35,7 @@ test("returns 400 when artist or title is missing", async () => {
 });
 
 test("returns 400 when no API is available for script", async () => {
-  const handler = createMusicRomanizeHandler({
+  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
     getAvailableAPIsFn: () => [],
     getSupportedMusicAPIsFn: () => [{ script: "zh", platforms: ["netease"] }],
     logger: { error() {}, log() {} }
@@ -53,7 +53,7 @@ test("returns 400 when no API is available for script", async () => {
 test("returns 404 when song is not found across fallbacks", async () => {
   const apiA = { name: "API-A", async searchSong() { return null; } };
   const apiB = { name: "API-B", async searchSong() { return null; } };
-  const handler = createMusicRomanizeHandler({
+  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
     getAvailableAPIsFn: () => [apiA, apiB],
     logger: { error() {}, log() {} }
   });
@@ -77,7 +77,7 @@ test("returns 404 when lyrics are missing for found song", async () => {
       return null;
     }
   };
-  const handler = createMusicRomanizeHandler({
+  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
     getAvailableAPIsFn: () => [api],
     getProcessorFn: () => createProcessor(),
     logger: { error() {}, log() {} }
@@ -92,8 +92,8 @@ test("returns 404 when lyrics are missing for found song", async () => {
 });
 
 test("returns cached payload on cache hit", async () => {
-  const cached = { song: { id: "cached" }, lines: [], metadata: { version: "2.2.0" } };
-  const handler = createMusicRomanizeHandler({
+  const cached = { song: { id: "cached" }, lines: [], metadata: { version: "2.3.0" } };
+  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
     redis: {},
     getCachedFn: async () => cached,
     logger: { error() {}, log() {} }
@@ -119,7 +119,7 @@ test("uses fallback APIs and returns formatted response", async () => {
     }
   };
 
-  const handler = createMusicRomanizeHandler({
+  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
     getAvailableAPIsFn: () => [primaryAPI, backupAPI],
     getProcessorFn: () => createProcessor(),
     logger: { error() {}, log() {} }

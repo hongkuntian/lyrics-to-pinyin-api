@@ -12,7 +12,7 @@ import {randomUUID} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
 import {BoundedCache} from './utils/bounded-cache.js';
 import {hedgedLookup} from './utils/hedged-lookup.js';
-const RESPONSE_VERSION='2.2.0';
+const RESPONSE_VERSION='2.3.0';
 export function createMusicRomanizeHandler(dependencies={}) {
   const {
     redis=createRedisFromEnv(),detectLanguageFn=detectLanguage,getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,
@@ -98,10 +98,10 @@ export function createMusicRomanizeHandler(dependencies={}) {
         const aliasKey=JSON.stringify(request),knownAliases=aliasCache.get(aliasKey);
         let result=knownAliases?.length ? await tryRecording(knownAliases[0]) : null;
         if(!result) result=await tryRecording(request);
-        if(!result && catalog_id && deadline>Date.now()) {
+        if(!result && (catalog_id || (album && duration)) && deadline>Date.now()) {
           const aliases=knownAliases || await measure('catalog_alias',()=>withDeadline(signal=>resolveCatalogAliasesFn(request,{signal}),Math.min(2500,deadline-Date.now()))).catch(()=>[]);
           if(aliases.length) aliasCache.set(aliasKey,aliases);
-          for(const alias of aliases.slice(0,2)) { result=await tryRecording(alias);if(result) break; }
+          for(const alias of aliases.slice(0,3)) { result=await tryRecording(alias);if(result) break; }
         }
         if(result) {
           const {song,lyrics,api,target}=result;
@@ -120,7 +120,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
           if(!response) return {status:400,body:{error:'Script is not supported for romanization'}};
           response.song.album=song.album ?? null;response.song.duration=song.duration ?? null;
           response.metadata.version=RESPONSE_VERSION;
-          if(target!==request) response.metadata.recording_match={method:'catalog_alias',catalog_id,artist,title,duration};
+          if(target!==request) response.metadata.recording_match={method:catalog_id ? 'catalog_alias':'metadata_alias',catalog_id:catalog_id || target.catalog_id,artist,title,duration,...(!catalog_id ? {album}:{})};
           diagnose(api.name,target===request ? 'matched':'catalog_alias');
           responseCache.set(key,response);
           if(redis && !cacheUnavailable(redis)) {

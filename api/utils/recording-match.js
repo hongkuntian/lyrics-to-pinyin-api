@@ -5,8 +5,25 @@ export function normalizeRecordingText(value = '') {
 export class RecordingMismatchError extends Error {
   constructor() { super('No unambiguous matching recording found'); this.code='recording_mismatch'; }
 }
-function normalizedAlbum(value) {
-  return normalizeRecordingText(value.replace(/^Optional\("(.*)"\)$/, '$1'));
+const unwrappedAlbum=value=>value.replace(/^Optional\("(.*)"\)$/, '$1');
+export function normalizedAlbum(value) {
+  return normalizeRecordingText(unwrappedAlbum(value).replace(/\s+-\s+(single|ep)$/i,''));
+}
+// Keep every contributor. Only explicit credit syntax is interchangeable; a solo
+// recording, unnamed guest, remix or live suffix is never silently discarded.
+export function recordingNames({title='',artist=''}) {
+  const guests=[];
+  const base=title.normalize('NFKC').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
+  const credits=[artist,...guests].flatMap(value=>value.normalize('NFKC').split(/\s*(?:&|,|\/|、|\bfeat\.?\s+|\bft\.?\s+|\bfeaturing\s+|\bwith\s+)\s*/i))
+    .map(normalizeRecordingText).filter(Boolean).sort();
+  return {title:normalizeRecordingText(base),credits};
+}
+export function sameRecordingNames(a,b) {
+  const left=recordingNames(a),right=recordingNames(b);
+  return left.title===right.title && JSON.stringify(left.credits)===JSON.stringify(right.credits);
+}
+export function searchTitle(value) {
+  return value.normalize('NFKC').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+[^()]+\)/gi,'').trim();
 }
 function isLive(value) {
   return /\blive\b|演唱会|现场/i.test(chinese.sify(value));
@@ -27,8 +44,7 @@ function equivalentLyrics(a,b) {
   return left!==null && left===canonical(b);
 }
 export function recordingScore(song, request) {
-  if (normalizeRecordingText(song.title)!==normalizeRecordingText(request.title) ||
-      normalizeRecordingText(song.artist)!==normalizeRecordingText(request.artist)) return -1;
+  if (!sameRecordingNames(song,request)) return -1;
   if (request.album && song.album && JSON.stringify(version(request.album)) !== JSON.stringify(version(song.album))) return -1;
   let score = 1;
   if (request.duration != null && song.duration != null) {
@@ -36,7 +52,11 @@ export function recordingScore(song, request) {
     if (difference > 3) return -1;
     score += 2 - difference/10;
   }
-  if (request.album && song.album && normalizedAlbum(request.album)===normalizedAlbum(song.album)) score += 3;
+  if (request.album && song.album && normalizedAlbum(request.album)===normalizedAlbum(song.album)) {
+    // A release suffix is useful fallback evidence, but must not erase the
+    // distinction when an exact album match also exists (e.g. Mojito).
+    score += normalizeRecordingText(unwrappedAlbum(request.album))===normalizeRecordingText(unwrappedAlbum(song.album)) ? 3:2.5;
+  }
   return score;
 }
 export function findRecording(songs, request) {

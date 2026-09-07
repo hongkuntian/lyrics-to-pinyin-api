@@ -1,14 +1,29 @@
 import {BaseMusicAPI} from './base.js';
 import {fetchJSON} from '../utils/fetch-json.js';
 import {parseLRC} from '../utils/lrc.js';
-import {findRecording} from '../utils/recording-match.js';
+import {findRecording,searchTitle} from '../utils/recording-match.js';
+import chinese from 'chinese-conv';
 export class LRCAPI extends BaseMusicAPI {
   constructor() { super('LRCAPI',['zh','en','ja','ko']); this.baseURL='https://lrclib.net/api'; }
   async searchSong(artist,title,context={}) {
-    const params=new URLSearchParams({artist_name:artist,track_name:title});
-    const data=await fetchJSON(`${this.baseURL}/search?${params}`,context);
-    const songs=data.map(song=>({id:song.id,title:song.trackName || song.name,artist:song.artistName,album:song.albumName,duration:song.duration,source:'lrclib',lyricsData:this.lyricsFromRecord(song)}));
-    return findRecording(songs,{artist,title,...context});
+    const request={artist,title,...context}, records=new Map();
+    let failure;
+    const search=async params=>{
+      const data=await fetchJSON(`${this.baseURL}/search?${new URLSearchParams(params)}`,context);
+      for(const song of data) records.set(song.id,{id:song.id,title:song.trackName || song.name,artist:song.artistName,album:song.albumName,duration:song.duration,source:'lrclib',lyricsData:this.lyricsFromRecord(song)});
+    };
+    try { await search({artist_name:artist,track_name:title}); } catch(error) { failure=error; }
+    try { const match=findRecording([...records.values()],request);if(match) return match; }
+    catch(error) { if(error.code!=='recording_mismatch') throw error; }
+    // Discovery may be broad; acceptance still requires the full title, complete
+    // artist credit and recording duration. LRCLIB search is script-sensitive.
+    const base=searchTitle(title), variants=[...new Set([chinese.sify(base),chinese.tify(base)])];
+    const results=await Promise.allSettled(variants.map(track_name=>search({track_name})));
+    for(const result of results) if(result.status==='rejected') failure=result.reason;
+    const match=findRecording([...records.values()],request);
+    if(match) return match;
+    if(failure) throw failure;
+    return null;
   }
   lyricsFromRecord(record) {
     const raw=record.syncedLyrics || record.plainLyrics;
