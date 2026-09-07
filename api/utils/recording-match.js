@@ -14,10 +14,10 @@ export function normalizedAlbum(value) {
 // recording, unnamed guest, remix or live suffix is never silently discarded.
 export function recordingNames({title='',artist=''}) {
   const guests=[];
-  const base=stripTitleDescription(title).replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
+  const base=stripTitleDescription(title).replace(/\(\s*live\s*版?\s*\)/gi,'(Live)').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
   const credits=[artist,...guests].flatMap(value=>value.normalize('NFKC').split(/\s*(?:&|,|\/|、|\bfeat\.?\s+|\bft\.?\s+|\bfeaturing\s+|\bwith\s+)\s*/i))
     .map(normalizeRecordingText).filter(Boolean).sort();
-  return {title:normalizeRecordingText(base),credits};
+  return {title:normalizeRecordingText(base),credits:[...new Set(credits)]};
 }
 export function sameRecordingNames(a,b) {
   const left=recordingNames(a),right=recordingNames(b);
@@ -46,7 +46,7 @@ function equivalentLyrics(a,b) {
 }
 export function recordingScore(song, request) {
   if (!sameRecordingNames(song,request)) return -1;
-  if (request.album && song.album && JSON.stringify(version(request.album)) !== JSON.stringify(version(song.album))) return -1;
+  if (request.album && song.album && JSON.stringify(version(`${request.title} ${request.album}`)) !== JSON.stringify(version(`${song.title} ${song.album}`))) return -1;
   let score = 1;
   if (request.duration != null && song.duration != null) {
     const difference = Math.abs(request.duration-song.duration);

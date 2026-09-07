@@ -37,3 +37,16 @@ test('soundtrack descriptions are not recording versions',()=>{
  for(const suffix of ['Live','Remastered','Instrumental','Acapella','Cover','主題曲 Live','From Our Times - Remastered']) assert.equal(recordingScore({...english,title:`A Little Happiness (${suffix})`},english),-1);
  assert.equal(recordingScore({...base,title:'小幸運 (電影《我的少女時代》主題曲)',duration:300},base),-1);
 });
+
+
+test('repeated featured credits retain each distinct contributor once',()=>{
+ assert.ok(recordingScore({title:'Song (feat. Guest)',artist:'Singer & Guest',duration:200},{title:'Song',artist:'Singer & Guest',duration:200})>=0);
+ assert.equal(recordingScore({title:'Song (feat. Other)',artist:'Singer & Guest',duration:200},{title:'Song',artist:'Singer & Guest',duration:200}),-1);
+});
+test('live markers can appear in the song title as well as the album',()=>{
+ const request={title:'我要你 (Live)',artist:'毛不易 & 单依纯',album:'剧好听的歌 第8期 (Live) - EP',duration:278.394};
+ const song={...request,title:'我要你 (Live版)',album:'剧好听的歌 第8期',duration:278.393};
+ assert.ok(recordingScore(song,request)>=0);
+ assert.equal(recordingScore({...song,title:'我要你'},request),-1);
+ assert.equal(recordingScore({...song,duration:300},request),-1);
+});

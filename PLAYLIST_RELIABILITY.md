@@ -6,6 +6,7 @@ The library audit reproduces failures using the Mac Music export's artist, title
 
 - LRCLIB searches are sensitive to Simplified versus Traditional Chinese. Retry discovery by base title in both scripts; still validate the complete recording before returning lyrics.
 - Full ensemble credits may contain up to 1024 characters. The previous 300-character bound rejected a real multi-artist library recording before lookup; contributor names are never truncated.
+- `Live` and `Live版` are equivalent title markers. Compare version evidence across title and album together; a provider can label the title as live while leaving the album suffix off. Live versus studio remains distinct. Repeated featured credits count each contributor once.
 - Duet credit separators differ across catalogs (`&`, comma, slash, `feat.`). Canonicalize the complete contributor list and explicit title-feature credits. Never remove a guest or accept only the lead artist.
 - Soundtrack and promotional title descriptions can be removed for discovery and identity comparison; descriptions containing recording-version labels are retained.
 - Album `- Single` / `- EP` release suffixes provide fallback evidence. Exact album matches remain stronger; live/demo/instrumental distinctions and conflicting equally ranked lyrics remain protected.
@@ -18,7 +19,7 @@ API version 2.3.0 invalidates cached responses from the older matching policy. `
 
 ## Verification
 
-77 hermetic checks pass: 37 unit, 34 integration and 6 contract tests. Fixtures cover wrong singers, missing/extra guests, different durations, live/instrumental versions, conflicting lyric duplicates, ambiguous catalog discovery, stale catalog IDs, partial outages and cancellation.
+80 hermetic checks pass: 39 unit, 35 integration and 6 contract tests. Fixtures cover wrong singers, missing/extra guests, different durations, live/instrumental versions, conflicting lyric duplicates, ambiguous catalog discovery, stale catalog IDs, partial outages and cancellation.
 
 The reported duet resolves to LRCLIB 5657609, 222 seconds, with 36 timed lines. Additional live catalog checks outside the library pass for Left and Right (Charlie Puth & Jung Kook), Perfect Duet (with Beyoncé), and 珊瑚海 (feat. 梁心頤). Test fixtures use original lyric snippets; provider lyric text is not committed.
 
