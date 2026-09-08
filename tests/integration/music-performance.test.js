@@ -55,3 +55,19 @@ test('cache writes do not delay response and a hanging cache is suspended',async
  assert.equal((await invoke(second)).statusCode,200);assert.equal(pending.length,1);
  await Promise.all(pending);
 });
+test('slow verified timing gets a bounded chance after fast plain lyrics',async()=>{
+ const timed=api({getLyrics:async()=>{await new Promise(r=>setTimeout(r,600));return lyrics;}});
+ const plain=api({name:'Plain',getLyrics:async()=>({lines:[{text:'你好',timestamp:null}]})});
+ const res=await invoke(make([timed,plain],{hedgeDelayMs:1}));
+ assert.equal(res.body.metadata.source,'Primary');
+ assert.equal(res.body.lines[0].timestamp,0);
+});
+test('plain lyrics survive the timing grace deadline and cancel remaining work',async()=>{
+ let aborted=false;
+ const stalled=api({getLyrics:(_, {signal})=>new Promise(()=>signal.addEventListener('abort',()=>{aborted=true;}))});
+ const plain=api({name:'Plain',getLyrics:async()=>({lines:[{text:'你好',timestamp:null}]})});
+ const res=await invoke(make([stalled,plain],{hedgeDelayMs:1,untimedGraceMs:5,providerTimeoutMs:2000}));
+ assert.equal(res.body.metadata.source,'Plain');
+ assert.equal(res.body.quality.synced,false);
+ assert.equal(aborted,true);
+});

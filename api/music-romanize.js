@@ -18,7 +18,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
     redis=createRedisFromEnv(),detectLanguageFn=detectLanguage,getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,
     getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,getCacheKeyFn=getCacheKey,
     getCachedFn=getCached,setCachedFn=setCached,getMusicAPIFn=getMusicAPI,getAvailableAPIsFn=getAvailableAPIs,
-    getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,hedgeDelayMs=350,cacheTimeoutMs=300,
+    getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,hedgeDelayMs=350,untimedGraceMs=2500,cacheTimeoutMs=300,
     resolveCatalogAliasesFn=resolveCatalogAliases,waitUntilFn=waitUntil,logger=console,
     responseCache=new BoundedCache(),aliasCache=new BoundedCache({ttlMs:86400000})
   }=dependencies;
@@ -53,7 +53,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
       if(!apis.length) return send({status:400,body:{error:`No music API available for script '${searchScript}' and platform '${music_platform}'`,supported_combinations:getSupportedMusicAPIsFn()}});
       // Sort option keys without relaxing recording or request-bound alias identity.
       const stableOptions=Object.fromEntries(Object.entries(options).sort(([a],[b])=>a.localeCompare(b)));
-      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION}),searchScript,searchSystem,stableOptions);
+      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,selectionPolicy:'timed-grace-v2'}),searchScript,searchSystem,stableOptions);
       const local=responseCache.get(key);
       if(local) { cacheStatus='MEMORY';return send({status:200,body:local}); }
       if(inflight.has(key)) { cacheStatus='COALESCED';return send(await measure('shared',()=>inflight.get(key))); }
@@ -92,7 +92,10 @@ export function createMusicRomanizeHandler(dependencies={}) {
           };
           // An explicit source retains its first opportunity before fallback.
           if(preferred) { for(const api of apis) { const result=await lookup(api);if(result) return result; }return null; }
-          return hedgedLookup(apis,lookup,{delayMs:hedgeDelayMs});
+          // Fast plain lyrics remain available, but do not cancel a verified
+          // timed candidate after just 350 ms. The extra wait applies only
+          // when the current fallback has no timestamps, and remains bounded.
+          return hedgedLookup(apis,lookup,{delayMs:hedgeDelayMs,untimedGraceMs:Math.min(untimedGraceMs,Math.max(0,deadline-Date.now()))});
         };
         // Reuse previously verified localizations first on repeated catalog requests.
         const aliasKey=JSON.stringify(request),knownAliases=aliasCache.get(aliasKey);

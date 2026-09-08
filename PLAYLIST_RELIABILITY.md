@@ -25,3 +25,25 @@ API version 2.3.0 invalidates cached responses from the older matching policy. `
 The reported duet resolves to LRCLIB 5657609, 222 seconds, with 36 timed lines. Additional live catalog checks outside the library pass for Left and Right (Charlie Puth & Jung Kook), Perfect Duet (with Beyoncé), and 珊瑚海 (feat. 梁心頤). Test fixtures use original lyric snippets; provider lyric text is not committed.
 
 Use `node scripts/audit-library.mjs input.json output.ndjson [endpoint]` for repeatable, bounded live audits. Inputs are playlist arrays with `tracks` containing request metadata. Results contain recording metadata, HTTP status, provider and line counts, not lyric bodies. Live availability varies; retain failures rather than reporting retries across different runs as one clean pass.
+
+## Timed-lyrics grace window — September 7, 2026
+
+A 30-recording native audit found that the verified Candy Lo/Wang Leehom duet
+好心分手 returned plain lyrics in automatic mode while an explicit NetEase
+probe returned 54 timed lines. The cold verified NetEase lookup took about
+2.34 seconds of server work (1.22 seconds search, 1.10 seconds lyrics), exceeding
+the previous 350 ms untimed grace window.
+
+Automatic selection now gives a fast plain result up to 2.5 seconds for a
+verified timed alternative. Timed results still return immediately; if the
+other lookup fails, plain lyrics return immediately, and if it stalls, the
+grace timer returns the plain result and aborts remaining work. Existing
+recording checks, provider timeouts, concurrency and overall deadlines remain.
+The selection-policy cache key changes to avoid reusing responses chosen by
+the earlier policy; response version and schema stay 2.3.0-compatible.
+
+Regression checks cover a verified timed candidate arriving after the old
+350 ms window and the bounded plain fallback with cancellation. Existing
+clients with a locally cached plain response can use Reload Lyrics to request
+the improved selection. An explicit-provider probe still returned untimed
+lyrics for Mojito; no timing has been fabricated for that recording.
