@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "recordings": [
+    {
+      "id": "apple-1085956292-official-9ZJOV1WT-6A",
+      "reviewedDate": "2026-09-08",
+      "signature": {
+        "catalog_id": "1085956292",
+        "title": "我等到花兒也謝了",
+        "artist": "Evon Low",
+        "album": "冬眠",
+        "duration": 327.24
+      },
+      "catalogAnchor": {
+        "storefront": "us",
+        "signature": {
+          "catalog_id": "1085956292",
+          "title": "我等到花兒也謝了",
+          "artist": "Evon Low",
+          "album": "冬眠",
+          "duration": 327.24
+        }
+      },
+      "source": {
+        "videoID": "9ZJOV1WT-6A",
+        "channelID": "UC-fK3h3DWGRS61U9wu4K8CA",
+        "title": "刘珺儿Evon Low I 我等到花儿也谢了 I OFFICIAL MUSIC VIDEO",
+        "duration": 328,
+        "paragraphSHA256": "a0494c133e84e3de98048d1c9d03bab7cb436bee612ca0b1bb3a5f4f137c7f80"
+      },
+      "provenance": [
+        {"url": "https://music.apple.com/us/song/1085956292", "note": "Exact catalog recording, artist, album and duration"},
+        {"url": "https://www.youtube.com/watch?v=9ZJOV1WT-6A", "note": "NSR Chinese - New Southern Records Malaysia official video description; reviewed vocal paragraph, without timing or verified repetition structure"}
+      ]
+    }
+  ]
+}
