@@ -64,7 +64,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
       const compute=async()=> {
         if(redis && !cacheUnavailable(redis)) {
           const cached=await measure('cache_read',()=>withDeadline(()=>getCachedFn(redis,key),cacheTimeoutMs)).catch(error=>{suspendCache(redis,error);return null;});
-          if(cached?.metadata?.version===RESPONSE_VERSION && cached.metadata.selection_revision===SELECTION_REVISION) {
+          if(cached?.metadata?.version===RESPONSE_VERSION && cached.metadata.selection_revision===SELECTION_REVISION && cached.metadata.timing_correction?.status!=='untimed_fallback') {
             responseCache.set(key,cached);cacheStatus='REDIS';return {status:200,body:cached};
           }
         }
@@ -114,6 +114,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
         }
         if(result) {
           const {song,lyrics,api,target}=result;
+          const cacheable=result.timingCorrection?.status!=='untimed_fallback';
           const response=await measure('romanize',async()=> {
             const script=lyrics.instrumental ? searchScript : language || await detectLanguageFn(lyrics.lines.map(line=>line.text || '').join('\n'));
             const system=romanization_system || getDefaultRomanizationSystemFn(script);
@@ -129,7 +130,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
           if(!response) return {status:400,body:{error:'Script is not supported for romanization'}};
           response.song.album=song.album ?? null;response.song.duration=song.duration ?? null;
           response.metadata.version=RESPONSE_VERSION;
-          response.metadata.selection_revision=SELECTION_REVISION;
+          if(cacheable) response.metadata.selection_revision=SELECTION_REVISION;
           response.quality.instrumental=lyrics.instrumental===true;
           if(result.timingCorrection) response.metadata.timing_correction=result.timingCorrection;
           if(target!==request) response.metadata.recording_match={method:catalog_id ? 'catalog_alias':'metadata_alias',catalog_id:catalog_id || target.catalog_id,artist,title,duration,...(!catalog_id ? {album}:{})};
@@ -138,8 +139,8 @@ export function createMusicRomanizeHandler(dependencies={}) {
             response.metadata.recording_match={method,catalog_id,artist,title,album,duration};
           }
           diagnose(api.name,target===request ? 'matched':'catalog_alias');
-          responseCache.set(key,response);
-          if(redis && !cacheUnavailable(redis)) {
+          if(cacheable) responseCache.set(key,response);
+          if(cacheable && redis && !cacheUnavailable(redis)) {
             const writeStart=performance.now();
             const write=withDeadline(()=>setCachedFn(redis,key,response,86400),cacheTimeoutMs)
               .catch(error=>suspendCache(redis,error))

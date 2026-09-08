@@ -41,3 +41,13 @@ test('recording-bound correction localizations use a catalog alias proof',async(
  assert.equal(result.body.metadata.recording_match.artist,request.artist);
  assert.equal(result.body.metadata.recording_match.catalog_id,request.catalog_id);
 });
+
+test('temporary correction-source outages remain readable without caching the degraded selection',async()=>{
+ let attempts=0;
+ const handler=make({lines:[{text:'A phrase',timestamp:12}]},{redis:{},getCachedFn:async()=>({metadata:{version:'2.3.0',selection_revision:SELECTION_REVISION,timing_correction:{status:'untimed_fallback'}}}),setCachedFn:()=>assert.fail('temporary fallback must not persist'),applyTimingCorrectionFn:async(candidate)=>{attempts++;return {...candidate,lyrics:{lines:[{text:'A phrase',timestamp:null}]},timingCorrection:{id:'fixture',status:'untimed_fallback'}};}});
+ for(let i=0;i<2;i++) {
+  const result=await invoke(handler);assert.equal(result.statusCode,200);assert.equal(result.body.lines[0].original,'A phrase');
+  assert.equal(result.body.metadata.selection_revision,undefined);assert.equal(result.body.quality.synced,false);
+ }
+ assert.equal(attempts,2);
+});
