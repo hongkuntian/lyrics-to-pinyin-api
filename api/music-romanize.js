@@ -14,15 +14,22 @@ import {BoundedCache} from './utils/bounded-cache.js';
 import {cleanLyrics,hasUsableLyrics} from './utils/lyric-quality.js';
 import {applyTimingCorrection} from './utils/timing-corrections.js';
 import {hedgedLookup} from './utils/hedged-lookup.js';
+import {lookupReviewedRecording} from './utils/reviewed-recordings.js';
+import {lookupOfficialTranscription} from './utils/official-transcriptions.js';
 const RESPONSE_VERSION='2.3.0';
-export const SELECTION_REVISION='lyrics-selection-2026-09-08';
+export const SELECTION_REVISION='lyrics-selection-2026-09-08-durable';
+const responseLifetimeMs=response=>response.quality?.partial===true || (response.quality?.synced===false && response.quality?.instrumental!==true) ? 300000:86400000;
+const remainingLifetimeMs=response=> {
+  const created=Date.parse(response.metadata?.timestamp);
+  return Math.max(0,responseLifetimeMs(response)-(Number.isFinite(created)?Math.max(0,Date.now()-created):0));
+};
 export function createMusicRomanizeHandler(dependencies={}) {
   const {
     redis=createRedisFromEnv(),detectLanguageFn=detectLanguage,getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,
     getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,getCacheKeyFn=getCacheKey,
     getCachedFn=getCached,setCachedFn=setCached,getMusicAPIFn=getMusicAPI,getAvailableAPIsFn=getAvailableAPIs,
     getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,hedgeDelayMs=350,untimedGraceMs=2500,cacheTimeoutMs=300,
-    applyTimingCorrectionFn=applyTimingCorrection,resolveCatalogAliasesFn=resolveCatalogAliases,waitUntilFn=waitUntil,logger=console,
+    applyTimingCorrectionFn=applyTimingCorrection,resolveCatalogAliasesFn=resolveCatalogAliases,lookupReviewedRecordingFn=lookupReviewedRecording,lookupOfficialTranscriptionFn=lookupOfficialTranscription,waitUntilFn=waitUntil,logger=console,
     responseCache=new BoundedCache(),aliasCache=new BoundedCache({ttlMs:86400000})
   }=dependencies;
   const inflight=new Map();
@@ -64,8 +71,8 @@ export function createMusicRomanizeHandler(dependencies={}) {
       const compute=async()=> {
         if(redis && !cacheUnavailable(redis)) {
           const cached=await measure('cache_read',()=>withDeadline(()=>getCachedFn(redis,key),cacheTimeoutMs)).catch(error=>{suspendCache(redis,error);return null;});
-          if(cached?.metadata?.version===RESPONSE_VERSION && cached.metadata.selection_revision===SELECTION_REVISION && cached.metadata.timing_correction?.status!=='untimed_fallback') {
-            responseCache.set(key,cached);cacheStatus='REDIS';return {status:200,body:cached};
+          if(cached?.metadata?.version===RESPONSE_VERSION && cached.metadata.selection_revision===SELECTION_REVISION && cached.metadata.timing_correction?.status!=='untimed_fallback' && remainingLifetimeMs(cached)>0) {
+            responseCache.set(key,cached,{ttlMs:remainingLifetimeMs(cached)});cacheStatus='REDIS';return {status:200,body:cached};
           }
         }
         let matched=false,mismatch=false,timedOut=false,unavailable=false;
@@ -105,12 +112,32 @@ export function createMusicRomanizeHandler(dependencies={}) {
         };
         // Reuse previously verified localizations first on repeated catalog requests.
         const aliasKey=JSON.stringify(request),knownAliases=aliasCache.get(aliasKey);
-        let result=knownAliases?.length ? await tryRecording(knownAliases[0]) : null;
-        if(!result) result=await tryRecording(request);
-        if(!result && (catalog_id || (album && duration)) && deadline>Date.now()) {
+        const timed=candidate=>candidate?.lyrics?.lines?.some(line=>Number.isFinite(line.timestamp) && line.timestamp>=0);
+        const mayImprove=candidate=>!candidate || (!preferred && !candidate.lyrics.instrumental && !timed(candidate));
+        const better=(current,candidate)=> {
+          if(!current) return candidate;
+          if(!candidate || candidate.lyrics.instrumental || (!current.lyrics.partial && candidate.lyrics.partial)) return current;
+          return (current.lyrics.partial && !candidate.lyrics.partial) || (timed(candidate) && !timed(current)) ? candidate:current;
+        };
+        // Reviewed cross-catalog metadata is only an exact-ID discovery path.
+        // The helper rechecks complete catalog and source signatures before
+        // returning any provider words; ordinary mismatches stay strict.
+        let result=!preferred ? await measure('reviewed_recording',()=>withDeadline(async signal=> {
+          const candidate=await lookupReviewedRecordingFn(request,{signal});
+          return candidate ? applyTimingCorrectionFn(candidate,request,{signal,deadline}):null;
+        },Math.min(providerTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null):null;
+        if(!result && !preferred) result=await measure('official_transcription',()=>withDeadline(
+          signal=>lookupOfficialTranscriptionFn(request,{signal}),Math.min(providerTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null);
+        if(mayImprove(result) && knownAliases?.length) result=better(result,await tryRecording(knownAliases[0]));
+        if(mayImprove(result)) result=better(result,await tryRecording(request));
+        if(mayImprove(result) && (catalog_id || (album && duration)) && deadline>Date.now()) {
           const aliases=knownAliases || await measure('catalog_alias',()=>withDeadline(signal=>resolveCatalogAliasesFn(request,{signal}),Math.min(2500,deadline-Date.now()))).catch(()=>[]);
           if(aliases.length) aliasCache.set(aliasKey,aliases);
-          for(const alias of aliases.slice(0,3)) { result=await tryRecording(alias);if(result) break; }
+          for(const alias of aliases.slice(0,3)) {
+            if(alias===knownAliases?.[0]) continue;
+            result=better(result,await tryRecording(alias));
+            if(!mayImprove(result)) break;
+          }
         }
         if(result) {
           const {song,lyrics,api,target}=result;
@@ -132,17 +159,19 @@ export function createMusicRomanizeHandler(dependencies={}) {
           response.metadata.version=RESPONSE_VERSION;
           if(cacheable) response.metadata.selection_revision=SELECTION_REVISION;
           response.quality.instrumental=lyrics.instrumental===true;
+          response.quality.partial=lyrics.partial===true;
           if(result.timingCorrection) response.metadata.timing_correction=result.timingCorrection;
+          if(result.reviewedIdentity) response.metadata.reviewed_recording=result.reviewedIdentity;
           if(target!==request) response.metadata.recording_match={method:catalog_id ? 'catalog_alias':'metadata_alias',catalog_id:catalog_id || target.catalog_id,artist,title,duration,...(!catalog_id ? {album}:{})};
           if(target===request && !sameRecordingNames(song,request)) {
             const method=result.timingCorrection?.status==='replacement' && !metadataEquivalence(song,request) ? 'catalog_alias':'metadata_equivalence';
             response.metadata.recording_match={method,catalog_id,artist,title,album,duration};
           }
           diagnose(api.name,target===request ? 'matched':'catalog_alias');
-          if(cacheable) responseCache.set(key,response);
+          if(cacheable) responseCache.set(key,response,{ttlMs:responseLifetimeMs(response)});
           if(cacheable && redis && !cacheUnavailable(redis)) {
             const writeStart=performance.now();
-            const write=withDeadline(()=>setCachedFn(redis,key,response,86400),cacheTimeoutMs)
+            const write=withDeadline(()=>setCachedFn(redis,key,response,responseLifetimeMs(response)/1000),cacheTimeoutMs)
               .catch(error=>suspendCache(redis,error))
               .finally(()=>logger.info?.('lyrics_cache_write',{requestID,duration_ms:Math.round(performance.now()-writeStart)}));
             waitUntilFn(write);

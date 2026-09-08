@@ -26,6 +26,26 @@ test('deduplication does not conceal conflicting timing, text, versions or unkno
   assert.throws(()=>findRecording([{...english,duration:40}],request),/recording/i);
 });
 
+test('explicit instrumental duplicates with the same recording metadata resolve deterministically', () => {
+  const song={id:35279058,title:'Forgotten Battlefield - Lueur Déclinante',artist:'Lorien Testard',album:'Clair Obscur: Expedition 33 (Original Soundtrack)',duration:196,
+    lyricsData:{source:'lrclib',instrumental:true,lines:[]}};
+  const duplicate={...song,id:24445380,album:`Optional("${song.album}")`};
+  const query={...song,catalog_id:'1808472926',title:'Forgotten Battlefied - Lueur Déclinante'};
+  for(const songs of [[song,duplicate],[duplicate,song]]) assert.equal(findRecording(songs,query).id,24445380);
+});
+
+test('instrumental deduplication requires explicit evidence and cannot hide conflicting recordings', () => {
+  const song={id:1,title:'Quiet Movement',artist:'Composer',album:'Original Soundtrack',duration:196,
+    lyricsData:{source:'lrclib',instrumental:true,lines:[]}};
+  const query={artist:song.artist,title:song.title,duration:196};
+  for(const changed of [
+    {lyricsData:null}, {lyricsData:{lines:[]}},
+    {lyricsData:{instrumental:true,lines:[{text:'Actual vocal words',timestamp:5}]}},
+    {album:undefined}, {album:'Other Soundtrack'}, {album:'Original Soundtrack (Live)'}
+  ]) assert.throws(()=>findRecording([song,{...song,id:2,...changed}],query),/recording/i);
+  assert.throws(()=>findRecording([song,{...song,id:2,duration:197}],{...query,duration:196.5}),/recording/i);
+});
+
 const catalogEnglish = {trackId:1321295664,kind:'song',trackName:request.title,artistName:request.artist,collectionName:english.album,trackTimeMillis:258264};
 const catalogChinese = {...catalogEnglish,trackName:'永不失聯的愛',artistName:'周興哲',collectionName:'如果雨之後'};
 const fetchFn = async url => ({ok:true,json:async()=>({results:[new URL(url).searchParams.get('country')==='tw' ? catalogChinese : catalogEnglish]})});

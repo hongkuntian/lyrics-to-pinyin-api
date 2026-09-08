@@ -2,6 +2,7 @@ import { NeteaseAPI } from "./netease.js";
 import { SpotifyAPI } from "./spotify.js";
 import { GeniusAPI } from "./genius.js";
 import { LRCAPI } from "./lrclib.js";
+import { KugouAPI } from "./kugou.js";
 
 // Music API registry
 const musicAPIs = new Map();
@@ -9,17 +10,18 @@ const musicAPIs = new Map();
 // Initialize APIs
 musicAPIs.set("lrclib", new LRCAPI());
 musicAPIs.set("netease", new NeteaseAPI());
+musicAPIs.set("kugou", new KugouAPI());
 // musicAPIs.set("spotify", new SpotifyAPI());
 // musicAPIs.set("genius", new GeniusAPI());
 
 // Script to platform mapping - NetEase as primary, LRC Lib as backup
 const scriptPlatformMap = {
-  "zh": ["netease", "lrclib"], // Mandarin Chinese - NetEase first, then LRC Lib
-  "yue": ["netease"],          // Cantonese - NetEase only
+  "zh": ["netease", "lrclib", "kugou"], // Recording-verified fallback after the existing sources.
+  "yue": ["netease", "kugou"],
   "ja": ["lrclib"],            // Japanese - LRC Lib only
   "ko": ["lrclib"],            // Korean - LRC Lib only
   "ru": [],                    // Russian (no API available yet)
-  "en": ["netease", "lrclib"]  // English - NetEase first, then LRC Lib
+  "en": ["netease", "lrclib", "kugou"]
 };
 
 export function getMusicAPI(script, platform = null) {

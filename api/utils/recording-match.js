@@ -103,6 +103,16 @@ export function metadataEquivalence(song,request) {
 function equivalentLyrics(a,b) {
   if (!Number.isFinite(a.duration) || !Number.isFinite(b.duration) || Math.abs(a.duration-b.duration)>0.5) return false;
   if (JSON.stringify(version(a.album))!==JSON.stringify(version(b.album))) return false;
+  const instrumental=song=> {
+    const data=cleanLyrics(song.lyricsData,{duration:song.duration});
+    return data?.instrumental===true && data.lines.length===0;
+  };
+  // Instrumental copies have no text fingerprint. Require the full matching
+  // album and names in addition to both sources' explicit instrumental flag.
+  // An empty response, another album, or actual vocal text cannot form a tie.
+  if(instrumental(a) || instrumental(b)) return instrumental(a) && instrumental(b)
+    && !!a.album && !!b.album && !!normalizedAlbum(a.album)
+    && normalizedAlbum(a.album)===normalizedAlbum(b.album) && sameRecordingNames(a,b);
   const canonical=song=> {
     const data=song.lyricsData;
     if(data?.lines?.some(line=>line.timestamp!=null && (!Number.isFinite(line.timestamp) || line.timestamp<0 || line.timestamp>song.duration))) return null;

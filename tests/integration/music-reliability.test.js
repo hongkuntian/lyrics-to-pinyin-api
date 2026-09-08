@@ -7,7 +7,7 @@ const processor={name:'Fixture',romanize:async(text)=>({romanized:text})};
 const api=(overrides={})=>({name:'Fixture',searchSong:async()=>song,getLyrics:async()=>({lines:[{text:'你好',timestamp:0}]}),...overrides});
 async function run(apis,body={},deps={}) {
   const res=createMockRes();
-  await createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],redis:null,getAvailableAPIsFn:()=>apis,getProcessorFn:()=>processor,providerTimeoutMs:20,logger:{error(){},log(){}},...deps})(createMockReq({body:{artist:'周杰伦',title:'晴天',duration:269,language:'zh',...body}}),res);
+  await createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[],redis:null,getAvailableAPIsFn:()=>apis,getProcessorFn:()=>processor,providerTimeoutMs:20,logger:{error(){},log(){}},...deps})(createMockReq({body:{artist:'周杰伦',title:'晴天',duration:269,language:'zh',...body}}),res);
   return res;
 }
 test('zero timestamps survive the handler',async()=>assert.equal((await run([api()])).body.lines[0].timestamp,0));

@@ -58,7 +58,8 @@
       "required": ["synced"],
       "properties": {
         "synced": { "type": "boolean" },
-        "instrumental": { "type": "boolean" }
+        "instrumental": { "type": "boolean" },
+        "partial": { "type": "boolean" }
       }
     },
     "metadata": {

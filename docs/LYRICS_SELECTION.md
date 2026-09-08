@@ -1,6 +1,6 @@
 # Lyrics selection revision: 2026-09-08
 
-The additive API 2.3.0 field `metadata.selection_revision` is `lyrics-selection-2026-09-08`. It also participates in server cache keys and is checked on Redis reads. Old payloads are not stamped with the new revision. Lyra only persists this revision; displaying an older server response during rollout does not renew its cache eligibility.
+The additive API 2.3.0 field `metadata.selection_revision` is `lyrics-selection-2026-09-08-durable`. It also participates in server cache keys and is checked on Redis reads. Old payloads are not stamped with the new revision. Lyra only persists this revision; displaying an older server response during rollout does not renew its cache eligibility.
 
 ## Identity and discovery
 
@@ -20,8 +20,18 @@ Apple catalog 966805806, Faye Wong / 王菲, 匆匆那年, 241 seconds has a rev
 
 Every replacement row must normalize to the corresponding original row to preserve the exact original spelling and character ranges. Otherwise the complete verified replacement transcription is used, and clients must not blindly migrate edits. `metadata.timing_correction.source_fingerprint` identifies the upstream replacement track, not the final text-preserving payload. A catalog-bound Chinese localization uses catalog alias proof; reversed English name formatting uses metadata equivalence proof.
 
-Independent provider agreement is evidence for this correction, not proof from listening. The opening replacement timestamp is 28.32 seconds; audible verification against the Apple Music recording remains separate acceptance work.
+Independent provider agreement is evidence for this correction, not proof from listening. The opening replacement timestamp is 28.32 seconds; the user confirmed the corrected timing against Apple Music on 2026-09-08.
 
 ## Regression evidence
 
 Hermetic tests cover retries, bounded discovery, recording/version/guest rejection, explicit instrumentals, credit-only fallback, stale server caches, request-bound proofs, correction fingerprints and fallback deadlines. An independent matrix contains 11 valid controls and 108 wrong performer, guest, version, title or duration variants; all pass. Full-library coverage must be measured through the native client as well, because authenticated MusicKit localization is unavailable to a direct backend-only audit.
+
+## Durable recovery and freshness
+
+Automatic lookup includes a bounded Kugou fallback with exact full title/credits, one-second duration tolerance and recording-version checks including versions present only in the requested album. Only official recommended lyric candidates are eligible; tied candidates must agree. Transport credentials never enter the public response or caches.
+
+Reviewed cross-catalog discoveries are metadata-only registry entries. Every request revalidates its complete accepted Apple catalog signature and the exact NetEase recording ID, album ID/name, paired contributor IDs/names, duration, and noncontradictory lyric headers. Changed sources fail closed. This recovers the Tomorrow Will Be Better ensemble and Eason Chan Arcane recording without broadening ordinary performer matching.
+
+A separately reviewed official description can provide partial untimed words when no complete source is available. Exact catalog, official channel/video identity and paragraph hash must still validate live. `quality.partial` labels this state; clients must disclose missing repeats/timing and exclude it from complete lyric counts. Complete plain or timed words supersede partial words; instrumental candidates cannot erase verified vocals.
+
+Plain and partial results expire after five minutes in server/native memory and disk; full timed and instrumental results retain the normal one-day lifetime. Reading Redis or disk preserves the original remaining freshness. Optional catalog localizations can upgrade plain lyrics within the existing bounded lookup; unavailable upgrades preserve readable words.

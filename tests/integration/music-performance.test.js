@@ -6,7 +6,7 @@ const song={id:1,title:'晴天',artist:'周杰伦',album:'叶惠美',duration:26
 const body={artist:song.artist,title:song.title,album:song.album,duration:269,language:'zh'};
 const lyrics={lines:[{text:'你好',timestamp:0}]};
 const api=(overrides={})=>({name:'Primary',searchSong:async()=>song,getLyrics:async()=>lyrics,...overrides});
-const make=(apis,deps={})=>createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],redis:null,getAvailableAPIsFn:()=>apis,getProcessorFn:()=>({romanize:async t=>({romanized:t})}),logger:{info(){},error(){}},...deps});
+const make=(apis,deps={})=>createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[],redis:null,getAvailableAPIsFn:()=>apis,getProcessorFn:()=>({romanize:async t=>({romanized:t})}),logger:{info(){},error(){}},...deps});
 async function invoke(handler,fields={}){const res=createMockRes();await handler(createMockReq({body:{...body,...fields}}),res);return res;}
 test('repeat and simultaneous requests reuse verified results without provider work',async()=>{
  let calls=0,release;

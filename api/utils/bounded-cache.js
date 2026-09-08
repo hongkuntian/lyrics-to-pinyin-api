@@ -10,10 +10,11 @@ export class BoundedCache {
     if(entry.expires<=this.now()) return null;
     this.entries.set(key,entry);return entry.value;
   }
-  set(key,value) {
+  set(key,value,{ttlMs=this.ttlMs}={}) {
+    if(!Number.isFinite(ttlMs) || ttlMs<=0) return;
     if(Buffer.byteLength(JSON.stringify(value))>this.maxEntryBytes) return;
     this.entries.delete(key);
-    this.entries.set(key,{value,expires:this.now()+this.ttlMs});
+    this.entries.set(key,{value,expires:this.now()+Math.min(this.ttlMs,ttlMs)});
     while(this.entries.size>this.limit) this.entries.delete(this.entries.keys().next().value);
   }
 }

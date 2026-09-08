@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createMusicRomanizeHandler } from "../../api/music-romanize.js";
+import { createMusicRomanizeHandler, SELECTION_REVISION } from "../../api/music-romanize.js";
 import { createMockReq, createMockRes } from "../helpers/mock-http.js";
 
 function createProcessor() {
@@ -13,7 +13,7 @@ function createProcessor() {
 }
 
 test("returns 405 for non-POST requests", async () => {
-  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[], logger: { error() {}, log() {} } });
+  const handler = createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[], logger: { error() {}, log() {} } });
   const req = createMockReq({ method: "GET", body: {} });
   const res = createMockRes();
 
@@ -24,7 +24,7 @@ test("returns 405 for non-POST requests", async () => {
 });
 
 test("returns 400 when artist or title is missing", async () => {
-  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[], logger: { error() {}, log() {} } });
+  const handler = createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[], logger: { error() {}, log() {} } });
   const req = createMockReq({ body: { artist: "Jay Chou" } });
   const res = createMockRes();
 
@@ -35,7 +35,7 @@ test("returns 400 when artist or title is missing", async () => {
 });
 
 test("returns 400 when no API is available for script", async () => {
-  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
+  const handler = createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[],
     getAvailableAPIsFn: () => [],
     getSupportedMusicAPIsFn: () => [{ script: "zh", platforms: ["netease"] }],
     logger: { error() {}, log() {} }
@@ -53,7 +53,7 @@ test("returns 400 when no API is available for script", async () => {
 test("returns 404 when song is not found across fallbacks", async () => {
   const apiA = { name: "API-A", async searchSong() { return null; } };
   const apiB = { name: "API-B", async searchSong() { return null; } };
-  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
+  const handler = createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[],
     getAvailableAPIsFn: () => [apiA, apiB],
     logger: { error() {}, log() {} }
   });
@@ -77,7 +77,7 @@ test("returns 404 when lyrics are missing for found song", async () => {
       return null;
     }
   };
-  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
+  const handler = createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[],
     getAvailableAPIsFn: () => [api],
     getProcessorFn: () => createProcessor(),
     logger: { error() {}, log() {} }
@@ -92,8 +92,8 @@ test("returns 404 when lyrics are missing for found song", async () => {
 });
 
 test("returns cached payload on cache hit", async () => {
-  const cached = { song: { id: "cached" }, lines: [], metadata: { version: "2.3.0", selection_revision: "lyrics-selection-2026-09-08" } };
-  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
+  const cached = { song: { id: "cached" }, lines: [], metadata: { version: "2.3.0", selection_revision: SELECTION_REVISION } };
+  const handler = createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[],
     redis: {},
     getCachedFn: async () => cached,
     logger: { error() {}, log() {} }
@@ -119,7 +119,7 @@ test("uses fallback APIs and returns formatted response", async () => {
     }
   };
 
-  const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
+  const handler = createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[],
     getAvailableAPIsFn: () => [primaryAPI, backupAPI],
     getProcessorFn: () => createProcessor(),
     logger: { error() {}, log() {} }
@@ -144,7 +144,7 @@ test("accepts complete ensemble credits while retaining a bounded artist field",
   const artist = Array.from({length: 60}, (_, i) => `Performer ${i}`).join(', ');
   let received;
   const api = { name: 'Fixture', async searchSong(value) { received = value; return null; } };
-  const handler = createMusicRomanizeHandler({redis: null, resolveCatalogAliasesFn: async () => [], getAvailableAPIsFn: () => [api], logger: {error() {}}});
+  const handler = createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,redis: null, resolveCatalogAliasesFn: async () => [], getAvailableAPIsFn: () => [api], logger: {error() {}}});
   const result = createMockRes();
   await handler(createMockReq({body: {artist, title: 'Ensemble song', language: 'en'}}), result);
   assert.equal(result.statusCode, 404);
