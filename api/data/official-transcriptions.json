@@ -26,11 +26,19 @@
         "channelID": "UC-fK3h3DWGRS61U9wu4K8CA",
         "title": "刘珺儿Evon Low I 我等到花儿也谢了 I OFFICIAL MUSIC VIDEO",
         "duration": 328,
-        "paragraphSHA256": "a0494c133e84e3de98048d1c9d03bab7cb436bee612ca0b1bb3a5f4f137c7f80"
+        "paragraphSHA256": "a0494c133e84e3de98048d1c9d03bab7cb436bee612ca0b1bb3a5f4f137c7f80",
+        "publicDuration": 329,
+        "publicDurationNote": "Reviewed public VideoObject duration is 329 seconds while player videoDetails is 328 seconds; require this exact public metadata value only for the vetted untimed description fallback. Apple recording duration remains 327.24 seconds."
       },
       "provenance": [
-        {"url": "https://music.apple.com/us/song/1085956292", "note": "Exact catalog recording, artist, album and duration"},
-        {"url": "https://www.youtube.com/watch?v=9ZJOV1WT-6A", "note": "NSR Chinese - New Southern Records Malaysia official video description; reviewed vocal paragraph, without timing or verified repetition structure"}
+        {
+          "url": "https://music.apple.com/us/song/1085956292",
+          "note": "Exact catalog recording, artist, album and duration"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=9ZJOV1WT-6A",
+          "note": "NSR Chinese - New Southern Records Malaysia official video description; reviewed vocal paragraph, without timing or verified repetition structure"
+        }
       ]
     }
   ]

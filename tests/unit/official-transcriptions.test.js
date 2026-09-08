@@ -51,3 +51,38 @@ test('diagnostics distinguish public metadata validation without exposing source
   const failed=[];await lookupOfficialTranscription(signature,{...context(),fetchFn:async()=>{throw new Error('DO_NOT_LOG_PRIVATE_TRANSPORT');},diagnose:x=>failed.push(x)});
   assert.equal(JSON.stringify(failed).includes('DO_NOT_LOG'),false);assert.ok(failed.some(x=>x.outcome==='failed'));
 });
+
+function publicPage() {
+  return {currentVideoEndpoint:{watchEndpoint:{videoId:entry.source.videoID}},contents:{twoColumnWatchNextResults:{results:{results:{contents:[
+    {videoPrimaryInfoRenderer:{title:{runs:[{text:entry.source.title}]}}},
+    {videoSecondaryInfoRenderer:{owner:{videoOwnerRenderer:{navigationEndpoint:{browseEndpoint:{browseId:entry.source.channelID}}}},attributedDescription:{content:'Credits\n'+words}}}
+  ]}}}}};
+}
+function publicContext({page=publicPage(),duration='PT2M2S',identifier=entry.source.videoID,video={playabilityStatus:{status:'LOGIN_REQUIRED'}}}={}) {
+  const schema='<div itemscope itemtype="http://schema.org/VideoObject"><link itemprop="url" href="https://www.youtube.com/watch?v='+entry.source.videoID+'"><meta itemprop="identifier" content="'+identifier+'"><meta itemprop="duration" content="'+duration+'"><span itemprop="author"></span></div>';
+  const html=schema+'<script>var ytInitialPlayerResponse = '+JSON.stringify(video)+'; var ytInitialData = '+JSON.stringify(page)+';</script>';
+  const ctx=context({html});ctx.registry={recordings:[{...entry,source:{...entry.source,publicDuration:122}}]};return ctx;
+}
+test('recovers exact public main-watch description when playback is gated without fetching media or authenticating',async()=>{
+  const ctx=publicContext();const result=await lookupOfficialTranscription(signature,ctx);assert.ok(result);assert.equal(result.lyrics.partial,true);assert.equal(result.lyrics.lines.length,2);assert.equal(result.reviewedIdentity.descriptionMetadata,'public_watch_page');assert.equal(ctx.calls.length,2);assert.ok(ctx.calls[1].url.startsWith('https://www.youtube.com/watch?v='));
+});
+test('public watch fallback rejects identity, paragraph, duration and schema mutations',async()=>{
+  for(const field of ['video','channel','title','paragraph','recommendation']){
+    const page=publicPage(),contents=page.contents.twoColumnWatchNextResults.results.results.contents;
+    if(field==='video')page.currentVideoEndpoint.watchEndpoint.videoId='wrong-video';
+    if(field==='channel')contents[1].videoSecondaryInfoRenderer.owner.videoOwnerRenderer.navigationEndpoint.browseEndpoint.browseId='wrong-channel';
+    if(field==='title')contents[0].videoPrimaryInfoRenderer.title.runs[0].text='Other Cover';
+    if(field==='paragraph')contents[1].videoSecondaryInfoRenderer.attributedDescription.content='Different words';
+    if(field==='recommendation'){page.recommendations=contents;page.contents.twoColumnWatchNextResults.results.results.contents=[];}
+    assert.equal(await lookupOfficialTranscription(signature,publicContext({page})),null);
+  }
+  assert.equal(await lookupOfficialTranscription(signature,publicContext({duration:'PT2M3S'})),null);
+  assert.equal(await lookupOfficialTranscription(signature,publicContext({identifier:'wrong-video'})),null);
+});
+test('public watch metadata cannot conceal contradictory player recording metadata',async()=>{
+  const video=makeVideo();video.videoDetails.videoId='wrong-video';assert.equal(await lookupOfficialTranscription(signature,publicContext({video})),null);
+});
+
+test('an empty playback metadata object still permits independently verified public metadata',async()=>{
+  assert.ok(await lookupOfficialTranscription(signature,publicContext({video:{playabilityStatus:{status:'LOGIN_REQUIRED'},videoDetails:{}}})));
+});

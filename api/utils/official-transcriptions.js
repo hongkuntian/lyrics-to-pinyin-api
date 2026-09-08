@@ -44,6 +44,21 @@ function playerResponse(html,initialData=false) {
   }
   return null;
 }
+function publicDuration(html,source) {
+  const starts=[...html.matchAll(/<[^>]+\bitemtype=["']https?:\/\/schema\.org\/VideoObject["'][^>]*>/giu)];
+  if(starts.length!==1) return null;
+  // Main VideoObject metadata precedes its nested author object. Do not read
+  // duration or identifiers from recommendations or nested schema objects.
+  const block=html.slice(starts[0].index+starts[0][0].length).split(/<span\b|<\/div>/iu)[0];
+  if(block.length>8192) return null;
+  const attr=(tag,name)=>new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`,'iu').exec(tag)?.[2];
+  const metas=[...block.matchAll(/<(?:meta|link)\b[^>]*>/giu)].map(match=>match[0]);
+  const values=name=>metas.filter(tag=>attr(tag,'itemprop')===name).map(tag=>attr(tag,'content') ?? attr(tag,'href'));
+  const ids=values('identifier'),urls=values('url'),times=values('duration');
+  if(ids.length!==1 || ids[0]!==source.videoID || urls.length!==1 || urls[0]!==`https://www.youtube.com/watch?v=${source.videoID}` || times.length!==1) return null;
+  const time=/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/u.exec(times[0]);
+  return time ? Number(time[1] || 0)*3600+Number(time[2] || 0)*60+Number(time[3] || 0):null;
+}
 async function boundedText(url,{fetchFn=fetch,signal}) {
   if(signal.aborted) throw new Error('Cancelled');
   const response=await fetchFn(url,{signal,redirect:'error',size:maxBytes,headers:{'User-Agent':'Lyra/2.3.0'}});
@@ -81,7 +96,7 @@ export async function lookupOfficialTranscription(request,context={}) {
       const player=playerResponse(html),details=player?.videoDetails;
       const playability=player?.playabilityStatus?.status;
       let page;
-      try { page=playerResponse(html,true); } catch { /* Optional diagnostics only. */ }
+      try { page=playerResponse(html,true); } catch { /* Missing public metadata cannot establish the fallback. */ }
       const watch=page?.contents?.twoColumnWatchNextResults?.results?.results?.contents || [];
       const primary=watch.find(item=>item.videoPrimaryInfoRenderer)?.videoPrimaryInfoRenderer;
       const secondary=watch.find(item=>item.videoSecondaryInfoRenderer)?.videoSecondaryInfoRenderer;
@@ -97,12 +112,30 @@ export async function lookupOfficialTranscription(request,context={}) {
         titleMatches:details?.title===source.title,durationMatches:Number(details?.lengthSeconds)===source.duration,
         descriptionPresent:typeof details?.shortDescription==='string',
         paragraphMatches:typeof details?.shortDescription==='string' && details.shortDescription.split(/\r?\n/u).some(paragraph=>hash(paragraph)===source.paragraphSHA256)});
-      if(player?.playabilityStatus?.status!=='OK' || !details || details.videoId!==source.videoID
-        || details.channelId!==source.channelID || details.title!==source.title
-        || !/^\d+$/.test(details.lengthSeconds || '') || Number(details.lengthSeconds)!==source.duration
-        || Math.abs(Number(details.lengthSeconds)-request.duration)>1 || typeof details.shortDescription!=='string'
-        || details.shortDescription.length>200000) return null;
-      const paragraphs=details.shortDescription.split(/\r?\n/u).filter(paragraph=>hash(paragraph)===source.paragraphSHA256);
+      let description,descriptionMetadata;
+      if(details && Object.keys(details).length>0) {
+        // A contradictory player identity cannot be concealed by another page
+        // object. Retain the original fully verified metadata path when present.
+        if(playability!=='OK' || details.videoId!==source.videoID || details.channelId!==source.channelID || details.title!==source.title
+          || !/^\d+$/.test(details.lengthSeconds || '') || Number(details.lengthSeconds)!==source.duration
+          || Math.abs(Number(details.lengthSeconds)-request.duration)>1) return null;
+        description=details.shortDescription;descriptionMetadata='player';
+      } else {
+        const duration=publicDuration(html,source);
+        diagnose({stage:'public_page_duration',durationMatches:Number.isFinite(duration) && duration===source.publicDuration});
+        if(watch.filter(item=>item.videoPrimaryInfoRenderer).length!==1 || watch.filter(item=>item.videoSecondaryInfoRenderer).length!==1
+          || page?.currentVideoEndpoint?.watchEndpoint?.videoId!==source.videoID
+          || secondary?.owner?.videoOwnerRenderer?.navigationEndpoint?.browseEndpoint?.browseId!==source.channelID
+          || (primary?.title?.runs || []).map(run=>run.text || '').join('')!==source.title
+          || !Number.isFinite(source.publicDuration) || !Number.isFinite(duration) || duration!==source.publicDuration
+          || Math.abs(source.publicDuration-source.duration)>1 || Math.abs(source.duration-request.duration)>1) return null;
+        // Cloud playback can require login while the normal public watch page
+        // independently returns the official description. Read only that page;
+        // no authentication, player retry, alternate client, or media request.
+        description=pageDescription;descriptionMetadata='public_watch_page';
+      }
+      if(typeof description!=='string' || description.length>200000) return null;
+      const paragraphs=description.split(/\r?\n/u).filter(paragraph=>hash(paragraph)===source.paragraphSHA256);
       if(paragraphs.length!==1) return null;
       const lines=paragraphs[0].split(/[，。；！？\n]/u).map(text=>text.trim()).filter(Boolean).map(text=>({text,timestamp:null}));
       if(!lines.length) return null;
@@ -112,7 +145,7 @@ export async function lookupOfficialTranscription(request,context={}) {
       const song={id:source.videoID,title:actual.title,artist:actual.artist,album:actual.album,duration:actual.duration,source:'official_description'};
       return {song,lyrics,api:{name:'OfficialDescription'},target:request,reviewedIdentity:{id:entry.id,reviewedDate:entry.reviewedDate,
         catalogID:request.catalog_id,source:'official_description',sourceID:source.videoID,sourceChannelID:source.channelID,
-        sourceURL:url,paragraphSHA256:source.paragraphSHA256,provenance:entry.provenance}};
+        sourceURL:url,descriptionMetadata,paragraphSHA256:source.paragraphSHA256,provenance:entry.provenance}};
     },6000,context.signal);
   } catch(error) {
     diagnose({stage,outcome:'failed',category:context.signal?.aborted || error?.name==='AbortError'?'cancelled':error?.code==='provider_timeout'?'deadline':'source_unavailable'});
