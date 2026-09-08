@@ -67,3 +67,9 @@ test("validateRomanizationRequest catches invalid payloads", () => {
   assert.ok(result.errors.some((msg) => msg.includes("Invalid romanization system")));
   assert.ok(result.errors.some((msg) => msg.includes("tone_style")));
 });
+
+test("numeric provider text IDs remain compatible without changing opaque identity", () => {
+  for(const [input,expected] of [[1,1],["98440486",98440486],["0",0],["00123","00123"],["9007199254740993","9007199254740993"],["9ZJOV1WT-6A","9ZJOV1WT-6A"]]) {
+    assert.equal(formatMusicResponse({id:input,title:"Fixture",artist:"Artist"},{title:"Fixture",artist:"Artist",lines:[]}).song.id,expected);
+  }
+});

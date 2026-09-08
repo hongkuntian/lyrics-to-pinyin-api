@@ -51,6 +51,11 @@ export function formatBatchResponse(results) {
 }
 
 export function formatMusicResponse(songData, romanizedData) {
+  // Preserve the numeric wire shape older Lyra builds expect when a provider
+  // represents an ordinary integer ID as text. Opaque/large/zero-prefixed IDs
+  // retain their exact bytes for current clients; never round an identity.
+  const rawID=songData.id;
+  const id=typeof rawID==='string' && /^(?:0|[1-9]\d*)$/.test(rawID) && Number.isSafeInteger(Number(rawID)) ? Number(rawID):rawID;
   return {
     song: {
       title: {
@@ -61,7 +66,7 @@ export function formatMusicResponse(songData, romanizedData) {
         original: songData.artist,
         romanized: romanizedData.artist
       },
-      id: songData.id,
+      id,
       language: romanizedData.language,
       romanization_system: romanizedData.system
     },
