@@ -28,7 +28,8 @@
         "duration": 328,
         "paragraphSHA256": "a0494c133e84e3de98048d1c9d03bab7cb436bee612ca0b1bb3a5f4f137c7f80",
         "publicDuration": 329,
-        "publicDurationNote": "Reviewed public VideoObject duration is 329 seconds while player videoDetails is 328 seconds; require this exact public metadata value only for the vetted untimed description fallback. Apple recording duration remains 327.24 seconds."
+        "publicDurationNote": "Reviewed public VideoObject duration is 329 seconds while player videoDetails is 328 seconds; if VideoObject metadata is present, require its exact identity and duration. Cloud public watch pages can omit the entire schema. For this entry only, that absence permits partial untimed words when the live exact Apple catalog anchor and immutable public video, channel, full title and paragraph hash all still match. Apple recording duration remains 327.24 seconds.",
+        "allowAbsentPublicDurationForPartialDescription": true
       },
       "provenance": [
         {

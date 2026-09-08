@@ -58,10 +58,10 @@ function publicPage() {
     {videoSecondaryInfoRenderer:{owner:{videoOwnerRenderer:{navigationEndpoint:{browseEndpoint:{browseId:entry.source.channelID}}}},attributedDescription:{content:'Credits\n'+words}}}
   ]}}}}};
 }
-function publicContext({page=publicPage(),duration='PT2M2S',identifier=entry.source.videoID,video={playabilityStatus:{status:'LOGIN_REQUIRED'}}}={}) {
-  const schema='<div itemscope itemtype="http://schema.org/VideoObject"><link itemprop="url" href="https://www.youtube.com/watch?v='+entry.source.videoID+'"><meta itemprop="identifier" content="'+identifier+'"><meta itemprop="duration" content="'+duration+'"><span itemprop="author"></span></div>';
-  const html=schema+'<script>var ytInitialPlayerResponse = '+JSON.stringify(video)+'; var ytInitialData = '+JSON.stringify(page)+';</script>';
-  const ctx=context({html});ctx.registry={recordings:[{...entry,source:{...entry.source,publicDuration:122}}]};return ctx;
+function publicContext({page=publicPage(),duration='PT2M2S',identifier=entry.source.videoID,video={playabilityStatus:{status:'LOGIN_REQUIRED'}},includeSchema=true,allowAbsent=false,extraSchema=''}={}) {
+  const schema=includeSchema?'<div itemscope itemtype="http://schema.org/VideoObject"><link itemprop="url" href="https://www.youtube.com/watch?v='+entry.source.videoID+'"><meta itemprop="identifier" content="'+identifier+'"><meta itemprop="duration" content="'+duration+'"><span itemprop="author"></span></div>':'';
+  const html=schema+extraSchema+'<script>var ytInitialPlayerResponse = '+JSON.stringify(video)+'; var ytInitialData = '+JSON.stringify(page)+';</script>';
+  const ctx=context({html});ctx.registry={recordings:[{...entry,source:{...entry.source,publicDuration:122,allowAbsentPublicDurationForPartialDescription:allowAbsent}}]};return ctx;
 }
 test('recovers exact public main-watch description when playback is gated without fetching media or authenticating',async()=>{
   const ctx=publicContext();const result=await lookupOfficialTranscription(signature,ctx);assert.ok(result);assert.equal(result.lyrics.partial,true);assert.equal(result.lyrics.lines.length,2);assert.equal(result.reviewedIdentity.descriptionMetadata,'public_watch_page');assert.equal(ctx.calls.length,2);assert.ok(ctx.calls[1].url.startsWith('https://www.youtube.com/watch?v='));
@@ -92,4 +92,44 @@ test('public duration diagnostics distinguish absent schema and explicit duratio
   const state=events.find(event=>event.stage==='public_page_duration');assert.equal(state.schemaCount,1);assert.equal(state.identifierMatches,true);assert.equal(state.urlMatches,true);assert.equal(state.parsedDuration,123);assert.equal(state.durationMatches,false);
   const absent=[];await lookupOfficialTranscription(signature,{...context({video:{playabilityStatus:{status:'LOGIN_REQUIRED'}}}),diagnose:event=>absent.push(event)});
   const missing=absent.find(event=>event.stage==='public_page_duration');assert.equal(missing.schemaCount,0);assert.equal(missing.parsedDuration,null);
+});
+
+test('a reviewed opt-in permits only partial untimed words when the entire public duration schema is absent',async()=>{
+  const result=await lookupOfficialTranscription(signature,publicContext({includeSchema:false,allowAbsent:true}));
+  assert.ok(result);assert.equal(result.reviewedIdentity.descriptionMetadata,'reviewed_catalog_and_public_description');
+  assert.equal(result.lyrics.partial,true);assert.ok(result.lyrics.lines.every(line=>line.timestamp===null));
+  assert.equal(await lookupOfficialTranscription(signature,publicContext({includeSchema:false})),null);
+  const unregistered=publicContext({includeSchema:false,allowAbsent:true});
+  assert.equal(await lookupOfficialTranscription({...signature,catalog_id:'999'},unregistered),null);assert.equal(unregistered.calls.length,0);
+});
+
+test('absent-schema opt-in still requires exact public identity and the single reviewed paragraph',async()=>{
+  for(const field of ['video','channel','title','paragraph','duplicate']) {
+    const page=publicPage(),contents=page.contents.twoColumnWatchNextResults.results.results.contents;
+    if(field==='video')page.currentVideoEndpoint.watchEndpoint.videoId='wrong-video';
+    if(field==='channel')contents[1].videoSecondaryInfoRenderer.owner.videoOwnerRenderer.navigationEndpoint.browseEndpoint.browseId='wrong-channel';
+    if(field==='title')contents[0].videoPrimaryInfoRenderer.title.runs[0].text='Other Cover';
+    if(field==='paragraph')contents[1].videoSecondaryInfoRenderer.attributedDescription.content='Changed words';
+    if(field==='duplicate')contents[1].videoSecondaryInfoRenderer.attributedDescription.content=words+'\n'+words;
+    assert.equal(await lookupOfficialTranscription(signature,publicContext({page,includeSchema:false,allowAbsent:true})),null);
+  }
+});
+
+test('absent-schema opt-in never bypasses incomplete or conflicting present VideoObject metadata',async()=>{
+  for(const change of [{duration:'PT2M3S'},{duration:''},{duration:'invalid'},{identifier:'wrong-video'},{identifier:''}]) {
+    assert.equal(await lookupOfficialTranscription(signature,publicContext({...change,allowAbsent:true})),null);
+  }
+  for(const extraSchema of ['<div itemtype="https://schema.org/VideoObject "></div>',
+    '<script type="application/ld+json">{"@type":"VideoObject","duration":"PT2M3S"}</script>',
+    '<script type="application/ld+json">{"@type":["Thing","VideoObject"],"duration":"PT2M3S"}</script>']) {
+    assert.equal(await lookupOfficialTranscription(signature,publicContext({includeSchema:false,allowAbsent:true,extraSchema})),null);
+    assert.equal(await lookupOfficialTranscription(signature,publicContext({allowAbsent:true,extraSchema})),null);
+  }
+});
+
+test('absent-schema partial words still reject a changed live catalog anchor',async()=>{
+  const ctx=publicContext({includeSchema:false,allowAbsent:true}),fetchSource=ctx.fetchFn;
+  const apple=makeApple();apple.results[0].trackTimeMillis=130000;
+  ctx.fetchFn=(url,init)=>url.startsWith('https://itunes.apple.com/')?context({apple}).fetchFn(url,init):fetchSource(url,init);
+  assert.equal(await lookupOfficialTranscription(signature,ctx),null);assert.equal(ctx.calls.length,0);
 });

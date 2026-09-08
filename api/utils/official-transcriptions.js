@@ -46,7 +46,14 @@ function playerResponse(html,initialData=false) {
 }
 function publicDuration(html,source) {
   const starts=[...html.matchAll(/<[^>]+\bitemtype=["']https?:\/\/schema\.org\/VideoObject["'][^>]*>/giu)];
-  const diagnostic={schemaCount:starts.length,identifierMatches:false,urlMatches:false,durationCount:0,parsedDuration:null,duration:null};
+  // An unsupported VideoObject representation is present metadata, not absent
+  // metadata. Conservatively reject it rather than activating the reviewed
+  // no-schema exception (including JSON-LD or a changed microdata format).
+  const schemaTags=[...html.matchAll(/<[^>]+\bitemtype\s*=\s*["'][^"']*\bschema\.org\/VideoObject\b[^"']*["'][^>]*>/giu)];
+  const unparsedSchemaPresent=schemaTags.length!==starts.length
+    || (starts.length===0 && /\bschema\.org\/VideoObject\b/iu.test(html))
+    || /["']@type["']\s*:\s*(?:["']VideoObject["']|\[[^\]]*["']VideoObject["'])/iu.test(html);
+  const diagnostic={schemaCount:starts.length,unparsedSchemaPresent,identifierMatches:false,urlMatches:false,durationCount:0,parsedDuration:null,duration:null};
   if(starts.length!==1) return diagnostic;
   // Main VideoObject metadata precedes its nested author object. Do not read
   // duration or identifiers from recommendations or nested schema objects.
@@ -128,16 +135,21 @@ export async function lookupOfficialTranscription(request,context={}) {
       } else {
         const schema=publicDuration(html,source),duration=schema.duration;
         diagnose({stage:'public_page_duration',...schema,durationMatches:Number.isFinite(duration) && duration===source.publicDuration});
+        const reviewedDescriptionOnly=schema.schemaCount===0 && !schema.unparsedSchemaPresent && source.allowAbsentPublicDurationForPartialDescription===true;
         if(watch.filter(item=>item.videoPrimaryInfoRenderer).length!==1 || watch.filter(item=>item.videoSecondaryInfoRenderer).length!==1
           || page?.currentVideoEndpoint?.watchEndpoint?.videoId!==source.videoID
           || secondary?.owner?.videoOwnerRenderer?.navigationEndpoint?.browseEndpoint?.browseId!==source.channelID
           || (primary?.title?.runs || []).map(run=>run.text || '').join('')!==source.title
-          || !Number.isFinite(source.publicDuration) || !Number.isFinite(duration) || duration!==source.publicDuration
+          || schema.unparsedSchemaPresent || !Number.isFinite(source.duration) || !Number.isFinite(source.publicDuration)
+          || (!reviewedDescriptionOnly && (!Number.isFinite(duration) || duration!==source.publicDuration))
           || Math.abs(source.publicDuration-source.duration)>1 || Math.abs(source.duration-request.duration)>1) return null;
         // Cloud playback can require login while the normal public watch page
         // independently returns the official description. Read only that page;
         // no authentication, player retry, alternate client, or media request.
-        description=pageDescription;descriptionMetadata='public_watch_page';
+        // Only a reviewed registry entry may use a completely absent schema.
+        // The live catalog anchor and exact public video/channel/title/paragraph
+        // remain mandatory. This establishes partial words, never their timing.
+        description=pageDescription;descriptionMetadata=reviewedDescriptionOnly?'reviewed_catalog_and_public_description':'public_watch_page';
       }
       if(typeof description!=='string' || description.length>200000) return null;
       const paragraphs=description.split(/\r?\n/u).filter(paragraph=>hash(paragraph)===source.paragraphSHA256);
