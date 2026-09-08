@@ -46,18 +46,23 @@ function playerResponse(html,initialData=false) {
 }
 function publicDuration(html,source) {
   const starts=[...html.matchAll(/<[^>]+\bitemtype=["']https?:\/\/schema\.org\/VideoObject["'][^>]*>/giu)];
-  if(starts.length!==1) return null;
+  const diagnostic={schemaCount:starts.length,identifierMatches:false,urlMatches:false,durationCount:0,parsedDuration:null,duration:null};
+  if(starts.length!==1) return diagnostic;
   // Main VideoObject metadata precedes its nested author object. Do not read
   // duration or identifiers from recommendations or nested schema objects.
   const block=html.slice(starts[0].index+starts[0][0].length).split(/<span\b|<\/div>/iu)[0];
-  if(block.length>8192) return null;
+  if(block.length>8192) return diagnostic;
   const attr=(tag,name)=>new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`,'iu').exec(tag)?.[2];
   const metas=[...block.matchAll(/<(?:meta|link)\b[^>]*>/giu)].map(match=>match[0]);
   const values=name=>metas.filter(tag=>attr(tag,'itemprop')===name).map(tag=>attr(tag,'content') ?? attr(tag,'href'));
   const ids=values('identifier'),urls=values('url'),times=values('duration');
-  if(ids.length!==1 || ids[0]!==source.videoID || urls.length!==1 || urls[0]!==`https://www.youtube.com/watch?v=${source.videoID}` || times.length!==1) return null;
-  const time=/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/u.exec(times[0]);
-  return time ? Number(time[1] || 0)*3600+Number(time[2] || 0)*60+Number(time[3] || 0):null;
+  diagnostic.identifierMatches=ids.length===1 && ids[0]===source.videoID;
+  diagnostic.urlMatches=urls.length===1 && urls[0]===`https://www.youtube.com/watch?v=${source.videoID}`;
+  diagnostic.durationCount=times.length;
+  const time=times.length===1 ? /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/u.exec(times[0]):null;
+  diagnostic.parsedDuration=time ? Number(time[1] || 0)*3600+Number(time[2] || 0)*60+Number(time[3] || 0):null;
+  if(diagnostic.identifierMatches && diagnostic.urlMatches) diagnostic.duration=diagnostic.parsedDuration;
+  return diagnostic;
 }
 async function boundedText(url,{fetchFn=fetch,signal}) {
   if(signal.aborted) throw new Error('Cancelled');
@@ -121,8 +126,8 @@ export async function lookupOfficialTranscription(request,context={}) {
           || Math.abs(Number(details.lengthSeconds)-request.duration)>1) return null;
         description=details.shortDescription;descriptionMetadata='player';
       } else {
-        const duration=publicDuration(html,source);
-        diagnose({stage:'public_page_duration',durationMatches:Number.isFinite(duration) && duration===source.publicDuration});
+        const schema=publicDuration(html,source),duration=schema.duration;
+        diagnose({stage:'public_page_duration',...schema,durationMatches:Number.isFinite(duration) && duration===source.publicDuration});
         if(watch.filter(item=>item.videoPrimaryInfoRenderer).length!==1 || watch.filter(item=>item.videoSecondaryInfoRenderer).length!==1
           || page?.currentVideoEndpoint?.watchEndpoint?.videoId!==source.videoID
           || secondary?.owner?.videoOwnerRenderer?.navigationEndpoint?.browseEndpoint?.browseId!==source.channelID

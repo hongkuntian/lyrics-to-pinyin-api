@@ -86,3 +86,10 @@ test('public watch metadata cannot conceal contradictory player recording metada
 test('an empty playback metadata object still permits independently verified public metadata',async()=>{
   assert.ok(await lookupOfficialTranscription(signature,publicContext({video:{playabilityStatus:{status:'LOGIN_REQUIRED'},videoDetails:{}}})));
 });
+
+test('public duration diagnostics distinguish absent schema and explicit duration conflicts',async()=>{
+  const events=[];await lookupOfficialTranscription(signature,{...publicContext({duration:'PT2M3S'}),diagnose:event=>events.push(event)});
+  const state=events.find(event=>event.stage==='public_page_duration');assert.equal(state.schemaCount,1);assert.equal(state.identifierMatches,true);assert.equal(state.urlMatches,true);assert.equal(state.parsedDuration,123);assert.equal(state.durationMatches,false);
+  const absent=[];await lookupOfficialTranscription(signature,{...context({video:{playabilityStatus:{status:'LOGIN_REQUIRED'}}}),diagnose:event=>absent.push(event)});
+  const missing=absent.find(event=>event.stage==='public_page_duration');assert.equal(missing.schemaCount,0);assert.equal(missing.parsedDuration,null);
+});
