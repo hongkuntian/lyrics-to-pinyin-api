@@ -53,7 +53,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
       if(!apis.length) return send({status:400,body:{error:`No music API available for script '${searchScript}' and platform '${music_platform}'`,supported_combinations:getSupportedMusicAPIsFn()}});
       // Sort option keys without relaxing recording or request-bound alias identity.
       const stableOptions=Object.fromEntries(Object.entries(options).sort(([a],[b])=>a.localeCompare(b)));
-      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,selectionPolicy:'timed-grace-v2'}),searchScript,searchSystem,stableOptions);
+      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,selectionPolicy:'timed-recording-v3'}),searchScript,searchSystem,stableOptions);
       const local=responseCache.get(key);
       if(local) { cacheStatus='MEMORY';return send({status:200,body:local}); }
       if(inflight.has(key)) { cacheStatus='COALESCED';return send(await measure('shared',()=>inflight.get(key))); }

@@ -68,3 +68,33 @@ export function findRecording(songs, request) {
   if (tied.some(song=>song.id!==tied[0].id && !equivalentLyrics(tied[0],song))) throw new RecordingMismatchError();
   return tied.sort((a,b)=>String(a.id).localeCompare(String(b.id),'en',{numeric:true}))[0];
 }
+
+// Prefer usable timing only after establishing the recording. A release suffix
+// alone must not strand plain lyrics when a near-identical timed copy exists.
+export function findLyricsRecording(songs, request) {
+  const best=findRecording(songs,request);
+  if(!best || best.lyricsData?.lines?.some(line=>Number.isFinite(line.timestamp) && line.timestamp>=0)) return best;
+  if(!Number.isFinite(request.duration) || !Number.isFinite(best.duration) || !best.album) return best;
+  const text=song=>normalizeRecordingText((song.lyricsData?.lines || []).map(line=>line.text || '').join(''));
+  const original=text(best);
+  if(!original) return best;
+  const candidates=songs.filter(song=> {
+    if(recordingScore(song,request)<0 || !song.album || normalizedAlbum(song.album)!==normalizedAlbum(best.album)
+       || !Number.isFinite(song.duration) || Math.abs(song.duration-best.duration)>0.5) return false;
+    const lines=song.lyricsData?.lines?.filter(line=>line.text?.trim()) || [];
+    if(lines.length<2 || !lines.every(line=>Number.isFinite(line.timestamp) && line.timestamp>=0 && line.timestamp<=song.duration)
+       || new Set(lines.map(line=>line.timestamp)).size<2) return false;
+    const candidate=text(song);
+    if(candidate===original) return true;
+    // Permit only tiny insertions (e.g. a transcribed ad-lib), never changed or
+    // reordered words or a missing verse. Work is linear in lyric length.
+    const left=Array.from(original),right=Array.from(candidate);
+    const [short,long]=left.length<right.length ? [left,right]:[right,left];
+    if(long.length-short.length>Math.min(8,Math.floor(short.length*0.02))) return false;
+    let index=0;
+    for(const character of long) if(character===short[index]) index++;
+    return index===short.length;
+  });
+  try { return findRecording(candidates,request) || best; }
+  catch(error) { if(error.code==='recording_mismatch') return best; throw error; }
+}

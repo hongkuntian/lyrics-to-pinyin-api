@@ -47,3 +47,40 @@ Regression checks cover a verified timed candidate arriving after the old
 clients with a locally cached plain response can use Reload Lyrics to request
 the improved selection. An explicit-provider probe still returned untimed
 lyrics for Mojito; no timing has been fabricated for that recording.
+
+## Timed duplicate selection — September 7, 2026 follow-up
+
+The earlier Mojito probe did **not** establish that synced lyrics were absent.
+LRCLIB search returned plain entry 24832658 (`Mojito - Single`) and timed entry
+9008170 (`Mojito`) for Jay Chou, both 185 seconds. Exact album-label scoring
+selected the plain entry before timing quality was considered. The timed copy
+contains the same normalized lyrics with an additional four-letter ad-lib and
+different line breaks. It has 34 timed lines, from 16.64 to 170.92 seconds.
+Sources: <https://lrclib.net/api/get/24832658> and
+<https://lrclib.net/api/get/9008170>.
+
+LRCLIB now first establishes the ordinary unambiguous recording, then allows
+an untimed result to be upgraded only when a timed duplicate has:
+
+- The same accepted title and complete artist credit, equivalent album after
+  existing release-suffix normalization, and duration within 0.5 seconds of the
+  original match. Request duration must also be known; existing version and
+  request-duration validation still applies.
+- Matching complete normalized text, ignoring punctuation, whitespace, script
+  variants and line breaks. Tiny insertions are allowed only when one text is a
+  subsequence of the other, capped at both eight characters and 2% of the shorter
+  text. Substitutions, reordering, and substantial omissions cannot qualify.
+- At least two distinct timestamps, with every lyric line timed inside the
+  recording duration. Conflicting equally ranked timed copies retain the plain
+  fallback; identical copies resolve deterministically.
+
+This uses records already returned by search, with no added network calls.
+Cross-provider hedging and its 2.5-second grace remain unchanged. Cache selection
+policy is now `timed-recording-v3`; the client response schema is unchanged.
+Existing on-device plain caches require **Reload Lyrics**.
+
+Verification: 88 hermetic tests passed (42 unit, 40 integration, 6 contract),
+including wrong singers, different albums/versions, conflicting text and timing,
+unknown duration, incomplete timing, bounded ad-libs and deterministic duplicates.
+A fresh direct LRCLIB provider check selected 9008170 and all 34 timed lines.
+Timestamp availability is verified; listening-based alignment remains separate.
