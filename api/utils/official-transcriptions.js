@@ -60,18 +60,31 @@ export async function lookupOfficialTranscription(request,context={}) {
   const registry=context.registry || productionRegistry;
   const entry=registry.recordings?.find(item=>matches(request,item.signature));
   if(!entry) return null;
+  const diagnose=event=>{try {context.diagnose?.(event);} catch { /* Diagnostics never affect selection. */ }};
+  let stage='catalog_fetch';
   try {
     return await withDeadline(async signal=> {
       const transport={fetchFn:context.fetchFn || fetch,signal};
       const anchor=entry.catalogAnchor;
       const params=new URLSearchParams({id:anchor.signature.catalog_id,country:anchor.storefront,lang:'en_us'});
-      const catalog=JSON.parse(await boundedText(`https://itunes.apple.com/lookup?${params}`,transport));
+      const catalogText=await boundedText(`https://itunes.apple.com/lookup?${params}`,transport);
+      stage='catalog_parse';
+      const catalog=JSON.parse(catalogText);
       const anchors=(Array.isArray(catalog.results)?catalog.results:[]).filter(song=>song?.kind==='song' && matches(signature(song),anchor.signature) && close(song.trackTimeMillis/1000,request.duration));
-      if(anchors.length!==1) return null;
+      if(anchors.length!==1) {diagnose({stage:'catalog_identity',outcome:'rejected'});return null;}
       const source=entry.source;
       if(!/^[A-Za-z0-9_-]{11}$/.test(source.videoID) || !nonempty(source.channelID) || !/^[a-f0-9]{64}$/.test(source.paragraphSHA256)) return null;
       const url=`https://www.youtube.com/watch?v=${source.videoID}`;
-      const player=playerResponse(await boundedText(url,transport)),details=player?.videoDetails;
+      stage='source_fetch';
+      const html=await boundedText(url,transport);
+      stage='source_parse';
+      const player=playerResponse(html),details=player?.videoDetails;
+      const playability=player?.playabilityStatus?.status;
+      diagnose({stage:'source_metadata',playability:['OK','LOGIN_REQUIRED','UNPLAYABLE','ERROR'].includes(playability)?playability:'OTHER',
+        playerPresent:!!player,videoMatches:details?.videoId===source.videoID,channelMatches:details?.channelId===source.channelID,
+        titleMatches:details?.title===source.title,durationMatches:Number(details?.lengthSeconds)===source.duration,
+        descriptionPresent:typeof details?.shortDescription==='string',
+        paragraphMatches:typeof details?.shortDescription==='string' && details.shortDescription.split(/\r?\n/u).some(paragraph=>hash(paragraph)===source.paragraphSHA256)});
       if(player?.playabilityStatus?.status!=='OK' || !details || details.videoId!==source.videoID
         || details.channelId!==source.channelID || details.title!==source.title
         || !/^\d+$/.test(details.lengthSeconds || '') || Number(details.lengthSeconds)!==source.duration
@@ -81,6 +94,7 @@ export async function lookupOfficialTranscription(request,context={}) {
       if(paragraphs.length!==1) return null;
       const lines=paragraphs[0].split(/[，。；！？\n]/u).map(text=>text.trim()).filter(Boolean).map(text=>({text,timestamp:null}));
       if(!lines.length) return null;
+      diagnose({stage:'source_verified',outcome:'accepted'});
       const actual=signature(anchors[0]);
       const lyrics={lines,source:'official_description',partial:true,instrumental:false};
       const song={id:source.videoID,title:actual.title,artist:actual.artist,album:actual.album,duration:actual.duration,source:'official_description'};
@@ -88,7 +102,8 @@ export async function lookupOfficialTranscription(request,context={}) {
         catalogID:request.catalog_id,source:'official_description',sourceID:source.videoID,sourceChannelID:source.channelID,
         sourceURL:url,paragraphSHA256:source.paragraphSHA256,provenance:entry.provenance}};
     },6000,context.signal);
-  } catch {
+  } catch(error) {
+    diagnose({stage,outcome:'failed',category:context.signal?.aborted || error?.name==='AbortError'?'cancelled':error?.code==='provider_timeout'?'deadline':'source_unavailable'});
     // Login/consent pages, changed source content, redirects and transport errors
     // all fail closed; private HTTP implementation details never escape.
     return null;

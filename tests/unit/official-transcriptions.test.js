@@ -42,3 +42,12 @@ test('aborted caller makes no request and default registry does not accept test 
   const ctl=new AbortController();ctl.abort();const ctx=context();assert.equal(await lookupOfficialTranscription(signature,{...ctx,signal:ctl.signal}),null);assert.equal(ctx.calls.length,0);
   assert.equal(await lookupOfficialTranscription(signature,{fetchFn:async()=>{throw new Error('should not fetch');}}),null);
 });
+
+test('diagnostics distinguish public metadata validation without exposing source bodies or transport details',async()=>{
+  const video=makeVideo();video.playabilityStatus.status='LOGIN_REQUIRED';const events=[];
+  await lookupOfficialTranscription(signature,{...context({video}),diagnose:event=>events.push(event)});
+  const shape=events.find(x=>x.stage==='source_metadata');assert.ok(shape);assert.equal(shape.playability,'LOGIN_REQUIRED');assert.equal(shape.videoMatches,true);assert.equal(shape.channelMatches,true);assert.equal(shape.descriptionPresent,true);assert.equal(shape.paragraphMatches,true);
+  assert.equal(JSON.stringify(events).includes(words),false);
+  const failed=[];await lookupOfficialTranscription(signature,{...context(),fetchFn:async()=>{throw new Error('DO_NOT_LOG_PRIVATE_TRANSPORT');},diagnose:x=>failed.push(x)});
+  assert.equal(JSON.stringify(failed).includes('DO_NOT_LOG'),false);assert.ok(failed.some(x=>x.outcome==='failed'));
+});

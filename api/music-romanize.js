@@ -127,7 +127,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
           return candidate ? applyTimingCorrectionFn(candidate,request,{signal,deadline}):null;
         },Math.min(providerTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null):null;
         if(!result && !preferred) result=await measure('official_transcription',()=>withDeadline(
-          signal=>lookupOfficialTranscriptionFn(request,{signal}),Math.min(providerTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null);
+          signal=>lookupOfficialTranscriptionFn(request,{signal,diagnose:event=>logger.info?.('official_transcription',{requestID,...event})}),Math.min(providerTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null);
         if(mayImprove(result) && knownAliases?.length) result=better(result,await tryRecording(knownAliases[0]));
         if(mayImprove(result)) result=better(result,await tryRecording(request));
         if(mayImprove(result) && (catalog_id || (album && duration)) && deadline>Date.now()) {
