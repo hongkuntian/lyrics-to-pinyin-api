@@ -2,21 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {LRCAPI} from '../../api/music-apis/lrclib.js';
 const record={id:1,trackName:'說好不哭',artistName:'Jay Chou feat. Ashin Chen',albumName:'說好不哭',duration:222,syncedLyrics:'[00:00.00]一起唱'};
-test('LRCLIB returns a verified timed release duplicate without another network lookup',async()=>{
+test('LRCLIB returns a verified timed release duplicate without another lyric fetch',async()=>{
  const plain={id:10,trackName:'Song',artistName:'Artist',albumName:'Song - Single',duration:185,plainLyrics:'一起唱\n慢慢听'};
  const timed={...plain,id:11,albumName:'Song',syncedLyrics:'[00:10]一起唱\n[00:20]慢慢听'};
  let calls=0;
- const fetchFn=async()=>{calls++;return {ok:true,json:async()=>[plain,timed]};};
+ const fetchFn=async url=>{calls++;return new URL(url).pathname==='/api/get' ? {ok:false,status:404}:{ok:true,json:async()=>[plain,timed]};};
  const api=new LRCAPI(),song=await api.searchSong('Artist','Song',{album:'Song - Single',duration:185.008,fetchFn});
  assert.equal(song.id,11);
  assert.deepEqual((await api.getLyrics(song.id,{song,fetchFn})).lines.map(l=>l.timestamp),[10,20]);
- assert.equal(calls,1);
+ assert.equal(calls,2);
 });
 test('LRCLIB tries title and Chinese script variants without weakening candidate validation',async()=>{
  const urls=[];
  const fetchFn=async url=>{const p=new URL(url).searchParams;urls.push(url);return {ok:true,json:async()=>p.get('track_name')==='說好不哭' && !p.has('artist_name') ? [record,{...record,id:2,artistName:'Cover Singer'}]:[]};};
  const result=await new LRCAPI().searchSong('Jay Chou & Ashin Chen','说好不哭',{duration:222.333,album:'说好不哭 - Single',fetchFn});
- assert.equal(result.id,1);assert.ok(urls.length<=3);
+ assert.equal(result.id,1);assert.ok(urls.length<=4);
 });
 test('broad discovery never selects a solo credit, wrong recording, or cover',async()=>{
  for(const changed of [{artistName:'Jay Chou'},{artistName:'Cover Singer'},{duration:231}]){

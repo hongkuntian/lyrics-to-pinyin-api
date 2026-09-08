@@ -1,4 +1,5 @@
 import chinese from 'chinese-conv';
+import {cleanLyrics} from './lyric-quality.js';
 export function normalizeRecordingText(value = '') {
   return chinese.sify(value).normalize('NFKC').toLowerCase().replace(/[\p{P}\p{Z}\s]/gu,'');
 }
@@ -33,21 +34,90 @@ function version(value='') {
   const text=chinese.sify(value);
   return [isLive(text), /\bdemo\b|概念版|小样/i.test(text), /\b(remix|instrumental|karaoke)\b|伴奏/i.test(text)];
 }
+// Soft name equivalence is request-bound evidence, never unrestricted fuzzy search.
+// All rules require the same album and near-identical duration plus a catalog ID.
+const sensitiveCredit = /\b(feat|ft|featuring|with|live|remaster(?:ed)?|instrumental|karaoke|acapella|cover|remix|demo|version|acoustic|reprise|edit|mix)\b|合唱|翻唱|原唱|客串|现场|現場|演唱会|演唱會|伴奏|重制|重製/iu;
+const soloArtist = value => typeof value==='string' && value.trim() && !/[&,/、]/u.test(value) && !sensitiveCredit.test(value);
+function reversedSoloName(a,b) {
+  const latin='[\\p{Script=Latin}\\p{M}]+';
+  const ordered=new RegExp(`^(${latin})\\s+(${latin})$`,'u');
+  const reversed=new RegExp(`^(${latin})\\s*,\\s*(${latin})$`,'u');
+  for(const [left,right] of [[a,b],[b,a]]) {
+    const normal=left.normalize('NFKC').trim().match(ordered),inverted=right.normalize('NFKC').trim().match(reversed);
+    if(normal && inverted && normalizeRecordingText(normal[1])===normalizeRecordingText(inverted[2]) && normalizeRecordingText(normal[2])===normalizeRecordingText(inverted[1])) return true;
+  }
+  return false;
+}
+function compoundStageName(a,b) {
+  for(const [compound,plain] of [[a,b],[b,a]]) {
+    if(!soloArtist(compound) || !soloArtist(plain)) continue;
+    const parts=compound.normalize('NFKC').match(/^([\p{Script=Han}]{2,8})\s*\(([\p{Script=Han}]{2,12})\)$/u);
+    if(parts && normalizeRecordingText(parts[2])===normalizeRecordingText(plain)) return true;
+  }
+  return false;
+}
+function artistPrefixTitle(title,artists) {
+  const parts=title.match(/^(.+?)\s+[-–—]\s+(.+)$/u);
+  if(!parts || !artists.some(artist=>soloArtist(artist) && normalizeRecordingText(parts[1])===normalizeRecordingText(artist))) return title;
+  return parts[2];
+}
+function oneLongLatinEdit(a,b) {
+  const left=normalizeRecordingText(a),right=normalizeRecordingText(b);
+  if(!/^[\p{Script=Latin}\p{M}0-9]+$/u.test(left) || !/^[\p{Script=Latin}\p{M}0-9]+$/u.test(right)
+    || (left.match(/[a-z]/g) || []).length<20 || (right.match(/[a-z]/g) || []).length<20
+    || Math.abs(left.length-right.length)>1 || JSON.stringify(left.match(/\d+/g))!==JSON.stringify(right.match(/\d+/g))) return false;
+  let i=0,j=0,edits=0;
+  while(i<left.length && j<right.length) {
+    if(left[i]===right[j]) {i++;j++;continue;}
+    if(++edits>1) return false;
+    // Unchanged accents are allowed; only an ASCII letter may be corrected.
+    if(left.length>=right.length) {if(!/[a-z]/.test(left[i])) return false;i++;}
+    if(right.length>=left.length) {if(!/[a-z]/.test(right[j])) return false;j++;}
+  }
+  const tail=left.slice(i)+right.slice(j);
+  return edits+tail.length===1 && (!tail || /^[a-z]$/.test(tail));
+}
+export function metadataEquivalence(song,request) {
+  if(sameRecordingNames(song,request)) return null;
+  if(!/^\d{1,20}$/.test(request.catalog_id || '') || !song.album || !request.album
+    || !normalizedAlbum(song.album) || normalizedAlbum(song.album)!==normalizedAlbum(request.album)
+    || !Number.isFinite(song.duration) || !Number.isFinite(request.duration) || Math.abs(song.duration-request.duration)>0.5) return null;
+  if([song.artist,request.artist,song.title,request.title].some(value=>typeof value!=='string' || sensitiveCredit.test(value))) return null;
+  const rules=[],left=recordingNames(song),right=recordingNames(request);
+  if(JSON.stringify(left.credits)!==JSON.stringify(right.credits)) {
+    if(reversedSoloName(song.artist,request.artist)) rules.push('reversed_solo_artist');
+    else if(compoundStageName(song.artist,request.artist)) rules.push('compound_stage_name');
+    else return null;
+  }
+  if(left.title!==right.title) {
+    const artists=[song.artist,request.artist];
+    const a=artistPrefixTitle(stripTitleDescription(song.title),artists),b=artistPrefixTitle(stripTitleDescription(request.title),artists);
+    if(normalizeRecordingText(a)===normalizeRecordingText(b)) rules.push('artist_prefixed_title');
+    else if(oneLongLatinEdit(a,b)) {
+      if(a!==stripTitleDescription(song.title) || b!==stripTitleDescription(request.title)) rules.push('artist_prefixed_title');
+      rules.push('long_title_typo');
+    } else return null;
+  }
+  return rules.length ? {rules}:null;
+}
 function equivalentLyrics(a,b) {
   if (!Number.isFinite(a.duration) || !Number.isFinite(b.duration) || Math.abs(a.duration-b.duration)>0.5) return false;
   if (JSON.stringify(version(a.album))!==JSON.stringify(version(b.album))) return false;
   const canonical=song=> {
-    const lines=song.lyricsData?.lines;
-    if (!lines?.length || !lines.some(line=>line.text?.trim())) return null;
-    return JSON.stringify(lines.map(line=>[line.timestamp ?? null,line.text.trim().normalize('NFC')]));
+    const data=song.lyricsData;
+    if(data?.lines?.some(line=>line.timestamp!=null && (!Number.isFinite(line.timestamp) || line.timestamp<0 || line.timestamp>song.duration))) return null;
+    const lines=cleanLyrics(data,{duration:song.duration})?.lines;
+    if (!lines?.length) return null;
+    return JSON.stringify(lines.map(line=>[line.timestamp ?? null,normalizeRecordingText(line.text)]));
   };
   const left=canonical(a);
   return left!==null && left===canonical(b);
 }
 export function recordingScore(song, request) {
-  if (!sameRecordingNames(song,request)) return -1;
+  const strict=sameRecordingNames(song,request);
+  if (!strict && !metadataEquivalence(song,request)) return -1;
   if (request.album && song.album && JSON.stringify(version(`${request.title} ${request.album}`)) !== JSON.stringify(version(`${song.title} ${song.album}`))) return -1;
-  let score = 1;
+  let score = strict ? 1:0.75;
   if (request.duration != null && song.duration != null) {
     const difference = Math.abs(request.duration-song.duration);
     if (difference > 3) return -1;

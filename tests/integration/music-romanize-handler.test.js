@@ -92,7 +92,7 @@ test("returns 404 when lyrics are missing for found song", async () => {
 });
 
 test("returns cached payload on cache hit", async () => {
-  const cached = { song: { id: "cached" }, lines: [], metadata: { version: "2.3.0" } };
+  const cached = { song: { id: "cached" }, lines: [], metadata: { version: "2.3.0", selection_revision: "lyrics-selection-2026-09-08" } };
   const handler = createMusicRomanizeHandler({resolveCatalogAliasesFn:async()=>[],
     redis: {},
     getCachedFn: async () => cached,

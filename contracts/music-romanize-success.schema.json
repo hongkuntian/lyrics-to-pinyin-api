@@ -57,7 +57,8 @@
       "type": "object",
       "required": ["synced"],
       "properties": {
-        "synced": { "type": "boolean" }
+        "synced": { "type": "boolean" },
+        "instrumental": { "type": "boolean" }
       }
     },
     "metadata": {
@@ -67,11 +68,12 @@
         "timestamp": { "type": "string" },
         "version": { "type": "string" },
         "source": { "type": "string" },
+        "selection_revision": { "type": "string" },
         "recording_match": {
           "type": "object",
           "required": ["method", "catalog_id", "artist", "title", "duration"],
           "properties": {
-            "method": { "type": "string", "enum": ["catalog_alias", "metadata_alias"] },
+            "method": { "type": "string", "enum": ["catalog_alias", "metadata_alias", "metadata_equivalence"] },
             "catalog_id": { "type": "string", "pattern": "^[0-9]{1,20}$" },
             "artist": { "type": "string" },
             "album": { "type": "string" },

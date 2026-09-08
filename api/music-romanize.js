@@ -5,21 +5,24 @@ import {formatMusicResponse} from './utils/response-formatter.js';
 import {getCacheKey,getCached,setCached,cacheUnavailable,suspendCache} from './utils/cache.js';
 import {getMusicAPI,getAvailableAPIs,getSupportedCombinations} from './music-apis/index.js';
 import {withDeadline} from './utils/fetch-json.js';
-import {recordingScore,RecordingMismatchError} from './utils/recording-match.js';
+import {recordingScore,sameRecordingNames,metadataEquivalence,RecordingMismatchError} from './utils/recording-match.js';
 import {resolveCatalogAliases} from './utils/catalog-aliases.js';
 import {waitUntil} from '@vercel/functions';
 import {randomUUID} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
 import {BoundedCache} from './utils/bounded-cache.js';
+import {cleanLyrics,hasUsableLyrics} from './utils/lyric-quality.js';
+import {applyTimingCorrection} from './utils/timing-corrections.js';
 import {hedgedLookup} from './utils/hedged-lookup.js';
 const RESPONSE_VERSION='2.3.0';
+export const SELECTION_REVISION='lyrics-selection-2026-09-08';
 export function createMusicRomanizeHandler(dependencies={}) {
   const {
     redis=createRedisFromEnv(),detectLanguageFn=detectLanguage,getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,
     getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,getCacheKeyFn=getCacheKey,
     getCachedFn=getCached,setCachedFn=setCached,getMusicAPIFn=getMusicAPI,getAvailableAPIsFn=getAvailableAPIs,
     getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,hedgeDelayMs=350,untimedGraceMs=2500,cacheTimeoutMs=300,
-    resolveCatalogAliasesFn=resolveCatalogAliases,waitUntilFn=waitUntil,logger=console,
+    applyTimingCorrectionFn=applyTimingCorrection,resolveCatalogAliasesFn=resolveCatalogAliases,waitUntilFn=waitUntil,logger=console,
     responseCache=new BoundedCache(),aliasCache=new BoundedCache({ttlMs:86400000})
   }=dependencies;
   const inflight=new Map();
@@ -53,7 +56,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
       if(!apis.length) return send({status:400,body:{error:`No music API available for script '${searchScript}' and platform '${music_platform}'`,supported_combinations:getSupportedMusicAPIsFn()}});
       // Sort option keys without relaxing recording or request-bound alias identity.
       const stableOptions=Object.fromEntries(Object.entries(options).sort(([a],[b])=>a.localeCompare(b)));
-      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,selectionPolicy:'timed-recording-v3'}),searchScript,searchSystem,stableOptions);
+      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,selectionPolicy:SELECTION_REVISION}),searchScript,searchSystem,stableOptions);
       const local=responseCache.get(key);
       if(local) { cacheStatus='MEMORY';return send({status:200,body:local}); }
       if(inflight.has(key)) { cacheStatus='COALESCED';return send(await measure('shared',()=>inflight.get(key))); }
@@ -61,7 +64,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
       const compute=async()=> {
         if(redis && !cacheUnavailable(redis)) {
           const cached=await measure('cache_read',()=>withDeadline(()=>getCachedFn(redis,key),cacheTimeoutMs)).catch(error=>{suspendCache(redis,error);return null;});
-          if(cached?.metadata?.version===RESPONSE_VERSION) {
+          if(cached?.metadata?.version===RESPONSE_VERSION && cached.metadata.selection_revision===SELECTION_REVISION) {
             responseCache.set(key,cached);cacheStatus='REDIS';return {status:200,body:cached};
           }
         }
@@ -72,15 +75,18 @@ export function createMusicRomanizeHandler(dependencies={}) {
           const lookup=async(api,parentSignal)=> {
             const remaining=deadline-Date.now();
             if(remaining<=0) { timedOut=true; return null; }
+            const providerDeadline=Date.now()+Math.min(providerTimeoutMs,remaining);
             try {
               return await withDeadline(async signal=> {
                 const label=api.name.replace(/[^a-zA-Z0-9_]/g,'');
-                const song=await measure(`${label}_search`,()=>api.searchSong(target.artist,target.title,{album:target.album,duration:target.duration,signal}));
+                const song=await measure(`${label}_search`,()=>api.searchSong(target.artist,target.title,{album:target.album,duration:target.duration,catalog_id:target.catalog_id || catalog_id,signal}));
                 if(!song) { diagnose(api.name,'not_found');return null; }
                 if(recordingScore(song,target)<0 || (duration!=null && song.duration!=null && Math.abs(duration-song.duration)>3)) throw new RecordingMismatchError();
                 matched=true;
-                const lyrics=await measure(`${label}_lyrics`,()=>api.getLyrics(song.id,{signal,song}));
-                return lyrics?.lines?.some(line=>line.text?.trim()) ? {song,lyrics,api,target}:null;
+                let lyrics=cleanLyrics(await measure(`${label}_lyrics`,()=>api.getLyrics(song.id,{signal,song})),{duration:song.duration});
+                const candidate=await applyTimingCorrectionFn({song,lyrics,api,target},request,{signal,deadline:providerDeadline});
+                lyrics=candidate.lyrics;
+                return hasUsableLyrics(lyrics,{duration:candidate.song.duration}) ? candidate:null;
               },Math.min(providerTimeoutMs,remaining),parentSignal);
             } catch(error) {
               if(parentSignal?.aborted) return null;
@@ -109,7 +115,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
         if(result) {
           const {song,lyrics,api,target}=result;
           const response=await measure('romanize',async()=> {
-            const script=language || await detectLanguageFn(lyrics.lines.map(line=>line.text || '').join('\n'));
+            const script=lyrics.instrumental ? searchScript : language || await detectLanguageFn(lyrics.lines.map(line=>line.text || '').join('\n'));
             const system=romanization_system || getDefaultRomanizationSystemFn(script);
             const processor=script==='en' ? null:getProcessorFn(script);
             if(!processor && script!=='en') return null;
@@ -123,7 +129,14 @@ export function createMusicRomanizeHandler(dependencies={}) {
           if(!response) return {status:400,body:{error:'Script is not supported for romanization'}};
           response.song.album=song.album ?? null;response.song.duration=song.duration ?? null;
           response.metadata.version=RESPONSE_VERSION;
+          response.metadata.selection_revision=SELECTION_REVISION;
+          response.quality.instrumental=lyrics.instrumental===true;
+          if(result.timingCorrection) response.metadata.timing_correction=result.timingCorrection;
           if(target!==request) response.metadata.recording_match={method:catalog_id ? 'catalog_alias':'metadata_alias',catalog_id:catalog_id || target.catalog_id,artist,title,duration,...(!catalog_id ? {album}:{})};
+          if(target===request && !sameRecordingNames(song,request)) {
+            const method=result.timingCorrection?.status==='replacement' && !metadataEquivalence(song,request) ? 'catalog_alias':'metadata_equivalence';
+            response.metadata.recording_match={method,catalog_id,artist,title,album,duration};
+          }
           diagnose(api.name,target===request ? 'matched':'catalog_alias');
           responseCache.set(key,response);
           if(redis && !cacheUnavailable(redis)) {
