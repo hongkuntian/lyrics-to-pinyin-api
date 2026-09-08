@@ -27,8 +27,8 @@ function signature(song) {
   return {catalog_id:String(song.trackId),title:song.trackName,artist:song.artistName,album:song.collectionName,
     duration:Number.isFinite(song.trackTimeMillis) ? song.trackTimeMillis/1000:null};
 }
-function playerResponse(html) {
-  const match=/\bytInitialPlayerResponse\s*=\s*/u.exec(html);
+function playerResponse(html,initialData=false) {
+  const match=(initialData ? /\bytInitialData\s*=\s*/u : /\bytInitialPlayerResponse\s*=\s*/u).exec(html);
   if(!match || html[match.index+match[0].length]!=='{') return null;
   const start=match.index+match[0].length;
   let depth=0,quoted=false,escaped=false;
@@ -80,6 +80,18 @@ export async function lookupOfficialTranscription(request,context={}) {
       stage='source_parse';
       const player=playerResponse(html),details=player?.videoDetails;
       const playability=player?.playabilityStatus?.status;
+      let page;
+      try { page=playerResponse(html,true); } catch { /* Optional diagnostics only. */ }
+      const watch=page?.contents?.twoColumnWatchNextResults?.results?.results?.contents || [];
+      const primary=watch.find(item=>item.videoPrimaryInfoRenderer)?.videoPrimaryInfoRenderer;
+      const secondary=watch.find(item=>item.videoSecondaryInfoRenderer)?.videoSecondaryInfoRenderer;
+      const pageDescription=secondary?.attributedDescription?.content;
+      diagnose({stage:'public_page_metadata',pagePresent:!!page,
+        videoMatches:page?.currentVideoEndpoint?.watchEndpoint?.videoId===source.videoID,
+        channelMatches:secondary?.owner?.videoOwnerRenderer?.navigationEndpoint?.browseEndpoint?.browseId===source.channelID,
+        titleMatches:(primary?.title?.runs || []).map(run=>run.text || '').join('')===source.title,
+        descriptionPresent:typeof pageDescription==='string',
+        paragraphMatches:typeof pageDescription==='string' && pageDescription.split(/\r?\n/u).some(paragraph=>hash(paragraph)===source.paragraphSHA256)});
       diagnose({stage:'source_metadata',playability:['OK','LOGIN_REQUIRED','UNPLAYABLE','ERROR'].includes(playability)?playability:'OTHER',
         playerPresent:!!player,videoMatches:details?.videoId===source.videoID,channelMatches:details?.channelId===source.channelID,
         titleMatches:details?.title===source.title,durationMatches:Number(details?.lengthSeconds)===source.duration,
