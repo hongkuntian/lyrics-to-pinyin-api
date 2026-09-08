@@ -1,7 +1,7 @@
 import {createRedisFromEnv} from './utils/redis-client.js';
 import {detectLanguage,getDefaultRomanizationSystem} from './utils/language-detection.js';
 import {getProcessor} from './processors/index.js';
-import {formatMusicResponse} from './utils/response-formatter.js';
+import {formatMusicResponse,canonicalProviderID} from './utils/response-formatter.js';
 import {getCacheKey,getCached,setCached,cacheUnavailable,suspendCache} from './utils/cache.js';
 import {getMusicAPI,getAvailableAPIs,getSupportedCombinations} from './music-apis/index.js';
 import {withDeadline} from './utils/fetch-json.js';
@@ -42,6 +42,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
       finally { timings.push(`${name};dur=${(performance.now()-start).toFixed(1)}`); }
     };
     const send=({status,body})=> {
+      if(status===200 && body?.song) body={...body,song:{...body.song,id:canonicalProviderID(body.song.id)}};
       res.setHeader('X-Request-ID',requestID);
       res.setHeader('X-Lyrics-Cache',cacheStatus);
       res.setHeader('Server-Timing',[...timings,`total;dur=${(performance.now()-started).toFixed(1)}`].join(', '));

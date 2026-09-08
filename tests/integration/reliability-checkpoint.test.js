@@ -121,3 +121,12 @@ test('partially timed transcriptions still retry on the short lifetime',async()=
  const result=await invoke(make({partial:true,lines:[{text:'Some timed words',timestamp:4}]},{redis:{},getCachedFn:async()=>null,setCachedFn:async(_,__,body,ttl)=>writes.push(ttl),waitUntilFn:()=>{}}));
  assert.equal(result.body.quality.partial,true);assert.deepEqual(writes,[300]);
 });
+
+test('cached numeric provider IDs keep old clients readable without renewing freshness',async()=>{
+ const cached={song:{id:'103045439'},metadata:{version:'2.3.0',selection_revision:SELECTION_REVISION,timestamp:new Date().toISOString()},quality:{synced:true,partial:false,instrumental:false},lines:[{original:'Cached phrase',timestamp:4}]};
+ const handler=make(null,{redis:{},getCachedFn:async()=>cached,getAvailableAPIsFn:()=>[{name:'Unused',searchSong:()=>assert.fail('valid cache should be used')}]});
+ for(let i=0;i<2;i++) {
+  const result=await invoke(handler);assert.equal(result.body.song.id,103045439);assert.equal(result.body.metadata.timestamp,cached.metadata.timestamp);
+ }
+ assert.equal(cached.song.id,'103045439');
+});
