@@ -9,6 +9,29 @@ import {sameRecordingNames,recordingScore,findRecording,RecordingMismatchError,n
 const origin='https://lyrics.kugou.com';
 const maxBytes=512*1024;
 const official='官方推荐歌词';
+const albumVersionMarkers=[
+  /\blive\b|\bconcert\b|现场|演唱会/iu,
+  /\bremaster(?:ed)?\b|重制/iu,
+  /\binstrumental\b|纯音乐|器乐/iu,
+  /\bkaraoke\b|伴奏|卡拉\s*ok/iu,
+  /\bremix\b|混音/iu,
+  /\bdemo\b|概念版|小样/iu,
+  /\bacoustic\b|不插电/iu,
+  /\ba[ -]?cap(?:p)?ella\b|清唱/iu,
+  /\bedit\b|剪辑版/iu,
+  /\bmix\b/iu,
+  /\bcover\b|翻唱/iu,
+  /\breprise\b/iu,
+  /\bversion\b|版本/iu
+];
+function preservesAlbumVersion(song,request) {
+  const album=chinese.sify(request.album || '').normalize('NFKC');
+  const candidate=chinese.sify(song.title).normalize('NFKC');
+  // This provider has no authoritative album metadata. Every explicit version
+  // mentioned only on the requested album must also be established by the
+  // independently matching candidate title; unknown album evidence is not a match.
+  return albumVersionMarkers.every(marker=>!marker.test(album) || marker.test(candidate));
+}
 function cancelled(signal) {
   if(signal?.aborted) throw Object.assign(new Error('Lookup cancelled'),{name:'AbortError'});
 }
@@ -81,7 +104,7 @@ export class KugouAPI extends BaseMusicAPI {
         || !/^\d{1,20}$/.test(String(raw.id ?? '')) || typeof raw.accesskey!=='string' || !/^[A-Za-z0-9_-]{1,256}$/.test(raw.accesskey)
         || /伴奏|instrumental|karaoke/iu.test(raw.language || '')) continue;
       const song={source:'kugou',id:String(raw.id),title:raw.song,artist:raw.singer,duration:raw.duration/1000};
-      if(!sameRecordingNames(song,request) || recordingScore(song,request)<0) continue;
+      if(!sameRecordingNames(song,request) || !preservesAlbumVersion(song,request) || recordingScore(song,request)<0) continue;
       const previous=records.get(song.id);
       if(previous && (JSON.stringify(previous.song)!==JSON.stringify(song) || previous.key!==raw.accesskey)) throw new RecordingMismatchError();
       records.set(song.id,{song,key:raw.accesskey,score:recordingScore(song,request)});

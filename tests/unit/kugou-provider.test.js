@@ -87,3 +87,28 @@ test('rejects lyric bodies whose explicit recording metadata contradicts selecte
     await assert.rejects(search(context([candidate()],{'10':{status:200,content:Buffer.from(changed).toString('base64')}})),{code:'recording_mismatch'});
   }
 });
+
+test('does not erase album-only recording versions when lyric candidates have no album',async()=>{
+  for(const album of ['Live Concert','现场精选','演唱会录音','Remastered','重制版','Instrumental','Karaoke','Remix','Demo','Acoustic','A cappella','Radio Edit','Extended Mix','Cover Collection','Reprise','Alternate Version']) {
+    const ctx=context([candidate()],{}, {album});
+    await assert.rejects(search(ctx),{code:'recording_mismatch'});
+    assert.ok(ctx.calls.length<=1,'Unestablished album version must never download lyrics');
+  }
+});
+
+test('allows an album version only when matching candidate title also establishes that version',async()=>{
+  for(const [album,suffix] of [['Live Concert','Live'],['Remastered','Remastered'],['现场精选','现场'],['Acoustic Sessions','Acoustic']]) {
+    const title=`窗前 (${suffix})`;
+    const ctx=context([candidate('10',{song:title})],{'10':{status:200,content:Buffer.from(raw.replaceAll('窗前',title)).toString('base64')}},{album});
+    assert.equal((await search(ctx,{title})).id,'10');
+  }
+  const title='窗前 (Live)';
+  const ctx=context([candidate('10',{song:title})],{}, {album:'Live Acoustic'});
+  await assert.rejects(search(ctx,{title}),{code:'recording_mismatch'});
+});
+
+test('original soundtrack and normal album descriptors do not imply another recording version',async()=>{
+  for(const album of ['Original Soundtrack','电影原声带','对你太在乎','春泥','放你在心里']) {
+    assert.equal((await search(context([candidate()],{}, {album}))).id,'10');
+  }
+});
