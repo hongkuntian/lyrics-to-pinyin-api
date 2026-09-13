@@ -14,6 +14,8 @@ function typeMatches(expectedType, value) {
 
 export function validateSchema(schema, value, path = "$") {
   const errors = [];
+  if (Object.hasOwn(schema, "const") && value !== schema.const) errors.push(`${path}: unexpected constant`);
+  if (schema.enum && !schema.enum.includes(value)) errors.push(`${path}: unexpected enum value`);
 
   if (schema.anyOf) {
     const branchMatched = schema.anyOf.some((branch) => validateSchema(branch, value, path).length === 0);

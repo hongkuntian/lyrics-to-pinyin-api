@@ -32,9 +32,11 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "node-fetch": "^3.3.2",
+    "pg": "^8.23.0",
     "pinyin-pro": "^3.26.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@vercel/node": "^2.9.6"
   },
   "engines": {

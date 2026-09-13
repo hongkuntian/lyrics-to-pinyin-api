@@ -1,0 +1,442 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Song library v1 response",
+  "anyOf": [
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "state",
+        "document"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "ready"
+        },
+        "document": {
+          "type": "object",
+          "required": [
+            "id",
+            "recordingKey",
+            "sourceHash",
+            "selectionRevision",
+            "response",
+            "structure"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "recordingKey": {
+              "type": "string"
+            },
+            "sourceHash": {
+              "type": "string"
+            },
+            "selectionRevision": {
+              "type": "string"
+            },
+            "response": {
+              "type": "object",
+              "required": [
+                "song",
+                "lines",
+                "metadata",
+                "quality"
+              ],
+              "properties": {
+                "song": {
+                  "type": "object"
+                },
+                "lines": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "original",
+                      "romanized",
+                      "timestamp"
+                    ],
+                    "properties": {
+                      "original": {
+                        "type": "string"
+                      },
+                      "romanized": {
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "metadata": {
+                  "type": "object"
+                },
+                "quality": {
+                  "type": "object"
+                }
+              }
+            },
+            "structure": {
+              "type": "object",
+              "required": [
+                "speakers",
+                "occurrences"
+              ],
+              "properties": {
+                "speakers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "sourceLabel",
+                      "displayName"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "sourceLabel": {
+                        "type": "string"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "occurrences": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "sourceID",
+                      "sourceText",
+                      "lyricText",
+                      "speakerID",
+                      "startsTurn",
+                      "sourcePrefix"
+                    ],
+                    "properties": {
+                      "sourceID": {
+                        "type": "string"
+                      },
+                      "sourceText": {
+                        "type": "string"
+                      },
+                      "lyricText": {
+                        "type": "string"
+                      },
+                      "speakerID": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "startsTurn": {
+                        "type": "boolean"
+                      },
+                      "sourcePrefix": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "state",
+        "translation"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "ready"
+        },
+        "translation": {
+          "type": "object",
+          "required": [
+            "id",
+            "recipe",
+            "lines",
+            "sourceNotes"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "recipe": {
+              "type": "string"
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sourceID",
+                  "lyricText",
+                  "text",
+                  "speakerID",
+                  "startsTurn"
+                ],
+                "properties": {
+                  "sourceID": {
+                    "type": "string"
+                  },
+                  "lyricText": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "speakerID": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "startsTurn": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "sourceNotes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sourceID",
+                  "sourceQuote",
+                  "kind",
+                  "explanation"
+                ],
+                "properties": {
+                  "sourceID": {
+                    "type": "string"
+                  },
+                  "sourceQuote": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "uncertain_source",
+                      "ambiguous_reading"
+                    ]
+                  },
+                  "explanation": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "state"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "loading_lyrics"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "state",
+        "job"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "preparing"
+        },
+        "job": {
+          "type": "object",
+          "required": [
+            "id",
+            "state",
+            "documentID",
+            "target",
+            "errorCode"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "queued",
+                "running",
+                "ready",
+                "failed",
+                "unknown"
+              ]
+            },
+            "documentID": {
+              "type": "string"
+            },
+            "target": {
+              "const": "en"
+            },
+            "errorCode": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "state",
+        "job"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "enum": [
+            "queued",
+            "running",
+            "ready",
+            "failed",
+            "unknown"
+          ]
+        },
+        "job": {
+          "type": "object",
+          "required": [
+            "id",
+            "state",
+            "documentID",
+            "target",
+            "errorCode"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "queued",
+                "running",
+                "ready",
+                "failed",
+                "unknown"
+              ]
+            },
+            "documentID": {
+              "type": "string"
+            },
+            "target": {
+              "const": "en"
+            },
+            "errorCode": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "report"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "report": {
+          "type": "object",
+          "required": [
+            "id",
+            "status"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "status": {
+              "const": "pending"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "code"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "code": {
+          "type": "string"
+        }
+      }
+    }
+  ]
+}

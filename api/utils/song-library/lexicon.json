@@ -1,0 +1,142 @@
+{
+  "version": "lexical-context-1",
+  "scope": "Conventional meanings and competing senses of four lexemes only; no translation scoring, song interpretation, songwriter-intent claim, or recording verification.",
+  "limitations": "Generation-safe notes and non-entailment cautions are researcher inferences from the listed sense inventories, not additional dictionary definitions.",
+  "terms": [
+    {
+      "term": "紅塵",
+      "variants": [
+        "红尘"
+      ],
+      "meanings": [
+        {
+          "sense": "The secular human world, or a lively and prosperous worldly setting.",
+          "sources": [
+            "moe_revised_hongchen",
+            "moe_concised_hongchen"
+          ]
+        },
+        {
+          "sense": "Dust, as a separate attested literary sense.",
+          "sources": [
+            "moe_revised_hongchen"
+          ]
+        }
+      ],
+      "limits_and_competing_senses": "The figurative worldly sense and physical-dust sense coexist. The concise dictionary highlights the worldly metaphor; the revised dictionary also preserves older usage. The lexeme alone does not establish a romance, a specific attachment, or a religious speaker.",
+      "generation_safe_note": "Consider worldly life or the human world as the conventional metaphor while retaining dust as a contextual alternative; do not automatically render the characters literally or add a specific romantic story."
+    },
+    {
+      "term": "紅顏",
+      "variants": [
+        "红颜"
+      ],
+      "meanings": [
+        {
+          "sense": "A beauty or beautiful person; the revised entry illustrates this sense with female figures.",
+          "sources": [
+            "moe_revised_hongyan",
+            "moe_concised_hongyan"
+          ]
+        },
+        {
+          "sense": "A young person or youth, illustrated in contrast with old age.",
+          "sources": [
+            "moe_revised_hongyan",
+            "moe_concised_hongyan"
+          ]
+        }
+      ],
+      "limits_and_competing_senses": "The person/beauty sense competes with a youth sense. Neither entry makes a beloved, partner, or reciprocal relationship part of the standalone definition. Dictionary examples cannot determine an unseen referent.",
+      "generation_safe_note": "Resolve beauty/person versus youth from the passage. Do not automatically turn the term into a literal red face, an abstract female soul, or an identified lover."
+    },
+    {
+      "term": "奉陪",
+      "variants": [],
+      "meanings": [
+        {
+          "sense": "A courteous way to speak of accompanying someone or providing company.",
+          "sources": [
+            "moe_concised_fengpei"
+          ]
+        },
+        {
+          "sense": "To engage with or compete against someone; the dictionary illustrates an adversarial legal context.",
+          "sources": [
+            "moe_concised_fengpei"
+          ]
+        }
+      ],
+      "limits_and_competing_senses": "Courteous company and adversarial engagement are both attested. The lexeme alone does not settle warmth versus defiance, voluntary companionship versus a challenge, or any lifelong commitment.",
+      "generation_safe_note": "Preserve the act of accompanying or engaging and let context determine tone. Do not infer permanent devotion, submission, consolation, or romantic reciprocity from the term alone."
+    },
+    {
+      "term": "好過",
+      "variants": [
+        "好过"
+      ],
+      "language_focus": "Cantonese",
+      "pronunciation": "hou2 gwo3",
+      "meanings": [
+        {
+          "sense": "A comparison in which one thing is preferable or superior to another.",
+          "sources": [
+            "cantowords_hougwo",
+            "cantodict_hougwo"
+          ]
+        },
+        {
+          "sense": "Preference for an alternative; Cantowords explains that it may be the less bad of two imperfect options, often alongside 不如 or 索性.",
+          "sources": [
+            "cantowords_hougwo"
+          ]
+        },
+        {
+          "sense": "Experiencing ease or well-being, or being in a more comfortable situation; CantoDict lists this alongside the Cantonese comparative sense.",
+          "sources": [
+            "cantodict_hougwo"
+          ]
+        }
+      ],
+      "limits_and_competing_senses": "Comparison/preference and personal ease/well-being must be distinguished syntactically. The preferred alternative need not be positively desirable. The two entries do not select a sense for an unseen occurrence.",
+      "generation_safe_note": "Check what is compared and whether an alternative is proposed; preserve a possible less-bad choice. Consider ease/well-being only where the construction supports it."
+    }
+  ],
+  "sources": [
+    {
+      "id": "moe_revised_hongchen",
+      "title": "Taiwan MOE Revised Mandarin Chinese Dictionary: 紅塵",
+      "url": "https://dict.revised.moe.edu.tw/dictView.jsp?ID=87024&q=1&word=%E7%B4%85%E5%A1%B5"
+    },
+    {
+      "id": "moe_concised_hongchen",
+      "title": "Taiwan MOE Concised Mandarin Chinese Dictionary: 紅塵",
+      "url": "https://dict.concised.moe.edu.tw/dictView.jsp?ID=21124&la=0&powerMode=0"
+    },
+    {
+      "id": "moe_revised_hongyan",
+      "title": "Taiwan MOE Revised Mandarin Chinese Dictionary: 紅顏",
+      "url": "https://dict.revised.moe.edu.tw/dictView.jsp?ID=87075&la=0&powerMode=0"
+    },
+    {
+      "id": "moe_concised_hongyan",
+      "title": "Taiwan MOE Concised Mandarin Chinese Dictionary: 紅顏",
+      "url": "https://dict.concised.moe.edu.tw/dictView.jsp?ID=21134&powerMode=1"
+    },
+    {
+      "id": "moe_concised_fengpei",
+      "title": "Taiwan MOE Concised Mandarin Chinese Dictionary: 奉陪",
+      "url": "https://dict.concised.moe.edu.tw/dictView.jsp?ID=6249&la=0&powerMode=0"
+    },
+    {
+      "id": "cantowords_hougwo",
+      "title": "Words.hk / Cantowords Cantonese Dictionary: 好過",
+      "url": "https://cantowords.com/dictionary/%E5%A5%BD%E9%81%8E"
+    },
+    {
+      "id": "cantodict_hougwo",
+      "title": "CantoDict: 好過, word 15181",
+      "url": "https://www.cantonese.sheik.co.uk/dictionary/words/15181/"
+    }
+  ]
+}

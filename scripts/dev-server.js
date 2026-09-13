@@ -19,6 +19,7 @@ app.use(express.json());
 // Import API handlers
 import romanizeHandler from '../api/romanize.js';
 import musicRomanizeHandler from '../api/music-romanize.js';
+import songLibraryHandler from '../api/song-library.js';
 
 // Mock request/response objects for Vercel functions
 function createMockReqRes(method, path, body = {}) {
@@ -75,11 +76,12 @@ app.post('/api/music-romanize', async (req, res) => {
 });
 
 // Health check
+app.post('/api/song-library',songLibraryHandler);
 app.get('/health', (req, res) => {
     res.json({ 
         status: 'ok', 
         version: '2.0.0',
-        endpoints: ['/api/romanize', '/api/music-romanize']
+        endpoints: ['/api/romanize', '/api/music-romanize', '/api/song-library']
     });
 });
 
