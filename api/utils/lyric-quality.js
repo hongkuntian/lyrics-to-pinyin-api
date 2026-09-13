@@ -2,12 +2,15 @@
 // arbitrary colons, prose, or short lyric lines are not metadata by themselves.
 const credit = /^(?:词|詞|曲|作词|作詞|填词|填詞|改编词|改編詞|作曲|编曲|編曲|词曲|詞曲|制作人|製作人|制作|製作|监制|監製|录音|錄音|混音|母带|母帶|和声|和聲|弦乐|弦樂|吉他|贝斯|貝斯|鼓|钢琴|鋼琴|配唱制作人|配唱製作人|录音师|錄音師|混音师|混音師|母带工程师|母帶工程師|音乐总监|音樂總監|发行|發行|出品|版权|版權|发行公司|發行公司|制作公司|製作公司|录音室|錄音室|录音工程师|錄音工程師|混音工程师|混音工程師|lyrics\s+by|compos(?:er|ed\s+by)|arrang(?:er|ed\s+by)|produc(?:er|ed\s+by)|mixed\s+by|mastered\s+by|recorded\s+by|publisher)\s*[:：]/iu;
 const instrumentalMarker = /^(?:纯音乐[，,。\s]*(?:请欣赏)?|純音樂[，,。\s]*(?:請欣賞)?|instrumental)[。.!\s]*$/iu;
+const musicianCredit = /^(?:(?:acoustic\s+guitar|guitar\s+solo|strings|programming)\s*[:：]|chorus\s*[:：]\s*[\p{L}\p{M}. ]+(?:\s*\/\s*[\p{L}\p{M}. ]+)+$)/iu;
+const sourceCredit = /^取材自歌曲[《〈].+[》〉]\s*[（(]\s*[词詞]\s*[:：].+曲\s*[:：].+[）)]$/u;
 
 export function cleanLyrics(data, {duration} = {}) {
   if (!data) return null;
   const lines = (data.lines || []).filter(line => typeof line.text === 'string')
     .map(line => ({...line, text: line.text.trim()}))
-    .filter(line => line.text && !credit.test(line.text) && !instrumentalMarker.test(line.text))
+    .filter(line => line.text && !credit.test(line.text) && !musicianCredit.test(line.text)
+      && !sourceCredit.test(line.text) && !instrumentalMarker.test(line.text))
     .map(line => ({...line, timestamp: Number.isFinite(line.timestamp) && line.timestamp >= 0
       && (!Number.isFinite(duration) || line.timestamp <= duration) ? line.timestamp : null}));
   // NetEase encodes its explicit instrumental flag as this fixed full phrase.
