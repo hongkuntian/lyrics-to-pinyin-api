@@ -1,0 +1,69 @@
+[
+  {
+    "id": "jacky-mandarin",
+    "artist": "Jacky Cheung",
+    "title": "我等到花兒也謝了",
+    "album": "真愛 新曲+真正精選",
+    "duration": 278.507,
+    "catalogID": "1440912488",
+    "referenceHash": "46f687da191d00f1b8a70feade0e3b715149b6f4de3f5017b3e84d235397176e",
+    "rejectedHashes": ["29f92a0adaaa3d79294adb14941f217c52ae95452bff9a6cf17643e009568af8"],
+    "provenance": ["https://music.apple.com/ca/song/1440912488", "https://music.163.com/song?id=189873", "https://lrclib.net/api/get/34022656"],
+    "note": "Reviewed Mandarin text reference. ISRC is deliberately absent until independently bound to this recording."
+  },
+  {
+    "id": "jacky-cantonese",
+    "artist": "張學友",
+    "title": "我等到花兒也謝了",
+    "album": "這個冬天不太冷",
+    "duration": 319.253,
+    "catalogID": "1443816196",
+    "isrc": "HKA619900534",
+    "isrcBinding": "Deezer 2458130: Jacky Cheung, same title, 319 seconds, compilation 三年兩語; not verified as Apple's ISRC",
+    "referenceHash": "29f92a0adaaa3d79294adb14941f217c52ae95452bff9a6cf17643e009568af8",
+    "rejectedHashes": ["46f687da191d00f1b8a70feade0e3b715149b6f4de3f5017b3e84d235397176e"],
+    "provenance": ["https://music.apple.com/hk/song/1443816196", "https://api.deezer.com/track/2458130", "https://lrclib.net/api/get/25371400"],
+    "note": "Cantonese transcription reference; matching words do not prove alignment with this album's audio."
+  },
+  {
+    "id": "evon-cover",
+    "artist": "Evon Low",
+    "title": "我等到花兒也謝了",
+    "album": "冬眠",
+    "duration": 327.24,
+    "catalogID": "1085956292",
+    "provenance": ["https://music.apple.com/us/song/1085956292"],
+    "note": "Same-title cover. No adjudicated lyric reference."
+  },
+  {
+    "id": "beyond-cantonese",
+    "artist": "Beyond",
+    "title": "海闊天空",
+    "album": "樂與怒",
+    "duration": 324.84,
+    "catalogID": "1722083721",
+    "provenance": ["https://music.apple.com/us/song/1722083721"],
+    "note": "Cantonese coverage control; no adjudicated lyric reference."
+  },
+  {
+    "id": "jay-ashin-duet",
+    "artist": "Jay Chou & Ashin Chen",
+    "title": "说好不哭",
+    "album": "说好不哭 - Single",
+    "duration": 222.333,
+    "catalogID": "1480230401",
+    "provenance": ["https://music.apple.com/us/song/1480230401"],
+    "note": "Full contributor-credit control; no adjudicated lyric reference."
+  },
+  {
+    "id": "daft-punk-isrc-control",
+    "artist": "Daft Punk",
+    "title": "One More Time",
+    "album": "Discovery",
+    "duration": 320.357,
+    "isrc": "GBDUW0000053",
+    "isrcBinding": "Musicae's documented reference recording; not an Apple-derived ID",
+    "provenance": ["https://api.musicae.io/dj-track-analysis/"],
+    "note": "English ISRC availability control; no adjudicated lyric reference."
+  }
+]
