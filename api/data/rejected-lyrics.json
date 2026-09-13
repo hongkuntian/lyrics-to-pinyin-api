@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "recordings": [
+    {
+      "provider": "lrclib",
+      "id": "13004903",
+      "lyricsSha256": "29f92a0adaaa3d79294adb14941f217c52ae95452bff9a6cf17643e009568af8",
+      "reviewedDate": "2026-09-13",
+      "reason": "Cantonese transcription mislabeled as the 278-second Mandarin recording on 真愛 新曲+真正精選; lyric words and timing duplicate the 319-second Cantonese entry 25371400.",
+      "provenance": [
+        "https://lrclib.net/api/get/13004903",
+        "https://lrclib.net/api/get/25371400",
+        "https://music.apple.com/ca/song/1440912488",
+        "https://www.shazam.com/song/1504394725",
+        "https://music.163.com/song?id=189873"
+      ]
+    }
+  ]
+}

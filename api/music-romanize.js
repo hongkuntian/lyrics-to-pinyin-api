@@ -17,7 +17,7 @@ import {hedgedLookup} from './utils/hedged-lookup.js';
 import {lookupReviewedRecording} from './utils/reviewed-recordings.js';
 import {lookupOfficialTranscription} from './utils/official-transcriptions.js';
 const RESPONSE_VERSION='2.3.0';
-export const SELECTION_REVISION='lyrics-selection-2026-09-08-durable';
+export const SELECTION_REVISION='lyrics-selection-2026-09-13-reviewed-text';
 const responseLifetimeMs=response=>response.quality?.partial===true || (response.quality?.synced===false && response.quality?.instrumental!==true) ? 300000:86400000;
 const remainingLifetimeMs=response=> {
   const created=Date.parse(response.metadata?.timestamp);

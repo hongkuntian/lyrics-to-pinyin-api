@@ -4,8 +4,9 @@ import {parseLRC} from '../utils/lrc.js';
 import {findRecording,findLyricsRecording,searchTitle} from '../utils/recording-match.js';
 import chinese from 'chinese-conv';
 import {cleanLyrics,hasUsableLyrics} from '../utils/lyric-quality.js';
+import {isRejectedLyrics} from '../utils/rejected-lyrics.js';
 export class LRCAPI extends BaseMusicAPI {
-  constructor() { super('LRCAPI',['zh','en','ja','ko']); this.baseURL='https://lrclib.net/api'; }
+  constructor({rejectLyrics=isRejectedLyrics}={}) { super('LRCAPI',['zh','en','ja','ko']); this.baseURL='https://lrclib.net/api'; this.rejectLyrics=rejectLyrics; }
   async searchSong(artist,title,context={}) {
     const request={artist,title,...context}, records=new Map();
     let failure;
@@ -53,12 +54,14 @@ export class LRCAPI extends BaseMusicAPI {
   }
   lyricsFromRecord(record) {
     const make=raw=>cleanLyrics({lines:raw ? parseLRC(raw):[],source:'lrclib',songId:record.id,instrumental:record.instrumental===true},{duration:record.duration});
+    let rejected=false;
     // A credit-only synced field must not hide a usable plain transcription.
     for(const raw of [record.syncedLyrics,record.plainLyrics]) {
       if(!raw) continue;
+      if(this.rejectLyrics('lrclib',record.id,parseLRC(raw))) {rejected=true;continue;}
       const lyrics=make(raw);if(lyrics?.lines?.length) return lyrics;
     }
-    return record.instrumental===true ? make(''):null;
+    return !rejected && record.instrumental===true ? make(''):null;
   }
   async getLyrics(id,context={}) {
     // Search results belong to the request, never mutable singleton state.

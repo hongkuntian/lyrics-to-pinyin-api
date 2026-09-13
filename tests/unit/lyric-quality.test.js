@@ -8,6 +8,11 @@ test('credits alone and placeholder instrumental text are not sung lyrics',()=> 
   assert.equal(hasUsableLyrics({lines:[],instrumental:true}),true);
   assert.equal(hasUsableLyrics({lines:[]}),false);
 });
+test('adaptation and publisher credits in the matching Mandarin source are not vocals',()=>{
+  const lines=[{text:'改编词 : Example',timestamp:0.225},{text:'改編詞：Example',timestamp:0.25},
+    {text:'Publisher : Example Publishing',timestamp:0.3},{text:'这是演唱的测试文字',timestamp:0.515}];
+  assert.deepEqual(cleanLyrics({lines}).lines,[lines[3]]);
+});
 test('retain real short lyrics and colons while clearing invalid vocal timing',()=> {
   const result=cleanLyrics({instrumental:true,lines:[{text:' 作词：Example ',timestamp:0},
     {text:'我说：你好',timestamp:28},{text:'啊',timestamp:500},{text:'come home',timestamp:-1}]},{duration:241});

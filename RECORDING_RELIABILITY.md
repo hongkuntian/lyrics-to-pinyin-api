@@ -24,3 +24,29 @@ Live local checks resolved Unbreakable Love through LRCLIB with English metadata
 Code checkpoint `dc99cd0` passed preview probes and was deployed to production at https://lyrics-to-pinyin-api.vercel.app. Both the older request without album metadata and the enriched catalog request return HTTP 200 with 33 timed lines and Mandarin pinyin. An incorrect 90-second duration remains rejected with 409; 晴天 returns 200 with 53 lines. The production error-log check returned no errors for the checked window.
 
 Lyra's physical-device acceptance test opened My Playlist #3 on T-Phone, selected Unbreakable Love, loaded timed lyrics, sought beyond one minute and resumed playback by tapping a lyric. The test passed, and its screenshot was inspected for pinyin. Lyra's full gate also passed all 23 unit and 7 UI smoke tests. Details and local evidence paths are recorded in the Lyra repository's `docs/RECORDING_RELIABILITY.md`.
+# Reviewed lyric text exclusions
+
+Matching title, performer, album, and duration does not prove that a provider's
+lyric text belongs to that recording. LRCLIB record `13004903`, for example,
+labels Cantonese words as the 278-second Mandarin recording of
+我等到花兒也謝了 on 真愛 新曲+真正精選 (Apple catalog `1440912488`).
+The same wrong words and timing also appear on its 319-second record `25371400`.
+Apple/Shazam's album transcription and NetEase recording `189873` identify the
+Mandarin version; the latter has a duration of 278.506 seconds versus Apple's
+278.507 seconds.
+
+`api/data/rejected-lyrics.json` retains reviewed provider IDs, normalized lyric
+hashes, reasons, and public evidence links without embedding a lyric corpus.
+LRCLIB applies these exclusions to exact lookup, search, and direct lyric fetch,
+including both synced and plain fields. Normal fallback still verifies recording
+metadata; an unavailable replacement cannot restore a rejected transcription.
+Retiming, punctuation, wrapping, and simplified/traditional script changes do not
+alter the fingerprint. Changed words require a new review to be excluded again.
+This is a bounded exclusion of verified bad provider data, not a general language
+classifier or a guarantee that every other provider transcription is accurate.
+
+Selection revisions must advance in both the backend and Lyra when such a repair
+would otherwise reuse cached bad lyrics. Existing app versions remain response
+compatible, but their previously cached results can live until the old expiry;
+updating Lyra invalidates those entries immediately. Tests use original synthetic
+words and injected exclusions; live checks separately verify the reviewed hash.
