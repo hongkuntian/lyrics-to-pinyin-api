@@ -30,6 +30,16 @@ turn metadata but their display text has no singer prefixes. Original sources
 and normalization structure contribute to the document identity, so translations
 for different row layouts cannot attach to each other.
 
+The existing song-library API v1 still ties `sourceText` to the visible row and
+`startsTurn` to a printed prefix. Its responses therefore project normalized
+documents onto the clean vocal rows with empty printed prefixes and no printed
+turn starts. Translation replies use that same view. The full annotation mapping
+remains in `response.metadata.lyric_structure`; the canonical stored document and
+model input keep real performer turns. IDs and hashes identify that canonical
+document, independent of its API view. Existing clients remain compatible without
+requiring a coordinated rollout of the saved-translation feature. Older saved
+documents retain their original v1 speaker-prefix format when explicitly reopened.
+
 The response selection revision is `lyrics-selection-2026-09-13-vocal-text`.
 Backend cache keys also include the normalization version. Native memory/disk
 cache admission and durable song-library lookups use the matching revision;

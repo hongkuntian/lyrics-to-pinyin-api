@@ -4,10 +4,10 @@ import {SongLibraryStore,LibraryError} from './utils/song-library/store.js';
 import {database} from './utils/song-library/database.js';
 import {makeDocument,recordingRequest,requestKey} from './utils/song-library/document.js';
 import {generate,requestBody,reservationMicros,RECIPE} from './utils/song-library/translation.js';
+import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
 
 export const config={maxDuration:300};
 const actions={lyrics:['recording'],translate:['documentID','sourceHash'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
-const safeTranslation=({rejectedNotes,...value})=>value;
 export function lyricLoader(handler=createMusicRomanizeHandler()) {
   return async recording=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
@@ -52,18 +52,18 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
             if(!doc) doc=await db.saveDocument(makeDocument(recording,await loadLyrics(recording),selectionRevision));
           } finally {await db.releaseLookup(key,selectionRevision,owner);}
         }
-        return send(200,{state:'ready',document:doc});
+        return send(200,{state:'ready',document:publicDocument(doc)});
       }
       if(input.action==='translate') {
         if(typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string') throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
         if(doc.sourceHash!==input.sourceHash)throw new LibraryError('source_changed');
         const saved=await db.translation(doc.id,'en');
-        if(saved)return send(200,{state:'ready',translation:safeTranslation(saved)});
+        if(saved)return send(200,{state:'ready',translation:publicTranslation(saved,doc)});
         if(!await db.isCurrentDocument(doc.id,selectionRevision))throw new LibraryError('source_revision_superseded');
         if(!apiKey)throw new LibraryError('generation_not_configured',503);
         const result=await db.reserve({userID:user.id,documentID:doc.id,target:'en',recipe:RECIPE,reservedMicros:reservationMicros(requestBody(doc))});
-        if(result.kind==='ready')return send(200,{state:'ready',translation:safeTranslation(result.translation)});
+        if(result.kind==='ready')return send(200,{state:'ready',translation:publicTranslation(result.translation,doc)});
         if(result.job.state==='queued')waitUntilFn(execute(db,result.job.id,doc).catch(()=>logger.error('translation_worker_storage_failure',{jobID:result.job.id})));
         if(result.kind==='unknown'||result.kind==='failed')return send(409,{state:result.kind,job:result.job,code:result.job.errorCode??'review_required'});
         res.setHeader('Retry-After','3');return send(202,{state:'preparing',job:result.job});
@@ -72,7 +72,9 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
         if(typeof input.jobID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(input.jobID))throw new LibraryError('invalid_request',400);
         const job=await db.job(input.jobID);if(!job)throw new LibraryError('job_not_found',404);
         const saved=job.state==='ready'?await db.translation(job.documentID,job.target):null;
-        return send(200,{state:job.state,job,...(saved?{translation:safeTranslation(saved)}:{})});
+        const doc=saved?await db.document(job.documentID):null;
+        if(saved&&!doc)throw new LibraryError('document_not_found',404);
+        return send(200,{state:job.state,job,...(saved?{translation:publicTranslation(saved,doc)}:{})});
       }
       const report=await db.report({userID:user.id,documentID:input.documentID,translationID:input.translationID,
         sourceID:input.sourceID,category:input.category,detail:input.detail});

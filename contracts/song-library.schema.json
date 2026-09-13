@@ -155,68 +155,12 @@
                       },
                       "sourcePrefix": {
                         "type": "string"
-                      },
-                      "sourceIndex": {
-                        "type": "number"
                       }
                     }
                   }
                 },
                 "version": {
-                  "enum": [
-                    "source-speakers-1",
-                    "lyric-annotations-1"
-                  ]
-                },
-                "sourceRows": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "required": [
-                      "text",
-                      "timestamp"
-                    ],
-                    "properties": {
-                      "text": {
-                        "type": "string"
-                      },
-                      "timestamp": {
-                        "anyOf": [
-                          {
-                            "type": "number"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                },
-                "annotations": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "required": [
-                      "sourceIndex",
-                      "kind"
-                    ],
-                    "properties": {
-                      "sourceIndex": {
-                        "type": "number"
-                      },
-                      "kind": {
-                        "type": "string",
-                        "enum": [
-                          "production_credit",
-                          "source_credit",
-                          "performer_cue",
-                          "instrumental_marker",
-                          "empty"
-                        ]
-                      }
-                    }
-                  }
+                  "const": "source-speakers-1"
                 }
               }
             }
