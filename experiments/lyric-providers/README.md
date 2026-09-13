@@ -20,10 +20,13 @@ For authenticated free-tier probes, configure `RAPIDAPI_KEY` and/or
 
 ```sh
 node experiments/lyric-providers/run.mjs \
-  --providers musicae,musixmatch-apple,musixmatch-isrc \
+  --providers musicae \
   --env-file .env.local \
   --output tmp/provider-experiment/identifier-providers.json
 ```
+
+Musixmatch is currently deferred. When access is available, its separate routes
+are `musixmatch-apple` and `musixmatch-isrc`.
 
 `--cases jacky-mandarin,jacky-cantonese` selects a subset. Each authenticated
 provider route is capped at five HTTP requests per invocation. Musicae currently
@@ -73,6 +76,15 @@ version. A live direct Deezer ISRC lookup instead returned track `2458130`,
 Cantonese candidate, and is not described as verified Apple recording identity.
 MusicBrainz returned 404 for that code in the initial probe. The English ISRC
 is the recording used in Musicae's own documentation.
+
+The authenticated Musicae metadata lookup subsequently mapped that same ISRC
+to a 278.506-second track on `真愛 新曲 + 真正精選`, conflicting with the Deezer
+mapping. Its ISRC and direct Spotify-ID lyric queries both returned the known
+wrong Cantonese transcription for metadata matching the Mandarin release. See
+[RESULTS.md](RESULTS.md#authenticated-musicae-comparison) for exact endpoint
+paths, identifiers and comparison fingerprints. The frozen fixtures retain
+their original provenance; a text-reference match on the Cantonese fixture
+must not be read as a successful recording match.
 
 Provider support for an ISRC query does not prove that its lyric selection uses
 the identifier end to end. An ISRC-to-metadata lookup followed by fuzzy lyric
