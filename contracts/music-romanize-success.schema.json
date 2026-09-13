@@ -70,6 +70,141 @@
         "version": { "type": "string" },
         "source": { "type": "string" },
         "selection_revision": { "type": "string" },
+        "lyric_structure": {
+          "type": "object",
+          "required": [
+            "version",
+            "sourceRows",
+            "annotations",
+            "speakers",
+            "occurrences"
+          ],
+          "properties": {
+            "version": {
+              "type": "string",
+              "enum": [
+                "lyric-annotations-1"
+              ]
+            },
+            "sourceRows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "text",
+                  "timestamp"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "timestamp": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "annotations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sourceIndex",
+                  "kind"
+                ],
+                "properties": {
+                  "sourceIndex": {
+                    "type": "number"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "production_credit",
+                      "source_credit",
+                      "performer_cue",
+                      "instrumental_marker",
+                      "empty"
+                    ]
+                  }
+                }
+              }
+            },
+            "speakers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "sourceLabel",
+                  "displayName"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "sourceLabel": {
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "occurrences": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sourceID",
+                  "sourceIndex",
+                  "sourceText",
+                  "lyricText",
+                  "sourcePrefix",
+                  "speakerID",
+                  "startsTurn"
+                ],
+                "properties": {
+                  "sourceID": {
+                    "type": "string"
+                  },
+                  "sourceIndex": {
+                    "type": "number"
+                  },
+                  "sourceText": {
+                    "type": "string"
+                  },
+                  "lyricText": {
+                    "type": "string"
+                  },
+                  "sourcePrefix": {
+                    "type": "string"
+                  },
+                  "speakerID": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "startsTurn": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
         "recording_match": {
           "type": "object",
           "required": ["method", "catalog_id", "artist", "title", "duration"],

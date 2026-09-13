@@ -36,7 +36,7 @@ test('speaker attribution belongs to source and cannot be relabelled by generate
   const spoken=makeDocument(recording,{...response,lines:[{original:'甲：一起唱',romanized:'',timestamp:0},{original:'慢慢听',romanized:'',timestamp:2},{original:'乙：再唱一遍',romanized:'',timestamp:4}]},'test',{甲:'A',乙:'B'});
   const value={translations:{L0001:'Sing together.',L0002:'Listen slowly.',L0003:'Sing it once more.'},sourceNotes:[]};
   const result=parseTranslation(JSON.stringify(value),spoken);
-  assert.equal(result.lines[0].text,'A: Sing together.');assert.equal(result.lines[1].speakerID,'S1');assert.equal(result.lines[2].text,'B: Sing it once more.');
+  assert.equal(result.lines[0].text,'Sing together.');assert.equal(result.lines[0].startsTurn,true);assert.equal(result.lines[1].speakerID,'S1');assert.equal(result.lines[2].text,'Sing it once more.');
   value.translations.L0001='B: Sing together.';
   assert.throws(()=>parseTranslation(JSON.stringify(value),spoken),{code:'unexpected_generated_speaker_prefix'});
 });

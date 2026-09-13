@@ -1,0 +1,24 @@
+{
+  "artists": [
+    {
+      "id": "top-debut-boy-group",
+      "names": ["TOP Debut Boy Group", "TOP登陆少年组合", "TOP登陸少年組合"],
+      "members": [
+        {"name": "朱志鑫", "aliases": ["朱志鑫22X"]},
+        {"name": "张极", "aliases": ["张极Jeremy"]},
+        {"name": "张泽禹", "aliases": ["张泽禹Zack"]},
+        {"name": "左航", "aliases": ["左航LEFT"]},
+        {"name": "苏新皓", "aliases": ["苏新皓Su"]}
+      ],
+      "provenance": [
+        "https://www.weibo.com/7854957897/PEC5ClzmX",
+        "https://music.apple.com/us/artist/1782557618",
+        "https://music.163.com/song?id=2734065329"
+      ],
+      "note": "Member identities from the group's release announcement; compound labels observed in the provider transcription. Applies to this artist's songs, not arbitrary same-name text."
+    }
+  ],
+  "reviewedRecordings": {
+    "342794615": {"卢": "Lo", "王": "Wang"}
+  }
+}

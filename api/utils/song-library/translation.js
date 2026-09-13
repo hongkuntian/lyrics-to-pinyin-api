@@ -3,14 +3,15 @@ const require=createRequire(import.meta.url);
 const prompt=require('./prompt.json'),lexicon=require('./lexicon.json');
 import {LibraryError} from './store.js';
 export const MODEL='gpt-5.6-luna';
-export const RECIPE='song-clause-4-notes-isolated-1';
+export const RECIPE='song-clause-4-vocal-text-1';
 const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
 export function requestBody(doc) {
   const ids=doc.structure.occurrences.map(o=>o.sourceID),text=doc.structure.occurrences.map(o=>o.sourceText).join('\n');
   const terms=lexicon.terms.filter(t=>[t.term,...t.variants].some(v=>text.includes(v)));
   const sourceIDs=new Set(terms.flatMap(t=>t.meanings.flatMap(m=>m.sources)));
   const data={title:doc.response.song.title.original,artist:doc.response.song.artist.original,
-    sourceLanguageLabel:doc.response.song.language,sourceDocument:doc.structure,verifiedBackground:[],
+    sourceLanguageLabel:doc.response.song.language,sourceDocument:{version:doc.structure.version,
+      speakers:doc.structure.speakers,occurrences:doc.structure.occurrences},verifiedBackground:[],
     lexicalContext:{terms,sources:lexicon.sources.filter(s=>sourceIDs.has(s.id))}};
   return {model:MODEL,reasoning:{effort:'high'},service_tier:'default',max_output_tokens:16384,store:false,
     instructions:prompt.instructions,input:[{role:'user',content:JSON.stringify(data)}],text:{format:{
@@ -58,9 +59,8 @@ export function parseTranslation(text,doc) {
   const lines=occurrences.map(o=> {
     const body=translations[o.sourceID];
     if(names.some(name=>body.startsWith(name+':')||body.startsWith(name+'：'))) throw new LibraryError('unexpected_generated_speaker_prefix',502);
-    const speaker=doc.structure.speakers.find(s=>s.id===o.speakerID);
     return {sourceID:o.sourceID,lyricText:body,speakerID:o.speakerID,startsTurn:o.startsTurn,
-      text:o.startsTurn?`${speaker.displayName}: ${body}`:body};
+      text:body};
   });
   const sourceNotes=[],rejectedNotes=[];
   const notes=Array.isArray(value.sourceNotes)?value.sourceNotes:[value.sourceNotes];

@@ -1,7 +1,7 @@
 import {digest,LibraryError} from './store.js';
+import {reviewedSpeakerLabels,validLyricStructure} from '../lyric-annotations.js';
 
 // Source metadata carried forward from the reviewed corpus, not guessed from arbitrary colons.
-const reviewedSpeakers={'342794615':{'卢':'Lo','王':'Wang'}};
 export function recordingRequest(value) {
   const keys=['catalog_id','artist','title','album','duration','storefront'];
   if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!keys.includes(k))||
@@ -14,16 +14,18 @@ export function recordingRequest(value) {
     duration:value.duration,storefront:value.storefront??null};
 }
 export const requestKey=request=>digest(recordingRequest(request));
-export function makeDocument(request,response,selectionRevision,labels=reviewedSpeakers[request.catalog_id]??{}) {
+export function makeDocument(request,response,selectionRevision,labels=reviewedSpeakerLabels(request.catalog_id)) {
   request=recordingRequest(request);
   if(!response?.song||!Array.isArray(response.lines)||!response.metadata||!response.quality) throw new LibraryError('invalid_source',502);
   if(response.quality.partial || !response.lines.length || response.quality.instrumental) throw new LibraryError('source_incomplete',422);
   if(response.lines.length>250 || Buffer.byteLength(JSON.stringify(response))>160_000) throw new LibraryError('source_too_large',422);
   if(response.lines.some(l=>typeof l.original!=='string'||!l.original.trim()||/[\r\n]/.test(l.original)||l.original.length>2000||typeof l.romanized!=='string'||
     (l.timestamp!=null&&(!Number.isFinite(l.timestamp)||l.timestamp<0)))) throw new LibraryError('invalid_source',502);
-  const speakers=Object.entries(labels).map(([sourceLabel,displayName],i)=>({id:`S${i+1}`,sourceLabel,displayName}));
+  const normalized=response.metadata.lyric_structure;
+  if(normalized && !validLyricStructure(normalized,response.lines)) throw new LibraryError('invalid_source_structure',502);
+  const speakers=normalized?.speakers??Object.entries(labels).map(([sourceLabel,displayName],i)=>({id:`S${i+1}`,sourceLabel,displayName}));
   let active=null;const seen=new Set();
-  const occurrences=response.lines.map((line,i)=> {
+  const occurrences=normalized?.occurrences??response.lines.map((line,i)=> {
     let prefix='';
     for(const speaker of speakers) {
       if(line.original.startsWith(speaker.sourceLabel+':')||line.original.startsWith(speaker.sourceLabel+'：')) {
@@ -35,8 +37,8 @@ export function makeDocument(request,response,selectionRevision,labels=reviewedS
     if(!lyricText.trim()) throw new LibraryError('invalid_source',502);
     return {sourceID:`L${String(i+1).padStart(4,'0')}`,sourceText:line.original,lyricText,speakerID:active,startsTurn:Boolean(prefix),sourcePrefix:prefix};
   });
-  if(speakers.some(s=>!seen.has(s.id))) throw new LibraryError('source_speaker_metadata_changed',422);
-  const structure={version:'source-speakers-1',speakers,occurrences};
+  if(!normalized && speakers.some(s=>!seen.has(s.id))) throw new LibraryError('source_speaker_metadata_changed',422);
+  const structure=normalized??{version:'source-speakers-1',speakers,occurrences};
   // Preserve recording and exact ordered source; local IDs are generated from occurrence position.
   // Provider fetch timestamps and model versions do not expire a durable document.
   const recordingKey=digest({catalogID:request.catalog_id,storefront:request.storefront});

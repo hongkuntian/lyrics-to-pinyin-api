@@ -18,7 +18,7 @@ test('musician and source credits are removed without discarding a sung chorus l
     'Programming：Example Player','Chorus：歌手甲 / 歌手乙',
     '取材自歌曲《测试曲》(词：词作者 曲：曲作者)',
     'Chorus: sing this line with me','这是演唱的测试文字'].map(text=>({text,timestamp:200}));
-  assert.deepEqual(cleanLyrics({lines}).lines,lines.slice(-2));
+  assert.deepEqual(cleanLyrics({lines}).lines,[lines[4],...lines.slice(-2)]);
 });
 test('retain real short lyrics and colons while clearing invalid vocal timing',()=> {
   const result=cleanLyrics({instrumental:true,lines:[{text:' 作词：Example ',timestamp:0},
@@ -29,7 +29,8 @@ test('retain real short lyrics and colons while clearing invalid vocal timing',(
 
 test('NetEase fixed instrumental marker is explicit evidence only without remaining vocals',()=>{
  const marked={source:'netease',lines:[{text:'作词：Writer',timestamp:0},{text:'纯音乐，请欣赏',timestamp:2}]};
- assert.deepEqual(cleanLyrics(marked),{...marked,lines:[],instrumental:true});
+ assert.deepEqual(cleanLyrics(marked).lines,[]);
+ assert.equal(cleanLyrics(marked).instrumental,true);
  assert.equal(cleanLyrics({...marked,source:'unknown'}).instrumental,false);
  assert.equal(cleanLyrics({...marked,lines:[...marked.lines,{text:'A sung phrase',timestamp:10}]}).instrumental,false);
  assert.equal(cleanLyrics({...marked,lines:[{text:'作词：Writer',timestamp:0}]}).instrumental,false);

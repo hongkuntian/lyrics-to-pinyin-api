@@ -103,3 +103,15 @@ test("catalog alias identity is an additive typed response contract", async () =
   assertSchemaMatch(musicSuccessSchema,res.body);
   assert.deepEqual(res.body.metadata.recording_match,{method:'catalog_alias',...original});
 });
+
+test('normalized annotation metadata is typed and optional for older clients', async () => {
+  const api={name:'Fixture',searchSong:async()=>({id:1,title:'Test song',artist:'TOP Debut Boy Group'}),
+    getLyrics:async()=>({lines:[{text:'作词：Example',timestamp:0},{text:'张极Jeremy：',timestamp:3},{text:'一起唱',timestamp:4}]})};
+  const handler=createMusicRomanizeHandler({redis:null,getAvailableAPIsFn:()=>[api],logger:{error(){}}});
+  const res=createMockRes();await handler(createMockReq({body:{artist:'TOP Debut Boy Group',title:'Test song',language:'zh'}}),res);
+  assert.equal(res.statusCode,200);assertSchemaMatch(musicSuccessSchema,res.body);
+  const malformed=structuredClone(res.body);malformed.metadata.lyric_structure.occurrences[0].sourceIndex='2';
+  assert.ok(validateSchema(musicSuccessSchema,malformed).length);
+  const legacy=structuredClone(res.body);delete legacy.metadata.lyric_structure;
+  assertSchemaMatch(musicSuccessSchema,legacy);
+});
