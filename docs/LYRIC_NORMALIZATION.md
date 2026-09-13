@@ -1,6 +1,6 @@
 # Lyric annotations and vocal text
 
-The shared `cleanLyrics` path uses `lyric-annotations-1` to separate recognized
+The shared `cleanLyrics` path uses `lyric-annotations-2` to separate recognized
 production credits and performer cues from sung text before romanization. It
 does not delete arbitrary colon-containing lines, deduplicate refrains, rewrite
 words, or move a cue's timestamp onto a vocal line.
@@ -21,7 +21,8 @@ its source row index, original text, removed prefix, clean text and explicit tur
 metadata. Source timestamps are evidence; visible timestamps come from the
 vocal rows and may reflect a separately verified timing correction. Repeated
 normalization preserves the same mapping and cannot strip a second apparent
-speaker prefix from already-cleaned sung words.
+speaker prefix from already-cleaned sung words or reclassify a stripped vocal
+body as a production credit or instrumental marker.
 
 Song-library documents validate the mapping against their exact response rows.
 Translation receives only vocal occurrences and their performer context, not
@@ -40,7 +41,7 @@ document, independent of its API view. Existing clients remain compatible withou
 requiring a coordinated rollout of the saved-translation feature. Older saved
 documents retain their original v1 speaker-prefix format when explicitly reopened.
 
-The response selection revision is `lyrics-selection-2026-09-13-vocal-text`.
+The response selection revision is `lyrics-selection-2026-09-13-vocal-text-2`.
 Backend cache keys also include the normalization version. Native memory/disk
 cache admission and durable song-library lookups use the matching revision;
 older results remain readable during rollout but must be refetched rather than

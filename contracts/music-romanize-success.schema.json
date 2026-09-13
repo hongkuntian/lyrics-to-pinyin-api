@@ -83,7 +83,8 @@
             "version": {
               "type": "string",
               "enum": [
-                "lyric-annotations-1"
+                "lyric-annotations-1",
+                "lyric-annotations-2"
               ]
             },
             "sourceRows": {

@@ -2,8 +2,8 @@ import {createRequire} from 'node:module';
 import chinese from 'chinese-conv';
 const require=createRequire(import.meta.url);
 const roster=require('../data/lyric-performers.json');
-export const LYRIC_NORMALIZATION_VERSION='lyric-annotations-1';
-export const LYRIC_SELECTION_REVISION='lyrics-selection-2026-09-13-vocal-text';
+export const LYRIC_NORMALIZATION_VERSION='lyric-annotations-2';
+export const LYRIC_SELECTION_REVISION='lyrics-selection-2026-09-13-vocal-text-2';
 export const reviewedSpeakerLabels=catalogID=>roster.reviewedRecordings[catalogID]??{};
 
 // Normalize labels for comparison only. Never rewrite the sung words.
@@ -105,11 +105,12 @@ export function normalizeLyricAnnotations(data,options={}) {
   input.forEach((line,i)=>{
     const original=reusable?previous.occurrences[i]:null;
     const sourceIndex=original?.sourceIndex??i,sourceText=original?.sourceText??line.text;
-    const text=line.text.trim(),role=creditRole(text,aliases);
-    if(!text || role || instrumental.test(text)) {
+    const strippedPrefix=Boolean(original?.sourcePrefix);
+    const text=line.text.trim(),role=strippedPrefix?null:creditRole(text,aliases);
+    if(!text || role || (!strippedPrefix && instrumental.test(text))) {
       annotations.push({sourceIndex,kind:role??(text?'instrumental_marker':'empty')});return;
     }
-    const prefix=original?.speakerID?null:labelPrefix(text);
+    const prefix=strippedPrefix?null:labelPrefix(text);
     const names=prefix && (namedPerformers(prefix.label,aliases)
       ?? (hasNamedCue && genericLabels.has(labelKey(prefix.label))?[genericLabels.get(labelKey(prefix.label))]:null));
     let lyricText=text,sourcePrefix=original?.sourcePrefix??'',startsTurn=original?.startsTurn??false;

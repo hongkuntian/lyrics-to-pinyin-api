@@ -75,7 +75,7 @@ test('lyrics, cached translation and job status remain compatible with API v1 cl
   const loaded=await call({action:'lyrics',recording});assert.equal(loaded.statusCode,200);
   const wire=loaded.body.document,canonical=await store.document(wire.id);
   assert.equal(wire.structure.version,'source-speakers-1');
-  assert.equal(canonical.structure.version,'lyric-annotations-1');
+  assert.equal(canonical.structure.version,'lyric-annotations-2');
   assert.deepEqual(wire.response.metadata.lyric_structure,canonical.structure);
   for(const [i,o] of wire.structure.occurrences.entries()) {
     assert.equal(o.sourceText,wire.response.lines[i].original);

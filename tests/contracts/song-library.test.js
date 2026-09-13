@@ -42,7 +42,7 @@ test('song library v1 carries clean vocal rows and retains annotation metadata',
   const document=publicDocument(makeDocument({catalog_id:'123',artist:'Test artist',title:'Original test song',duration:12},response,'current'));
   const payload={version:1,state:'ready',document};
   assert.deepEqual(validateSchema(schema,payload),[]);
-  assert.equal(document.response.metadata.lyric_structure.version,'lyric-annotations-1');
+  assert.equal(document.response.metadata.lyric_structure.version,'lyric-annotations-2');
   const malformed=structuredClone(payload);malformed.document.structure.occurrences[0].sourceID=2;
   assert.ok(validateSchema(schema,malformed).length);
   malformed.document.structure=structuredClone(document.structure);malformed.document.structure.version='unknown';

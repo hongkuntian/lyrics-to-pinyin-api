@@ -32,6 +32,11 @@ test('translation replies match vocal rows while stored performer turns and note
   assert.deepEqual(wire.sourceNotes,[translation.sourceNotes[0]]);
   assert.deepEqual(translation,before);
 });
+test('the first normalized document revision keeps the same v1 view after a cleanup update',()=>{
+  const older={...doc,structure:{...doc.structure,version:'lyric-annotations-1'}};
+  assert.deepEqual(publicDocument(older),publicDocument(doc));
+  assert.deepEqual(publicTranslation(translation,older),publicTranslation(translation,doc));
+});
 test('older saved documents retain the original API v1 speaker-prefix convention',()=>{
   const legacy={structure:{version:'source-speakers-1',speakers:[{id:'S1',displayName:'Lo'}],
     occurrences:[{sourceID:'L0001',sourceText:'卢：一起唱',lyricText:'一起唱',sourcePrefix:'卢：',speakerID:'S1',startsTurn:true}]}};

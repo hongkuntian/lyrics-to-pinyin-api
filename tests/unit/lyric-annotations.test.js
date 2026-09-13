@@ -69,3 +69,17 @@ test('an initial context-free pass retains source rows for a later verified arti
   assert.deepEqual(result.lyricStructure.sourceRows,data.lines);
   assert.deepEqual(result.lyricStructure.occurrences.map(o=>o.sourceIndex),[2,3]);
 });
+
+test('a stripped vocal body cannot become a credit or instrumental marker on another pass',()=>{
+  const data={source:'netease',lines:rows(['张极Jeremy：Producer: keep singing','张泽禹Zack：编曲：这也是歌词','左航LEFT：Instrumental'])};
+  const first=cleanLyrics(data,top),second=cleanLyrics(first,top);
+  assert.deepEqual(first.lines.map(l=>l.text),['Producer: keep singing','编曲：这也是歌词','Instrumental']);
+  assert.deepEqual(second,first);assert.equal(second.instrumental,false);
+});
+test('a later verified roster can resolve a previously unknown cue inside an active turn',()=>{
+  const data={lines:rows(['张极：第一句','张泽禹Zack：第二句'])};
+  const first=cleanLyrics(data,{artist:'张极'}),second=cleanLyrics(first,top);
+  assert.deepEqual(second.lines.map(l=>l.text),['第一句','第二句']);
+  assert.deepEqual(second.lyricStructure.occurrences.map(o=>o.speakerID),['S1','S2']);
+  assert.deepEqual(cleanLyrics(second,top),second);
+});
