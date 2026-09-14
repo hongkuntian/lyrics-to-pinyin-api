@@ -3,16 +3,9 @@ import {LibraryError,digest} from './store.js';
 import {reserveReview,claimReviewOperation,finishReviewOperation,releaseReviewOperation} from './spending.js';
 import {assessmentBody,batchReservation,VERIFICATION_RESERVATION,REVIEW_POLICY,assessRecord} from './review-assessment.js';
 import {BatchProvider,batchInput,batchMatches,parseBatchFiles,stableJSON} from './batch-provider.js';
-
-const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??null;
-// Reuse the accounting primitives inside the caller's transaction, on its connection.
-const within=db=>({transaction:fn=>fn(db)});
-async function context(db,revisionID) {
-  const r=await first(db,`SELECT d.id,d.source_hash,d.response,d.structure,r.content,t.target FROM translation_revisions r
-    JOIN song_translations t ON t.id=r.translation_id JOIN lyric_documents d ON d.id=t.document_id WHERE r.id=$1`,[revisionID]);
-  if(!r||r.target!=='en')throw new LibraryError('review_context_unavailable');
-  return {doc:{id:r.id,sourceHash:r.source_hash,response:r.response,structure:r.structure},content:r.content};
-}
+import {first,within,reviewContext as context,saveReviewBatch} from './review-context.js';
+import {advanceReviews,prepareVerifications} from './review-publication.js';
+import {parseVerification} from './review-verification.js';
 export class ReviewQueue {
   constructor(db,owner=randomUUID()) {this.db=db;this.owner=owner;}
   async acquire() {
@@ -38,6 +31,9 @@ export class ReviewQueue {
       const active=await first(db,"SELECT * FROM correction_batches WHERE state NOT IN ('completed','cancelled')");
       if(active)return {batch:active};
       if(!settings?.enabled||!settings.review_enabled)return {outcome:'review_disabled'};
+      const advanced=await advanceReviews(db,settings);
+      const verification=await prepareVerifications(db,settings);
+      if(verification)return {batch:verification};
       if(!settings.review_max_daily)return {outcome:'review_allowance_exhausted'};
       // Superseded revisions cost nothing. Age gets priority after seven days; reporter
       // count is capped so a report flood cannot grow the paid queue for one revision.
@@ -47,7 +43,7 @@ export class ReviewQueue {
         ORDER BY (q.first_reported_at<now()-interval '7 days') DESC,
         least(3,(SELECT count(DISTINCT user_id) FROM correction_reports r WHERE r.translation_id=q.revision_id AND r.category='translation')) DESC,
         q.first_reported_at,q.revision_id LIMIT 25`)).rows;
-      const items=[];let outcome='empty';
+      const items=[];let outcome=advanced.published?'published':advanced.closed?'review_completed':'empty';
       for(const row of candidates) {
         if(items.length>=Math.min(5,settings.review_max_daily))break;
         let c,body,reports;
@@ -77,12 +73,7 @@ export class ReviewQueue {
         await db.query("UPDATE correction_review_queue SET state='reserved',review_id=$2,reason=NULL WHERE revision_id=$1",[row.revision_id,review.id]);
       }
       if(!items.length)return {outcome};
-      items.sort((a,b)=>a.operation_id.localeCompare(b.operation_id));
-      const id=randomUUID(),hash=digest(batchInput(items));
-      const batch=await first(db,"INSERT INTO correction_batches(id,state,request_hash) VALUES($1,'prepared',$2) RETURNING *",[id,hash]);
-      for(const i of items)await db.query(`INSERT INTO correction_batch_items(operation_id,batch_id,review_id,revision_id,request_body,report_snapshot)
-        VALUES($1,$2,$3,$4,$5,$6)`,[i.operation_id,id,i.review_id,i.revision_id,JSON.stringify(i.request_body),JSON.stringify(i.report_snapshot)]);
-      return {batch};
+      return {batch:await saveReviewBatch(db,items,'assessment',REVIEW_POLICY)};
     });
   }
   async transition(id,from,to) {
@@ -96,14 +87,16 @@ export class ReviewQueue {
     return this.tx(async db=> {
       const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
       if(!settings?.enabled||!settings.review_enabled)return null;
+      if(local.stage==='verification'&&!settings.review_publication_enabled)return null;
       const items=(await db.query('SELECT * FROM correction_batch_items WHERE batch_id=$1 ORDER BY operation_id',[local.id])).rows;
+      if(digest(batchInput(items))!==local.request_hash)throw new LibraryError('batch_request_changed');
       for(const i of items) {
         const head=await first(db,`SELECT h.revision_id,t.id AS translation_id FROM translation_heads h JOIN song_translations t ON t.id=h.translation_id
           WHERE h.revision_id=$1 FOR UPDATE OF t`,[i.revision_id]);
         const fresh=head&&await first(db,'SELECT revision_id FROM translation_heads WHERE translation_id=$1',[head.translation_id]);
         if(fresh?.revision_id!==i.revision_id) {
           for(const item of items) {
-            const ops=(await db.query('SELECT id FROM library_spend_operations WHERE review_id=$1',[item.review_id])).rows;
+            const ops=(await db.query("SELECT id FROM library_spend_operations WHERE review_id=$1 AND state='reserved'",[item.review_id])).rows;
             for(const op of ops)await releaseReviewOperation(within(db),op.id);
           }
           await db.query("UPDATE correction_batch_items SET state='cancelled',error_code='batch_source_superseded' WHERE batch_id=$1",[local.id]);
@@ -115,7 +108,7 @@ export class ReviewQueue {
       const claimed=await first(db,"UPDATE correction_batches SET state='submitting',updated_at=now(),error_code=NULL WHERE id=$1 AND state='uploaded' RETURNING *",[local.id]);
       if(!claimed)return null;
       for(const i of items)if(!await claimReviewOperation(within(db),i.operation_id))throw new LibraryError('operation_already_claimed');
-      await db.query("UPDATE correction_review_queue SET state='submitted' WHERE review_id IN(SELECT review_id FROM correction_batch_items WHERE batch_id=$1)",[local.id]);
+      await db.query("UPDATE correction_review_queue SET state='submitted',reason=$2 WHERE review_id IN(SELECT review_id FROM correction_batch_items WHERE batch_id=$1)",[local.id,local.stage==='verification'?'verification_submitted':null]);
       return claimed;
     });
   }
@@ -142,7 +135,7 @@ export class ReviewQueue {
           continue;
         }
         const c=await context(db,i.revision_id);
-        const assessed=record?assessRecord(record,c.doc,c.content):{actualMicros:null,result:null,errorCode:'batch_result_missing'};
+        const assessed=record?assessRecord(record,c.doc,c.content,i.stage==='verification'?parseVerification:undefined):{actualMicros:null,result:null,errorCode:'batch_result_missing'};
         const current=!!await first(db,'SELECT 1 FROM translation_heads WHERE revision_id=$1',[i.revision_id]);
         if(!current&&assessed.errorCode!=='provider_configuration_changed')assessed.errorCode='translation_revision_superseded';
         await finishReviewOperation(within(db),i.operation_id,{actualMicros:assessed.actualMicros,providerID:remote.id,errorCode:assessed.errorCode});
@@ -153,16 +146,18 @@ export class ReviewQueue {
           [i.operation_id,known?'done':'unknown',assessed.result?JSON.stringify(assessed.result):null,hash,assessed.errorCode,
             usage?JSON.stringify({input_tokens:usage.input_tokens,output_tokens:usage.output_tokens}):null,
             typeof responseID==='string'&&responseID.length<=200?responseID:null]);
-        if(known&&(!current||assessed.result?.decision!=='correct')) {
+        if(i.stage==='assessment'&&known&&(!current||assessed.result?.decision!=='correct')) {
           const v=await first(db,"SELECT id FROM library_spend_operations WHERE review_id=$1 AND kind='review_verification'",[i.review_id]);
           await releaseReviewOperation(within(db),v.id);
         }
         await db.query('UPDATE correction_review_queue SET state=$2,reason=$3 WHERE revision_id=$1',
-          [i.revision_id,known?(current?'assessed':'superseded'):'submitted',assessed.errorCode??(assessed.result?.decision==='correct'?'awaiting_verification':assessed.result?.decision)]);
+          [i.revision_id,known?(current?'assessed':'superseded'):'submitted',assessed.errorCode??(i.stage==='verification'?'comparison_completed':assessed.result?.decision==='correct'?'awaiting_verification':assessed.result?.decision)]);
       }
       await db.query('UPDATE correction_batches SET state=$2,provider_status=$3,error_code=$4,updated_at=now() WHERE id=$1',
         [local.id,unknown?'submitted':'completed',remote.status,unknown?'provider_usage_unknown':null]);
-      return unknown?'reconciliation_required':'assessed';
+      const settings=await first(db,'SELECT * FROM library_settings WHERE id=1');
+      const advanced=await advanceReviews(db,settings);
+      return unknown?'reconciliation_required':advanced.published?'published':local.stage==='verification'?'review_completed':'assessed';
     });
   }
 }

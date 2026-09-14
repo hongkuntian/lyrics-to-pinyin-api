@@ -61,6 +61,11 @@ test("unknown jobs and report context render without executing report text", asy
   await expect(page.getByText("Recommendation: correct", {exact:true})).toBeVisible();
   await expect(page.getByText(/<script>window.modelInjected=true<\/script>/)).toBeVisible();
   expect(await page.evaluate(() => Reflect.get(window, "modelInjected"))).toBeUndefined();
+  await expect(page.getByText("Published correction", {exact:true})).toBeVisible();
+  await expect(page.getByText("Fresh comparison: correction preferred", {exact:true})).toBeVisible();
+  await expect(page.getByText("Before: Put the brilliant sun in my pocket.", {exact:true})).toBeVisible();
+  await expect(page.getByText("After: Tuck a little light into my pocket.", {exact:true})).toBeVisible();
+  expect(await page.evaluate(() => Reflect.get(window, "comparisonInjected"))).toBeUndefined();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await page.getByRole("link", { name: "Open full song" }).click();
   await expect(page).toHaveURL(/#L0003$/);

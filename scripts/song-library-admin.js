@@ -32,6 +32,9 @@ try {
   } else if(command==='configure-reviews') {
     const configuration={enabled:values.enable===true,dailyMicros:dollars(values['daily-usd']),monthlyMicros:dollars(values['monthly-usd']),maxDaily:Number(values['max-daily'])};
     await store.configureReviews(configuration);console.log(JSON.stringify(configuration));
+  } else if(command==='configure-publication') {
+    await db.query('UPDATE library_settings SET review_publication_enabled=$1 WHERE id=1',[values.enable===true]);
+    console.log(JSON.stringify({publicationEnabled:values.enable===true}));
   } else if(command==='user') {
     if(!values.id||!values['token-file'])throw new Error('user requires --id and --token-file. Reusing the ID rotates its token without resetting quotas.');
     const path=resolve(values['token-file']);await mkdir(dirname(path),{recursive:true});
@@ -43,7 +46,7 @@ try {
   } else if(command==='reports') {
     const result=await db.query('SELECT id,document_id,translation_id,source_id,category,detail,status,created_at FROM correction_reports ORDER BY created_at DESC LIMIT 100');
     console.log(JSON.stringify(result.rows,null,2));
-  } else throw new Error('Commands: migrate, configure, configure-reviews, disable, user, usage, reports.');
+  } else throw new Error('Commands: migrate, configure, configure-reviews, configure-publication, disable, user, usage, reports.');
 } catch(error) {
   // Never print connection strings, tokens, provider bodies or driver diagnostics.
   console.error(error.code??'admin_command_failed');process.exitCode=1;

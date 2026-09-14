@@ -49,10 +49,25 @@ export default async function ReportPage({
             <p>{d.review.decision ? `Recommendation: ${d.review.decision}` : `Review ${d.review.state}`}</p>
             {d.review.summary && <p>{d.review.summary}</p>}
             {d.review.reason && <p className="text-sm text-muted-foreground">{d.review.reason.replaceAll("_", " ")}</p>}
-            <small>AI assessment of the reported revision. No translation change has been published by this assessment.</small>
+            {d.review.comparison && <p>Fresh comparison: {d.review.comparison.replaceAll("_", " ")}</p>}
+            {d.review.comparison_summary && <p>{d.review.comparison_summary}</p>}
+            <p>{d.review.disposition === "published" ? `Correction published ${stamp(d.review.closed_at)}.` : d.review.disposition ? "The original translation has been retained by this review." : "This review has not published a change."}</p>
+            <small>AI assessment of the reported revision. Agreement between model calls does not establish bilingual human validation.</small>
           </> : <p className="text-sm text-muted-foreground">Translation reports with an exact saved revision enter the daily queue. Lyrics, timing and pronunciation reports await a later evidence workflow.</p>}
         </CardContent>
       </Card>
+      {d.changes.length > 0 && <Card className="report-detail">
+        <CardHeader><CardTitle>{d.review?.disposition === "published" ? "Published correction" : "Proposed correction"}</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
+          {d.changes.map(change => <div key={change.source_id} className="space-y-2">
+            <p className="text-sm text-muted-foreground">{change.source_id}</p>
+            <p lang={d.song.language}>{change.source_text}</p>
+            <p><strong>Before: </strong>{change.before}</p>
+            <p><strong>After: </strong>{change.after}</p>
+            <p className="text-sm text-muted-foreground">{change.reason}</p>
+          </div>)}
+        </CardContent>
+      </Card>}
       <Card className="comparison-card">
         <CardHeader className="section-header">
           <CardTitle>Lyric context</CardTitle>

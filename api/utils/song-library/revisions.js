@@ -9,7 +9,7 @@ export const currentTranslationSQL=`SELECT r.id,r.recipe,r.content FROM song_tra
   WHERE t.document_id=$1 AND t.target=$2`;
 
 // Trusted backend primitive only. No public handler dispatches to this function.
-// The future review worker must persist and check both decisions before calling it.
+// The review publisher validates persisted assessment and comparison before calling it.
 export async function publishRevision(database,args,{rollback=false}={}) {
   const {expectedRevisionID,sourceHash,publicationKey,actor,reason,candidate,restoreRevisionID}=args;
   if(!uuid(expectedRevisionID)||typeof sourceHash!=='string'||!sourceHash||

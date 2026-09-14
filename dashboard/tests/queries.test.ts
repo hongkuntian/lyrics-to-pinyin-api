@@ -19,7 +19,7 @@ async function setup() {
       "utf8",
     ),
   );
-  for (const name of ["003-correction-foundation.sql", "004-correction-dashboard.sql", "005-correction-batches.sql", "006-batch-dashboard.sql"]) {
+  for (const name of ["003-correction-foundation.sql", "004-correction-dashboard.sql", "005-correction-batches.sql", "006-batch-dashboard.sql", "007-correction-publication.sql", "008-publication-dashboard.sql"]) {
     await db.exec(await readFile(new URL(`../../db/${name}`, import.meta.url), "utf8"));
   }
   await db.query("INSERT INTO library_users(id) VALUES('fixture-user')");
@@ -208,6 +208,9 @@ test("reader sees views but cannot read tokens, provider payloads or alter recor
       "SELECT * FROM public.translation_revisions",
       "SELECT * FROM public.correction_batch_items",
       "SELECT * FROM public.correction_batches",
+      "SELECT * FROM public.correction_review_outcomes",
+      "UPDATE lyra_dashboard.review_changes SET after='unreviewed'",
+      "UPDATE lyra_dashboard.settings SET review_publication_enabled=true",
       "UPDATE lyra_dashboard.review_queue SET state='assessed'",
       "UPDATE lyra_dashboard.review_worker SET last_outcome='assessed'",
       "UPDATE lyra_dashboard.spend SET accounted_micros=0",
@@ -223,4 +226,30 @@ test("reader sees views but cannot read tokens, provider payloads or alter recor
   } finally {
     await db.close();
   }
+});
+
+test("two review stages join once and expose only comparison outcome and exact before/after lines", async () => {
+  const {db,q}=await setup();
+  try {
+    await db.query('UPDATE library_settings SET review_enabled=true');
+    const reportID='50000000-0000-4000-8000-000000000001',reviewID='50000000-0000-4000-8000-000000000002';
+    await db.query(`INSERT INTO correction_reports(id,user_id,document_id,translation_id,source_id,category,detail,fingerprint)
+      VALUES($1,'fixture-user',$2,$3,'L0001','translation','Check meaning','comparison-report')`,[reportID,id,job]);
+    await db.query("INSERT INTO translation_reviews(id,revision_id,policy_version,model) VALUES($1,$2,'song-review-assessment-1','gpt-5.6-luna')",[reviewID,job]);
+    await db.query("UPDATE correction_review_queue SET review_id=$1,state='deferred' WHERE revision_id=$2",[reviewID,job]);
+    for(const [n,stage] of ['assessment','verification'].entries()) {
+      const operationID=`60000000-0000-4000-8000-00000000000${n}`,batchID=`70000000-0000-4000-8000-00000000000${n}`;
+      await db.query(`INSERT INTO library_spend_operations(id,operation_key,kind,review_id,state,reserved_micros,accounted_micros)
+        VALUES($1::uuid,$1::text,$2,$3,'reserved',1000,1000)`,[operationID,`review_${stage}`,reviewID]);
+      await db.query("INSERT INTO correction_batches(id,state,request_hash,stage) VALUES($1,'completed','fixture',$2)",[batchID,stage]);
+      await db.query(`INSERT INTO correction_batch_items(operation_id,batch_id,review_id,revision_id,request_body,report_snapshot,stage,comparison_context,state,result)
+        VALUES($1,$2,$3,$4,$5,'[]',$6,$7,'done',$8)`,[operationID,batchID,reviewID,job,JSON.stringify({secret:'hidden-private-prompt'}),stage,
+        stage==='verification'?JSON.stringify({candidateSlot:'B'}):null,JSON.stringify(stage==='assessment'?{decision:'correct',summary:'Source action.',changes:[{sourceID:'L0001',sourceQuote:'回家',replacement:'Return home.',reason:'The direction is home.'}]}:{preferred:'B',summary:'The correction is clearer.'})]);
+    }
+    assert.equal((await db.query('SELECT * FROM lyra_dashboard.review_queue')).rows.length,1);
+    const detail=await q.report(reportID);assert.equal(detail?.review?.comparison,'correction_preferred');
+    assert.deepEqual(detail?.changes,[{source_id:'L0001',source_text:'回家',before:'Go home.',after:'Return home.',reason:'The direction is home.'}]);
+    assert.ok(!JSON.stringify(detail).includes('hidden-private-prompt'));
+    assert.equal((await q.reviewProgress()).deferred,1);
+  } finally {await db.close();}
 });

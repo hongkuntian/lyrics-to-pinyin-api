@@ -13,7 +13,7 @@ const identifier=value=> {
 };
 export function batchMatches(remote,local) {
   return remote?.endpoint==='/v1/responses'&&remote.input_file_id===local.input_file_id&&
-    remote.metadata?.lyra_batch_id===local.id&&remote.metadata?.request_hash===local.request_hash&&remote.metadata?.policy_version===REVIEW_POLICY;
+    remote.metadata?.lyra_batch_id===local.id&&remote.metadata?.request_hash===local.request_hash&&remote.metadata?.policy_version===(local.policy_version??REVIEW_POLICY);
 }
 export function parseBatchFiles(texts,items) {
   const expected=new Set(items.map(i=>i.operation_id)),found=new Map();
@@ -76,7 +76,7 @@ export class BatchProvider {
   }
   submit(local) {
     return this.request('/batches',{method:'POST',body:{input_file_id:local.input_file_id,endpoint:'/v1/responses',completion_window:'24h',
-      metadata:{lyra_batch_id:local.id,request_hash:local.request_hash,policy_version:REVIEW_POLICY},
+      metadata:{lyra_batch_id:local.id,request_hash:local.request_hash,policy_version:local.policy_version??REVIEW_POLICY},
       output_expires_after:{anchor:'created_at',seconds:2592000}}});
   }
   async findBatch(local) {

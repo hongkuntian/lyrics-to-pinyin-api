@@ -1,5 +1,5 @@
 import { PAGE_SIZE, pageNumber, searchText } from "./model";
-import type { Song, Job, Report, Line, Overview, ReviewProgress, ReviewAssessment } from "./model";
+import type { Song, Job, Report, Line, Overview, ReviewProgress, ReviewAssessment, ReviewChange } from "./model";
 const now = "2026-09-14T12:00:00.000Z";
 export const fixtureSongs: Song[] = Array.from({ length: 24 }, (_, i) => ({
   id: (i + 1).toString(16).padStart(64, "0"),
@@ -90,8 +90,8 @@ export function fixtures(empty = false) {
     reports = empty ? [] : fixtureReports;
   return {
     async reviewProgress(): Promise<ReviewProgress> {
-      return {review_enabled:true,review_daily_micros:"250000",review_monthly_micros:"1000000",review_max_daily:5,
-        review_daily:empty?"0":"22331",review_monthly:empty?"0":"22331",pending:0,processing:0,assessed:empty?0:1,blocked:0,
+      return {review_enabled:true,review_publication_enabled:true,review_daily_micros:"250000",review_monthly_micros:"1000000",review_max_daily:5,
+        review_daily:empty?"0":"22331",review_monthly:empty?"0":"22331",pending:0,processing:0,assessed:0,blocked:0,kept:0,deferred:0,published:empty?0:1,stage:"verification",
         last_run_at:empty?null:now,last_outcome:empty?null:"assessed",batch_state:empty?null:"completed",provider_status:empty?null:"completed",error_code:null};
     },
     async overview(): Promise<Overview> {
@@ -153,10 +153,11 @@ export function fixtures(empty = false) {
     async report(id: string) {
       const report = reports.find((r) => r.id === id);
       const detail = report ? await this.song(report.document_id) : null;
-      const review: ReviewAssessment | null = report ? {revision_id:report.translation_id!,state:"assessed",reason:"awaiting_verification",
+      const review: ReviewAssessment | null = report ? {revision_id:report.translation_id!,state:"published",reason:"comparison_passed",
         decision:"correct",summary:"Keep the recurring image consistent. <script>window.modelInjected=true</script>",
-        policy_version:"song-review-assessment-1",model:"gpt-5.6-luna",completed_at:now} : null;
-      return report && detail ? { ...detail, report, review } : null;
+        policy_version:"song-review-assessment-1",model:"gpt-5.6-luna",completed_at:now,comparison:"correction_preferred",comparison_summary:"The source supports the exact replacement. <script>window.comparisonInjected=true</script>",disposition:"published",published_revision_id:"20000000-0000-4000-8000-000000000001",closed_at:now} : null;
+      const changes: ReviewChange[] = report ? [{source_id:"L0003",source_text:"把微光装进口袋",before:"Put the brilliant sun in my pocket.",after:"Tuck a little light into my pocket.",reason:"The source describes a faint light."}] : [];
+      return report && detail ? { ...detail, report, review, changes } : null;
     },
   };
 }

@@ -50,7 +50,7 @@ export function parseAssessment(text,doc,content) {
   if(parsed.rejectedNotes.length)throw new LibraryError('invalid_assessment_evidence',502);
   return {...v,candidate:v.decision==='correct'?candidate:null};
 }
-export function assessRecord(record,doc,content) {
+export function assessRecord(record,doc,content,parse=parseAssessment) {
   const body=record?.response?.body;
   if(record?.response===null&&record?.error?.code==='batch_expired')return {actualMicros:0,result:null,errorCode:'batch_expired'};
   if(!body||body.model!==MODEL||body.service_tier!=='default')return {actualMicros:null,result:null,errorCode:body?'provider_configuration_changed':'provider_usage_unknown'};
@@ -60,6 +60,6 @@ export function assessRecord(record,doc,content) {
     const parts=(body.output??[]).filter(o=>o.type==='message').flatMap(o=>o.content??[]);
     const texts=parts.filter(p=>p.type==='output_text');
     if(parts.some(p=>p.type==='refusal')||texts.length!==1)throw new LibraryError('provider_refused',502);
-    return {actualMicros,result:parseAssessment(texts[0].text,doc,content),errorCode:actualMicros===null?'provider_usage_unknown':null};
+    return {actualMicros,result:parse(texts[0].text,doc,content),errorCode:actualMicros===null?'provider_usage_unknown':null};
   } catch(e) {return {actualMicros,result:null,errorCode:e instanceof LibraryError?e.code:'invalid_assessment'};}
 }

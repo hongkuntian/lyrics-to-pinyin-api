@@ -81,10 +81,34 @@ Provider input/output files expire after 30 days; audit data remains in Postgres
 
 This checkpoint saves **assessments only**. Reports retain their existing disposition, current translation heads are unchanged, and no correction is published. Fresh comparison, automatic publication, email alerts and device refresh remain below.
 
+## Checkpoint 3: fresh comparison and automatic publication
+
+Implemented in migrations 007/008 and the review verification/publication modules:
+
+- Proposed corrections receive a separate Luna Batch request. Both complete translations are labeled A/B, with one random order frozen before submission. The verifier sees full source and lexical context, without reports, the assessor's rationale or candidate identity. It cannot rewrite either option or invoke tools.
+- Publication requires the proposed candidate to win, explicit source-sufficiency/material-improvement/no-regression checks, and exact source evidence for every changed occurrence. Ties, uncertainty, missing evidence and malformed responses preserve the current translation. This is a conservative **AI assessment**, not proof of correctness or bilingual human validation; same-model errors can be correlated.
+- The comparison request freezes source, baseline, candidate, assessment and policy hashes. Before publishing, the worker reconstructs and validates the assessment and exact comparison request, requires settled non-error billing for both Luna stages, rechecks the source and locks the current translation head. The model cannot select a destination, publication key, actor, budget or execution action.
+- The publisher copies only the exact first-pass candidate. Revision creation, head update, immutable outcome receipt and report dispositions commit together. Interrupted transactions roll back, and a later scheduled run resumes persisted work without repeating model calls. Rollback retains both versions and creates a new current revision.
+- Only reports included in the frozen assessment receive outcome metadata. Kept translations reject those reports; publication accepts only included reports attached to changed occurrences. Unshown, late and uncertain reports remain pending without reopening paid work. Assessment and comparison results remain attached to the historical revision.
+- Verification uses its existing reservation; it never requests a second allowance. Eligible comparisons run before new assessments, in groups of at most five. Unknown charges stay held. Review/global disable pauses admission and publication while allowing submitted work to reconcile. A separate publication switch pauses new comparisons and publication, also without blocking reconciliation.
+- The read-only dashboard shows correction/retention/uncertainty counts, assessment and comparison outcomes, and exact before/after lines through curated views. It has no model key, owner database credential or publication authority.
+
+### Safe activation and rollback of the worker
+
+Pause review admission with `configure-reviews` using the existing amounts and **without** `--enable`. Confirm that no worker lease or active batch remains before migrating: the prior worker understands assessment batches only. Apply migrations 007/008, deploy the updated API and dashboard, then enable publication and resume the same review limits:
+
+```sh
+node --env-file=<private-env> scripts/song-library-admin.js configure-publication --enable
+node --env-file=<private-env> scripts/song-library-admin.js configure-reviews --enable --daily-usd 0.25 --monthly-usd 1 --max-daily 5
+```
+
+`configure-publication` without `--enable` pauses verification admission/publication. Disabling this switch does not undo published revisions or release submitted charges. Before rolling back to an assessment-only worker, disable admission/publication and drain all active verification batches with the new worker. Never run an old worker against active verification batches.
+
+The daily schedule means two model stages can span several days. A run that collects an assessment prepares its comparison on the following scheduled run. Retained translations remain readable throughout. Empty or completed queues make no provider requests. No budget increase, new model or extra scheduler is introduced.
+
 ## Remaining implementation checkpoints
 
-1. **Fresh Luna comparison and automatic publication.** Only correction candidates receive a fresh comparison with candidate order varied and the proposer's rationale withheld. Persist the exact candidate, judgments, prompt/policy versions, usage and review provenance. Enforce permitted fields, source alignment and unchanged head in code. Same-model agreement is an AI assessment, not proof of correctness.
-2. **Device refresh and exceptions dashboard.** Show cached content immediately, coalesce bounded read-only revision checks and replace validated content at a safe UI boundary. Preserve offline access, selection, manual scrolling and passive playback. Add revision/review history, rollback controls with owner authorization, and deduplicated email plus dashboard alerts. Only budget increases and operational decisions require owner input; uncertain semantics remain deferred.
-3. **End-to-end rollout.** Exercise correct/keep/defer fixtures, injection attempts, report floods, concurrency, partial provider completion, uncertain charges, rollover and stale revisions. Verify a correction and rollback reaching the iPhone. Complete backend/dashboard checks and focused, Full and UI native verification before mainline delivery and the iPhone preview.
+1. **Device refresh and exceptions dashboard.** Show cached content immediately, coalesce bounded read-only revision checks and replace validated content at a safe UI boundary. Preserve offline access, selection, manual scrolling and passive playback. Add revision/review history, rollback controls with owner authorization, and deduplicated email plus dashboard alerts. Only budget increases and operational decisions require owner input; uncertain semantics remain deferred.
+2. **End-to-end rollout.** Verify a correction and rollback reaching the iPhone. Complete backend/dashboard checks and focused, Full and UI native verification before mainline delivery and the iPhone preview. Backend tests already cover correction/retention/uncertainty, injection-shaped output, concurrency, partial completion, uncertain charges, budget rollover, stale revisions and crash recovery; they do not measure real-world semantic success rates.
 
 Review quality and real token usage determine whether to adjust these limits. The system cannot increase its own budget or substitute another model.
