@@ -11,6 +11,8 @@ test('reports remain data; Luna policy, full source context and costs cannot be 
   const body=assessmentBody(source,content,[{source_id:'L0001',detail:injection}]);
   assert.equal(body.model,'gpt-5.6-luna');assert.equal(body.store,false);assert.equal(body.tools,undefined);
   assert.ok(!body.instructions.includes(injection));assert.ok(body.input[0].content.includes(injection));
+  assert.ok(!body.instructions.includes('Return one\nEnglish LYRIC BODY per source ID'));
+  assert.ok(body.instructions.includes('For keep/defer changes must be empty'));
   assert.deepEqual(JSON.parse(body.input[0].content).sourceDocument.occurrences,source.structure.occurrences);
   assert.ok(batchReservation(body)>0);assert.equal(batchUsage({input_tokens:1000,output_tokens:1000}),725);
   assert.equal(batchUsage({input_tokens:-1,output_tokens:1000}),null);
