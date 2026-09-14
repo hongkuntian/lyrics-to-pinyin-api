@@ -47,6 +47,8 @@ test("unknown jobs and report context render without executing report text", asy
     page.getByText("provider_unavailable", { exact: true }),
   ).toBeVisible();
   await page.goto("/reports");
+  await expect(page.getByText("Automatic review", {exact:true})).toBeVisible();
+  await expect(page.getByText("Scheduled daily · Luna only", {exact:true})).toBeVisible();
   await page.getByRole("link", { name: /Fixture report/ }).click();
   await expect(page.locator(".lyric-focus")).toHaveAttribute("id", "L0003");
   await expect(
@@ -55,6 +57,11 @@ test("unknown jobs and report context render without executing report text", asy
   expect(
     await page.evaluate(() => Reflect.get(window, "injected")),
   ).toBeUndefined();
+  await expect(page.getByText("Luna assessment", {exact:true})).toBeVisible();
+  await expect(page.getByText("Recommendation: correct", {exact:true})).toBeVisible();
+  await expect(page.getByText(/<script>window.modelInjected=true<\/script>/)).toBeVisible();
+  expect(await page.evaluate(() => Reflect.get(window, "modelInjected"))).toBeUndefined();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   await page.getByRole("link", { name: "Open full song" }).click();
   await expect(page).toHaveURL(/#L0003$/);
 });

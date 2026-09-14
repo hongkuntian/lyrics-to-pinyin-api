@@ -12,6 +12,10 @@
     {
       "src": "api/song-library.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/review-reports.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -26,6 +30,16 @@
     {
       "src": "/api/song-library",
       "dest": "/api/song-library.js"
+    },
+    {
+      "src": "/api/review-reports",
+      "dest": "/api/review-reports.js"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/review-reports",
+      "schedule": "0 8 * * *"
     }
   ]
 }

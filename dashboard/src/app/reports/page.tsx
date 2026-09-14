@@ -4,6 +4,7 @@ import { read } from "@/lib/data";
 import { pageNumber } from "@/lib/model";
 import { PageHeading, Pager } from "@/components/shared";
 import { ReportsList } from "@/components/reports-list";
+import { ReviewProgressCard } from "@/components/review-progress";
 import { Card, CardContent } from "@/components/ui/card";
 export default async function ReportsPage({
   searchParams,
@@ -16,7 +17,7 @@ export default async function ReportsPage({
     )
       ? (p.status ?? "pending")
       : "pending";
-  const d = await read((q) => q.reports(status, pageNumber(p.page)));
+  const {d,progress} = await read(async (q) => ({d:await q.reports(status, pageNumber(p.page)),progress:await q.reviewProgress()}));
   return (
     <>
       <PageHeading
@@ -24,6 +25,7 @@ export default async function ReportsPage({
         title="Reports"
         description="Read each report alongside the exact saved lyric and its song context."
       />
+      <ReviewProgressCard progress={progress} />
       <nav className="filter-tabs" aria-label="Filter reports">
         {["pending", "accepted", "rejected", ""].map((s) => (
           <Link

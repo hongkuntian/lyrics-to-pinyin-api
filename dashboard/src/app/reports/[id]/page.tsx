@@ -42,6 +42,17 @@ export default async function ReportPage({
           </small>
         </CardContent>
       </Card>
+      <Card className="report-detail">
+        <CardHeader><CardTitle>Luna assessment</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {d.review ? <>
+            <p>{d.review.decision ? `Recommendation: ${d.review.decision}` : `Review ${d.review.state}`}</p>
+            {d.review.summary && <p>{d.review.summary}</p>}
+            {d.review.reason && <p className="text-sm text-muted-foreground">{d.review.reason.replaceAll("_", " ")}</p>}
+            <small>AI assessment of the reported revision. No translation change has been published by this assessment.</small>
+          </> : <p className="text-sm text-muted-foreground">Translation reports with an exact saved revision enter the daily queue. Lyrics, timing and pronunciation reports await a later evidence workflow.</p>}
+        </CardContent>
+      </Card>
       <Card className="comparison-card">
         <CardHeader className="section-header">
           <CardTitle>Lyric context</CardTitle>

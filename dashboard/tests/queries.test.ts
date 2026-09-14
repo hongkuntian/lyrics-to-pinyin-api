@@ -19,7 +19,7 @@ async function setup() {
       "utf8",
     ),
   );
-  for (const name of ["003-correction-foundation.sql", "004-correction-dashboard.sql"]) {
+  for (const name of ["003-correction-foundation.sql", "004-correction-dashboard.sql", "005-correction-batches.sql", "006-batch-dashboard.sql"]) {
     await db.exec(await readFile(new URL(`../../db/${name}`, import.meta.url), "utf8"));
   }
   await db.query("INSERT INTO library_users(id) VALUES('fixture-user')");
@@ -127,6 +127,8 @@ test("pagination is bounded and reports resolve to the original occurrence", asy
     assert.equal(detail?.lines[1].translation, "Come back home.");
     assert.equal((await q.reports("pending")).total, 1);
     assert.equal((await q.reports("accepted")).total, 0);
+    assert.equal((await q.reviewProgress()).pending, 1);
+    assert.equal(detail?.review?.state, "pending");
   } finally {
     await db.close();
   }
@@ -195,6 +197,7 @@ test("reader sees views but cannot read tokens, provider payloads or alter recor
     );
     assert.equal((await q.overview()).songs, 1);
     assert.equal((await q.song(id))?.lines.length, 2);
+    assert.equal((await q.reviewProgress()).pending, 0);
     for (const sql of [
       "SELECT * FROM public.library_tokens",
       "SELECT provider_response FROM public.translation_jobs",
@@ -203,6 +206,10 @@ test("reader sees views but cannot read tokens, provider payloads or alter recor
       "DELETE FROM public.song_translations",
       "SELECT * FROM public.library_spend_operations",
       "SELECT * FROM public.translation_revisions",
+      "SELECT * FROM public.correction_batch_items",
+      "SELECT * FROM public.correction_batches",
+      "UPDATE lyra_dashboard.review_queue SET state='assessed'",
+      "UPDATE lyra_dashboard.review_worker SET last_outcome='assessed'",
       "UPDATE lyra_dashboard.spend SET accounted_micros=0",
       "CREATE TABLE lyra_dashboard.unwanted(id integer)",
     ])

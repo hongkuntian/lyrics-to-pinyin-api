@@ -32,7 +32,7 @@ export function usageMicros(usage) {
   if(!usage||!['input_tokens','output_tokens'].every(k=>Number.isSafeInteger(usage[k])&&usage[k]>=0&&usage[k]<=10_000_000)) return null;
   return Math.ceil(usage.input_tokens*0.25+usage.output_tokens*1.2);
 }
-function strictJSON(text) {
+export function strictJSON(text) {
   if(typeof text!=='string'||Buffer.byteLength(text)>500_000) throw new LibraryError('invalid_json',502);
   let parsed;try { parsed=JSON.parse(text); } catch { throw new LibraryError('invalid_json',502); }
   // JSON.parse accepts duplicate fields. Scan valid JSON to reject them, including escaped keys.

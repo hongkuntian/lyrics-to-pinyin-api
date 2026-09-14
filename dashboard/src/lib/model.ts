@@ -112,3 +112,14 @@ export function seconds(start: string | null, end: string | null) {
   if (!start || !end) return "—";
   return `${Math.max(0, (Date.parse(end) - Date.parse(start)) / 1000).toFixed(1)}s`;
 }
+export type ReviewProgress = {
+  review_enabled: boolean; review_daily_micros: string; review_monthly_micros: string; review_max_daily: number;
+  review_daily: string; review_monthly: string;
+  pending: number; processing: number; assessed: number; blocked: number;
+  last_run_at: string | null; last_outcome: string | null;
+  batch_state: string | null; provider_status: string | null; error_code: string | null;
+};
+export type ReviewAssessment = {
+  revision_id: string; state: string; reason: string | null; decision: string | null; summary: string | null;
+  policy_version: string | null; model: string | null; completed_at: string | null;
+};

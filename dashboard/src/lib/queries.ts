@@ -7,6 +7,8 @@ import type {
   Line,
   Overview,
   Page,
+  ReviewProgress,
+  ReviewAssessment,
 } from "./model";
 export type Database = {
   query<T>(sql: string, values?: unknown[]): Promise<{ rows: T[] }>;
@@ -18,6 +20,15 @@ const jobStates = new Set(["queued", "running", "ready", "failed", "unknown"]);
 const reportStates = new Set(["pending", "accepted", "rejected"]);
 export class DashboardQueries {
   constructor(private db: Database) {}
+  async reviewProgress(): Promise<ReviewProgress> {
+    return one<ReviewProgress>(this.db, `SELECT s.review_enabled,s.review_daily_micros::text,s.review_monthly_micros::text,s.review_max_daily,
+      b.review_daily::text,b.review_monthly::text,w.last_run_at::text,w.last_outcome,w.batch_state,w.provider_status,w.error_code,
+      (SELECT count(*)::integer FROM lyra_dashboard.review_queue WHERE state='pending') AS pending,
+      (SELECT count(*)::integer FROM lyra_dashboard.review_queue WHERE state IN ('reserved','submitted')) AS processing,
+      (SELECT count(*)::integer FROM lyra_dashboard.review_queue WHERE state='assessed') AS assessed,
+      (SELECT count(*)::integer FROM lyra_dashboard.review_queue WHERE state='blocked') AS blocked
+      FROM lyra_dashboard.settings s CROSS JOIN lyra_dashboard.budget b CROSS JOIN lyra_dashboard.review_worker w`);
+  }
   async overview(): Promise<Overview> {
     const settings = await one<Settings>(
       this.db,
@@ -156,6 +167,8 @@ export class DashboardQueries {
         )
       ).rows;
     }
-    return detail ? { ...detail, report } : null;
+    const review = report.translation_id ? await one<ReviewAssessment>(this.db,
+      "SELECT revision_id,state,reason,decision,summary,policy_version,model,completed_at::text FROM lyra_dashboard.review_queue WHERE revision_id=$1", [report.translation_id]) ?? null : null;
+    return detail ? { ...detail, report, review } : null;
   }
 }
