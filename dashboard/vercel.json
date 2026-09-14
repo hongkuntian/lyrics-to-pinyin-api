@@ -3,6 +3,5 @@
   "framework": "nextjs",
   "regions": ["iad1"],
   "buildCommand": "npm run build",
-  "installCommand": "npm ci",
-  "public": false
+  "installCommand": "npm ci"
 }
