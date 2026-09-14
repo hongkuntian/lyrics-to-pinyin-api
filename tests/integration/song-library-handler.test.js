@@ -15,7 +15,7 @@ async function setup(t,overrides={}) {
     const res={code:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
     await target({method:'POST',headers:{authorization:`Bearer ${token}`},body},res);return res;
   };
-  return {store,handler,call:caller(handler),pending,instance:changes=>caller(createSongLibraryHandler({...options,...changes}))};
+  return {db,store,handler,call:caller(handler),pending,instance:changes=>caller(createSongLibraryHandler({...options,...changes}))};
 }
 test('fetch, translate, poll and reuse across users calls each provider only once',async t=> {
   let lyrics=0,generations=0;
@@ -86,4 +86,35 @@ test('report submission is linked to exact source and never invokes generation',
   const {body:{document:doc}}=await call({action:'lyrics',recording});
   const result=await call({action:'report',documentID:doc.id,sourceID:'L0001',category:'lyrics',detail:'Please check the words.'});
   assert.equal(result.code,200);assert.equal(result.body.report.status,'pending');assert.equal(calls,0);
+});
+
+test('current revision check is free on misses, unchanged content, updates, and disabled generation',async t=> {
+  let calls=0;
+  const {call,store,pending,instance}=await setup(t,{generateFn:async()=>{calls++;return fakeGeneration();}});
+  const {body:{document:doc}}=await call({action:'lyrics',recording});
+  const check={action:'current',documentID:doc.id,sourceHash:doc.sourceHash};
+  assert.equal((await call(check)).body.state,'missing');assert.equal(calls,0);
+  await call({action:'translate',documentID:doc.id,sourceHash:doc.sourceHash});await Promise.all(pending);
+  const saved=await store.translation(doc.id,'en');
+  assert.equal((await call({...check,revisionID:saved.id})).body.state,'unchanged');
+  const updated=await store.publishRevision({expectedRevisionID:saved.id,sourceHash:doc.sourceHash,publicationKey:'handler-fixture',
+    actor:'test',reason:'Check refresh.',candidate:{translations:{L0001:'Let us sing together.'},sourceNotes:[]}});
+  await store.configure({enabled:false,dailyMicros:0,monthlyMicros:0});
+  const changed=await instance({apiKey:undefined})({...check,revisionID:saved.id});
+  assert.equal(changed.body.state,'ready');assert.equal(changed.body.translation.id,updated.id);
+  assert.equal(changed.body.translation.rejectedNotes,undefined);
+  assert.equal((await call({...check,sourceHash:'changed'})).body.code,'source_changed');
+  assert.equal((await call({...check,revisionID:'invalid'})).code,400);
+  assert.equal(calls,1);
+});
+
+test('v1 duplicate report receipt stays compatible without resetting its assessment',async t=> {
+  const {call,db}=await setup(t);
+  const {body:{document:doc}}=await call({action:'lyrics',recording});
+  const input={action:'report',documentID:doc.id,sourceID:'L0001',category:'lyrics',detail:'Same report.'};
+  const original=await call(input);
+  await db.query("UPDATE correction_reports SET status='accepted' WHERE id=$1",[original.body.report.id]);
+  assert.deepEqual((await call(input)).body,original.body);
+  assert.equal((await db.query('SELECT status FROM correction_reports')).rows[0].status,'accepted');
+  for(const action of ['publish','rollback','reserveReview','configureReviews']) assert.equal((await call({action})).code,400);
 });

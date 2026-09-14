@@ -1,9 +1,10 @@
 // Provision a dedicated reader after deployment protection has been verified.
 // The output is a private env file, never a credential printed to the terminal.
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
 import pg from "pg";
+import {migrateLibrary} from "./library-migrations.js";
 const output = process.argv[2];
 let client;
 try {
@@ -21,12 +22,11 @@ try {
   );
   if (existing.rowCount)
     throw new Error("reader_already_exists_use_retained_credentials");
-  await client.query(
-    await readFile(
-      new URL("../db/002-dashboard-views.sql", import.meta.url),
-      "utf8",
-    ),
-  );
+  await migrateLibrary({transaction:async fn=> {
+    await client.query('BEGIN');
+    try {const value=await fn(client);await client.query('COMMIT');return value;}
+    catch(error) {await client.query('ROLLBACK');throw error;}
+  }});
   const password = randomBytes(36).toString("base64url");
   const url = new URL(process.env.LYRA_LIBRARY_DATABASE_URL);
   url.username = "lyra_dashboard_reader";

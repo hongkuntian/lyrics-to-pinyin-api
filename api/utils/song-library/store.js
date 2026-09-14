@@ -1,4 +1,6 @@
 import {createHash,randomUUID} from 'node:crypto';
+import {currentTranslationSQL,publishRevision,revisions} from './revisions.js';
+import {budget,checkBudget,configureReviews,reserveReview,claimReviewOperation,finishReviewOperation,releaseReviewOperation} from './spending.js';
 
 export class LibraryError extends Error {
   constructor(code,status=409) { super(code);this.code=code;this.status=status; }
@@ -64,9 +66,18 @@ export class SongLibraryStore {
   }
   async releaseLookup(key,revision,owner) { await this.db.query('DELETE FROM lyric_lookups WHERE request_key=$1 AND selection_revision=$2 AND owner=$3',[key,revision,owner]); }
   async translation(documentID,target) {
-    const row=await first(this.db,'SELECT id,content,recipe FROM song_translations WHERE document_id=$1 AND target=$2',[documentID,target]);
+    const row=await first(this.db,currentTranslationSQL,[documentID,target]);
     return row && {id:row.id,recipe:row.recipe,...row.content};
   }
+  publishRevision(args) { return publishRevision(this.db,args); }
+  rollbackRevision(args) { return publishRevision(this.db,args,{rollback:true}); }
+  revisions(documentID,target) { return revisions(this.db,documentID,target); }
+  budget() { return budget(this.db); }
+  configureReviews(args) { return configureReviews(this.db,args); }
+  reserveReview(args) { return reserveReview(this.db,args); }
+  claimReviewOperation(id) { return claimReviewOperation(this.db,id); }
+  finishReviewOperation(id,args) { return finishReviewOperation(this.db,id,args); }
+  releaseReviewOperation(id) { return releaseReviewOperation(this.db,id); }
   async reserve({userID,documentID,target,recipe,reservedMicros}) {
     if(target!=='en'||typeof recipe!=='string'||!recipe||!Number.isSafeInteger(reservedMicros)||reservedMicros<=0) throw new LibraryError('invalid_generation',400);
     return this.db.transaction(async db=> {
@@ -76,7 +87,7 @@ export class SongLibraryStore {
       if(!settings) throw new LibraryError('store_unavailable',503);
       const user=await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
       if(!user) throw new LibraryError('unauthorized',401);
-      const saved=await first(db,'SELECT id,recipe,content FROM song_translations WHERE document_id=$1 AND target=$2',[documentID,target]);
+      const saved=await first(db,currentTranslationSQL,[documentID,target]);
       if(saved) return {kind:'ready',translation:{id:saved.id,recipe:saved.recipe,...saved.content}};
       const prior=await first(db,'SELECT * FROM translation_jobs WHERE document_id=$1 AND target=$2',[documentID,target]);
       if(prior) return {kind:prior.state==='queued'||prior.state==='running'?'pending':prior.state,job:publicJob(prior)};
@@ -86,9 +97,7 @@ export class SongLibraryStore {
       const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,
         count(*) AS monthly FROM translation_jobs WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
       if(Number(counts.daily)>=settings.user_daily || Number(counts.monthly)>=settings.user_monthly) throw new LibraryError('generation_allowance_exhausted',429);
-      const spend=await first(db,`SELECT coalesce(sum(accounted_micros) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'),0) AS daily,
-        coalesce(sum(accounted_micros),0) AS monthly FROM translation_jobs WHERE created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`);
-      if(Number(spend.daily)+reservedMicros>Number(settings.daily_micros)||Number(spend.monthly)+reservedMicros>Number(settings.monthly_micros)) throw new LibraryError('budget_exhausted',429);
+      checkBudget(settings,await budget(db),reservedMicros);
       const row=await first(db,`INSERT INTO translation_jobs(id,document_id,target,recipe,user_id,state,reserved_micros,accounted_micros)
         VALUES($1,$2,$3,$4,$5,'queued',$6,$6) RETURNING *`,[randomUUID(),documentID,target,recipe,userID,reservedMicros]);
       return {kind:'created',job:publicJob(row)};
@@ -117,7 +126,7 @@ export class SongLibraryStore {
         state='failed';errorCode='cost_reservation_exceeded';
       }
       if(state==='ready') await db.query(`INSERT INTO song_translations(id,document_id,target,recipe,content) VALUES($1,$2,$3,$4,$5)`,[id,job.document_id,job.target,job.recipe,JSON.stringify(content)]);
-      await db.query(`UPDATE translation_jobs SET state=$2,accounted_micros=$3,error_code=$4,provider_response=$5,finished_at=now() WHERE id=$1`,[id,state,charged,errorCode,JSON.stringify(response)]);
+      await db.query(`UPDATE translation_jobs SET state=$2,accounted_micros=$3,error_code=$4,provider_response=$5,finished_at=now(),cost_final=$6 WHERE id=$1`,[id,state,charged,errorCode,JSON.stringify(response),actualMicros!==null]);
     });
   }
   async job(id) {
@@ -126,7 +135,8 @@ export class SongLibraryStore {
     const row=await first(this.db,'SELECT * FROM translation_jobs WHERE id=$1',[id]);
     return row && publicJob(row);
   }
-  async usage() { return first(this.db,'SELECT coalesce(sum(accounted_micros),0) AS accounted_micros,count(*) AS jobs FROM translation_jobs'); }
+  async usage() { return first(this.db,`SELECT coalesce(sum(accounted_micros),0) AS accounted_micros,
+    count(*) FILTER(WHERE kind='generation') AS jobs,count(*) FILTER(WHERE kind<>'generation') AS review_operations FROM library_spend_operations`); }
   async report({userID,documentID,translationID=null,sourceID,category,detail}) {
     if(typeof documentID!=='string'||typeof sourceID!=='string'||
       (translationID!==null&&(typeof translationID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(translationID))))
@@ -134,7 +144,8 @@ export class SongLibraryStore {
     const doc=await this.document(documentID);
     if(!doc||!doc.structure.occurrences.some(x=>x.sourceID===sourceID)||!['lyrics','translation','pronunciation','timing'].includes(category)||typeof detail!=='string'||!detail.trim()||detail.length>2000) throw new LibraryError('invalid_report',400);
     if(translationID) {
-      const row=await first(this.db,'SELECT id FROM song_translations WHERE id=$1 AND document_id=$2',[translationID,documentID]);
+      const row=await first(this.db,`SELECT r.id FROM translation_revisions r JOIN song_translations t ON t.id=r.translation_id
+        WHERE r.id=$1 AND t.document_id=$2`,[translationID,documentID]);
       if(!row) throw new LibraryError('invalid_report',400);
     }
     const fingerprint=digest([userID,documentID,translationID,sourceID,category,detail.trim()]);

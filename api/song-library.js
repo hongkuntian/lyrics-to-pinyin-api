@@ -7,7 +7,7 @@ import {generate,requestBody,reservationMicros,RECIPE} from './utils/song-librar
 import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
 
 export const config={maxDuration:300};
-const actions={lyrics:['recording'],translate:['documentID','sourceHash'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
+const actions={lyrics:['recording'],translate:['documentID','sourceHash'],current:['documentID','sourceHash','revisionID'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeHandler()) {
   return async recording=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
@@ -54,11 +54,19 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
         }
         return send(200,{state:'ready',document:publicDocument(doc)});
       }
-      if(input.action==='translate') {
+      if(input.action==='translate'||input.action==='current') {
         if(typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string') throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
         if(doc.sourceHash!==input.sourceHash)throw new LibraryError('source_changed');
         const saved=await db.translation(doc.id,'en');
+        // Revision checks never reserve money, queue generation, or require an OpenAI key.
+        if(input.action==='current') {
+          if(input.revisionID!==undefined&&(typeof input.revisionID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(input.revisionID)))
+            throw new LibraryError('invalid_request',400);
+          if(!saved)return send(200,{state:'missing'});
+          if(saved.id===input.revisionID)return send(200,{state:'unchanged',revisionID:saved.id});
+          return send(200,{state:'ready',translation:publicTranslation(saved,doc)});
+        }
         if(saved)return send(200,{state:'ready',translation:publicTranslation(saved,doc)});
         if(!await db.isCurrentDocument(doc.id,selectionRevision))throw new LibraryError('source_revision_superseded');
         if(!apiKey)throw new LibraryError('generation_not_configured',503);
@@ -78,7 +86,9 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
       }
       const report=await db.report({userID:user.id,documentID:input.documentID,translationID:input.translationID,
         sourceID:input.sourceID,category:input.category,detail:input.detail});
-      return send(200,{report});
+      // v1 acknowledges receipt with "pending" even when a duplicate report has since been
+      // assessed. Its durable disposition remains unchanged and is visible to the dashboard.
+      return send(200,{report:{id:report.id,status:'pending'}});
     } catch(error) {
       const known=error instanceof LibraryError;const status=known?error.status:503;
       if(!known)logger.error('song_library_store_unavailable');

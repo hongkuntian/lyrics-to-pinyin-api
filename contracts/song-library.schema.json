@@ -4,6 +4,16 @@
   "anyOf": [
     {
       "type": "object",
+      "required": ["version", "state"],
+      "properties": {"version": {"const": 1}, "state": {"const": "missing"}}
+    },
+    {
+      "type": "object",
+      "required": ["version", "state", "revisionID"],
+      "properties": {"version": {"const": 1}, "state": {"const": "unchanged"}, "revisionID": {"type": "string"}}
+    },
+    {
+      "type": "object",
       "required": [
         "version",
         "state",

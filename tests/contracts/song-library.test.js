@@ -21,10 +21,12 @@ test('song library document, job, translation, status, report and error follow t
     assert.deepEqual(validateSchema(schema,res.body),[]);return res.body;
   }
   const {document}=await call({action:'lyrics',recording:{catalog_id:'123',artist:'Test artist',title:'Original test song',duration:12}});
+  assert.equal((await call({action:'current',documentID:document.id,sourceHash:document.sourceHash})).state,'missing');
   const {job}=await call({action:'translate',documentID:document.id,sourceHash:document.sourceHash});
   await Promise.all(pending);
   const ready=await call({action:'translate',documentID:document.id,sourceHash:document.sourceHash});
   assert.equal(ready.state,'ready');assert.equal(ready.translation.rejectedNotes,undefined);
+  assert.equal((await call({action:'current',documentID:document.id,sourceHash:document.sourceHash,revisionID:ready.translation.id})).state,'unchanged');
   const status=await call({action:'status',jobID:job.id});
   assert.deepEqual(status.translation,ready.translation);
   await call({action:'report',documentID:document.id,translationID:ready.translation.id,sourceID:'L0001',category:'translation',detail:'Review the meaning.'});

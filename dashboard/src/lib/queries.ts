@@ -33,12 +33,12 @@ export class DashboardQueries {
     }>(
       this.db,
       `SELECT
-      coalesce(sum(accounted_micros) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'),0)::text AS today,
-      coalesce(sum(accounted_micros),0)::text AS month,
-      coalesce(sum(accounted_micros) FILTER(WHERE cost_kind='estimated'),0)::text AS estimated,
-      coalesce(sum(accounted_micros) FILTER(WHERE cost_kind='reserved'),0)::text AS reserved,
+      (SELECT daily::text FROM lyra_dashboard.budget) AS today,
+      (SELECT monthly::text FROM lyra_dashboard.budget) AS month,
+      coalesce(sum(accounted_micros) FILTER(WHERE state='settled' AND settled_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'),0)::text AS estimated,
+      coalesce(sum(accounted_micros) FILTER(WHERE state IN ('reserved','submitted','unknown')),0)::text AS reserved,
       (SELECT count(*)::integer FROM lyra_dashboard.jobs WHERE state IN ('failed','unknown') OR (state IN ('running','queued') AND coalesce(started_at,created_at)<now()-interval '6 minutes')) AS attention
-      FROM lyra_dashboard.jobs WHERE created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,
+      FROM lyra_dashboard.spend`,
     );
     const counts = await one<{
       songs: number;
@@ -61,7 +61,7 @@ export class DashboardQueries {
         accounted: string;
       }>(`SELECT to_char(d,'YYYY-MM-DD') AS day,coalesce(sum(j.accounted_micros),0)::text AS accounted
       FROM generate_series((now() AT TIME ZONE 'UTC')::date-6,(now() AT TIME ZONE 'UTC')::date,interval '1 day') d
-      LEFT JOIN lyra_dashboard.jobs j ON (j.created_at AT TIME ZONE 'UTC')::date=d::date GROUP BY d ORDER BY d`)
+      LEFT JOIN lyra_dashboard.spend j ON (coalesce(j.settled_at,j.created_at) AT TIME ZONE 'UTC')::date=d::date GROUP BY d ORDER BY d`)
     ).rows;
     return { ...totals, ...counts, settings, recent, trend };
   }
@@ -148,6 +148,14 @@ export class DashboardQueries {
     );
     if (!report) return null;
     const detail = await this.song(report.document_id);
+    if (detail && report.translation_id) {
+      detail.lines = (
+        await this.db.query<Line>(
+          "SELECT * FROM lyra_dashboard.revision_lines WHERE document_id=$1 AND translation_id=$2 ORDER BY position",
+          [report.document_id, report.translation_id],
+        )
+      ).rows;
+    }
     return detail ? { ...detail, report } : null;
   }
 }

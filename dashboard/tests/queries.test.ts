@@ -19,6 +19,9 @@ async function setup() {
       "utf8",
     ),
   );
+  for (const name of ["003-correction-foundation.sql", "004-correction-dashboard.sql"]) {
+    await db.exec(await readFile(new URL(`../../db/${name}`, import.meta.url), "utf8"));
+  }
   await db.query("INSERT INTO library_users(id) VALUES('fixture-user')");
   await db.query(
     "UPDATE library_settings SET enabled=true,daily_micros=1000000,monthly_micros=5000000",
@@ -128,23 +131,24 @@ test("pagination is bounded and reports resolve to the original occurrence", asy
     await db.close();
   }
 });
-test("accounted totals use UTC creation windows and retain uncertain reservations", async () => {
+test("accounted totals use UTC completion windows and retain old uncertain reservations", async () => {
   const { db, q } = await setup();
   try {
     await db.query("SET TIME ZONE 'Pacific/Honolulu'");
     await db.query(
-      "UPDATE translation_jobs SET created_at=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'-interval '1 microsecond'",
+      "UPDATE translation_jobs SET created_at=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'-interval '1 microsecond',finished_at=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'-interval '1 microsecond'",
     );
     assert.equal((await q.overview()).month, "0");
+    await db.query("UPDATE library_spend_operations SET created_at=now()-interval '40 days'");
     await db.query(
-      "UPDATE translation_jobs SET created_at=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',state='unknown',accounted_micros=30000",
+      "UPDATE translation_jobs SET state='unknown',accounted_micros=30000",
     );
     const totals = await q.overview();
     assert.equal(totals.today, "30000");
     assert.equal(totals.month, "30000");
     assert.equal(totals.reserved, "30000");
     assert.equal(totals.estimated, "0");
-    assert.equal(totals.trend.at(-1)?.accounted, "30000");
+    assert.equal(totals.trend.at(-1)?.accounted, "0");
     await db.query(
       "UPDATE translation_jobs SET state='ready',provider_response='{}'",
     );
@@ -152,6 +156,36 @@ test("accounted totals use UTC creation windows and retain uncertain reservation
   } finally {
     await db.close();
   }
+});
+
+test("song pages follow the current revision while report context retains the reported version", async () => {
+  const {db,q}=await setup();
+  try {
+    const reportID="10000000-0000-4000-8000-000000000002",revisionID="20000000-0000-4000-8000-000000000002";
+    await db.query(`INSERT INTO correction_reports(id,user_id,document_id,translation_id,source_id,category,detail,fingerprint)
+      VALUES($1,'fixture-user',$2,$3,'L0001','translation','Check the original wording.','revision-report')`,[reportID,id,job]);
+    await db.query(`INSERT INTO translation_revisions(id,translation_id,sequence,base_revision_id,source_hash,recipe,content,origin,publication_key,request_hash,actor,reason)
+      SELECT $1,translation_id,2,id,source_hash,recipe,$2,'correction','fixture-revision','fixture','test','Test history' FROM translation_revisions WHERE id=$3`,
+      [revisionID,JSON.stringify({lines:[{sourceID:'L0001',lyricText:'Return home.'},{sourceID:'L0002',lyricText:'Come home again.'}]}),job]);
+    await db.query('UPDATE translation_heads SET revision_id=$1 WHERE translation_id=$2',[revisionID,job]);
+    assert.equal((await q.song(id))?.lines[0].translation,'Return home.');
+    assert.equal((await q.song(id))?.song.translation_id,revisionID);
+    assert.equal((await q.report(reportID))?.lines[0].translation,'Go home.');
+  } finally {await db.close();}
+});
+
+test("dashboard totals include review reservations in the same budget as generation", async () => {
+  const {db,q}=await setup();
+  try {
+    await db.query('UPDATE library_settings SET review_enabled=true');
+    const reviewID='30000000-0000-4000-8000-000000000003';
+    await db.query("INSERT INTO translation_reviews(id,revision_id,policy_version,model) VALUES($1,$2,'test','gpt-5.6-luna')",[reviewID,job]);
+    await db.query(`INSERT INTO library_spend_operations(id,operation_key,kind,review_id,state,reserved_micros,accounted_micros,created_at)
+      VALUES('40000000-0000-4000-8000-000000000004','test-review','review_assessment',$1,'reserved',10000,10000,now()-interval '40 days')`,[reviewID]);
+    const totals=await q.overview();
+    assert.equal(totals.today,'13200');assert.equal(totals.month,'13200');
+    assert.equal(totals.reserved,'10000');assert.equal(totals.estimated,'3200');
+  } finally {await db.close();}
 });
 test("reader sees views but cannot read tokens, provider payloads or alter records", async () => {
   const { db, q } = await setup();
@@ -167,6 +201,9 @@ test("reader sees views but cannot read tokens, provider payloads or alter recor
       "UPDATE lyra_dashboard.settings SET enabled=false",
       "UPDATE lyra_dashboard.jobs SET state='failed'",
       "DELETE FROM public.song_translations",
+      "SELECT * FROM public.library_spend_operations",
+      "SELECT * FROM public.translation_revisions",
+      "UPDATE lyra_dashboard.spend SET accounted_micros=0",
       "CREATE TABLE lyra_dashboard.unwanted(id integer)",
     ])
       await assert.rejects(db.query(sql));

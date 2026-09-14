@@ -5,6 +5,7 @@ import {SongLibraryStore} from '../../api/utils/song-library/store.js';
 export async function libraryDB(path) {
   const db=new PGlite(path);
   await db.exec(await readFile(new URL('../../db/001-song-library.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../../db/003-correction-foundation.sql',import.meta.url),'utf8'));
   const store=new SongLibraryStore({query:(...args)=>db.query(...args),transaction:fn=>db.transaction(fn)});
   await store.configure({enabled:true,dailyMicros:1_000_000,monthlyMicros:5_000_000});
   await store.createUser('reader-a','token-a');
