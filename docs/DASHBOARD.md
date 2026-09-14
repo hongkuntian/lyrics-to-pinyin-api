@@ -45,6 +45,8 @@ The ledger's integer `accounted_micros` is authoritative for budget headroom, in
 
 For CLI deployments launched from the repository root, link that checkout to the dashboard project and pass `--local-config dashboard/vercel.json`. A checkout used for dashboard delivery must not retain the API project's `.vercel/project.json`.
 
+Connect the project to this GitHub repository with production branch `main`. On a Hobby team, Vercel must associate the latest commit author with the team owner. Use an email already associated with the owner's GitHub account for checkpoint commits; a machine-generated `.local` email can leave deployments blocked even when the CLI is authenticated. Verify GitHub's commit attribution before retrying. Do not change deployment protection or upgrade the plan to resolve an author-identity mismatch. See [Vercel's collaboration troubleshooting](https://vercel.com/docs/deployments/troubleshoot-project-collaboration#team-configuration).
+
 Configure the API project's Ignored Build Step as `node scripts/ignore-vercel-build.mjs backend`. This skips complete dashboard-only diffs against `VERCEL_GIT_PREVIOUS_SHA`; unknown revisions, paths, mixed changes and migrations build normally. The dashboard project builds on shared-repository changes so schema changes cannot be silently missed. Use a reviewed, verified main checkpoint for delivery.
 
 ## Boundaries for later work
