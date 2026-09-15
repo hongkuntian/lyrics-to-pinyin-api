@@ -528,7 +528,7 @@
               "minimum": 1
             },
             "recipe": {
-              "const": "study-occurrence-1"
+              "const": "study-occurrence-2"
             },
             "meaning": {
               "type": "string"

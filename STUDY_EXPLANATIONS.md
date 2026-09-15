@@ -13,8 +13,12 @@ immutable whole-song source, selected range and accepted translation to the
 existing Luna model with a strict schema. The answer contains `meaning`,
 `context`, `grammar`, `uncertainty` and the exact selected `sourceQuote`.
 Metadata includes source occurrence/range, document and translation revision,
-and recipe `study-occurrence-1`. A line translation or dictionary result is not
+and recipe `study-occurrence-2`. A line translation or dictionary result is not
 substituted for a contextual explanation.
+
+The second recipe clarifies classifier roles and requires ambiguity to remain
+consistent across meaning, context and uncertainty. It also separates the lyric
+speaker from the real performer. Its cache identity excludes earlier answers.
 
 A new request returns `202 {version:1,state:"preparing"}`. Poll the **same action
 and fields** at four-second intervals, with a bounded wait. Ready results return
