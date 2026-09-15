@@ -6,8 +6,11 @@ import {makeDocument,recordingRequest,requestKey} from './utils/song-library/doc
 import {generate,requestBody,reservationMicros,RECIPE} from './utils/song-library/translation.js';
 import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
 
+import {selectionFor,explanationBody,explanationKey,generateExplanation,STUDY_RECIPE} from './utils/song-library/study-explanation.js';
+import {reserveExplanation,claimExplanation,finishExplanation,publicExplanation} from './utils/song-library/study-store.js';
+
 export const config={maxDuration:300};
-const actions={lyrics:['recording'],translate:['documentID','sourceHash'],current:['documentID','sourceHash','revisionID'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
+const actions={explain:['documentID','sourceHash','translationID','sourceID','lower','upper'],lyrics:['recording'],translate:['documentID','sourceHash'],current:['documentID','sourceHash','revisionID'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeHandler()) {
   return async recording=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
@@ -16,7 +19,7 @@ export function lyricLoader(handler=createMusicRomanizeHandler()) {
     return result.body;
   };
 }
-export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generateFn=generate,apiKey=process.env.OPENAI_API_KEY,
+export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,apiKey=process.env.OPENAI_API_KEY,
   selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
   async function execute(db,id,doc) {
@@ -75,6 +78,29 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
         if(result.job.state==='queued')waitUntilFn(execute(db,result.job.id,doc).catch(()=>logger.error('translation_worker_storage_failure',{jobID:result.job.id})));
         if(result.kind==='unknown'||result.kind==='failed')return send(409,{state:result.kind,job:result.job,code:result.job.errorCode??'review_required'});
         res.setHeader('Retry-After','3');return send(202,{state:'preparing',job:result.job});
+      }
+      if(input.action==='explain') {
+        if(typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string'||typeof input.translationID!=='string')throw new LibraryError('invalid_request',400);
+        const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
+        if(doc.sourceHash!==input.sourceHash)throw new LibraryError('source_changed');
+        const saved=await db.translation(doc.id,'en');
+        if(!saved||saved.id!==input.translationID)throw new LibraryError('translation_revision_superseded');
+        const selection=selectionFor(doc,input),key=explanationKey(doc,saved,selection);
+        const prior=(await db.db.query('SELECT * FROM study_explanations WHERE cache_key=$1',[key])).rows[0];
+        let row=prior;
+        if(!row) {
+          if(!await db.isCurrentDocument(doc.id,selectionRevision))throw new LibraryError('source_revision_superseded');
+          if(!apiKey)throw new LibraryError('generation_not_configured',503);
+          row=(await reserveExplanation(db.db,{key,doc,translation:saved,selection,recipe:STUDY_RECIPE,userID:user.id,amount:reservationMicros(explanationBody(doc,saved,selection))})).row;
+        }
+        if(row.state==='ready')return send(200,{state:'ready',explanation:publicExplanation(row)});
+        if(['failed','unknown'].includes(row.state))throw new LibraryError(row.error_code??'review_required');
+        if(row.state==='queued')waitUntilFn((async()=>{
+          if(!await claimExplanation(db.db,row.id))return;
+          try { const result=await explainFn(doc,saved,selection,{apiKey});await finishExplanation(db.db,row.id,result); }
+          catch(error) { await finishExplanation(db.db,row.id,{actualMicros:error.actualMicros??null,response:error.providerResponse??null,errorCode:error.code??'worker_interrupted'}); }
+        })().catch(()=>logger.error('study_worker_storage_failure',{jobID:row.id})));
+        res.setHeader('Retry-After','3');return send(202,{state:'preparing'});
       }
       if(input.action==='status') {
         if(typeof input.jobID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(input.jobID))throw new LibraryError('invalid_request',400);

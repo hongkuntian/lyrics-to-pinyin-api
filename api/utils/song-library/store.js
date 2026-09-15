@@ -92,10 +92,10 @@ export class SongLibraryStore {
       const prior=await first(db,'SELECT * FROM translation_jobs WHERE document_id=$1 AND target=$2',[documentID,target]);
       if(prior) return {kind:prior.state==='queued'||prior.state==='running'?'pending':prior.state,job:publicJob(prior)};
       if(!settings.enabled) throw new LibraryError('generation_disabled',503);
-      const active=await first(db,"SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1",[userID]);
+      const active=await first(db,"SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown') UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1",[userID]);
       if(active) throw new LibraryError('user_busy',429);
       const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,
-        count(*) AS monthly FROM translation_jobs WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
+        count(*) AS monthly FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations) attempts WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
       if(Number(counts.daily)>=settings.user_daily || Number(counts.monthly)>=settings.user_monthly) throw new LibraryError('generation_allowance_exhausted',429);
       checkBudget(settings,await budget(db),reservedMicros);
       const row=await first(db,`INSERT INTO translation_jobs(id,document_id,target,recipe,user_id,state,reserved_micros,accounted_micros)

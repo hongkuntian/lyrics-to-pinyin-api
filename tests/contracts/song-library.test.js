@@ -14,6 +14,7 @@ test('song library document, job, translation, status, report and error follow t
   const {db,store}=await libraryDB();t.after(()=>db.close());const pending=[];
   const handler=createSongLibraryHandler({store,selectionRevision:'contract',apiKey:'test',loadLyrics:async()=>source.response,
     generateFn:async doc=>({content:parseTranslation(JSON.stringify({translations:{L0001:'Make a song of today.'},sourceNotes:[]}),doc),actualMicros:1000,response:{}}),
+    explainFn:async(doc,translation,selection)=>({content:{meaning:'turn into through singing',context:'The day becomes a song.',grammar:'Result complement.',uncertainty:'',sourceQuote:selection.text},actualMicros:500,response:{id:'study'}}),
     waitUntilFn:task=>pending.push(task)});
   async function call(body) {
     const res={setHeader(){},status(code){this.code=code;return this;},json(value){this.body=value;}};
@@ -25,6 +26,9 @@ test('song library document, job, translation, status, report and error follow t
   const {job}=await call({action:'translate',documentID:document.id,sourceHash:document.sourceHash});
   await Promise.all(pending);
   const ready=await call({action:'translate',documentID:document.id,sourceHash:document.sourceHash});
+  const selection={action:'explain',documentID:document.id,sourceHash:document.sourceHash,translationID:ready.translation.id,sourceID:'L0001',lower:'3',upper:'5'};
+  assert.equal((await call(selection)).state,'preparing');await Promise.all(pending);
+  assert.equal((await call(selection)).explanation.sourceQuote,'唱成');
   assert.equal(ready.state,'ready');assert.equal(ready.translation.rejectedNotes,undefined);
   assert.equal((await call({action:'current',documentID:document.id,sourceHash:document.sourceHash,revisionID:ready.translation.id})).state,'unchanged');
   const status=await call({action:'status',jobID:job.id});

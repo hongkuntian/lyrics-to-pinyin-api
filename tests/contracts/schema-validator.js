@@ -1,4 +1,5 @@
 function typeMatches(expectedType, value) {
+  if (expectedType === "integer") return Number.isInteger(value);
   if (expectedType === "null") {
     return value === null;
   }
@@ -29,6 +30,8 @@ export function validateSchema(schema, value, path = "$") {
     errors.push(`${path}: expected ${schema.type}`);
     return errors;
   }
+
+  if (typeof value === "number" && schema.minimum !== undefined && value < schema.minimum) errors.push(`${path}: below minimum`);
 
   if (schema.type === "object") {
     const required = schema.required || [];

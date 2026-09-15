@@ -4,13 +4,37 @@
   "anyOf": [
     {
       "type": "object",
-      "required": ["version", "state"],
-      "properties": {"version": {"const": 1}, "state": {"const": "missing"}}
+      "required": [
+        "version",
+        "state"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "missing"
+        }
+      }
     },
     {
       "type": "object",
-      "required": ["version", "state", "revisionID"],
-      "properties": {"version": {"const": 1}, "state": {"const": "unchanged"}, "revisionID": {"type": "string"}}
+      "required": [
+        "version",
+        "state",
+        "revisionID"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "unchanged"
+        },
+        "revisionID": {
+          "type": "string"
+        }
+      }
     },
     {
       "type": "object",
@@ -451,6 +475,96 @@
           "type": "string"
         }
       }
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "state",
+        "explanation"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "ready"
+        },
+        "explanation": {
+          "type": "object",
+          "required": [
+            "id",
+            "documentID",
+            "translationID",
+            "sourceID",
+            "lower",
+            "upper",
+            "recipe",
+            "meaning",
+            "context",
+            "grammar",
+            "uncertainty",
+            "sourceQuote"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "documentID": {
+              "type": "string"
+            },
+            "translationID": {
+              "type": "string"
+            },
+            "sourceID": {
+              "type": "string"
+            },
+            "lower": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "upper": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "recipe": {
+              "const": "study-occurrence-1"
+            },
+            "meaning": {
+              "type": "string"
+            },
+            "context": {
+              "type": "string"
+            },
+            "grammar": {
+              "type": "string"
+            },
+            "uncertainty": {
+              "type": "string"
+            },
+            "sourceQuote": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "state"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "preparing"
+        }
+      },
+      "additionalProperties": false
     }
   ]
 }

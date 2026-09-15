@@ -5,11 +5,14 @@ import {SongLibraryStore} from '../../api/utils/song-library/store.js';
 export async function libraryDB(path) {
   const db=new PGlite(path);
   await db.exec(await readFile(new URL('../../db/001-song-library.sql',import.meta.url),'utf8'));
-  await db.exec(await readFile(new URL('../../db/003-correction-foundation.sql',import.meta.url),'utf8'));
+  if(!(await db.query("SELECT to_regclass('translation_reviews') AS table_name")).rows[0].table_name)
+    await db.exec(await readFile(new URL('../../db/003-correction-foundation.sql',import.meta.url),'utf8'));
   if(!(await db.query("SELECT to_regclass('correction_review_queue') AS table_name")).rows[0].table_name)
     await db.exec(await readFile(new URL('../../db/005-correction-batches.sql',import.meta.url),'utf8'));
   if(!(await db.query("SELECT to_regclass('correction_review_outcomes') AS table_name")).rows[0].table_name)
     await db.exec(await readFile(new URL('../../db/007-correction-publication.sql',import.meta.url),'utf8'));
+  if(!(await db.query("SELECT to_regclass('study_explanations') AS table_name")).rows[0].table_name)
+    await db.exec(await readFile(new URL('../../db/009-study-explanations.sql',import.meta.url),'utf8'));
   const store=new SongLibraryStore({query:(...args)=>db.query(...args),transaction:fn=>db.transaction(fn)});
   await store.configure({enabled:true,dailyMicros:1_000_000,monthlyMicros:5_000_000});
   await store.createUser('reader-a','token-a');
