@@ -132,3 +132,9 @@ export type Revision = {id:string; document_id:string; sequence:string; base_rev
   recipe:string; origin:string; actor:string; reason:string; restored_from:string|null; created_at:string; current:boolean};
 export type ControlAction = {id:string;actor:string;kind:"control"|"rollback";document_id:string|null;created_at:string;
   before_state:Record<string,string|boolean|number>;after_state:Record<string,string|boolean|number>};
+
+export type AlertIncident = {id:string;code:string;first_seen_at:string;last_seen_at:string;resolved_at:string|null;email_state:string|null;attempted_at:string|null};
+export type AlertSummary = {
+  active:{code:string}[]; history:AlertIncident[];
+  monitor:{initialized_at:string;last_checked_at:string|null;email_configured:boolean;daily_attempts:number;monthly_attempts:number;last_email_state:string|null};
+};

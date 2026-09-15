@@ -6,6 +6,7 @@ import { money, stamp, type ControlAction } from "@/lib/model";
 import { PageHeading } from "@/components/shared";
 import { OwnerStatus } from "@/components/owner-status";
 import { OwnerForm } from "@/components/owner-form";
+import { OperationalAlerts } from "@/components/operational-alerts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 export const metadata = { title: "Automation" };
 function actionLabel(a: ControlAction) {
@@ -25,10 +26,11 @@ function actionLabel(a: ControlAction) {
 }
 export default async function AutomationPage() {
   const identity = await owner();
-  const { overview, review, actions } = await read(async (q) => ({
+  const { overview, review, actions, alerts } = await read(async (q) => ({
     overview: await q.overview(),
     review: await q.reviewProgress(),
     actions: await q.controlActions(),
+    alerts: await q.alerts(),
   }));
   const controls = [
     {
@@ -61,6 +63,7 @@ export default async function AutomationPage() {
         description="Routine corrections run automatically. These controls are here when you need to intervene."
       />
       <OwnerStatus />
+      <OperationalAlerts data={alerts}/>
       <div className="automation-grid">
         {controls.map((c) => (
           <Card key={c.key}>

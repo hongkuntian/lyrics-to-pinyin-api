@@ -19,7 +19,7 @@ async function setup() {
       "utf8",
     ),
   );
-  for (const name of ["003-correction-foundation.sql", "004-correction-dashboard.sql", "005-correction-batches.sql", "006-batch-dashboard.sql", "007-correction-publication.sql", "008-publication-dashboard.sql", "009-study-explanations.sql", "010-dashboard-controls.sql"]) {
+  for (const name of ["003-correction-foundation.sql", "004-correction-dashboard.sql", "005-correction-batches.sql", "006-batch-dashboard.sql", "007-correction-publication.sql", "008-publication-dashboard.sql", "009-study-explanations.sql", "010-dashboard-controls.sql", "011-operational-alerts.sql"]) {
     await db.exec(await readFile(new URL(`../../db/${name}`, import.meta.url), "utf8"));
   }
   await db.query("INSERT INTO library_users(id) VALUES('fixture-user')");
@@ -98,6 +98,18 @@ test("views preserve repeated occurrence identity and hide provider payloads", a
   } finally {
     await db.close();
   }
+});
+
+test("operational alerts query fresh conditions and safe history without exposing mail configuration",async()=>{
+  const {db,q}=await setup();
+  try {
+    await db.query("UPDATE library_settings SET daily_micros=0");
+    let alerts=await q.alerts();
+    assert.deepEqual(alerts.active,[{code:"global_budget"}]);assert.equal(alerts.monitor.email_configured,false);
+    await db.query("UPDATE library_alert_monitor SET initialized_at=now()-interval '37 hours'");
+    alerts=await q.alerts();assert.ok(alerts.active.some(a=>a.code==='scheduler_overdue'));
+    assert.equal(alerts.history.length,0);assert.ok(!JSON.stringify(alerts).includes('must-not-leak'));
+  } finally {await db.close();}
 });
 
 test("pagination is bounded and reports resolve to the original occurrence", async () => {

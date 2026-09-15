@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 import path from "node:path";
 
 const nextConfig: NextConfig = {
-  turbopack: { root: path.resolve(__dirname) },
+  // The API and dashboard use the same static operational alert descriptions.
+  turbopack: { root: path.resolve(__dirname, "..") },
+  outputFileTracingRoot: path.resolve(__dirname, ".."),
   poweredByHeader: false,
   async headers() {
     return [

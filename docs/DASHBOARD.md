@@ -9,7 +9,7 @@ The dashboard is a separate Next.js application under `dashboard/`, deployed to 
 - Jobs: state filters, queue/worker timing, error codes, uncertain charges and potentially stalled requests. Inspection never changes job state.
 - Reports: status filters and the reported occurrence with surrounding lyrics. Text is escaped; report disposition does not mean a correction was applied.
 - Translation history: immutable versions, exact occurrence-by-occurrence comparisons, and owner-authorized restoration of a saved version as a new revision.
-- Automation: owner-only pause/resume of paid work, report review and correction publication; current limits, worker status and the latest 50 owner actions.
+- Automation: current operational incidents, capped email status, incident history, owner-only pause/resume of paid work, report review and correction publication; current limits, worker status and the latest 50 owner actions.
 
 Routine [automatic corrections](AUTOMATED_CORRECTIONS.md) do not require owner approval. Owner controls preserve existing spending limits and never retry uncertain provider requests or invoke a model. Historical cache-hit rates are not recorded; no hit-rate or savings claim is inferred from saved counts.
 
@@ -69,6 +69,12 @@ Control changes compare a settings version incremented by every settings update,
 
 Restoration locks the same stable translation container as the automatic publisher, checks the expected current revision and source hash, copies the chosen immutable content/recipe, and saves a new revision plus audit record atomically. A concurrent correction makes the old preview stale. Prior content and report context remain intact. The phone's existing revision check can receive the new revision; this dashboard checkpoint requires no native release.
 
+## Operational alerts
+
+Migration 011 adds curated incident, monitor and live-condition views. Automation reads the conditions on every page load, including a scheduler check overdue by more than 36 hours. Persisted incident history is updated by the existing daily worker. Resolved conditions disappear from the active list immediately; the historical resolution timestamp is recorded on the next scheduled check. The history list shows at most 50 episodes. No lyric text, reports, email addresses, credentials or provider email payloads are exposed by the alert views.
+
+Email delivery is configured only on the API project, following [the operational alert runbook](AUTOMATED_CORRECTIONS.md#checkpoint-4-operational-alerts). The dashboard needs no mail credential and never sends mail. It distinguishes missing setup, attempted/accepted, rejected and unknown delivery. Provider acceptance is not proof of inbox delivery. Routine corrections and ambiguous semantic results remain quiet.
+
 ## Later work
 
-Deduplicated email and dashboard incident alerts, budget-increase decisions and broader rollout evidence remain separate checkpoints. Keep uncertain charges reserved until billing is reconciled. Model assessments remain untrusted data; deterministic validation and publication controls enforce the approved automatic workflow.
+Owner-authorized budget increases and broader rollout evidence remain separate checkpoints. Keep uncertain charges reserved until billing is reconciled. Model assessments remain untrusted data; deterministic validation and publication controls enforce the approved automatic workflow.

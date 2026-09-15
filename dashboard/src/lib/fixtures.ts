@@ -1,5 +1,5 @@
 import { PAGE_SIZE, pageNumber, searchText } from "./model";
-import type { Song, Job, Report, Line, Overview, ReviewProgress, ReviewAssessment, ReviewChange, Revision } from "./model";
+import type { Song, Job, Report, Line, Overview, ReviewProgress, ReviewAssessment, ReviewChange, Revision, AlertSummary } from "./model";
 import type {FixtureControls} from "./fixture-controls";
 const now = "2026-09-14T12:00:00.000Z";
 export const fixtureSongs: Song[] = Array.from({ length: 24 }, (_, i) => ({
@@ -90,6 +90,11 @@ export function fixtures(empty = false, state?:FixtureControls) {
     jobs = empty ? [] : fixtureJobs,
     reports = empty ? [] : fixtureReports;
   return {
+    async alerts():Promise<AlertSummary> {return {
+      active:empty?[]:[{code:"billing_uncertain"},{code:"generation_stalled"}],
+      history:empty?[]:[{id:"fixture-incident",code:"billing_uncertain",first_seen_at:now,last_seen_at:now,resolved_at:null,email_state:"accepted",attempted_at:now}],
+      monitor:{initialized_at:now,last_checked_at:empty?null:now,email_configured:!empty,daily_attempts:empty?0:1,monthly_attempts:empty?0:1,last_email_state:empty?null:"accepted"},
+    };},
     async controlActions() {return state?.actions ?? [];},
     async revisions(document:string):Promise<Revision[]> {
       const song = songs.find(s=>s.id === document);

@@ -1006,3 +1006,13 @@ main {
     font-size: 13px;
   }
 }
+/* Quiet operational incidents, separated from everyday correction activity. */
+.operational-alerts { margin-bottom: 24px; }
+.incident-list { display: grid; gap: 18px; padding: 0; list-style: none; }
+.incident-list li { border-left: 2px solid var(--primary); padding-left: 16px; }
+.incident-list p, .alert-delivery p { margin: 7px 0; color: var(--muted-foreground); line-height: 1.6; }
+.alert-delivery { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
+.alert-delivery small { color: var(--muted-foreground); line-height: 1.6; }
+.incident-history { margin-top: 20px; }
+.incident-history summary { cursor: pointer; font-weight: 500; }
+.overview-alert { margin-bottom: 22px; padding: 14px 18px; border: 1px solid var(--border); border-radius: 12px; color: var(--primary); }

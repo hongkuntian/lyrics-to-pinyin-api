@@ -18,7 +18,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 export default async function OverviewPage() {
-  const d = await read((q) => q.overview());
+  const {d,alerts} = await read(async(q) => ({d:await q.overview(),alerts:await q.alerts()}));
   return (
     <>
       <PageHeading
@@ -26,6 +26,9 @@ export default async function OverviewPage() {
         title="Overview"
         description="Every saved song. Every request. A clear view of your budget."
       />
+      {(alerts.active.length>0||!alerts.monitor.email_configured)&&<p className="overview-alert">
+        <Link href="/automation#alerts">{alerts.active.length>0?`${alerts.active.length} operational ${alerts.active.length===1?'issue needs':'issues need'} attention`:'Set up email alerts'} →</Link>
+      </p>}
       <div className="overview-status">
         <span>
           <ShieldCheck size={16} />

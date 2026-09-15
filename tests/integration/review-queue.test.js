@@ -117,7 +117,7 @@ test('expired lease owners cannot mutate batch state after takeover',async t=> {
 test('cron requires production, an owner secret, GET and no user-selected payload',async()=> {
   let calls=0;const secret='s'.repeat(40),env={VERCEL_ENV:'production',CRON_SECRET:secret,OPENAI_API_KEY:'fixture'};
   const invoke=async(e,req)=> {const res={setHeader(){},status(n){this.code=n;return this;},json(v){this.body=v;return this;}};
-    await createReviewReportsHandler({env:e,db:{},run:async()=>{calls++;return {state:'empty'};}})(req,res);return res;};
+    await createReviewReportsHandler({env:e,db:{},alerts:async()=>{},run:async()=>{calls++;return {state:'empty'};}})(req,res);return res;};
   const req={method:'GET',headers:{authorization:`Bearer ${secret}`}};
   assert.equal((await invoke(env,{...req,headers:{}})).code,401);
   assert.equal((await invoke({...env,VERCEL_ENV:'preview'},req)).code,503);

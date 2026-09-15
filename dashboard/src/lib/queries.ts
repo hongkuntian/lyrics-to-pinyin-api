@@ -12,6 +12,8 @@ import type {
   ReviewChange,
   Revision,
   ControlAction,
+  AlertSummary,
+  AlertIncident,
 } from "./model";
 export type Database = {
   query<T>(sql: string, values?: unknown[]): Promise<{ rows: T[] }>;
@@ -23,6 +25,12 @@ const jobStates = new Set(["queued", "running", "ready", "failed", "unknown"]);
 const reportStates = new Set(["pending", "accepted", "rejected"]);
 export class DashboardQueries {
   constructor(private db: Database) {}
+  async alerts(): Promise<AlertSummary> {
+    const active=(await this.db.query<{code:string}>("SELECT code FROM lyra_dashboard.alert_conditions ORDER BY code")).rows;
+    const history=(await this.db.query<AlertIncident>("SELECT * FROM lyra_dashboard.alert_incidents ORDER BY first_seen_at DESC,id DESC LIMIT 50")).rows;
+    const monitor=await one<AlertSummary['monitor']>(this.db,"SELECT * FROM lyra_dashboard.alert_monitor");
+    return {active,history,monitor};
+  }
   async controlActions(): Promise<ControlAction[]> {
     return (await this.db.query<ControlAction>("SELECT * FROM lyra_dashboard.control_actions ORDER BY created_at DESC,id DESC LIMIT 50")).rows;
   }
