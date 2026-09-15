@@ -5,6 +5,8 @@ import { DashboardQueries } from "./queries";
 import type { Database } from "./queries";
 import { fixtures } from "./fixtures";
 import { dataMode } from "./config";
+import {owner} from "./owner";
+import {fixtureControls} from "./fixture-controls";
 
 let pool: pg.Pool | undefined;
 export async function read<T>(
@@ -13,8 +15,10 @@ export async function read<T>(
   await connection();
   const mode = dataMode(process.env);
   if (mode === "error") throw new Error("dashboard_unavailable");
-  if (mode !== "production")
-    return fn(fixtures(mode === "empty") as unknown as DashboardQueries);
+  if (mode !== "production") {
+    const identity = await owner();
+    return fn(fixtures(mode === "empty",fixtureControls(identity?.sessionID)) as unknown as DashboardQueries);
+  }
   if (!pool) {
     pool = new pg.Pool({
       connectionString: process.env.LYRA_DASHBOARD_DATABASE_URL,

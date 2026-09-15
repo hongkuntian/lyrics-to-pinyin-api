@@ -1,5 +1,6 @@
 import { PAGE_SIZE, pageNumber, searchText } from "./model";
-import type { Song, Job, Report, Line, Overview, ReviewProgress, ReviewAssessment, ReviewChange } from "./model";
+import type { Song, Job, Report, Line, Overview, ReviewProgress, ReviewAssessment, ReviewChange, Revision } from "./model";
+import type {FixtureControls} from "./fixture-controls";
 const now = "2026-09-14T12:00:00.000Z";
 export const fixtureSongs: Song[] = Array.from({ length: 24 }, (_, i) => ({
   id: (i + 1).toString(16).padStart(64, "0"),
@@ -84,20 +85,40 @@ const paginate = <T>(rows: T[], page = 1) => ({
   total: rows.length,
   page: pageNumber(String(page)),
 });
-export function fixtures(empty = false) {
+export function fixtures(empty = false, state?:FixtureControls) {
   const songs = empty ? [] : fixtureSongs,
     jobs = empty ? [] : fixtureJobs,
     reports = empty ? [] : fixtureReports;
   return {
+    async controlActions() {return state?.actions ?? [];},
+    async revisions(document:string):Promise<Revision[]> {
+      const song = songs.find(s=>s.id === document);
+      if(!song) return [];
+      const common = {document_id:document,source_hash:song.source_hash,recipe:song.recipe!,actor:"fixture-worker",reason:"Preserve the recurring image.",created_at:now,restored_from:null};
+      const result:Revision[] = [{...common,id:song.translation_id!,sequence:"2",base_revision_id:null,origin:"correction",current:!(state?.head && document === songs[0]?.id)}];
+      if(document === songs[0]?.id) {
+        result.push({...common,id:"20000000-0000-4000-8000-000000000001",sequence:"1",base_revision_id:null,origin:"initial",reason:"Initial saved translation.",current:false});
+        if(state?.head) result.unshift({...common,id:state.head,sequence:"3",base_revision_id:song.translation_id,origin:"rollback",reason:"Owner restored the saved version.",restored_from:result[1].id,current:true});
+      }
+      return result;
+    },
+    async revision(document:string,id:string) {
+      const revision = (await this.revisions(document)).find(r=>r.id === id), detail = await this.song(document);
+      if(!revision || !detail) return null;
+      const saved = fixtureLines(document).map(line=>({...line,translation_id:id,
+        translation: (revision.sequence === "1" || revision.origin === "rollback") && line.source_id === "L0001" ? "Put a faint light in my pocket." : line.translation}));
+      return {...detail,revision,saved};
+    },
     async reviewProgress(): Promise<ReviewProgress> {
-      return {review_enabled:true,review_publication_enabled:true,review_daily_micros:"250000",review_monthly_micros:"1000000",review_max_daily:5,
+      return {review_enabled:state?.reviews ?? true,review_publication_enabled:state?.publication ?? true,review_daily_micros:"250000",review_monthly_micros:"1000000",review_max_daily:5,
         review_daily:empty?"0":"22331",review_monthly:empty?"0":"22331",pending:0,processing:0,assessed:0,blocked:0,kept:0,deferred:0,published:empty?0:1,stage:"verification",
         last_run_at:empty?null:now,last_outcome:empty?null:"assessed",batch_state:empty?null:"completed",provider_status:empty?null:"completed",error_code:null};
     },
     async overview(): Promise<Overview> {
       return {
         settings: {
-          enabled: true,
+          enabled: state?.paid_work ?? true,
+          control_version:state?.version ?? "1",
           daily_micros: "1000000",
           monthly_micros: "5000000",
           user_daily: 10,
@@ -130,10 +151,12 @@ export function fixtures(empty = false) {
     },
     async song(id: string) {
       const song = songs.find((s) => s.id === id);
+      const restored = id === songs[0]?.id && state?.head;
       return song
         ? {
-            song,
-            lines: fixtureLines(id),
+            song:{...song,translation_id:restored || song.translation_id},
+            lines: fixtureLines(id).map(line=>({...line,translation_id:restored || line.translation_id,
+              translation:restored && line.source_id === "L0001" ? "Put a faint light in my pocket." : line.translation})),
             reports: reports.filter((r) => r.document_id === id),
           }
         : null;

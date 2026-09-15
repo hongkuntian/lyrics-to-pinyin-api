@@ -10,6 +10,7 @@ import {
   MessageSquare,
   LockKeyhole,
   RefreshCw,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 const navigation = [
@@ -17,6 +18,7 @@ const navigation = [
   { href: "/songs", label: "Songs", icon: Library },
   { href: "/jobs", label: "Jobs", icon: Activity },
   { href: "/reports", label: "Reports", icon: MessageSquare },
+  { href: "/automation", label: "Automation", icon: SlidersHorizontal },
 ];
 export function Shell({
   children,
@@ -60,7 +62,7 @@ export function Shell({
         <div className="sidebar-bottom">
           <LockKeyhole size={15} />
           <div>
-            Private workspace<small>Read-only access</small>
+            Private workspace<small>Owner sign-in for controls</small>
           </div>
         </div>
       </aside>

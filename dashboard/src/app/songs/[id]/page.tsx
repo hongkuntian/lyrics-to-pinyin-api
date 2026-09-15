@@ -6,6 +6,7 @@ import { stamp } from "@/lib/model";
 import { PageHeading, Status } from "@/components/shared";
 import { LyricComparison } from "@/components/lyric-comparison";
 import { ReportsList } from "@/components/reports-list";
+import {RevisionHistory} from "@/components/revision-history";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 export default async function SongPage({
   params,
@@ -13,7 +14,7 @@ export default async function SongPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const d = await read((q) => q.song(id));
+  const {detail:d,revisions} = await read(async q => ({detail:await q.song(id),revisions:await q.revisions(id)}));
   if (!d) notFound();
   return (
     <>
@@ -49,6 +50,7 @@ export default async function SongPage({
           <dd>{d.song.translation_id ?? "—"}</dd>
         </dl>
       </details>
+      <RevisionHistory revisions={revisions}/>
       {d.reports.length > 0 && (
         <Card>
           <CardHeader>

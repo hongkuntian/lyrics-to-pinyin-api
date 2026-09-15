@@ -1,4 +1,5 @@
 export type Settings = {
+  control_version: string;
   enabled: boolean;
   daily_micros: string;
   monthly_micros: string;
@@ -126,3 +127,8 @@ export type ReviewAssessment = {
 };
 
 export type ReviewChange = { source_id: string; source_text: string; before: string; after: string; reason: string };
+
+export type Revision = {id:string; document_id:string; sequence:string; base_revision_id:string|null; source_hash:string;
+  recipe:string; origin:string; actor:string; reason:string; restored_from:string|null; created_at:string; current:boolean};
+export type ControlAction = {id:string;actor:string;kind:"control"|"rollback";document_id:string|null;created_at:string;
+  before_state:Record<string,string|boolean|number>;after_state:Record<string,string|boolean|number>};

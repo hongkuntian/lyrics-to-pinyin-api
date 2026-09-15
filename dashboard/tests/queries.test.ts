@@ -19,7 +19,7 @@ async function setup() {
       "utf8",
     ),
   );
-  for (const name of ["003-correction-foundation.sql", "004-correction-dashboard.sql", "005-correction-batches.sql", "006-batch-dashboard.sql", "007-correction-publication.sql", "008-publication-dashboard.sql"]) {
+  for (const name of ["003-correction-foundation.sql", "004-correction-dashboard.sql", "005-correction-batches.sql", "006-batch-dashboard.sql", "007-correction-publication.sql", "008-publication-dashboard.sql", "009-study-explanations.sql", "010-dashboard-controls.sql"]) {
     await db.exec(await readFile(new URL(`../../db/${name}`, import.meta.url), "utf8"));
   }
   await db.query("INSERT INTO library_users(id) VALUES('fixture-user')");
@@ -173,6 +173,12 @@ test("song pages follow the current revision while report context retains the re
     assert.equal((await q.song(id))?.lines[0].translation,'Return home.');
     assert.equal((await q.song(id))?.song.translation_id,revisionID);
     assert.equal((await q.report(reportID))?.lines[0].translation,'Go home.');
+    assert.deepEqual((await q.revisions(id)).map(r=>[r.id,r.current]),[[revisionID,true],[job,false]]);
+    const historical = await q.revision(id,job);
+    assert.equal(historical?.saved[0].translation,'Go home.');
+    assert.equal(historical?.lines[0].translation,'Return home.');
+    assert.equal(await q.revision('b'.repeat(64),job),null);
+    assert.equal(await q.revision(id,'not-a-uuid'),null);
   } finally {await db.close();}
 });
 
@@ -215,8 +221,13 @@ test("reader sees views but cannot read tokens, provider payloads or alter recor
       "UPDATE lyra_dashboard.review_worker SET last_outcome='assessed'",
       "UPDATE lyra_dashboard.spend SET accounted_micros=0",
       "CREATE TABLE lyra_dashboard.unwanted(id integer)",
+      "SELECT lyra_dashboard_control.set_control('owner','00000000-0000-4000-8000-000000000001',1,'reviews',true)",
+      "SELECT * FROM lyra_dashboard_control.operators",
+      "UPDATE lyra_dashboard.revisions SET reason='forged'",
     ])
       await assert.rejects(db.query(sql));
+    assert.equal((await q.revisions(id)).length,1);
+    assert.deepEqual(await q.controlActions(),[]);
     await db.exec("RESET ROLE");
     assert.equal(
       (await db.query<{ state: string }>("SELECT state FROM translation_jobs"))

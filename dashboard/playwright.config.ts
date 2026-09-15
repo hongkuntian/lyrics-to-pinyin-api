@@ -17,6 +17,7 @@ export default defineConfig({
     {
       command: "npm run start -- --hostname 127.0.0.1 --port 4331",
       url: "http://127.0.0.1:4331",
+      env: {LYRA_DASHBOARD_FIXTURE_CONTROLS:"1"},
       reuseExistingServer: !process.env.CI,
     },
     {

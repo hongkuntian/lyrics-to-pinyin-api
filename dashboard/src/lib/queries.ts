@@ -10,6 +10,8 @@ import type {
   ReviewProgress,
   ReviewAssessment,
   ReviewChange,
+  Revision,
+  ControlAction,
 } from "./model";
 export type Database = {
   query<T>(sql: string, values?: unknown[]): Promise<{ rows: T[] }>;
@@ -21,6 +23,22 @@ const jobStates = new Set(["queued", "running", "ready", "failed", "unknown"]);
 const reportStates = new Set(["pending", "accepted", "rejected"]);
 export class DashboardQueries {
   constructor(private db: Database) {}
+  async controlActions(): Promise<ControlAction[]> {
+    return (await this.db.query<ControlAction>("SELECT * FROM lyra_dashboard.control_actions ORDER BY created_at DESC,id DESC LIMIT 50")).rows;
+  }
+  async revisions(document: string): Promise<Revision[]> {
+    if (!/^[a-f0-9]{64}$/.test(document)) return [];
+    return (await this.db.query<Revision>("SELECT * FROM lyra_dashboard.revisions WHERE document_id=$1 ORDER BY sequence::bigint DESC LIMIT 100", [document])).rows;
+  }
+  async revision(document: string, id: string) {
+    if (!/^[a-f0-9]{64}$/.test(document) || !/^[a-f0-9-]{36}$/.test(id)) return null;
+    const revision = await one<Revision>(this.db, "SELECT * FROM lyra_dashboard.revisions WHERE document_id=$1 AND id=$2", [document,id]);
+    if (!revision) return null;
+    const detail = await this.song(document);
+    if (!detail) return null;
+    const saved = (await this.db.query<Line>("SELECT * FROM lyra_dashboard.revision_lines WHERE document_id=$1 AND translation_id=$2 ORDER BY position", [document,id])).rows;
+    return {...detail,revision,saved};
+  }
   async reviewProgress(): Promise<ReviewProgress> {
     return one<ReviewProgress>(this.db, `SELECT s.review_enabled,s.review_publication_enabled,s.review_daily_micros::text,s.review_monthly_micros::text,s.review_max_daily,
       b.review_daily::text,b.review_monthly::text,w.last_run_at::text,w.last_outcome,w.batch_state,w.provider_status,w.error_code,w.stage,
