@@ -1,3 +1,4 @@
+import {canonicalTarget} from './languages.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {currentTranslationSQL,publishRevision,revisions} from './revisions.js';
 import {budget,checkBudget,configureReviews,reserveReview,claimReviewOperation,finishReviewOperation,releaseReviewOperation} from './spending.js';
@@ -67,7 +68,7 @@ export class SongLibraryStore {
   async releaseLookup(key,revision,owner) { await this.db.query('DELETE FROM lyric_lookups WHERE request_key=$1 AND selection_revision=$2 AND owner=$3',[key,revision,owner]); }
   async translation(documentID,target) {
     const row=await first(this.db,currentTranslationSQL,[documentID,target]);
-    return row && {id:row.id,recipe:row.recipe,...row.content};
+    return row && {...row.content,id:row.id,recipe:row.recipe,target:row.target,documentID:row.document_id,sourceHash:row.source_hash,notesLanguage:row.target};
   }
   publishRevision(args) { return publishRevision(this.db,args); }
   rollbackRevision(args) { return publishRevision(this.db,args,{rollback:true}); }
@@ -78,8 +79,8 @@ export class SongLibraryStore {
   claimReviewOperation(id) { return claimReviewOperation(this.db,id); }
   finishReviewOperation(id,args) { return finishReviewOperation(this.db,id,args); }
   releaseReviewOperation(id) { return releaseReviewOperation(this.db,id); }
-  async reserve({userID,documentID,target,recipe,reservedMicros}) {
-    if(target!=='en'||typeof recipe!=='string'||!recipe||!Number.isSafeInteger(reservedMicros)||reservedMicros<=0) throw new LibraryError('invalid_generation',400);
+  async reserve({userID,documentID,target,recipe,reservedMicros,generationRequest=null}) {
+    if(canonicalTarget(target)!==target||typeof recipe!=='string'||!recipe||!Number.isSafeInteger(reservedMicros)||reservedMicros<=0) throw new LibraryError('invalid_generation',400);
     return this.db.transaction(async db=> {
       // All admission decisions use the same locked row: cached, coalesced, quota and spend checks
       // therefore agree across instances. The lock is released BEFORE contacting any provider.
@@ -88,7 +89,7 @@ export class SongLibraryStore {
       const user=await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
       if(!user) throw new LibraryError('unauthorized',401);
       const saved=await first(db,currentTranslationSQL,[documentID,target]);
-      if(saved) return {kind:'ready',translation:{id:saved.id,recipe:saved.recipe,...saved.content}};
+      if(saved) return {kind:'ready',translation:{...saved.content,id:saved.id,recipe:saved.recipe,target:saved.target,documentID:saved.document_id,sourceHash:saved.source_hash,notesLanguage:saved.target}};
       const prior=await first(db,'SELECT * FROM translation_jobs WHERE document_id=$1 AND target=$2',[documentID,target]);
       if(prior) return {kind:prior.state==='queued'||prior.state==='running'?'pending':prior.state,job:publicJob(prior)};
       if(!settings.enabled) throw new LibraryError('generation_disabled',503);
@@ -98,8 +99,8 @@ export class SongLibraryStore {
         count(*) AS monthly FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations) attempts WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
       if(Number(counts.daily)>=settings.user_daily || Number(counts.monthly)>=settings.user_monthly) throw new LibraryError('generation_allowance_exhausted',429);
       checkBudget(settings,await budget(db),reservedMicros);
-      const row=await first(db,`INSERT INTO translation_jobs(id,document_id,target,recipe,user_id,state,reserved_micros,accounted_micros)
-        VALUES($1,$2,$3,$4,$5,'queued',$6,$6) RETURNING *`,[randomUUID(),documentID,target,recipe,userID,reservedMicros]);
+      const row=await first(db,`INSERT INTO translation_jobs(id,document_id,target,recipe,user_id,state,reserved_micros,accounted_micros,generation_request)
+        VALUES($1,$2,$3,$4,$5,'queued',$6,$6,$7) RETURNING *`,[randomUUID(),documentID,target,recipe,userID,reservedMicros,generationRequest?JSON.stringify(generationRequest):null]);
       return {kind:'created',job:publicJob(row)};
     });
   }

@@ -4,7 +4,7 @@ import {parseTranslation} from './translation.js';
 
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??null;
 const uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
-export const currentTranslationSQL=`SELECT r.id,r.recipe,r.content FROM song_translations t
+export const currentTranslationSQL=`SELECT r.id,r.recipe,r.content,t.target,t.document_id,r.source_hash FROM song_translations t
   JOIN translation_heads h ON h.translation_id=t.id JOIN translation_revisions r ON r.id=h.revision_id
   WHERE t.document_id=$1 AND t.target=$2`;
 

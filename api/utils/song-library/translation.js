@@ -1,11 +1,15 @@
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
-const prompt=require('./prompt.json'),lexicon=require('./lexicon.json');
+const prompt=require('./prompt.json'),multilingualPrompt=require('./multilingual-prompt.json'),lexicon=require('./lexicon.json');
+import {canonicalTarget,TARGETS} from './languages.js';
 import {LibraryError} from './store.js';
 export const MODEL='gpt-5.6-luna';
 export const RECIPE='song-clause-4-vocal-text-1';
 const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
-export function requestBody(doc) {
+export const translationRecipe=target=>canonicalTarget(target)==='en'?RECIPE:'song-multilingual-1';
+export function requestBody(doc,target='en') {
+  target=canonicalTarget(target);
+  const instructions=target==='en'?prompt.instructions:multilingualPrompt.instructions.replaceAll('{{language}}',TARGETS[target].name).replaceAll('{{unclear}}',TARGETS[target].unclear);
   const ids=doc.structure.occurrences.map(o=>o.sourceID),text=doc.structure.occurrences.map(o=>o.sourceText).join('\n');
   const terms=lexicon.terms.filter(t=>[t.term,...t.variants].some(v=>text.includes(v)));
   const sourceIDs=new Set(terms.flatMap(t=>t.meanings.flatMap(m=>m.sources)));
@@ -14,7 +18,7 @@ export function requestBody(doc) {
       speakers:doc.structure.speakers,occurrences:doc.structure.occurrences},verifiedBackground:[],
     lexicalContext:{terms,sources:lexicon.sources.filter(s=>sourceIDs.has(s.id))}};
   return {model:MODEL,reasoning:{effort:'high'},service_tier:'default',max_output_tokens:16384,store:false,
-    instructions:prompt.instructions,input:[{role:'user',content:JSON.stringify(data)}],text:{format:{
+    instructions,input:[{role:'user',content:JSON.stringify(data)}],text:{format:{
       type:'json_schema',name:'song_fidelity',strict:true,schema:object({
         translations:object(Object.fromEntries(ids.map(id=>[id,{type:'string'}]))),
         sourceNotes:{type:'array',items:object({sourceID:{type:'string',enum:ids},sourceQuote:{type:'string'},
@@ -74,16 +78,16 @@ export function parseTranslation(text,doc) {
   }
   return {lines,sourceNotes,rejectedNotes};
 }
-export async function generate(doc,{apiKey,fetchFn=fetch}={}) {
+export async function generate(doc,{apiKey,fetchFn=fetch,target='en',generationRequest=null}={}) {
   if(!apiKey) throw new LibraryError('generation_not_configured',503);
-  const body=requestBody(doc);let response=null,actualMicros=null;
+  const body=generationRequest??requestBody(doc,target);let response=null,actualMicros=null;
   try {
     const result=await fetchFn('https://api.openai.com/v1/responses',{method:'POST',
       headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(270_000)});
     const text=await result.text();if(Buffer.byteLength(text)>2_000_000) throw new LibraryError('provider_response_too_large',502);
     try {response=JSON.parse(text);}catch{throw new LibraryError('invalid_provider_response',502);}
     if(!result.ok) throw new LibraryError('provider_rejected',502);
-    if(response.model!==MODEL||response.service_tier!=='default') throw new LibraryError('provider_configuration_changed',502);
+    if(response.model!==body.model||response.service_tier!==body.service_tier) throw new LibraryError('provider_configuration_changed',502);
     actualMicros=usageMicros(response.usage);
     if(response.status!=='completed') throw new LibraryError('provider_incomplete',502);
     const parts=(response.output??[]).filter(o=>o.type==='message').flatMap(o=>o.content??[]);

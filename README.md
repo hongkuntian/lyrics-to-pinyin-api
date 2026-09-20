@@ -135,3 +135,7 @@ npm run deploy
 ```
 
 Configured for Vercel via `vercel.json`.
+
+## Multilingual song content
+
+See [the backend contract and rollout guide](docs/MULTILINGUAL_BACKEND.md) for target-aware translations, independent explanation languages, and original or translated-text Study. New language directions remain disabled until evaluated.

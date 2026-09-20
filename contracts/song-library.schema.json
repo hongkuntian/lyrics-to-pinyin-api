@@ -222,7 +222,11 @@
             "id",
             "recipe",
             "lines",
-            "sourceNotes"
+            "sourceNotes",
+            "target",
+            "notesLanguage",
+            "documentID",
+            "sourceHash"
           ],
           "properties": {
             "id": {
@@ -296,6 +300,30 @@
                   }
                 }
               }
+            },
+            "target": {
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "zh-Hans",
+                "zh-Hant"
+              ]
+            },
+            "notesLanguage": {
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "zh-Hans",
+                "zh-Hant"
+              ]
+            },
+            "documentID": {
+              "type": "string"
+            },
+            "sourceHash": {
+              "type": "string"
             }
           }
         }
@@ -356,7 +384,13 @@
               "type": "string"
             },
             "target": {
-              "const": "en"
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "zh-Hans",
+                "zh-Hant"
+              ]
             },
             "errorCode": {
               "anyOf": [
@@ -418,7 +452,13 @@
               "type": "string"
             },
             "target": {
-              "const": "en"
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "zh-Hans",
+                "zh-Hant"
+              ]
             },
             "errorCode": {
               "anyOf": [
@@ -491,62 +531,242 @@
           "const": "ready"
         },
         "explanation": {
-          "type": "object",
-          "required": [
-            "id",
-            "documentID",
-            "translationID",
-            "sourceID",
-            "lower",
-            "upper",
-            "recipe",
-            "meaning",
-            "context",
-            "grammar",
-            "uncertainty",
-            "sourceQuote"
-          ],
-          "properties": {
-            "id": {
-              "type": "string"
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "id",
+                "documentID",
+                "translationID",
+                "sourceID",
+                "lower",
+                "upper",
+                "recipe",
+                "meaning",
+                "context",
+                "grammar",
+                "uncertainty",
+                "sourceQuote"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "documentID": {
+                  "type": "string"
+                },
+                "translationID": {
+                  "type": "string"
+                },
+                "sourceID": {
+                  "type": "string"
+                },
+                "lower": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "upper": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "recipe": {
+                  "const": "study-occurrence-2"
+                },
+                "meaning": {
+                  "type": "string"
+                },
+                "context": {
+                  "type": "string"
+                },
+                "grammar": {
+                  "type": "string"
+                },
+                "uncertainty": {
+                  "type": "string"
+                },
+                "sourceQuote": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
             },
-            "documentID": {
-              "type": "string"
-            },
-            "translationID": {
-              "type": "string"
-            },
-            "sourceID": {
-              "type": "string"
-            },
-            "lower": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "upper": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "recipe": {
-              "const": "study-occurrence-2"
-            },
-            "meaning": {
-              "type": "string"
-            },
-            "context": {
-              "type": "string"
-            },
-            "grammar": {
-              "type": "string"
-            },
-            "uncertainty": {
-              "type": "string"
-            },
-            "sourceQuote": {
-              "type": "string"
+            {
+              "type": "object",
+              "required": [
+                "id",
+                "documentID",
+                "translationID",
+                "sourceID",
+                "lower",
+                "upper",
+                "recipe",
+                "meaning",
+                "context",
+                "grammar",
+                "uncertainty",
+                "sourceQuote",
+                "contractVersion",
+                "explanationLanguage",
+                "studyText",
+                "selection"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "documentID": {
+                  "type": "string"
+                },
+                "translationID": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sourceID": {
+                  "type": "string"
+                },
+                "lower": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "upper": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "recipe": {
+                  "const": "study-text-1"
+                },
+                "meaning": {
+                  "type": "string"
+                },
+                "context": {
+                  "type": "string"
+                },
+                "grammar": {
+                  "type": "string"
+                },
+                "uncertainty": {
+                  "type": "string"
+                },
+                "sourceQuote": {
+                  "type": "string"
+                },
+                "contractVersion": {
+                  "const": 2
+                },
+                "explanationLanguage": {
+                  "enum": [
+                    "en",
+                    "fr",
+                    "es",
+                    "zh-Hans",
+                    "zh-Hant"
+                  ]
+                },
+                "studyText": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "layer",
+                        "revisionID",
+                        "occurrenceID"
+                      ],
+                      "properties": {
+                        "layer": {
+                          "const": "original"
+                        },
+                        "revisionID": {
+                          "type": "string"
+                        },
+                        "occurrenceID": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "layer",
+                        "revisionID",
+                        "occurrenceID",
+                        "target"
+                      ],
+                      "properties": {
+                        "layer": {
+                          "const": "translation"
+                        },
+                        "revisionID": {
+                          "type": "string"
+                        },
+                        "occurrenceID": {
+                          "type": "string"
+                        },
+                        "target": {
+                          "enum": [
+                            "en",
+                            "fr",
+                            "es",
+                            "zh-Hans",
+                            "zh-Hant"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "selection": {
+                  "type": "object",
+                  "required": [
+                    "offsetUnit",
+                    "ranges",
+                    "textHash"
+                  ],
+                  "properties": {
+                    "offsetUnit": {
+                      "const": "grapheme"
+                    },
+                    "textHash": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "ranges": {
+                      "type": "array",
+                      "minItems": 1,
+                      "maxItems": 1,
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "lower",
+                          "upper"
+                        ],
+                        "properties": {
+                          "lower": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "upper": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ]
         }
       }
     },
@@ -562,6 +782,86 @@
         },
         "state": {
           "const": "preparing"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "capabilities"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "capabilities": {
+          "type": "object",
+          "required": [
+            "version",
+            "targets",
+            "translationDirections",
+            "explanationDirections",
+            "study",
+            "automaticCorrectionTargets"
+          ],
+          "properties": {
+            "version": {
+              "const": 1
+            },
+            "targets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "tag",
+                  "name"
+                ],
+                "properties": {
+                  "tag": {
+                    "enum": [
+                      "en",
+                      "fr",
+                      "es",
+                      "zh-Hans",
+                      "zh-Hant"
+                    ]
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              },
+              "translationDirections": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "explanationDirections": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "study": {
+                "type": "object"
+              },
+              "automaticCorrectionTargets": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "en",
+                    "fr",
+                    "es",
+                    "zh-Hans",
+                    "zh-Hant"
+                  ]
+                }
+              }
+            }
+          }
         }
       },
       "additionalProperties": false

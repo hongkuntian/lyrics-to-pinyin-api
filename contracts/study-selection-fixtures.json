@@ -1,0 +1,32 @@
+[
+  {
+    "text": "été",
+    "lower": 0,
+    "upper": 1,
+    "selected": "é"
+  },
+  {
+    "text": "A👩🏽‍💻B",
+    "lower": 1,
+    "upper": 3,
+    "selected": "👩🏽‍💻B"
+  },
+  {
+    "text": "किताब",
+    "lower": 0,
+    "upper": 2,
+    "selected": "किता"
+  },
+  {
+    "text": "你好吗",
+    "lower": 1,
+    "upper": 3,
+    "selected": "好吗"
+  },
+  {
+    "text": "אבג A",
+    "lower": 0,
+    "upper": 2,
+    "selected": "אב"
+  }
+]

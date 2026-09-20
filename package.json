@@ -22,7 +22,8 @@
     "test:music": "node tests/music-tests.js",
     "build": "echo 'No build step required'",
     "start": "node scripts/dev-server.js",
-    "deploy": "vercel --prod"
+    "deploy": "vercel --prod",
+    "vercel-build": "node scripts/vercel-library-build.js"
   },
   "dependencies": {
     "@upstash/redis": "^1.35.0",

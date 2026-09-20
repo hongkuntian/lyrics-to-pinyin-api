@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Study v2 request (canonical targets)",
+  "type": "object",
+  "required": [
+    "action",
+    "contractVersion",
+    "documentID",
+    "sourceHash",
+    "studyText",
+    "selection",
+    "explanationLanguage"
+  ],
+  "properties": {
+    "action": {
+      "const": "explain"
+    },
+    "contractVersion": {
+      "const": 2
+    },
+    "documentID": {
+      "type": "string"
+    },
+    "sourceHash": {
+      "type": "string"
+    },
+    "studyText": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "layer",
+            "revisionID",
+            "occurrenceID"
+          ],
+          "properties": {
+            "layer": {
+              "const": "original"
+            },
+            "revisionID": {
+              "type": "string"
+            },
+            "occurrenceID": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "layer",
+            "revisionID",
+            "occurrenceID",
+            "target"
+          ],
+          "properties": {
+            "layer": {
+              "const": "translation"
+            },
+            "revisionID": {
+              "type": "string"
+            },
+            "occurrenceID": {
+              "type": "string"
+            },
+            "target": {
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "zh-Hans",
+                "zh-Hant"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "selection": {
+      "type": "object",
+      "required": [
+        "offsetUnit",
+        "ranges",
+        "textHash"
+      ],
+      "properties": {
+        "offsetUnit": {
+          "const": "grapheme"
+        },
+        "textHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "ranges": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "lower",
+              "upper"
+            ],
+            "properties": {
+              "lower": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "upper": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "explanationLanguage": {
+      "enum": [
+        "en",
+        "fr",
+        "es",
+        "zh-Hans",
+        "zh-Hant"
+      ]
+    },
+    "contextTranslation": {
+      "type": "object",
+      "required": [
+        "target",
+        "revisionID"
+      ],
+      "properties": {
+        "target": {
+          "enum": [
+            "en",
+            "fr",
+            "es",
+            "zh-Hans",
+            "zh-Hant"
+          ]
+        },
+        "revisionID": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
