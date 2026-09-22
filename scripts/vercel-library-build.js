@@ -1,4 +1,6 @@
 // Build-only administration: no HTTP endpoint and no exported credentials.
+import {open} from 'node:fs/promises';
+import {runEvaluation} from './evaluate-multilingual.js';
 import {pathToFileURL} from 'node:url';
 import {database} from '../api/utils/song-library/database.js';
 import {migrateLibrary,migrationNames} from './library-migrations.js';
@@ -21,6 +23,15 @@ export async function verifyBuildSchema({env=process.env,open=database,migrate=m
   } finally {await db?.close();}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
-  try {await verifyBuildSchema();}
-  catch {console.error('Library schema verification failed. Run an explicit production migration build before promotion.');process.exitCode=1;}
+  try {
+    await verifyBuildSchema();
+    if(process.env.LYRA_MULTILINGUAL_EVALUATE_ON_BUILD==='1') {
+      if(process.env.VERCEL!=='1'||process.env.VERCEL_ENV!=='production')throw new Error('evaluation_requires_production_build');
+      // Vercel's legacy multi-function builder can invoke this hook repeatedly.
+      // One build container evaluates once; other invocations leave it alone.
+      const claim=await open('/tmp/lyra-multilingual-evaluation.lock','wx').catch(error=>{if(error.code!=='EEXIST')throw error;});
+      if(claim){await claim.close();await runEvaluation();}
+    }
+  }
+  catch {console.error('Library build verification failed. Inspect the schema or evaluation receipt before promotion.');process.exitCode=1;}
 }

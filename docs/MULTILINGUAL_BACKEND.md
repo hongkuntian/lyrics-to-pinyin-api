@@ -154,8 +154,42 @@ Non-English reports persist with their exact revisions but the existing automati
 English correction pipeline refuses them; multilingual correction evaluation is
 still required. No new direction is automatically enabled by deployment.
 
-The app milestone still needs independent translation/explanation preferences,
-localization, target-aware caches and pending jobs, late-result fencing, selection
-and progress identity for both layers, and pronunciation of the selected text.
+The app now has independent content preferences, target-aware caches and jobs,
+late-result fencing, revision-bound selection, separate practice histories, and
+translated pronunciation capability. UI localization and linguistic release
+evaluation remain.
 Translated text should use meaning alignment, not recording word timing. English
 source fixtures here do not certify live English-song acquisition coverage.
+
+
+## Reproducible multilingual evaluation
+
+`evaluation/multilingual/corpus.json` contains four original, ten-line evaluation
+songs in English, French, Spanish and Mandarin. The changed refrain distinguishes
+not asking someone to stay from asking them not to stay. Other checks cover speaker
+agency, negation, metaphor, uncertainty, proper names and mixed-language passages.
+This is a targeted regression corpus, not a representative commercial-song benchmark.
+
+Run `node scripts/evaluate-multilingual.js --live` with an authorized provider key.
+The runner uses production whole-song translation and Study request builders,
+retains source and output together, and evaluates 12 direct translation directions,
+12 original-text explanations and three translated-text explanations in English.
+Two workers share a conservative two-dollar reservation ceiling. Provider model,
+recipe, service tier and request limits remain unchanged. No production library,
+cache or language policy is written. The output is evidence for bilingual review;
+successful JSON never marks a language direction approved.
+
+When the key is available only inside Vercel, use an **unpromoted** deployment with
+`vercel --prod --skip-domain --build-env LYRA_MULTILINGUAL_EVALUATE_ON_BUILD=1`.
+The explicit build flag runs this same corpus once per build container, after the
+schema check. The flag is not a persistent project setting. Evaluation failure
+fails that build. Inspect its build logs for `multilingual_evaluation_case` records,
+retain them in ignored artifacts, and review all source/output pairs before changing
+language admission. Do not promote an evaluation build as a language release.
+Errors log only bounded provider codes/types, never credentials or raw error bodies.
+Normal builds perform no evaluation/provider calls.
+
+The September 21 attempted evaluation was rejected with `invalid_api_key` for the
+production provider credential. No translation or explanation quality result was
+obtained, and no new direction was enabled. Replacing that credential and repeating
+the live evaluation is required before the multilingual beta can be admitted.
