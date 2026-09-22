@@ -8,7 +8,7 @@ import {libraryDB,source} from '../helpers/library-db.js';
 import {createSongLibraryHandler} from '../../api/song-library.js';
 import {languagePolicy} from '../../api/utils/song-library/languages.js';
 import {digest} from '../../api/utils/song-library/store.js';
-import {RECIPE} from '../../api/utils/song-library/translation.js';
+import {LEGACY_RECIPE} from '../../api/utils/song-library/translation.js';
 import {reviewContext} from '../../api/utils/song-library/review-context.js';
 
 async function fixture(t,{sourceLanguage='zh',policy=languagePolicy({translation:['*:en','zh:fr','en:zh-Hans'],explanation:['*:en','zh:fr','zh-Hans:fr']})}={}) {
@@ -74,7 +74,7 @@ test('a resumed job executes its admitted request across handler deployments',as
 
 test('legacy queued English jobs and legacy request defaults survive the migration',async t=>{
  const f=await fixture(t);
- await f.store.reserve({userID:'reader-a',documentID:f.doc.id,target:'en',recipe:RECIPE,reservedMicros:40000});
+ await f.store.reserve({userID:'reader-a',documentID:f.doc.id,target:'en',recipe:LEGACY_RECIPE,reservedMicros:40000});
  await f.call({...f.base,action:'translate'});await f.drain();
  assert.equal(f.translations[0].target,'en');assert.match(f.translations[0].generationRequest.instructions,/idiomatic English/);
  assert.equal((await f.call({...f.base,action:'translate'})).body.translation.target,'en');

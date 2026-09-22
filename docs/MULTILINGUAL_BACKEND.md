@@ -2,7 +2,7 @@
 
 The backend retains immutable source documents and existing document-plus-target
 translation containers. This checkpoint changes no iOS app files. Legacy requests,
-English prompts, recipe identities, and cached explanations remain compatible.
+Legacy English requests and cached explanations remain compatible.
 The source fingerprint is unchanged.
 
 ## Rollout and capabilities
@@ -27,14 +27,14 @@ new deployment before `vercel promote <deployment-url>`. No admin endpoint is ad
 `POST /api/song-library` with `{"action":"capabilities"}` and the normal bearer
 credential returns configured generation directions, known targets, Study limits,
 and automatic correction targets. A known target is not a quality certification.
-Both generation policies default to `["*:en"]`, preserving existing source admission
-and English behavior. Configuration must be an explicit JSON array of canonical
+Both generation policies default to `["*:en"]` when no policy is configured.
+The initial multilingual beta explicitly applies `evaluation/multilingual/beta-policy.json`. Configuration must be an explicit JSON array of canonical
 `source:target` pairs. An empty array disables new work of that kind:
 
 - `LYRA_TRANSLATION_DIRECTIONS`, e.g. `["*:en","zh:fr","en:zh-Hans"]`
 - `LYRA_EXPLANATION_DIRECTIONS`, e.g. `["*:en","zh:fr","zh-Hans:fr"]`
 
-These are examples for evaluation, not enabled production directions. Use exact
+Use exact
 source tags from the document (or the studied translation target); there is no
 automatic regional or script stripping on source matching. `*` is explicit broad
 admission, retained only for the existing English default unless an operator adds it.
@@ -69,9 +69,10 @@ report revisions. Existing accepted content is not regenerated for a new recipe.
 ```
 
 Generation runs directly from the entire original source, preserving occurrence IDs,
-speaker ownership, ambiguity, and clause fidelity. The English recipe stays frozen;
-new target instructions use the shared fidelity template plus language and uncertainty
-marker conventions. Source-note prose uses the translation's target language.
+speaker ownership, ambiguity, and clause fidelity. New English generation uses `song-clause-5-names-1`; non-English generation uses
+`song-multilingual-2`. Both preserve names and temporal negation explicitly. The
+legacy English recipe and prompt remain frozen for queued jobs without snapshots.
+Target instructions include language and uncertainty marker conventions. Source-note prose uses the translation's target language.
 Model schema validity is not evidence of linguistic accuracy.
 
 Each new job persists the exact provider request that was priced at admission.
@@ -156,8 +157,8 @@ still required. No new direction is automatically enabled by deployment.
 
 The app now has independent content preferences, target-aware caches and jobs,
 late-result fencing, revision-bound selection, separate practice histories, and
-translated pronunciation capability. UI localization and linguistic release
-evaluation remain.
+translated pronunciation capability. The initial beta also localizes the interface and enables the reviewed content
+languages.
 Translated text should use meaning alignment, not recording word timing. English
 source fixtures here do not certify live English-song acquisition coverage.
 
@@ -173,9 +174,8 @@ This is a targeted regression corpus, not a representative commercial-song bench
 Run `node scripts/evaluate-multilingual.js --live` with an authorized provider key.
 The runner uses production whole-song translation and Study request builders,
 retains source and output together, and evaluates 12 direct translation directions,
-12 original-text explanations and three translated-text explanations in English.
-Two workers share a conservative two-dollar reservation ceiling. Provider model,
-recipe, service tier and request limits remain unchanged. No production library,
+12 original-text explanations and 12 translated-text explanations across all four
+output languages. Two workers share a conservative three-dollar reservation ceiling. The runner uses the current production model, recipes, service tier and request limits. No production library,
 cache or language policy is written. The output is evidence for bilingual review;
 successful JSON never marks a language direction approved.
 
@@ -183,13 +183,20 @@ When the key is available only inside Vercel, use an **unpromoted** deployment w
 `vercel --prod --skip-domain --build-env LYRA_MULTILINGUAL_EVALUATE_ON_BUILD=1`.
 The explicit build flag runs this same corpus once per build container, after the
 schema check. The flag is not a persistent project setting. Evaluation failure
-fails that build. Inspect its build logs for `multilingual_evaluation_case` records,
+fails that build. Inspect its build logs for base64 `multilingual_evaluation_chunk` records,
+reassemble each direction in index order to obtain its `multilingual_evaluation_case`,
 retain them in ignored artifacts, and review all source/output pairs before changing
 language admission. Do not promote an evaluation build as a language release.
 Errors log only bounded provider codes/types, never credentials or raw error bodies.
 Normal builds perform no evaluation/provider calls.
 
-The September 21 attempted evaluation was rejected with `invalid_api_key` for the
-production provider credential. No translation or explanation quality result was
-obtained, and no new direction was enabled. Replacing that credential and repeating
-the live evaluation is required before the multilingual beta can be admitted.
+The September 21 provider-key failure was resolved by the operator. Live evaluations
+then exposed proper-name substitution, temporal-negation strengthening and an
+incorrect pronoun-gender claim. The current recipes address these errors. See
+[MULTILINGUAL_BETA_REVIEW.md](MULTILINGUAL_BETA_REVIEW.md) for reviewed results,
+release scope and limitations. The beta admits explicit source/target pairs only;
+no new wildcard targets are enabled. Non-English automatic correction remains off.
+
+English Study v1 and v2 keep their existing recipe identities and exact prompts.
+Non-English v2 explanations use `study-text-2`, so their grammar improvement cannot
+reuse an older explanation cache. Clients validate that language-specific recipe.

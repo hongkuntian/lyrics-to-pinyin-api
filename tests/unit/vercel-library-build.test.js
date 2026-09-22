@@ -28,3 +28,13 @@ test('migration errors never continue to readiness and still close',async()=>{
  await assert.rejects(verifyBuildSchema({env:{...production,LYRA_LIBRARY_MIGRATE_ON_BUILD:'1'},open:()=>({query:()=>assert.fail('query'),close:async()=>closed++}),migrate:async()=>{throw new Error('migration_changed');},log:()=>assert.fail('log')}),/migration_changed/);
  assert.equal(closed,1);
 });
+
+test('production admission is validated before database access and recorded without secrets',async()=>{
+ await assert.rejects(verifyBuildSchema({env:{...production,LYRA_TRANSLATION_DIRECTIONS:'invalid'},open:()=>assert.fail('database access')}),{code:'invalid_language_policy'});
+ const events=[];
+ await verifyBuildSchema({env:{...production,LYRA_TRANSLATION_DIRECTIONS:'["*:en","en:fr"]',LYRA_EXPLANATION_DIRECTIONS:'["*:en"]',OPENAI_API_KEY:'never-log-this'},
+  open:()=>({query:async()=>({rows:[{}]}),close:async()=>{}}),log:s=>events.push(JSON.parse(s))});
+ assert.deepEqual(events[0].translationDirections,['*:en','en:fr']);
+ assert.deepEqual(events[0].explanationDirections,['*:en']);
+ assert.ok(!JSON.stringify(events).includes('never-log-this'));
+});

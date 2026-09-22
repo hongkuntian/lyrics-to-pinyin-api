@@ -3,11 +3,11 @@ import {createMusicRomanizeHandler,SELECTION_REVISION} from './music-romanize.js
 import {SongLibraryStore,LibraryError} from './utils/song-library/store.js';
 import {database} from './utils/song-library/database.js';
 import {makeDocument,recordingRequest,requestKey} from './utils/song-library/document.js';
-import {generate,requestBody,reservationMicros,RECIPE,translationRecipe} from './utils/song-library/translation.js';
+import {generate,requestBody,reservationMicros,LEGACY_RECIPE,translationRecipe} from './utils/song-library/translation.js';
 import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
 
 import {canonicalTarget,environmentLanguagePolicy,requireDirection,capabilities} from './utils/song-library/languages.js';
-import {selectionV2,STUDY_V2_RECIPE,selectionFor,explanationBody,explanationKey,generateExplanation,STUDY_RECIPE} from './utils/song-library/study-explanation.js';
+import {selectionV2,explanationRecipe,selectionFor,explanationBody,explanationKey,generateExplanation} from './utils/song-library/study-explanation.js';
 import {reserveExplanation,claimExplanation,finishExplanation,publicExplanation} from './utils/song-library/study-store.js';
 
 export const config={maxDuration:300};
@@ -27,8 +27,8 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
     const claimed=await db.claim(id);if(!claimed)return;
     try {
       // An old queued job has only the frozen English recipe; never reinterpret it.
-      if(!claimed.generation_request&&(claimed.target!=='en'||claimed.recipe!==RECIPE))throw new LibraryError('generation_configuration_unavailable');
-      const result=await generateFn(doc,{apiKey,target:claimed.target,generationRequest:claimed.generation_request??requestBody(doc,'en')});
+      if(!claimed.generation_request&&(claimed.target!=='en'||claimed.recipe!==LEGACY_RECIPE))throw new LibraryError('generation_configuration_unavailable');
+      const result=await generateFn(doc,{apiKey,target:claimed.target,generationRequest:claimed.generation_request??requestBody(doc,'en',{legacy:true})});
       await db.complete(id,result.content,result.actualMicros,result.response);
     } catch(error) {
       // A timeout/storage interruption never releases money or starts a second provider request.
@@ -114,7 +114,7 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
           }
         }
         const selection=v2?selectionV2(doc,input,saved):selectionFor(doc,input);
-        const key=explanationKey(doc,saved,selection,language),recipe=v2?STUDY_V2_RECIPE:STUDY_RECIPE;
+        const key=explanationKey(doc,saved,selection,language),recipe=explanationRecipe(selection,language);
         const prior=(await db.db.query('SELECT * FROM study_explanations WHERE cache_key=$1',[key])).rows[0];
         let row=prior;
         if(!row) {

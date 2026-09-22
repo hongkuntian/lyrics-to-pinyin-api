@@ -1,0 +1,35 @@
+{
+  "translation": [
+    "*:en",
+    "en:fr",
+    "en:es",
+    "en:zh-Hans",
+    "fr:fr",
+    "fr:es",
+    "fr:zh-Hans",
+    "es:fr",
+    "es:es",
+    "es:zh-Hans",
+    "zh:fr",
+    "zh:es",
+    "zh:zh-Hans"
+  ],
+  "explanation": [
+    "*:en",
+    "en:fr",
+    "en:es",
+    "en:zh-Hans",
+    "fr:fr",
+    "fr:es",
+    "fr:zh-Hans",
+    "es:fr",
+    "es:es",
+    "es:zh-Hans",
+    "zh:fr",
+    "zh:es",
+    "zh:zh-Hans",
+    "zh-Hans:fr",
+    "zh-Hans:es",
+    "zh-Hans:zh-Hans"
+  ]
+}

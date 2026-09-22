@@ -639,7 +639,7 @@
                   "minimum": 1
                 },
                 "recipe": {
-                  "const": "study-text-1"
+                  "enum": ["study-text-1", "study-text-2"]
                 },
                 "meaning": {
                   "type": "string"

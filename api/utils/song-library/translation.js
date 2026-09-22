@@ -4,12 +4,15 @@ const prompt=require('./prompt.json'),multilingualPrompt=require('./multilingual
 import {canonicalTarget,TARGETS} from './languages.js';
 import {LibraryError} from './store.js';
 export const MODEL='gpt-5.6-luna';
-export const RECIPE='song-clause-4-vocal-text-1';
+export const LEGACY_RECIPE='song-clause-4-vocal-text-1';
+export const RECIPE='song-clause-5-names-1';
+const fidelity=' Preserve personal and place names in their source spelling unless the input supplies a verified localized name. A possible personal name must not silently become its common-noun dictionary meaning; preserve its spelling and note material ambiguity when needed. Preserve temporal scope precisely: a simple did not is not never, and an absent promise is not proof that no promise was ever made. Do not add universal time claims. Keep deliberately code-switched quoted words when their wording matters, with meaning conveyed by surrounding context. Use idiomatic target-language syntax for possessive questions and elliptical images; do not imitate source word order when it sounds unnatural.';
 const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
-export const translationRecipe=target=>canonicalTarget(target)==='en'?RECIPE:'song-multilingual-1';
-export function requestBody(doc,target='en') {
+export const translationRecipe=target=>canonicalTarget(target)==='en'?RECIPE:'song-multilingual-2';
+export function requestBody(doc,target='en',{legacy=false}={}) {
   target=canonicalTarget(target);
-  const instructions=target==='en'?prompt.instructions:multilingualPrompt.instructions.replaceAll('{{language}}',TARGETS[target].name).replaceAll('{{unclear}}',TARGETS[target].unclear);
+  if(legacy&&target!=='en')throw new LibraryError('generation_configuration_unavailable');
+  const instructions=(target==='en'?prompt.instructions:multilingualPrompt.instructions.replaceAll('{{language}}',TARGETS[target].name).replaceAll('{{unclear}}',TARGETS[target].unclear))+(legacy?'':fidelity);
   const ids=doc.structure.occurrences.map(o=>o.sourceID),text=doc.structure.occurrences.map(o=>o.sourceText).join('\n');
   const terms=lexicon.terms.filter(t=>[t.term,...t.variants].some(v=>text.includes(v)));
   const sourceIDs=new Set(terms.flatMap(t=>t.meanings.flatMap(m=>m.sources)));

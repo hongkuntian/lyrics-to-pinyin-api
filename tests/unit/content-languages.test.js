@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {canonicalTarget,languagePolicy,requireDirection,environmentLanguagePolicy} from '../../api/utils/song-library/languages.js';
-import {requestBody} from '../../api/utils/song-library/translation.js';
-import {selectionV2,explanationBody,explanationKey} from '../../api/utils/song-library/study-explanation.js';
+import {requestBody,translationRecipe,LEGACY_RECIPE} from '../../api/utils/song-library/translation.js';
+import {selectionV2,explanationBody,explanationKey,explanationRecipe} from '../../api/utils/song-library/study-explanation.js';
 import {digest} from '../../api/utils/song-library/store.js';
 import {source} from '../helpers/library-db.js';
 
@@ -64,4 +64,25 @@ test('equivalent request field order and target aliases share one explanation ke
  const first=selectionV2(source,{studyText:{layer:'translation',target:'zh-Hans',revisionID:'revision',occurrenceID:'L0001'},selection},translation);
  const reordered=selectionV2(source,{studyText:{occurrenceID:'L0001',revisionID:'revision',target:'zh-CN',layer:'translation'},selection},translation);
  assert.equal(explanationKey(source,translation,first,'fr-CA'),explanationKey(source,translation,reordered,'fr'));
+});
+
+test('new fidelity recipes preserve named entities while legacy queued English prompts stay frozen',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const legacy=JSON.parse(await readFile(new URL('../../api/utils/song-library/prompt.json',import.meta.url),'utf8'));
+ assert.equal(requestBody(source,'en',{legacy:true}).instructions,legacy.instructions);
+ assert.notEqual(translationRecipe('en'),LEGACY_RECIPE);
+ for(const target of ['en','fr','es','zh-Hans']){
+  assert.match(requestBody(source,target).instructions,/personal and place names/);
+  assert.match(requestBody(source,target).instructions,/did not is not never/);
+ }
+ assert.throws(()=>requestBody(source,'fr',{legacy:true}),{code:'generation_configuration_unavailable'});
+});
+
+test('new explanation languages use precise grammar rules without changing released English recipes',()=>{
+ const selection={studyText:{layer:'original'},text:'Nadie'};
+ assert.equal(explanationRecipe(selection,'en'),'study-text-1');
+ assert.equal(explanationRecipe(selection,'zh-Hans'),'study-text-2');
+ assert.equal(explanationRecipe({},'en'),'study-occurrence-2');
+ assert.match(explanationBody(source,null,selection,'zh-Hans').instructions,/invariant pronoun/);
+ assert.doesNotMatch(explanationBody(source,null,selection,'en').instructions,/invariant pronoun/);
 });
