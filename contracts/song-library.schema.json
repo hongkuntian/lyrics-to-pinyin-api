@@ -639,7 +639,10 @@
                   "minimum": 1
                 },
                 "recipe": {
-                  "enum": ["study-text-1", "study-text-2"]
+                  "enum": [
+                    "study-text-1",
+                    "study-text-2"
+                  ]
                 },
                 "meaning": {
                   "type": "string"
@@ -865,6 +868,203 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "state",
+        "pronunciation"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "ready"
+        },
+        "pronunciation": {
+          "type": "object",
+          "required": [
+            "version",
+            "id",
+            "documentID",
+            "sourceHash",
+            "profile",
+            "offsetUnit",
+            "textScope",
+            "readingRevision",
+            "lines"
+          ],
+          "properties": {
+            "version": {
+              "const": 1
+            },
+            "id": {
+              "type": "string"
+            },
+            "documentID": {
+              "type": "string"
+            },
+            "sourceHash": {
+              "type": "string"
+            },
+            "profile": {
+              "type": "object",
+              "required": [
+                "id",
+                "version",
+                "sourceLanguage",
+                "kind",
+                "notation",
+                "outputScript",
+                "readerLanguage",
+                "engineVersion",
+                "status",
+                "basis",
+                "limitations"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "sourceLanguage": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "romanization",
+                    "native-reading",
+                    "phonetic-approximation"
+                  ]
+                },
+                "notation": {
+                  "type": "string"
+                },
+                "outputScript": {
+                  "type": "string"
+                },
+                "readerLanguage": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "engineVersion": {
+                  "type": "string"
+                },
+                "status": {
+                  "enum": [
+                    "beta",
+                    "reviewed"
+                  ]
+                },
+                "basis": {
+                  "enum": [
+                    "text",
+                    "recording"
+                  ]
+                },
+                "limitations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "offsetUnit": {
+              "const": "grapheme"
+            },
+            "textScope": {
+              "const": "lyric-body"
+            },
+            "readingRevision": {
+              "type": "string"
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sourceID",
+                  "text",
+                  "segments"
+                ],
+                "properties": {
+                  "sourceID": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "segments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "lower",
+                        "upper",
+                        "source",
+                        "reading",
+                        "aid",
+                        "status"
+                      ],
+                      "properties": {
+                        "lower": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "upper": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "reading": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "aid": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "status": {
+                          "enum": [
+                            "resolved",
+                            "verbatim",
+                            "unresolved"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

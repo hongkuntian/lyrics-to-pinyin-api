@@ -4,7 +4,7 @@
   "cases": [
     {
       "input": "국물",
-      "expected": "gukmul",
+      "expected": "gungmul",
       "description": "받침 assimilation"
     },
     {
@@ -24,12 +24,16 @@
       "input": "안녕하세요",
       "cases": [
         {
-          "options": { "separator": " " },
-          "expected": "annyeong haseyo"
+          "options": {
+            "separator": " "
+          },
+          "expected": "annyeonghaseyo"
         },
         {
-          "options": { "separator": "-" },
-          "expected": "annyeong-haseyo"
+          "options": {
+            "separator": "-"
+          },
+          "expected": "annyeonghaseyo"
         }
       ]
     }

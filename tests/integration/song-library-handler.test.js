@@ -118,3 +118,23 @@ test('v1 duplicate report receipt stays compatible without resetting its assessm
   assert.equal((await db.query('SELECT status FROM correction_reports')).rows[0].status,'accepted');
   for(const action of ['publish','rollback','reserveReview','configureReviews']) assert.equal((await call({action})).code,400);
 });
+
+test('pronunciation annotations persist independently, reject stale sources and never reserve translation spend',async t=>{
+  const {annotationFor}=await import('../../api/utils/pronunciation-aids.js');
+  let generated=0;
+  const japanese=structuredClone(response);japanese.song.language='ja';japanese.lines=[{original:'君が好き',romanized:'old placeholder',timestamp:0}];
+  const {call,db,instance}=await setup(t,{loadLyrics:async()=>japanese,pronunciationFn:async(...args)=>{generated++;return annotationFor(...args);}});
+  const {body:{document:doc}}=await call({action:'lyrics',recording});
+  const query={action:'pronunciation',documentID:doc.id,sourceHash:doc.sourceHash,profileID:'ja-hepburn'};
+  assert.equal((await call({...query,sourceHash:'wrong'})).body.code,'source_changed');
+  assert.equal((await call({...query,profileID:'ko-revised'})).body.code,'unsupported_pronunciation_direction');
+  assert.equal((await call({...query,profileID:'ja-mandarin-hints'})).code,422);
+  assert.equal(generated,0);
+  const first=await call(query);assert.equal(first.code,200);assert.equal(first.body.pronunciation.lines[0].text,'kimi ga suki');
+  assert.deepEqual((await call(query,'token-b')).body,first.body);assert.equal(generated,1);
+  const kana=await call({...query,profileID:'ja-kana'});assert.equal(kana.body.pronunciation.lines[0].text,'きみがすき');
+  assert.notEqual(kana.body.pronunciation.id,first.body.pronunciation.id);
+  assert.deepEqual((await call({action:'lyrics',recording})).body.document,doc);
+  assert.equal(Number((await db.query('SELECT count(*) AS n FROM translation_jobs')).rows[0].n),0);
+  assert.equal((await instance({pronunciationProfiles:()=>[]})(query)).code,422);
+});

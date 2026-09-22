@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import {profiles} from './pronunciation-aids.js';
 
 // Cache outages must not add repeated DNS/network work to every lyrics request.
 const retryAfter = new WeakMap();
@@ -16,6 +17,8 @@ export function getCacheKey(text, language, romanizationSystem, options = {}) {
     system: romanizationSystem || 'default',
     options: JSON.stringify(options)
   };
+  const profile=profiles.find(p=>p.sourceLanguage===language&&p.kind==='romanization');
+  if(profile)keyData.pronunciationEngine=profile.engineVersion;
   
   // Create a hash of the key data for consistent cache keys
   const hash = crypto.createHash('sha256')

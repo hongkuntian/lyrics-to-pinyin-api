@@ -15,6 +15,8 @@ export async function libraryDB(path) {
     await db.exec(await readFile(new URL('../../db/009-study-explanations.sql',import.meta.url),'utf8'));
   if(!(await db.query("SELECT 1 FROM information_schema.columns WHERE table_name='translation_jobs' AND column_name='generation_request'")).rows.length)
     await db.exec(await readFile(new URL('../../db/012-multilingual-content.sql',import.meta.url),'utf8'));
+  if(!(await db.query("SELECT to_regclass('pronunciation_aids') AS name")).rows[0].name)
+    await db.exec(await readFile(new URL('../../db/013-pronunciation-aids.sql',import.meta.url),'utf8'));
   const store=new SongLibraryStore({query:(...args)=>db.query(...args),transaction:fn=>db.transaction(fn)});
   await store.configure({enabled:true,dailyMicros:1_000_000,monthlyMicros:5_000_000});
   await store.createUser('reader-a','token-a');

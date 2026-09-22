@@ -1,3 +1,4 @@
+import {RESPONSE_VERSION} from '../../api/music-romanize.js';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createMusicRomanizeHandler, SELECTION_REVISION } from "../../api/music-romanize.js";
@@ -92,7 +93,7 @@ test("returns 404 when lyrics are missing for found song", async () => {
 });
 
 test("returns cached payload on cache hit", async () => {
-  const cached = { song: { id: "cached" }, lines: [], metadata: { version: "2.3.0", selection_revision: SELECTION_REVISION } };
+  const cached = { song: { id: "cached" }, lines: [], metadata: { version: RESPONSE_VERSION, selection_revision: SELECTION_REVISION } };
   const handler = createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[],
     redis: {},
     getCachedFn: async () => cached,

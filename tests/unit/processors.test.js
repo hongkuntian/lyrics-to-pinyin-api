@@ -18,28 +18,7 @@ const processors = {
 };
 
 // Documents current implementation behavior where corpus ideal output differs.
-const KNOWN_DEVIATIONS = {
-  ja: {
-    "こんにちは": "konnichiha",
-    "おおきい": "ōkī",
-    "がっこう": "がっkou"
-  },
-  ko: {
-    "안녕하세요": "annyeongha세요"
-  },
-  ru: {
-    "хороший": "horošij"
-  },
-  "ja:options": {
-    "こんにちは|{\"case\":\"lower\"}": "konnichiha",
-    "こんにちは|{\"case\":\"title\"}": "Konnichiha",
-    "こんにちは|{\"case\":\"upper\"}": "KONNICHIHA"
-  },
-  "ko:options": {
-    "안녕하세요|{\"separator\":\" \"}": "annyeongha세요",
-    "안녕하세요|{\"separator\":\"-\"}": "annyeongha세요"
-  }
-};
+const KNOWN_DEVIATIONS = {ru:{"хороший":"horošij"}};
 
 function expectedForCase(language, input, fallback) {
   return KNOWN_DEVIATIONS[language]?.[input] ?? fallback;

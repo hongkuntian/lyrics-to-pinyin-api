@@ -10,8 +10,10 @@ import {canonicalTarget,environmentLanguagePolicy,requireDirection,capabilities}
 import {selectionV2,explanationRecipe,selectionFor,explanationBody,explanationKey,generateExplanation} from './utils/song-library/study-explanation.js';
 import {reserveExplanation,claimExplanation,finishExplanation,publicExplanation} from './utils/song-library/study-store.js';
 
+import {annotationFor,pronunciationKey,enabledProfiles} from './utils/pronunciation-aids.js';
+
 export const config={maxDuration:300};
-const actions={capabilities:[],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation'],lyrics:['recording'],translate:['documentID','sourceHash','target'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
+const actions={capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation'],lyrics:['recording'],translate:['documentID','sourceHash','target'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeHandler()) {
   return async recording=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
@@ -21,7 +23,7 @@ export function lyricLoader(handler=createMusicRomanizeHandler()) {
   };
 }
 export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,apiKey=process.env.OPENAI_API_KEY,
-  selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null}={}) {
+  selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null,pronunciationFn=annotationFor,pronunciationProfiles=enabledProfiles}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
   async function execute(db,id,doc) {
     const claimed=await db.claim(id);if(!claimed)return;
@@ -48,7 +50,24 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
       const db=getStore(),user=await db.authenticate(token);if(!user) throw new LibraryError('unauthorized',401);
       await db.rateLimit(user.id);
       const policy=languagePolicy??environmentLanguagePolicy();
-      if(input.action==='capabilities')return send(200,{capabilities:capabilities(policy)});
+      if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
+      if(input.action==='pronunciation') {
+        if(typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string'||typeof input.profileID!=='string')throw new LibraryError('invalid_request',400);
+        const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
+        if(doc.sourceHash!==input.sourceHash)throw new LibraryError('source_changed');
+        const key=pronunciationKey(doc,input.profileID);
+        // A disabled profile remains cached offline; no new server work is admitted.
+        if(!pronunciationProfiles().some(p=>p.id===input.profileID))throw new LibraryError('unsupported_pronunciation_profile',422);
+        let row=(await db.db.query('SELECT annotation FROM pronunciation_aids WHERE id=$1',[key])).rows[0];
+        if(!row){
+          const value=await pronunciationFn(doc,input.profileID);
+          if(value.id!==key||value.documentID!==doc.id||value.sourceHash!==doc.sourceHash)throw new LibraryError('invalid_pronunciation_result',502);
+          await db.db.query(`INSERT INTO pronunciation_aids(id,document_id,source_hash,profile_id,profile_version,engine_version,annotation)
+            VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO NOTHING`,[key,doc.id,doc.sourceHash,value.profile.id,value.profile.version,value.profile.engineVersion,JSON.stringify(value)]);
+          row=(await db.db.query('SELECT annotation FROM pronunciation_aids WHERE id=$1',[key])).rows[0];
+        }
+        return send(200,{state:'ready',pronunciation:row.annotation});
+      }
       if(input.action==='lyrics') {
         const recording=recordingRequest(input.recording),key=requestKey(recording);
         let doc=await db.documentForRequest(key,selectionRevision);

@@ -3,15 +3,45 @@
   "builds": [
     {
       "src": "api/romanize.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "node_modules/kuromoji/dict/**",
+          "node_modules/kuromoji/NOTICE.md",
+          "node_modules/kuromoji/LICENSE-2.0.txt",
+          "node_modules/kuroshiro/LICENSE",
+          "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
+          "THIRD_PARTY_NOTICES.md"
+        ]
+      }
     },
     {
       "src": "api/music-romanize.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "node_modules/kuromoji/dict/**",
+          "node_modules/kuromoji/NOTICE.md",
+          "node_modules/kuromoji/LICENSE-2.0.txt",
+          "node_modules/kuroshiro/LICENSE",
+          "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
+          "THIRD_PARTY_NOTICES.md"
+        ]
+      }
     },
     {
       "src": "api/song-library.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "node_modules/kuromoji/dict/**",
+          "node_modules/kuromoji/NOTICE.md",
+          "node_modules/kuromoji/LICENSE-2.0.txt",
+          "node_modules/kuroshiro/LICENSE",
+          "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
+          "THIRD_PARTY_NOTICES.md"
+        ]
+      }
     },
     {
       "src": "api/review-reports.js",

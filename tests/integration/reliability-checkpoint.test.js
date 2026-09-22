@@ -1,3 +1,4 @@
+import {RESPONSE_VERSION} from '../../api/music-romanize.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createMusicRomanizeHandler,SELECTION_REVISION} from '../../api/music-romanize.js';
@@ -45,7 +46,7 @@ test('recording-bound correction localizations use a catalog alias proof',async(
 
 test('temporary correction-source outages remain readable without caching the degraded selection',async()=>{
  let attempts=0;
- const handler=make({lines:[{text:'A phrase',timestamp:12}]},{redis:{},getCachedFn:async()=>({metadata:{version:'2.3.0',selection_revision:SELECTION_REVISION,timing_correction:{status:'untimed_fallback'}}}),setCachedFn:()=>assert.fail('temporary fallback must not persist'),applyTimingCorrectionFn:async(candidate)=>{attempts++;return {...candidate,lyrics:{lines:[{text:'A phrase',timestamp:null}]},timingCorrection:{id:'fixture',status:'untimed_fallback'}};}});
+ const handler=make({lines:[{text:'A phrase',timestamp:12}]},{redis:{},getCachedFn:async()=>({metadata:{version:RESPONSE_VERSION,selection_revision:SELECTION_REVISION,timing_correction:{status:'untimed_fallback'}}}),setCachedFn:()=>assert.fail('temporary fallback must not persist'),applyTimingCorrectionFn:async(candidate)=>{attempts++;return {...candidate,lyrics:{lines:[{text:'A phrase',timestamp:null}]},timingCorrection:{id:'fixture',status:'untimed_fallback'}};}});
  for(let i=0;i<2;i++) {
   const result=await invoke(handler);assert.equal(result.statusCode,200);assert.equal(result.body.lines[0].original,'A phrase');
   assert.equal(result.body.metadata.selection_revision,undefined);assert.equal(result.body.quality.synced,false);
@@ -64,7 +65,7 @@ test('plain results use a short server lifetime and can later recover timing',as
 });
 
 test('old plain Redis payloads cannot renew their lifetime in server memory',async()=>{
- const cached={metadata:{version:'2.3.0',selection_revision:SELECTION_REVISION,timestamp:new Date(Date.now()-600000).toISOString()},quality:{synced:false,instrumental:false},lines:[{original:'Old fallback',timestamp:null}]};
+ const cached={metadata:{version:RESPONSE_VERSION,selection_revision:SELECTION_REVISION,timestamp:new Date(Date.now()-600000).toISOString()},quality:{synced:false,instrumental:false},lines:[{original:'Old fallback',timestamp:null}]};
  const result=await invoke(make({lines:[{text:'Fresh timing',timestamp:7}]},{redis:{},getCachedFn:async()=>cached,setCachedFn:async()=>{},waitUntilFn:()=>{}}));
  assert.equal(result.body.quality.synced,true);assert.equal(result.body.lines[0].original,'Fresh timing');
 });
@@ -123,7 +124,7 @@ test('partially timed transcriptions still retry on the short lifetime',async()=
 });
 
 test('cached numeric provider IDs keep old clients readable without renewing freshness',async()=>{
- const cached={song:{id:'103045439'},metadata:{version:'2.3.0',selection_revision:SELECTION_REVISION,timestamp:new Date().toISOString()},quality:{synced:true,partial:false,instrumental:false},lines:[{original:'Cached phrase',timestamp:4}]};
+ const cached={song:{id:'103045439'},metadata:{version:RESPONSE_VERSION,selection_revision:SELECTION_REVISION,timestamp:new Date().toISOString()},quality:{synced:true,partial:false,instrumental:false},lines:[{original:'Cached phrase',timestamp:4}]};
  const handler=make(null,{redis:{},getCachedFn:async()=>cached,getAvailableAPIsFn:()=>[{name:'Unused',searchSong:()=>assert.fail('valid cache should be used')}]});
  for(let i=0;i<2;i++) {
   const result=await invoke(handler);assert.equal(result.body.song.id,103045439);assert.equal(result.body.metadata.timestamp,cached.metadata.timestamp);
