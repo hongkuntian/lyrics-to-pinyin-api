@@ -17,6 +17,7 @@ import {applyTimingCorrection} from './utils/timing-corrections.js';
 import {hedgedLookup} from './utils/hedged-lookup.js';
 import {lookupReviewedRecording} from './utils/reviewed-recordings.js';
 import {lookupOfficialTranscription} from './utils/official-transcriptions.js';
+import {lookupListeningReviewedRecording} from './utils/listening-reviewed-recordings.js';
 export const RESPONSE_VERSION='2.4.0';
 export const SELECTION_REVISION=LYRIC_SELECTION_REVISION;
 const responseLifetimeMs=response=>response.quality?.partial===true || (response.quality?.synced===false && response.quality?.instrumental!==true) ? 300000:86400000;
@@ -30,7 +31,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
     getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,getCacheKeyFn=getCacheKey,
     getCachedFn=getCached,setCachedFn=setCached,getMusicAPIFn=getMusicAPI,getAvailableAPIsFn=getAvailableAPIs,
     getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,hedgeDelayMs=350,untimedGraceMs=2500,cacheTimeoutMs=300,
-    applyTimingCorrectionFn=applyTimingCorrection,resolveCatalogAliasesFn=resolveCatalogAliases,lookupReviewedRecordingFn=lookupReviewedRecording,lookupOfficialTranscriptionFn=lookupOfficialTranscription,waitUntilFn=waitUntil,logger=console,
+    applyTimingCorrectionFn=applyTimingCorrection,resolveCatalogAliasesFn=resolveCatalogAliases,lookupReviewedRecordingFn=lookupReviewedRecording,lookupListeningReviewedRecordingFn=lookupListeningReviewedRecording,lookupOfficialTranscriptionFn=lookupOfficialTranscription,waitUntilFn=waitUntil,logger=console,
     responseCache=new BoundedCache(),aliasCache=new BoundedCache({ttlMs:86400000})
   }=dependencies;
   const inflight=new Map();
@@ -125,7 +126,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
         // The helper rechecks complete catalog and source signatures before
         // returning any provider words; ordinary mismatches stay strict.
         let result=!preferred ? await measure('reviewed_recording',()=>withDeadline(async signal=> {
-          const candidate=await lookupReviewedRecordingFn(request,{signal});
+          const candidate=await lookupListeningReviewedRecordingFn(request,{signal}) ?? await lookupReviewedRecordingFn(request,{signal});
           return candidate ? applyTimingCorrectionFn(candidate,request,{signal,deadline}):null;
         },Math.min(providerTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null):null;
         if(!result && !preferred) result=await measure('official_transcription',()=>withDeadline(

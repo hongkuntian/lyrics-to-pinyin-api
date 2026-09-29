@@ -13,6 +13,23 @@ function createProcessor() {
   };
 }
 
+test('listening-reviewed recovery exposes corrected source timing and recording proof',async()=>{
+  const request={artist:'Fixture Singer',title:'Fixture Song (Remastered)',album:'Fixture Album',duration:221.412,catalog_id:'123'};
+  const correction={id:'fixture-review',status:'replacement',basis:'recording_listening_review',offset_seconds:-8.5};
+  const handler=createMusicRomanizeHandler({redis:null,logger:{info(){},error(){}},
+    getAvailableAPIsFn:()=>[{name:'FixtureAPI',searchSong:()=>assert.fail('reviewed recovery needs no broad search')}],
+    lookupListeningReviewedRecordingFn:async target=>({song:{id:987,title:'Fixture Song',artist:request.artist,album:request.album,duration:221,source:'lrclib'},
+      lyrics:{lines:[{text:'Fixture opening',timestamp:28.18},{text:'Fixture chorus',timestamp:82.44},{text:'Fixture ending',timestamp:190.95}],source:'lrclib'},
+      api:{name:'LRCAPI'},target,timingCorrection:correction}),
+    detectLanguageFn:async()=> 'en',applyTimingCorrectionFn:async candidate=>candidate});
+  const res=createMockRes();await handler(createMockReq({body:request}),res);
+  assert.equal(res.statusCode,200);assert.equal(res.body.quality.synced,true);
+  assert.deepEqual(res.body.lines.map(row=>row.timestamp),[28.18,82.44,190.95]);
+  assert.equal(res.body.metadata.recording_match.method,'catalog_alias');
+  assert.deepEqual(res.body.metadata.timing_correction,correction);
+  assert.deepEqual(res.body.metadata.lyric_structure.sourceRows.map(row=>row.timestamp),[28.18,82.44,190.95]);
+});
+
 test("returns 405 for non-POST requests", async () => {
   const handler = createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,resolveCatalogAliasesFn:async()=>[], logger: { error() {}, log() {} } });
   const req = createMockReq({ method: "GET", body: {} });

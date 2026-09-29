@@ -153,7 +153,9 @@
         76,
         241.56
       ]
-    },
+    }
+  ],
+  "listeningReviewed": [
     {
       "catalog_id": "1887583861",
       "provider": "lrclib",
@@ -163,7 +165,20 @@
         36.68,
         91,
         199.45
-      ]
+      ],
+      "reviewedDate": "2026-09-29",
+      "heardCheckpoints": [
+        28,
+        82,
+        191
+      ],
+      "offsetSeconds": -8.5,
+      "correctedCheckpoints": [
+        28.18,
+        82.44,
+        190.95
+      ],
+      "basis": "Owner listening review at start, chorus and ending; approximate seconds."
     }
   ]
 }
