@@ -84,3 +84,20 @@ npm run deploy
 ```
 
 Set required environment variables in Vercel project settings.
+
+## Personal translation access
+
+Beta access codes have no expiry. Generate one into a private file with
+`node scripts/song-library-admin.js user --id <user-id> --token-file <private-path>`.
+Repeating the command for the same user rotates the code and revokes older codes,
+while preserving usage history and access settings.
+
+To explicitly grant unlimited personal translations and Study explanations, run
+`node scripts/song-library-admin.js user-access --id <user-id> --unlimited`.
+This account bypasses daily/monthly generation allowances and shared spending
+caps. Charges and reservations remain in the usage ledger and shared totals.
+Other users retain their existing limits. Global generation disable, account
+disable, request rate limits, source validation and in-flight protection still
+apply. The flag defaults to false and is only changed by operator administration.
+Use `--limited` instead of `--unlimited` to restore normal limits without rotating
+the code. Apply the versioned schema migrations before deploying this behavior.

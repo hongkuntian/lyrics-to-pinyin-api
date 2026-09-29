@@ -29,6 +29,15 @@ export class SongLibraryStore {
       await db.query('INSERT INTO library_tokens(digest,user_id) VALUES($1,$2) ON CONFLICT(digest) DO UPDATE SET revoked=false',[digest(token),id]);
     });
   }
+  async configureUserAccess(id,{unlimitedGeneration}) {
+    if(typeof id!=='string'||!id.trim()||id.length>128||typeof unlimitedGeneration!=='boolean') throw new LibraryError('invalid_user_access',400);
+    await this.db.transaction(async db=> {
+      // Serialize access changes with generation admission. Token rotation preserves this setting.
+      await db.query('SELECT id FROM library_settings WHERE id=1 FOR UPDATE');
+      const row=await first(db,'UPDATE library_users SET unlimited_generation=$2 WHERE id=$1 RETURNING id',[id,unlimitedGeneration]);
+      if(!row) throw new LibraryError('user_not_found',404);
+    });
+  }
   async authenticate(token) {
     if(typeof token!=='string') return null;
     return first(this.db,'SELECT u.id FROM library_tokens t JOIN library_users u ON u.id=t.user_id WHERE t.digest=$1 AND NOT t.revoked AND NOT u.disabled',[digest(token)]);
@@ -106,7 +115,7 @@ export class SongLibraryStore {
       const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
       if(!settings) throw new LibraryError('store_unavailable',503);
       if(await first(db,'SELECT 1 FROM lyric_documents WHERE id=$1 AND superseded_by IS NOT NULL',[documentID])) throw new LibraryError('source_revision_superseded');
-      const user=await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
+      const user=await first(db,'SELECT id,unlimited_generation FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
       if(!user) throw new LibraryError('unauthorized',401);
       const saved=await first(db,currentTranslationSQL,[documentID,target]);
       if(saved) return {kind:'ready',translation:{...saved.content,id:saved.id,recipe:saved.recipe,target:saved.target,documentID:saved.document_id,sourceHash:saved.source_hash,notesLanguage:saved.target}};
@@ -115,10 +124,12 @@ export class SongLibraryStore {
       if(!settings.enabled) throw new LibraryError('generation_disabled',503);
       const active=await first(db,"SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown') UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1",[userID]);
       if(active) throw new LibraryError('user_busy',429);
-      const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,
-        count(*) AS monthly FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations) attempts WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
-      if(Number(counts.daily)>=settings.user_daily || Number(counts.monthly)>=settings.user_monthly) throw new LibraryError('generation_allowance_exhausted',429);
-      checkBudget(settings,await budget(db),reservedMicros);
+      if(!user.unlimited_generation) {
+        const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,
+          count(*) AS monthly FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations) attempts WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
+        if(Number(counts.daily)>=settings.user_daily || Number(counts.monthly)>=settings.user_monthly) throw new LibraryError('generation_allowance_exhausted',429);
+        checkBudget(settings,await budget(db),reservedMicros);
+      }
       const row=await first(db,`INSERT INTO translation_jobs(id,document_id,target,recipe,user_id,state,reserved_micros,accounted_micros,generation_request)
         VALUES($1,$2,$3,$4,$5,'queued',$6,$6,$7) RETURNING *`,[randomUUID(),documentID,target,recipe,userID,reservedMicros,generationRequest?JSON.stringify(generationRequest):null]);
       return {kind:'created',job:publicJob(row)};
