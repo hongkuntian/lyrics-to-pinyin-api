@@ -142,19 +142,7 @@
       "catalog_id": "1480230401"
     }
   ],
-  "pendingAudioReview": [
-    {
-      "catalog_id": "1889827218",
-      "provider": "netease",
-      "source_id": "3425563499",
-      "duration": 305.65,
-      "checkpoints": [
-        19.76,
-        76,
-        241.56
-      ]
-    }
-  ],
+  "pendingAudioReview": [],
   "listeningReviewed": [
     {
       "catalog_id": "1887583861",
@@ -179,6 +167,25 @@
         190.95
       ],
       "basis": "Owner listening review at start, chorus and ending; approximate seconds."
+    },
+    {
+      "catalog_id": "1889827218",
+      "provider": "netease",
+      "source_id": "3425563499",
+      "duration": 305.65,
+      "checkpoints": [
+        19.76,
+        76,
+        241.56
+      ],
+      "reviewedDate": "2026-09-29",
+      "heardCheckpoints": [
+        20,
+        76,
+        242
+      ],
+      "offsetSeconds": 0,
+      "basis": "Owner confirmed all three approximate source landmarks."
     }
   ]
 }

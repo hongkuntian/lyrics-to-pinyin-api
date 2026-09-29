@@ -4,6 +4,7 @@ import {fetchJSON} from './fetch-json.js';
 import {normalizeRecordingText,normalizedAlbum,recordingNames} from './recording-match.js';
 import {parseLRC} from './lrc.js';
 import {cleanLyrics} from './lyric-quality.js';
+import {timingFingerprint} from './timing-corrections.js';
 
 // A literal JSON require is traced by the Vercel Node bundler on Node 18+.
 // The registry contains reviewed public metadata, never lyric text or timing.
@@ -45,9 +46,9 @@ function checkAbort(signal) {
 
 // This bounded exception repairs documented credit/title metadata only. Both
 // authoritative catalog and provider signatures must still match at lookup time.
-export async function lookupReviewedRecording(request,context={}) {
+export async function lookupReviewedRecording(request,context={}, {reviews=recordings}={}) {
   checkAbort(context.signal);
-  const entry=recordings.find(item=>item.acceptedRequests.some(signature=>sameSignature(request,signature)));
+  const entry=reviews.find(item=>item.acceptedRequests.some(signature=>sameSignature(request,signature)));
   if(!entry) return null;
   const get=async url=>{checkAbort(context.signal);const data=await fetchJSON(url,context);checkAbort(context.signal);return data;};
   try {
@@ -75,7 +76,9 @@ export async function lookupReviewedRecording(request,context={}) {
       if(tag[1].toLowerCase()==='ti' && normalizeRecordingText(value)!==normalizeRecordingText(raw.name)) return null;
       if(tag[1].toLowerCase()==='ar' && JSON.stringify(credits(value))!==JSON.stringify(credits(raw.ar.map(a=>a.name).join(' & ')))) return null;
     }
-    const lyrics=cleanLyrics({lines:parseLRC(response.lrc.lyric),source:'netease',songId:raw.id},{duration:raw.dt/1000});
+    const lyrics=cleanLyrics({lines:parseLRC(response.lrc.lyric),source:'netease',songId:raw.id},
+      {duration:raw.dt/1000,title:raw.name,artist:raw.ar.map(a=>a.name).join(' & '),catalogID:request.catalog_id});
+    if(entry.source.lyricsFingerprint && timingFingerprint(lyrics)!==entry.source.lyricsFingerprint) return null;
     // These reviewed recordings contain vocals. An empty/credit-only/instrumental
     // mutation must not turn a known vocal recording into an instrumental success.
     if(!lyrics?.lines.length || lyrics.instrumental) return null;

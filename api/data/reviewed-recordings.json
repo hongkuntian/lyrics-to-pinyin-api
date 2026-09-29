@@ -146,6 +146,77 @@
         "https://music.163.com/song?id=2643800682",
         "https://music.apple.com/us/artist/league-of-legends-music/960030338"
       ]
+    },
+    {
+      "id": "apple-1889827218-netease-3425563499",
+      "reviewedDate": "2026-09-29",
+      "reason": "Owner confirmed start, chorus and final-line timing of this exact 5:05 recording; provider adds Live to the title.",
+      "acceptedRequests": [
+        {
+          "artist": "Zhao Chuan",
+          "title": "我是一隻小小鳥",
+          "album": "當我們年輕的時候 / 新歌+經典現場錄音專輯",
+          "duration": 305.65,
+          "catalog_id": "1889827218"
+        },
+        {
+          "artist": "赵传",
+          "title": "我是一只小小鸟",
+          "album": "当我们年轻的时候 / 新歌+经典现场录音专辑",
+          "duration": 305.65,
+          "catalog_id": "1889827218"
+        },
+        {
+          "artist": "趙傳",
+          "title": "我是一隻小小鳥",
+          "album": "當我們年輕的時候 / 新歌+經典現場錄音專輯",
+          "duration": 305.65,
+          "catalog_id": "1889827218"
+        }
+      ],
+      "catalogAnchors": [
+        {
+          "storefront": "cn",
+          "signature": {
+            "artist": "赵传",
+            "title": "我是一只小小鸟",
+            "album": "当我们年轻的时候 / 新歌+经典现场录音专辑",
+            "duration": 305.65,
+            "catalog_id": "1889827218"
+          }
+        }
+      ],
+      "source": {
+        "id": "3425563499",
+        "title": "我是一只小小鸟 (Live)",
+        "album": "当我们年轻的时候 / 新歌＋经典现场录音专辑",
+        "album_id": "394418477",
+        "duration": 305.65,
+        "artists": [
+          {
+            "id": "6463",
+            "name": "赵传"
+          }
+        ],
+        "lyricsFingerprint": "c210d412adbd06911b30f006404b8cab3f36266792181d5fbcf150d044096f41"
+      },
+      "provenance": [
+        {
+          "kind": "owner_listening_review",
+          "date": "2026-09-29",
+          "approximateCheckpoints": [
+            20,
+            76,
+            242
+          ],
+          "sourceCheckpoints": [
+            19.76,
+            76,
+            241.56
+          ],
+          "timingAdjustment": 0
+        }
+      ]
     }
   ]
 }

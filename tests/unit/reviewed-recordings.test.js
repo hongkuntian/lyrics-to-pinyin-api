@@ -1,13 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
-import {lookupReviewedRecording} from '../../api/utils/reviewed-recordings.js';
+import {lookupReviewedRecording as lookupReviewed} from '../../api/utils/reviewed-recordings.js';
+import {timingFingerprint} from '../../api/utils/timing-corrections.js';
 import {withDeadline} from '../../api/utils/fetch-json.js';
 const require=createRequire(import.meta.url);
-const {recordings}=require('../../api/data/reviewed-recordings.json');
+const {recordings:productionRecordings}=require('../../api/data/reviewed-recordings.json');
 const clone=value=>JSON.parse(JSON.stringify(value));
 // Entirely synthetic text proves fetched lines/timing flow through unchanged.
 const rawLyrics='[00:00.00]词曲: Test Author\n[00:15.50]Fixture sunrise\n[00:30.25]Fixture moonlight';
+const recordings=productionRecordings.map(entry=>({...entry,source:{...entry.source,
+  ...(entry.source.lyricsFingerprint?{lyricsFingerprint:timingFingerprint({lines:[{text:'Fixture sunrise',timestamp:15.5},{text:'Fixture moonlight',timestamp:30.25}]})}:{})}}));
+const lookupReviewedRecording=(request,context)=>lookupReviewed(request,context,{reviews:recordings});
 function fixture(entry,mutate=()=>{},signal) {
   const calls=[];
   const fetchFn=async (url,init)=>{
@@ -54,7 +58,7 @@ for(const entry of recordings) {
     {title:base.title+' (Remastered)'},{title:base.title+' (Instrumental)'},{artist:base.artist+' & Unlisted Guest'},
     {artist:base.artist.split(',')[0]},{artist:'Wrong Singer'},{album:'Different Release'},
     {album:base.album+' (Remix)'},{duration:base.duration+0.501},{duration:NaN},{duration:String(base.duration)}];
-  for(const change of requestChanges) test(`${entry.id}: reject request ${JSON.stringify(change)}`,async()=>{
+  for(const change of requestChanges.filter(change=>Object.entries(change).some(([key,value])=>base[key]!==value))) test(`${entry.id}: reject request ${JSON.stringify(change)}`,async()=>{
     const context=fixture(entry);assert.equal(await lookupReviewedRecording({...base,...change},context),null);
     assert.equal(context.calls.length,0);
   });
@@ -91,6 +95,15 @@ for(const entry of recordings) {
     }
   });
 }
+test('listening-reviewed NetEase source rejects changed words or timestamps',async()=>{
+  const entry=recordings.find(x=>x.source.lyricsFingerprint);
+  assert.ok(entry);
+  for(const lyric of [rawLyrics.replace('15.50','12.00'),rawLyrics.replace('Fixture sunrise','Changed wording')]) {
+    assert.equal(await lookupReviewedRecording(entry.acceptedRequests[0],fixture(entry,(body,u)=>{
+      if(u.pathname==='/lyric')body.lrc.lyric=lyric;
+    })),null);
+  }
+});
 test('artist names must stay paired with their reviewed provider entity IDs',async()=>{
   const entry=recordings.find(x=>x.source.artists.length>1);
   const context=fixture(entry,(body,u)=>{if(u.pathname==='/song/detail') {
