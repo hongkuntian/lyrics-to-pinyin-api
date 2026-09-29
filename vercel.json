@@ -25,7 +25,8 @@
           "node_modules/kuromoji/LICENSE-2.0.txt",
           "node_modules/kuroshiro/LICENSE",
           "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
-          "THIRD_PARTY_NOTICES.md"
+          "THIRD_PARTY_NOTICES.md",
+          "api/data/reviewed-catalog-aliases.json"
         ]
       }
     },
@@ -39,7 +40,8 @@
           "node_modules/kuromoji/LICENSE-2.0.txt",
           "node_modules/kuroshiro/LICENSE",
           "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
-          "THIRD_PARTY_NOTICES.md"
+          "THIRD_PARTY_NOTICES.md",
+          "api/data/reviewed-catalog-aliases.json"
         ]
       }
     },

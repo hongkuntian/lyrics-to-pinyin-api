@@ -2,7 +2,8 @@ import {createRequire} from 'node:module';
 import {fetchJSON} from './fetch-json.js';
 import {recordingScore,recordingNames,normalizeRecordingText,normalizedAlbum} from './recording-match.js';
 
-const {recordings:reviewedAliases}=createRequire(import.meta.url)('../data/reviewed-catalog-aliases.json');
+const require=createRequire(import.meta.url);
+const {recordings:reviewedAliases}=require('../data/reviewed-catalog-aliases.json');
 const signature=(a,b)=>a.catalog_id===b.catalog_id && Number.isFinite(a.duration) && Math.abs(a.duration-b.duration)<=0.5
   && ['title','artist','album'].every(key=>typeof a[key]==='string' && typeof b[key]==='string' && normalizeRecordingText(a[key])===normalizeRecordingText(b[key]));
 const item=song=>({catalog_id:String(song.trackId),title:song.trackName,artist:song.artistName,album:song.collectionName,duration:song.trackTimeMillis/1000});
