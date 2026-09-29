@@ -66,12 +66,12 @@ export function createMusicRomanizeHandler(dependencies={}) {
       // Sort option keys without relaxing recording or request-bound alias identity.
       const stableOptions=Object.fromEntries(Object.entries(options).sort(([a],[b])=>a.localeCompare(b)));
       const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,selectionPolicy:SELECTION_REVISION,normalizationPolicy:LYRIC_NORMALIZATION_VERSION}),searchScript,searchSystem,stableOptions);
-      const local=responseCache.get(key);
+      const local=options.refresh===true?null:responseCache.get(key);
       if(local) { cacheStatus='MEMORY';return send({status:200,body:local}); }
       if(inflight.has(key)) { cacheStatus='COALESCED';return send(await measure('shared',()=>inflight.get(key))); }
       const request={artist,title,album,duration,catalog_id,storefront};
       const compute=async()=> {
-        if(redis && !cacheUnavailable(redis)) {
+        if(options.refresh!==true && redis && !cacheUnavailable(redis)) {
           const cached=await measure('cache_read',()=>withDeadline(()=>getCachedFn(redis,key),cacheTimeoutMs)).catch(error=>{suspendCache(redis,error);return null;});
           if(cached?.metadata?.version===RESPONSE_VERSION && cached.metadata.selection_revision===SELECTION_REVISION && cached.metadata.timing_correction?.status!=='untimed_fallback' && remainingLifetimeMs(cached)>0) {
             responseCache.set(key,cached,{ttlMs:remainingLifetimeMs(cached)});cacheStatus='REDIS';return {status:200,body:cached};
@@ -92,14 +92,14 @@ export function createMusicRomanizeHandler(dependencies={}) {
                 if(!song) { diagnose(api.name,'not_found');return null; }
                 if(recordingScore(song,target)<0 || (duration!=null && song.duration!=null && Math.abs(duration-song.duration)>3)) throw new RecordingMismatchError();
                 matched=true;
-                let lyrics=cleanLyrics(await measure(`${label}_lyrics`,()=>api.getLyrics(song.id,{signal,song})),{duration:song.duration,artist:song.artist,catalogID:catalog_id});
+                let lyrics=cleanLyrics(await measure(`${label}_lyrics`,()=>api.getLyrics(song.id,{signal,song})),{duration:song.duration,title:song.title,artist:song.artist,catalogID:catalog_id});
                 const candidate=await applyTimingCorrectionFn({song,lyrics,api,target},request,{signal,deadline:providerDeadline});
                 lyrics=candidate.lyrics;
                 return hasUsableLyrics(lyrics,{duration:candidate.song.duration}) ? candidate:null;
               },Math.min(providerTimeoutMs,remaining),parentSignal);
             } catch(error) {
               if(parentSignal?.aborted) return null;
-              if(error.code==='recording_mismatch') { mismatch=true;diagnose(api.name,'recording_mismatch'); }
+              if(error.code==='recording_mismatch') { mismatch=true;diagnose(api.name,error.reason??'recording_mismatch'); }
               else if(error.code==='provider_timeout' || error.name==='AbortError') { timedOut=true;diagnose(api.name,'provider_timeout'); }
               else { unavailable=true;logger.error('Lyrics provider failed',api.name,error.message); }
               return null;
@@ -134,7 +134,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
         if(mayImprove(result)) result=better(result,await tryRecording(request));
         if(mayImprove(result) && (catalog_id || (album && duration)) && deadline>Date.now()) {
           const aliases=knownAliases || await measure('catalog_alias',()=>withDeadline(signal=>resolveCatalogAliasesFn(request,{signal}),Math.min(2500,deadline-Date.now()))).catch(()=>[]);
-          if(aliases.length) aliasCache.set(aliasKey,aliases);
+          if(aliases.length) aliasCache.set(aliasKey,aliases);else diagnose('catalog','alias_evidence_missing');
           for(const alias of aliases.slice(0,3)) {
             if(alias===knownAliases?.[0]) continue;
             result=better(result,await tryRecording(alias));
@@ -143,7 +143,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
         }
         if(result) {
           const {song,api,target}=result;
-          const lyrics=cleanLyrics(result.lyrics,{duration:song.duration,artist:song.artist,catalogID:catalog_id});
+          const lyrics=cleanLyrics(result.lyrics,{duration:song.duration,title:song.title,artist:song.artist,catalogID:catalog_id});
           const cacheable=result.timingCorrection?.status!=='untimed_fallback';
           const response=await measure('romanize',async()=> {
             const script=lyrics.instrumental ? searchScript : language || await detectLanguageFn(lyrics.lines.map(line=>line.text || '').join('\n'));
@@ -161,6 +161,8 @@ export function createMusicRomanizeHandler(dependencies={}) {
           response.song.album=song.album ?? null;response.song.duration=song.duration ?? null;
           response.metadata.version=RESPONSE_VERSION;
           response.metadata.lyric_structure=lyrics.lyricStructure;
+          response.song_details={catalog_id:catalog_id??null,source_id:String(song.id),source:song.source??api.name,credits:lyrics.credits??[]};
+          if(lyrics.providerTranslation) response.provider_translation=lyrics.providerTranslation;
           if(cacheable) response.metadata.selection_revision=SELECTION_REVISION;
           response.quality.instrumental=lyrics.instrumental===true;
           response.quality.partial=lyrics.partial===true;
@@ -185,7 +187,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
         if(timedOut) return {status:504,body:{error:'Lyrics providers timed out',code:'provider_timeout'}};
         if(unavailable) return {status:502,body:{error:'Lyrics providers are unavailable',code:'provider_unavailable'}};
         if(mismatch) return {status:409,body:{error:'Could not verify the requested recording',code:'recording_mismatch'}};
-        if(matched) return {status:404,body:{error:'Lyrics not found'}};
+        if(matched) return {status:404,body:{error:'Lyrics not found',code:'lyrics_absent'}};
         return {status:404,body:{error:'Song not found',details:`Tried ${apis.map(api=>api.name).join(', ')}`}};
       };
       const task=compute();inflight.set(key,task);

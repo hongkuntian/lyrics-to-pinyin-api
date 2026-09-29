@@ -5,7 +5,7 @@ export const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??n
 export const within=db=>({transaction:fn=>fn(db)});
 export async function reviewContext(db,revisionID) {
   const r=await first(db,`SELECT d.id,d.source_hash,d.response,d.structure,r.content,r.source_hash AS revision_source_hash,t.target
-    FROM translation_revisions r JOIN song_translations t ON t.id=r.translation_id JOIN lyric_documents d ON d.id=t.document_id WHERE r.id=$1`,[revisionID]);
+    FROM translation_revisions r JOIN song_translations t ON t.id=r.translation_id JOIN lyric_documents d ON d.id=t.document_id WHERE r.id=$1 AND d.superseded_by IS NULL`,[revisionID]);
   if(!r||r.target!=='en'||r.source_hash!==r.revision_source_hash)throw new LibraryError('review_context_unavailable');
   return {doc:{id:r.id,sourceHash:r.source_hash,response:r.response,structure:r.structure},content:r.content};
 }

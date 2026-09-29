@@ -9,7 +9,7 @@ export class LibraryError extends Error {
 export const digest=value=>createHash('sha256').update(typeof value==='string'?value:JSON.stringify(value)).digest('hex');
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0] ?? null;
 const document=row=>row && ({id:row.id,recordingKey:row.recording_key,sourceHash:row.source_hash,
-  selectionRevision:row.selection_revision,response:row.response,structure:row.structure});
+  selectionRevision:row.selection_revision,checkedAt:row.checked_at??null,response:{...row.response,...(row.song_details?{song_details:row.song_details}:{}),...(row.provider_translation?{provider_translation:row.provider_translation}:{})},structure:row.structure});
 const publicJob=row=>({id:row.id,state:row.state,documentID:row.document_id,target:row.target,errorCode:row.error_code});
 
 export class SongLibraryStore {
@@ -39,22 +39,41 @@ export class SongLibraryStore {
       DO UPDATE SET count=library_rate_windows.count+1 RETURNING count`,[userID]);
     if(row.count>60) throw new LibraryError('rate_limited',429);
   }
-  async saveDocument(value) {
+  async saveDocument(value,{replaceID=null,lookupOwner=null}={}) {
     return this.db.transaction(async db=> {
+      if(lookupOwner) {
+        const lease=await first(db,`SELECT owner FROM lyric_lookups WHERE request_key=$1 AND selection_revision=$2
+          AND owner=$3 AND expires_at>now() FOR UPDATE`,[value.requestKey,value.selectionRevision,lookupOwner]);
+        if(!lease) throw new LibraryError('lookup_superseded');
+      }
+      const {song_details,provider_translation,...lyricResponse}=value.response;
       await db.query(`INSERT INTO lyric_documents(id,recording_key,source_hash,selection_revision,response,structure)
-        VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO NOTHING`,[value.id,value.recordingKey,value.sourceHash,value.selectionRevision,JSON.stringify(value.response),JSON.stringify(value.structure)]);
+        VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO NOTHING`,[value.id,value.recordingKey,value.sourceHash,value.selectionRevision,JSON.stringify(lyricResponse),JSON.stringify(value.structure)]);
+      await db.query(`INSERT INTO lyric_document_extras(document_id,song_details,provider_translation)
+        VALUES($1,$2,$3) ON CONFLICT(document_id) DO UPDATE SET song_details=$2,provider_translation=$3,checked_at=now()`,
+        [value.id,JSON.stringify(song_details??null),JSON.stringify(provider_translation??null)]);
       await db.query(`INSERT INTO lyric_requests(request_key,selection_revision,document_id) VALUES($1,$2,$3)
         ON CONFLICT(request_key,selection_revision) DO NOTHING`,[value.requestKey,value.selectionRevision,value.id]);
-      // First durable result wins for this request revision, including across instances.
-      return document(await first(db,`SELECT d.* FROM lyric_requests r JOIN lyric_documents d ON d.id=r.document_id
+      if(replaceID && lookupOwner) await db.query(`UPDATE lyric_requests SET document_id=$3,checked_at=now()
+        WHERE request_key=$1 AND selection_revision=$2 AND document_id=$4 AND EXISTS
+          (SELECT 1 FROM lyric_lookups WHERE request_key=$1 AND selection_revision=$2 AND owner=$5 AND expires_at>now())`,
+        [value.requestKey,value.selectionRevision,value.id,replaceID,lookupOwner]);
+      if(replaceID && lookupOwner && replaceID!==value.id) await db.query(`UPDATE lyric_requests SET document_id=$3,checked_at=now()
+        WHERE selection_revision=$2 AND document_id=$4 AND EXISTS
+          (SELECT 1 FROM lyric_requests WHERE request_key=$1 AND selection_revision=$2 AND document_id=$3)`,
+        [value.requestKey,value.selectionRevision,value.id,replaceID]);
+      // Equivalent aliases must move together, otherwise an old alias could
+      // continue admitting paid work for a superseded source document.
+      // A refresh may advance the head only while its lease and previous head match.
+      return document(await first(db,`SELECT d.*,r.checked_at,r.selection_revision AS selection_revision,x.song_details,x.provider_translation FROM lyric_requests r JOIN lyric_documents d ON d.id=r.document_id LEFT JOIN lyric_document_extras x ON x.document_id=d.id
         WHERE r.request_key=$1 AND r.selection_revision=$2`,[value.requestKey,value.selectionRevision]));
     });
   }
   async documentForRequest(key,revision) {
-    return document(await first(this.db,`SELECT d.* FROM lyric_requests r JOIN lyric_documents d ON d.id=r.document_id
+    return document(await first(this.db,`SELECT d.*,r.checked_at,r.selection_revision AS selection_revision,x.song_details,x.provider_translation FROM lyric_requests r JOIN lyric_documents d ON d.id=r.document_id LEFT JOIN lyric_document_extras x ON x.document_id=d.id
       WHERE r.request_key=$1 AND r.selection_revision=$2`,[key,revision]));
   }
-  async document(id) { return document(await first(this.db,'SELECT * FROM lyric_documents WHERE id=$1',[id])); }
+  async document(id) { return document(await first(this.db,'SELECT d.*,x.song_details,x.provider_translation FROM lyric_documents d LEFT JOIN lyric_document_extras x ON x.document_id=d.id WHERE d.id=$1 AND d.superseded_by IS NULL',[id])); }
   async isCurrentDocument(id,revision) {
     return !!await first(this.db,'SELECT 1 FROM lyric_requests WHERE document_id=$1 AND selection_revision=$2 LIMIT 1',[id,revision]);
   }
@@ -86,6 +105,7 @@ export class SongLibraryStore {
       // therefore agree across instances. The lock is released BEFORE contacting any provider.
       const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
       if(!settings) throw new LibraryError('store_unavailable',503);
+      if(await first(db,'SELECT 1 FROM lyric_documents WHERE id=$1 AND superseded_by IS NOT NULL',[documentID])) throw new LibraryError('source_revision_superseded');
       const user=await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
       if(!user) throw new LibraryError('unauthorized',401);
       const saved=await first(db,currentTranslationSQL,[documentID,target]);

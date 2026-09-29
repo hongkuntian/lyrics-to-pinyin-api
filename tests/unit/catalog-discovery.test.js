@@ -20,3 +20,14 @@ test('ambiguous catalog discovery refuses to guess between distinct IDs',async()
  const ambiguous=async()=>({ok:true,json:async()=>({results:[en,{...en,trackId:2}]})});
  assert.deepEqual(await resolveCatalogAliases(request,{fetchFn:ambiguous}),[]);
 });
+
+test('reviewed English MusicKit signature bridges a missing storefront without accepting near matches',async()=>{
+ const req={catalog_id:'536009642',artist:'Jay Chou',title:'Nocturne',album:'11月的蕭邦',duration:228.773};
+ const anchor={kind:'song',trackId:536009642,artistName:'周杰倫',trackName:'夜曲',collectionName:'11月的蕭邦',trackTimeMillis:228773};
+ const context={fetchFn:async()=>({ok:true,json:async()=>({results:[anchor]})})};
+ assert.equal((await resolveCatalogAliases(req,context))[0].title,'夜曲');
+ for(const change of [{artist:'Cover'},{title:'Nocturne (Live)'},{album:'Different'},{duration:225},{catalog_id:'999'}]) {
+  assert.deepEqual(await resolveCatalogAliases({...req,...change},context),[]);
+ }
+ assert.deepEqual(await resolveCatalogAliases(req,{fetchFn:async()=>({ok:true,json:async()=>({results:[{...anchor,trackName:'Different'}]})})}),[]);
+});

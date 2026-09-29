@@ -2,52 +2,115 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "MusicRomanizeSuccessResponse",
   "type": "object",
-  "required": ["song", "lines", "quality", "metadata"],
+  "required": [
+    "song",
+    "lines",
+    "quality",
+    "metadata"
+  ],
   "properties": {
     "song": {
       "type": "object",
-      "required": ["title", "artist", "id", "language", "romanization_system"],
+      "required": [
+        "title",
+        "artist",
+        "id",
+        "language",
+        "romanization_system"
+      ],
       "properties": {
         "title": {
           "type": "object",
-          "required": ["original", "romanized"],
+          "required": [
+            "original",
+            "romanized"
+          ],
           "properties": {
-            "original": { "type": "string" },
-            "romanized": { "type": "string" }
+            "original": {
+              "type": "string"
+            },
+            "romanized": {
+              "type": "string"
+            }
           }
         },
         "artist": {
           "type": "object",
-          "required": ["original", "romanized"],
+          "required": [
+            "original",
+            "romanized"
+          ],
           "properties": {
-            "original": { "type": "string" },
-            "romanized": { "type": "string" }
+            "original": {
+              "type": "string"
+            },
+            "romanized": {
+              "type": "string"
+            }
           }
         },
         "id": {
           "anyOf": [
-            { "type": "number" },
-            { "type": "string" }
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
           ]
         },
-        "album": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-        "duration": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
-        "language": { "type": "string" },
-        "romanization_system": { "type": "string" }
+        "album": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "language": {
+          "type": "string"
+        },
+        "romanization_system": {
+          "type": "string"
+        }
       }
     },
     "lines": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["original", "romanized", "timestamp"],
+        "required": [
+          "original",
+          "romanized",
+          "timestamp"
+        ],
         "properties": {
-          "original": { "type": "string" },
-          "romanized": { "type": "string" },
+          "original": {
+            "type": "string"
+          },
+          "romanized": {
+            "type": "string"
+          },
           "timestamp": {
             "anyOf": [
-              { "type": "number" },
-              { "type": "null" }
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
             ]
           }
         }
@@ -55,21 +118,41 @@
     },
     "quality": {
       "type": "object",
-      "required": ["synced"],
+      "required": [
+        "synced"
+      ],
       "properties": {
-        "synced": { "type": "boolean" },
-        "instrumental": { "type": "boolean" },
-        "partial": { "type": "boolean" }
+        "synced": {
+          "type": "boolean"
+        },
+        "instrumental": {
+          "type": "boolean"
+        },
+        "partial": {
+          "type": "boolean"
+        }
       }
     },
     "metadata": {
       "type": "object",
-      "required": ["timestamp", "version", "source"],
+      "required": [
+        "timestamp",
+        "version",
+        "source"
+      ],
       "properties": {
-        "timestamp": { "type": "string" },
-        "version": { "type": "string" },
-        "source": { "type": "string" },
-        "selection_revision": { "type": "string" },
+        "timestamp": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "selection_revision": {
+          "type": "string"
+        },
         "lyric_structure": {
           "type": "object",
           "required": [
@@ -84,7 +167,8 @@
               "type": "string",
               "enum": [
                 "lyric-annotations-1",
-                "lyric-annotations-2"
+                "lyric-annotations-2",
+                "lyric-annotations-3"
               ]
             },
             "sourceRows": {
@@ -208,14 +292,149 @@
         },
         "recording_match": {
           "type": "object",
-          "required": ["method", "catalog_id", "artist", "title", "duration"],
+          "required": [
+            "method",
+            "catalog_id",
+            "artist",
+            "title",
+            "duration"
+          ],
           "properties": {
-            "method": { "type": "string", "enum": ["catalog_alias", "metadata_alias", "metadata_equivalence"] },
-            "catalog_id": { "type": "string", "pattern": "^[0-9]{1,20}$" },
-            "artist": { "type": "string" },
-            "album": { "type": "string" },
-            "title": { "type": "string" },
-            "duration": { "type": "number", "exclusiveMinimum": 0 }
+            "method": {
+              "type": "string",
+              "enum": [
+                "catalog_alias",
+                "metadata_alias",
+                "metadata_equivalence"
+              ]
+            },
+            "catalog_id": {
+              "type": "string",
+              "pattern": "^[0-9]{1,20}$"
+            },
+            "artist": {
+              "type": "string"
+            },
+            "album": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "duration": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        }
+      }
+    },
+    "song_details": {
+      "type": "object",
+      "required": [
+        "catalog_id",
+        "source_id",
+        "source",
+        "credits"
+      ],
+      "properties": {
+        "catalog_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "credits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "role",
+              "contributors",
+              "source"
+            ],
+            "properties": {
+              "role": {
+                "type": "string"
+              },
+              "contributors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "source": {
+                "type": "string"
+              },
+              "instrument": {
+                "type": "string"
+              },
+              "original": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "provider_translation": {
+      "type": "object",
+      "required": [
+        "language",
+        "source",
+        "kind",
+        "lines"
+      ],
+      "properties": {
+        "language": {
+          "type": "string",
+          "enum": [
+            "en"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "provider"
+          ]
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "sourceID",
+              "sourceText",
+              "text",
+              "original"
+            ],
+            "properties": {
+              "sourceID": {
+                "type": "string"
+              },
+              "sourceText": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "original": {
+                "type": "string"
+              }
+            }
           }
         }
       }

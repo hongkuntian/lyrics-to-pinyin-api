@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "recordings": [
+    {
+      "acceptedRequests": [
+        {
+          "artist": "Hebe Tien",
+          "title": "A Little Happiness (From \"Our Times\")",
+          "album": "A Little Happiness (From \"Our Times\") - Single",
+          "duration": 265.522,
+          "catalog_id": "1017697311"
+        }
+      ],
+      "anchors": [
+        {
+          "catalog_id": "1017697311",
+          "artist": "田馥甄",
+          "title": "小幸運 (電影《我的少女時代》主題曲)",
+          "album": "小幸運 (電影《我的少女時代》主題曲) - Single",
+          "duration": 265.522
+        },
+        {
+          "catalog_id": "1017697311",
+          "artist": "田馥甄",
+          "title": "小幸运 (电影《我的少女时代》主题曲)",
+          "album": "小幸运 (电影《我的少女时代》主题曲) - Single",
+          "duration": 265.522
+        }
+      ],
+      "reviewedDate": "2026-09-29",
+      "provenance": [
+        "Saved native MusicKit catalog export",
+        "https://music.apple.com/tw/song/1017697311"
+      ]
+    },
+    {
+      "acceptedRequests": [
+        {
+          "artist": "JJ Lin",
+          "title": "Careful with Fate (Theme Song from the TV Series ''Pursuit of Jade'')",
+          "album": "Careful with Fate (Theme Song from the TV Series ''Pursuit of Jade'') - Single",
+          "duration": 282.32,
+          "catalog_id": "1874801974"
+        }
+      ],
+      "anchors": [
+        {
+          "catalog_id": "1874801974",
+          "artist": "林俊杰",
+          "title": "我对缘分小心翼翼 (影视剧《逐玉》主题曲)",
+          "album": "我对缘分小心翼翼 (影视剧《逐玉》主题曲) - Single",
+          "duration": 282.32
+        }
+      ],
+      "reviewedDate": "2026-09-29",
+      "provenance": [
+        "Saved native MusicKit catalog export",
+        "https://music.apple.com/cn/song/1874801974"
+      ]
+    },
+    {
+      "acceptedRequests": [
+        {
+          "artist": "Jay Chou",
+          "title": "最長的電影",
+          "album": "我很忙",
+          "duration": 235.84,
+          "catalog_id": "536030702"
+        },
+        {
+          "artist": "Jay Chou",
+          "title": "The Longest Movie",
+          "album": "我很忙",
+          "duration": 235.84,
+          "catalog_id": "536030702"
+        }
+      ],
+      "anchors": [
+        {
+          "catalog_id": "536030702",
+          "artist": "周杰倫",
+          "title": "最長的電影",
+          "album": "我很忙",
+          "duration": 235.84
+        },
+        {
+          "catalog_id": "536030702",
+          "artist": "周杰伦",
+          "title": "最长的电影",
+          "album": "我很忙",
+          "duration": 235.84
+        }
+      ],
+      "reviewedDate": "2026-09-29",
+      "provenance": [
+        "Saved native MusicKit catalog export",
+        "https://music.apple.com/tw/song/536030702"
+      ]
+    },
+    {
+      "acceptedRequests": [
+        {
+          "artist": "Jay Chou",
+          "title": "夜曲",
+          "album": "11月的蕭邦",
+          "duration": 228.773,
+          "catalog_id": "536009642"
+        },
+        {
+          "artist": "Jay Chou",
+          "title": "Nocturne",
+          "album": "11月的蕭邦",
+          "duration": 228.773,
+          "catalog_id": "536009642"
+        }
+      ],
+      "anchors": [
+        {
+          "catalog_id": "536009642",
+          "artist": "周杰倫",
+          "title": "夜曲",
+          "album": "11月的蕭邦",
+          "duration": 228.773
+        },
+        {
+          "catalog_id": "536009642",
+          "artist": "周杰伦",
+          "title": "夜曲",
+          "album": "11月的萧邦",
+          "duration": 228.773
+        }
+      ],
+      "reviewedDate": "2026-09-29",
+      "provenance": [
+        "Saved native MusicKit catalog export",
+        "https://music.apple.com/tw/song/536009642"
+      ]
+    },
+    {
+      "acceptedRequests": [
+        {
+          "artist": "Jay Chou & Ashin Chen",
+          "title": "说好不哭",
+          "album": "说好不哭 - Single",
+          "duration": 222.333,
+          "catalog_id": "1480230401"
+        },
+        {
+          "artist": "Jay Chou & Ashin Chen",
+          "title": "Won’t Cry",
+          "album": "说好不哭 - Single",
+          "duration": 222.333,
+          "catalog_id": "1480230401"
+        },
+        {
+          "artist": "Jay Chou & Ashin Chen",
+          "title": "Won't Cry",
+          "album": "说好不哭 - Single",
+          "duration": 222.333,
+          "catalog_id": "1480230401"
+        }
+      ],
+      "anchors": [
+        {
+          "catalog_id": "1480230401",
+          "artist": "周杰伦 & 五月天 阿信",
+          "title": "说好不哭",
+          "album": "说好不哭 - Single",
+          "duration": 222.333
+        }
+      ],
+      "reviewedDate": "2026-09-29",
+      "provenance": [
+        "Saved native MusicKit catalog export",
+        "https://music.apple.com/cn/song/1480230401"
+      ]
+    }
+  ]
+}

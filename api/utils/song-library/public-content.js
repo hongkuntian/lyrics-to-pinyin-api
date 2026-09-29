@@ -1,6 +1,6 @@
 import {LYRIC_NORMALIZATION_VERSION} from '../lyric-annotations.js';
 
-const normalizedVersions=new Set(['lyric-annotations-1',LYRIC_NORMALIZATION_VERSION]);
+const normalizedVersions=new Set(['lyric-annotations-1','lyric-annotations-2',LYRIC_NORMALIZATION_VERSION]);
 const normalized=doc=>normalizedVersions.has(doc.structure.version);
 
 // API v1 ties sourceText to the visible lyric row and startsTurn to a printed

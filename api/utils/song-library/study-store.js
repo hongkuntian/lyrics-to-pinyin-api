@@ -9,6 +9,7 @@ export const publicExplanation=row=>({id:row.id,documentID:row.document_id,trans
 export async function reserveExplanation(database,{key,doc,translation,selection,recipe,userID,amount,explanationLanguage='en',generationRequest=null}) {
   return database.transaction(async db=>{
     const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
+    if(await first(db,'SELECT 1 FROM lyric_documents WHERE id=$1 AND superseded_by IS NOT NULL',[doc.id]))throw new LibraryError('source_revision_superseded');
     const prior=await first(db,'SELECT * FROM study_explanations WHERE cache_key=$1',[key]);
     if(prior)return {created:false,row:prior};
     if(!settings?.enabled)throw new LibraryError('generation_disabled',503);

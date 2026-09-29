@@ -13,11 +13,11 @@ import {reserveExplanation,claimExplanation,finishExplanation,publicExplanation}
 import {annotationFor,pronunciationKey,enabledProfiles} from './utils/pronunciation-aids.js';
 
 export const config={maxDuration:300};
-const actions={capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation'],lyrics:['recording'],translate:['documentID','sourceHash','target'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
+const actions={capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeHandler()) {
-  return async recording=> {
+  return async (recording,{refresh=false}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
-    await handler({method:'POST',body:{...recording,options:{tone_style:'marks',separator:' ',case:'lower'}}},result);
+    await handler({method:'POST',body:{...recording,options:{tone_style:'marks',separator:' ',case:'lower',...(refresh?{refresh:true}:{})}}},result);
     if(result.code!==200) throw new LibraryError(result.body?.code??'lyrics_unavailable',result.code);
     return result.body;
   };
@@ -69,14 +69,24 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
         return send(200,{state:'ready',pronunciation:row.annotation});
       }
       if(input.action==='lyrics') {
-        const recording=recordingRequest(input.recording),key=requestKey(recording);
+        if(input.refresh!==undefined && input.refresh!==true && input.refresh!=='true') throw new LibraryError('invalid_request',400);
+        const recording=recordingRequest(input.recording),key=requestKey(recording),explicit=Boolean(input.refresh);
         let doc=await db.documentForRequest(key,selectionRevision);
-        if(!doc) {
+        const stale=value=>!value || Date.now()-new Date(value.checkedAt??0).getTime()>((value.response.quality.synced && !value.response.quality.partial)?86400000:300000);
+        if(explicit || stale(doc)) {
           const owner=await db.claimLookup(key,selectionRevision);
           if(!owner) {res.setHeader('Retry-After','2');return send(202,{state:'loading_lyrics'});}
           try {
             doc=await db.documentForRequest(key,selectionRevision);
-            if(!doc) doc=await db.saveDocument(makeDocument(recording,await loadLyrics(recording),selectionRevision));
+            if(explicit || stale(doc)) {
+              const candidate=makeDocument(recording,await loadLyrics(recording,{refresh:true}),selectionRevision);
+              // Provider outages or regressions cannot erase a complete timed source.
+              const keep=doc?.response.quality.synced && !candidate.response.quality.synced;
+              doc=await db.saveDocument(keep?{...doc,requestKey:key}:candidate,{replaceID:doc?.id,lookupOwner:owner});
+            }
+          } catch(error) {
+            if(!doc || explicit) throw error;
+            return send(200,{state:'ready',document:publicDocument(doc),refreshError:error.code??'lyrics_unavailable'});
           } finally {await db.releaseLookup(key,selectionRevision,owner);}
         }
         return send(200,{state:'ready',document:publicDocument(doc)});

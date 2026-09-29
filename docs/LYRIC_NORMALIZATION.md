@@ -1,6 +1,6 @@
 # Lyric annotations and vocal text
 
-The shared `cleanLyrics` path uses `lyric-annotations-2` to separate recognized
+The shared `cleanLyrics` path uses `lyric-annotations-3` to separate recognized
 production credits and performer cues from sung text before romanization. It
 does not delete arbitrary colon-containing lines, deduplicate refrains, rewrite
 words, or move a cue's timestamp onto a vocal line.
@@ -15,7 +15,7 @@ match. Generic chorus/gender cues require a confirmed named-performer cue in
 the same document. Unknown names and bracketed sung words remain unchanged.
 
 `metadata.lyric_structure` is an additive response field containing the
-normalization version, original source rows, removed annotation kinds, performer
+normalization version, performed source rows, performer cue annotations, performer
 identities, and one occurrence per visible lyric row. Each occurrence preserves
 its source row index, original text, removed prefix, clean text and explicit turn
 metadata. Source timestamps are evidence; visible timestamps come from the
@@ -38,10 +38,9 @@ turn starts. Translation replies use that same view. The full annotation mapping
 remains in `response.metadata.lyric_structure`; the canonical stored document and
 model input keep real performer turns. IDs and hashes identify that canonical
 document, independent of its API view. Existing clients remain compatible without
-requiring a coordinated rollout of the saved-translation feature. Older saved
-documents retain their original v1 speaker-prefix format when explicitly reopened.
+requiring a coordinated rollout of the saved-translation feature. Legacy documents are reprocessed into clean revisions by the explicit production migration; old IDs retain retirement records, not raw lyric payloads.
 
-The response selection revision is `lyrics-selection-2026-09-13-vocal-text-2`.
+The response selection revision is `lyrics-selection-2026-09-29-source-content-3`.
 Backend cache keys also include the normalization version. Native memory/disk
 cache admission and durable song-library lookups use the matching revision;
 older results remain readable during rollout but must be refetched rather than
@@ -66,3 +65,5 @@ cache migration and existing reviewed recording/timing repairs.
 Sources: [Apple recording](https://music.apple.com/us/song/1835909383),
 [NetEase source](https://music.163.com/song?id=2734065329),
 [group's release announcement and members](https://www.weibo.com/7854957897/PEC5ClzmX).
+
+Production credits live only in `song_details.credits`, persisted separately in `lyric_document_extras`. Source arrays contain no credit copies. Repeated Chinese^English pairs use the separate aligned `provider_translation` structure. See [source recovery](SOURCE_CONTENT_RECOVERY.md) for migration, refresh and listening gates.

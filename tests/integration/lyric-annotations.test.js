@@ -30,8 +30,8 @@ test('normal and reviewed paths normalize before pinyin and preserve source turn
       ['一起唱这首歌',6],['我说：别走',11],['再唱一遍',20],['一起唱这首歌',23]]);
     assert.ok(result.lines.every(l=>!l.romanized.includes('Jeremy')&&!l.romanized.includes('Arrangement')));
     const doc=makeDocument(recording,result,result.metadata.selection_revision);
-    assert.deepEqual(doc.structure.occurrences.map(o=>o.sourceIndex),[2,4,5,6]);
-    assert.equal(doc.structure.sourceRows.length,7);
+    assert.deepEqual(doc.structure.occurrences.map(o=>o.sourceIndex),[1,3,4,5]);
+    assert.equal(doc.structure.sourceRows.length,6);
     const translated=parseTranslation(JSON.stringify({translations:{L0001:'Sing this song together.',L0002:'I say: stay.',L0003:'Sing it again.',L0004:'Sing this song together.'},sourceNotes:[]}),doc);
     assert.equal(translated.lines[2].text,'Sing it again.');assert.equal(translated.lines[2].startsTurn,true);
     assert.equal(translated.lines[2].speakerID,doc.structure.occurrences[2].speakerID);
@@ -75,7 +75,7 @@ test('lyrics, cached translation and job status remain compatible with API v1 cl
   const loaded=await call({action:'lyrics',recording});assert.equal(loaded.statusCode,200);
   const wire=loaded.body.document,canonical=await store.document(wire.id);
   assert.equal(wire.structure.version,'source-speakers-1');
-  assert.equal(canonical.structure.version,'lyric-annotations-2');
+  assert.equal(canonical.structure.version,'lyric-annotations-3');
   assert.deepEqual(wire.response.metadata.lyric_structure,canonical.structure);
   for(const [i,o] of wire.structure.occurrences.entries()) {
     assert.equal(o.sourceText,wire.response.lines[i].original);

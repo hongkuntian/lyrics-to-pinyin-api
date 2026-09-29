@@ -5,8 +5,9 @@ import {pathToFileURL} from 'node:url';
 import {environmentLanguagePolicy} from '../api/utils/song-library/languages.js';
 import {database} from '../api/utils/song-library/database.js';
 import {migrateLibrary,migrationNames} from './library-migrations.js';
+import {migrateSourceContent} from './migrate-source-content.js';
 
-export async function verifyBuildSchema({env=process.env,open=database,migrate=migrateLibrary,log=console.log}={}) {
+export async function verifyBuildSchema({env=process.env,open=database,migrate=migrateLibrary,migrateSources=migrateSourceContent,log=console.log}={}) {
   const requested=env.LYRA_LIBRARY_MIGRATE_ON_BUILD==='1';
   const production=env.VERCEL==='1'&&env.VERCEL_ENV==='production';
   if(requested&&!production)throw new Error('migration_requires_production_build');
@@ -18,6 +19,8 @@ export async function verifyBuildSchema({env=process.env,open=database,migrate=m
     if(requested){
       const applied=await migrate(db);
       log(JSON.stringify({event:'library_migrations_applied',migrations:applied}));
+      const sources=await migrateSources(db);
+      log(JSON.stringify({event:'library_sources_migrated',...sources}));
     }
     const {rows}=await db.query('SELECT name FROM library_schema_migrations WHERE name=$1',[migrationNames.at(-1)]);
     if(!rows.length)throw new Error('library_schema_migration_required');

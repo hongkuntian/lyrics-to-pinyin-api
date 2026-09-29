@@ -4,7 +4,7 @@ export function normalizeRecordingText(value = '') {
   return chinese.sify(value).normalize('NFKC').toLowerCase().replace(/[\p{P}\p{Z}\s]/gu,'');
 }
 export class RecordingMismatchError extends Error {
-  constructor() { super('No unambiguous matching recording found'); this.code='recording_mismatch'; }
+  constructor(reason='recording_mismatch') { super('No unambiguous matching recording found'); this.code='recording_mismatch'; this.reason=reason; }
 }
 const unwrappedAlbum=value=>value.replace(/^Optional\("(.*)"\)$/, '$1');
 export const stripTitleDescription=value=>value.normalize('NFKC').replace(/\s*\((?:from\s+[^()]+|(?:love\s+)?theme\s+(?:song\s+)?from\s+[^()]+|[^()]*(?:主题曲|主題曲|插曲|片尾曲|片頭曲|片头曲|主题歌|主題歌)[^()]*|抖音热歌)\)/gi,description=>/\b(live|remaster(?:ed)?|instrumental|karaoke|acapella|cover|remix|demo)\b|现场|現場|演唱会|演唱會|重制|重製|伴奏|翻唱/i.test(description) ? description : '').trim();
@@ -143,9 +143,15 @@ export function recordingScore(song, request) {
 export function findRecording(songs, request) {
   if (!songs.length) return null;
   const ranked = songs.map(song=>({song,score:recordingScore(song,request)})).filter(x=>x.score>=0).sort((a,b)=>b.score-a.score);
-  if (!ranked.length) throw new RecordingMismatchError();
+  if (!ranked.length) {
+    const bareTitle=title=>normalizeRecordingText(stripTitleDescription(title).replace(/\(\s*(?:live|remastered?|重制版|重製版)\s*\)/giu,''));
+    const versionConflict=songs.some(song=>bareTitle(song.title)===bareTitle(request.title)
+      && normalizeRecordingText(song.title)!==normalizeRecordingText(request.title)
+      && JSON.stringify(recordingNames(song).credits)===JSON.stringify(recordingNames(request).credits));
+    throw new RecordingMismatchError(versionConflict?'version_conflict':'recording_mismatch');
+  }
   const tied=ranked.filter(item=>Math.abs(item.score-ranked[0].score)<1e-9).map(item=>item.song);
-  if (tied.some(song=>song.id!==tied[0].id && !equivalentLyrics(tied[0],song))) throw new RecordingMismatchError();
+  if (tied.some(song=>song.id!==tied[0].id && !equivalentLyrics(tied[0],song))) throw new RecordingMismatchError('duplicate_candidates');
   return tied.sort((a,b)=>String(a.id).localeCompare(String(b.id),'en',{numeric:true}))[0];
 }
 

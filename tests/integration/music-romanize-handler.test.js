@@ -89,7 +89,7 @@ test("returns 404 when lyrics are missing for found song", async () => {
   await handler(req, res);
 
   assert.equal(res.statusCode, 404);
-  assert.deepEqual(res.body, { error: "Lyrics not found" });
+  assert.deepEqual(res.body, { error: "Lyrics not found", code: "lyrics_absent" });
 });
 
 test("returns cached payload on cache hit", async () => {

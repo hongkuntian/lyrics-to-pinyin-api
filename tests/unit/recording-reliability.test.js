@@ -10,6 +10,12 @@ const lyricsData = {lines:[{text:'一起唱', timestamp:0}, {text:'慢慢听', t
 const english = {id:6822199, ...request, duration:258, album:'The Chaos After You', lyricsData};
 const duplicate = {...english, id:36456654, album:'如果雨之后'};
 
+test('diagnostics distinguish version labels from a true duration mismatch',()=>{
+  assert.throws(()=>findRecording([{...english,title:english.title+' (Live)'}],request),{reason:'version_conflict'});
+  assert.throws(()=>findRecording([{...english,duration:400}],request),{reason:'recording_mismatch'});
+  assert.throws(()=>findRecording([english,{...duplicate,lyricsData:{lines:[{text:'另一段',timestamp:3}]}}],request),{reason:'duplicate_candidates'});
+});
+
 test('equivalent localized-album duplicates resolve deterministically without an album', () => {
   assert.equal(findRecording([duplicate,english],request).id,6822199);
   assert.equal(findRecording([english,duplicate],request).id,6822199);

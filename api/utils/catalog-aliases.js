@@ -1,6 +1,10 @@
+import {createRequire} from 'node:module';
 import {fetchJSON} from './fetch-json.js';
 import {recordingScore,recordingNames,normalizeRecordingText,normalizedAlbum} from './recording-match.js';
 
+const {recordings:reviewedAliases}=createRequire(import.meta.url)('../data/reviewed-catalog-aliases.json');
+const signature=(a,b)=>a.catalog_id===b.catalog_id && Number.isFinite(a.duration) && Math.abs(a.duration-b.duration)<=0.5
+  && ['title','artist','album'].every(key=>typeof a[key]==='string' && typeof b[key]==='string' && normalizeRecordingText(a[key])===normalizeRecordingText(b[key]));
 const item=song=>({catalog_id:String(song.trackId),title:song.trackName,artist:song.artistName,album:song.collectionName,duration:song.trackTimeMillis/1000});
 const valid=song=>typeof song.title==='string' && typeof song.artist==='string' && Number.isFinite(song.duration);
 // Public catalog metadata supplies aliases. No translated title or artist supplied
@@ -40,7 +44,12 @@ export async function resolveCatalogAliases(request, context={}) {
   const expected=recordingNames(request);
   const titleMatches=songs.filter(s=>recordingNames(s).title===expected.title);
   const artists=songs.filter(s=>JSON.stringify(recordingNames(s).credits)===JSON.stringify(expected.credits));
-  if(!titleMatches.length || !artists.length) return [];
+  if(!titleMatches.length || !artists.length) {
+    // Public lookup omits some MusicKit English localizations. A reviewed native
+    // signature is an exact-recording bridge, never a client-supplied alias.
+    const review=reviewedAliases.find(entry=>entry.acceptedRequests.some(s=>signature(request,s)));
+    return review?songs.filter(song=>review.anchors.some(anchor=>signature(song,anchor))):[];
+  }
   if(!titleMatches.some(s=>recordingScore({...s,artist:request.artist,title:request.title},request)>=0)) return [];
   const mixed=songs.flatMap(s=>artists.map(a=>({...s,artist:a.artist})));
   const seen=new Set(),original=JSON.stringify([normalizeRecordingText(request.artist),normalizeRecordingText(request.title)]);

@@ -1,0 +1,169 @@
+{
+  "captured": "2026-09-29",
+  "recordings": [
+    {
+      "artist": "Evon Low",
+      "title": "我等到花兒也謝了",
+      "album": "冬眠",
+      "duration": 327.24,
+      "catalog_id": "1085956292"
+    },
+    {
+      "artist": "Hebe Tien",
+      "title": "A Little Happiness (From \"Our Times\")",
+      "album": "A Little Happiness (From \"Our Times\") - Single",
+      "duration": 265.522,
+      "catalog_id": "1017697311"
+    },
+    {
+      "artist": "Wang Leehom",
+      "title": "All The Things You Never Knew",
+      "album": "18 Martial Arts",
+      "duration": 279,
+      "catalog_id": "1528146380"
+    },
+    {
+      "artist": "Arcane, League of Legends Music & Eason Chan",
+      "title": "这样很好 (Isha’s Song) (from the series Arcane League of Legends)",
+      "album": "Arcane League of Legends: Season 2 (Soundtrack from the Animated Series)",
+      "duration": 264.68,
+      "catalog_id": "1777976938"
+    },
+    {
+      "artist": "Jay Chou",
+      "title": "Mojito",
+      "album": "Mojito - Single",
+      "duration": 185.008,
+      "catalog_id": "1517791423"
+    },
+    {
+      "artist": "Jay Chou & Ashin Chen",
+      "title": "说好不哭",
+      "album": "说好不哭 - Single",
+      "duration": 222.333,
+      "catalog_id": "1480230401"
+    },
+    {
+      "artist": "Li Jian",
+      "title": "传奇",
+      "album": "似水流年",
+      "duration": 294.653,
+      "catalog_id": "1739051716"
+    },
+    {
+      "artist": "马师傅",
+      "title": "执意逆行",
+      "album": "执意逆行 - Single",
+      "duration": 239.178,
+      "catalog_id": "1856816803"
+    },
+    {
+      "artist": "Fei Yu-Ching",
+      "title": "一剪梅 (重制版)",
+      "album": "长江水",
+      "duration": 221.412,
+      "catalog_id": "1887583861"
+    },
+    {
+      "artist": "Jason Zhang",
+      "title": "我的未来不是梦 (Live)",
+      "album": "我是歌手第二季 (第六期 Live)",
+      "duration": 311.378,
+      "catalog_id": "1696581622"
+    },
+    {
+      "artist": "胡杨林",
+      "title": "香水有毒",
+      "album": "香水有毒",
+      "duration": 290.717,
+      "catalog_id": "1625233237"
+    },
+    {
+      "artist": "Zhao Chuan",
+      "title": "我是一隻小小鳥",
+      "album": "當我們年輕的時候 / 新歌+經典現場錄音專輯",
+      "duration": 305.65,
+      "catalog_id": "1889827218"
+    },
+    {
+      "artist": "Jay Chou",
+      "title": "最長的電影",
+      "album": "我很忙",
+      "duration": 235.84,
+      "catalog_id": "536030702"
+    },
+    {
+      "artist": "Dengshenmejun",
+      "title": "赤伶",
+      "album": "赤伶 - Single",
+      "duration": 282.172,
+      "catalog_id": "1667021602"
+    },
+    {
+      "artist": "JJ Lin",
+      "title": "Careful with Fate (Theme Song from the TV Series ''Pursuit of Jade'')",
+      "album": "Careful with Fate (Theme Song from the TV Series ''Pursuit of Jade'') - Single",
+      "duration": 282.32,
+      "catalog_id": "1874801974"
+    },
+    {
+      "artist": "Jay Chou",
+      "title": "夜曲",
+      "album": "11月的蕭邦",
+      "duration": 228.773,
+      "catalog_id": "536009642"
+    },
+    {
+      "artist": "Jay Chou",
+      "title": "The Longest Movie",
+      "album": "我很忙",
+      "duration": 235.84,
+      "catalog_id": "536030702"
+    },
+    {
+      "artist": "Jay Chou",
+      "title": "Nocturne",
+      "album": "11月的蕭邦",
+      "duration": 228.773,
+      "catalog_id": "536009642"
+    },
+    {
+      "artist": "Jay Chou & Ashin Chen",
+      "title": "Won’t Cry",
+      "album": "说好不哭 - Single",
+      "duration": 222.333,
+      "catalog_id": "1480230401"
+    },
+    {
+      "artist": "Jay Chou & Ashin Chen",
+      "title": "Won't Cry",
+      "album": "说好不哭 - Single",
+      "duration": 222.333,
+      "catalog_id": "1480230401"
+    }
+  ],
+  "pendingAudioReview": [
+    {
+      "catalog_id": "1889827218",
+      "provider": "netease",
+      "source_id": "3425563499",
+      "duration": 305.65,
+      "checkpoints": [
+        19.76,
+        76,
+        241.56
+      ]
+    },
+    {
+      "catalog_id": "1887583861",
+      "provider": "lrclib",
+      "source_id": "36228377",
+      "duration": 221.412,
+      "checkpoints": [
+        36.68,
+        91,
+        199.45
+      ]
+    }
+  ]
+}

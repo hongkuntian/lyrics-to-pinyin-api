@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {LibraryError} from '../../api/utils/song-library/store.js';
 import {libraryDB} from '../helpers/library-db.js';
 import {createSongLibraryHandler} from '../../api/song-library.js';
 const recording={catalog_id:'123',artist:'Test artist',title:'Original song',duration:15};
@@ -137,4 +138,43 @@ test('pronunciation annotations persist independently, reject stale sources and 
   assert.deepEqual((await call({action:'lyrics',recording})).body.document,doc);
   assert.equal(Number((await db.query('SELECT count(*) AS n FROM translation_jobs')).rows[0].n),0);
   assert.equal((await instance({pronunciationProfiles:()=>[]})(query)).code,422);
+});
+
+test('stale plain documents upgrade with an immutable revision and fence old generation',async t=>{
+  let calls=0;
+  const plain={...response,lines:response.lines.map(l=>({...l,timestamp:null})),quality:{...response.quality,synced:false}};
+  const {call,db,store}=await setup(t,{loadLyrics:async(_,options)=>{assert.equal(options.refresh,true);return ++calls===1?plain:response;}});
+  const old=(await call({action:'lyrics',recording})).body.document;
+  await db.query("UPDATE lyric_requests SET checked_at=now()-interval '6 minutes'");
+  const current=(await call({action:'lyrics',recording})).body.document;
+  assert.notEqual(current.id,old.id);assert.equal(current.response.quality.synced,true);
+  assert.equal((await store.document(old.id)).response.quality.synced,false);
+  assert.equal((await call({action:'translate',documentID:old.id,sourceHash:old.sourceHash})).body.code,'source_revision_superseded');
+  assert.equal(calls,2);
+});
+test('explicit reload bypasses fresh head and failed refresh preserves the stored source',async t=>{
+  let calls=0;
+  const {call,instance,store}=await setup(t,{loadLyrics:async()=>{calls++;return response;}});
+  const first=(await call({action:'lyrics',recording})).body.document;
+  const reload=await call({action:'lyrics',recording,refresh:'true'});
+  assert.equal(reload.body.document.id,first.id);assert.equal(calls,2);
+  const failed=await instance({loadLyrics:async()=>{throw new LibraryError('provider_timeout',504);}})({action:'lyrics',recording,refresh:true});
+  assert.equal(failed.body.code,'provider_timeout');
+  assert.equal((await store.documentForRequest(first.requestKey??(await import('../../api/utils/song-library/document.js')).requestKey(recording),'test')).id,first.id);
+});
+
+test('credits and provider translation persist outside lyric document source arrays',async t=>{
+  const {cleanLyrics}=await import('../../api/utils/lyric-quality.js');
+  const normalized=cleanLyrics({source:'fixture',lines:[{text:'键盘：Test musician',timestamp:0},
+    {text:'春天来了^Spring arrives',timestamp:2},{text:'一起唱歌^Sing together',timestamp:3},
+    {text:'等待明天^Await tomorrow',timestamp:4},{text:'天空很蓝^The sky is blue',timestamp:5}]});
+  const fresh={...response,lines:normalized.lines.map(l=>({original:l.text,romanized:'reading',timestamp:l.timestamp})),
+    metadata:{...response.metadata,lyric_structure:normalized.lyricStructure},
+    song_details:{catalog_id:'123',source_id:'source-1',source:'fixture',credits:normalized.credits},provider_translation:normalized.providerTranslation};
+  const {call,db}=await setup(t,{loadLyrics:async()=>fresh});
+  const doc=(await call({action:'lyrics',recording})).body.document;
+  assert.equal(doc.response.song_details.credits[0].role,'键盘');assert.equal(doc.response.provider_translation.lines.length,4);
+  const stored=(await db.query('SELECT response,structure FROM lyric_documents')).rows[0];
+  assert.ok(!JSON.stringify(stored).includes('Test musician'));assert.ok(!JSON.stringify(stored).includes('Spring arrives'));
+  assert.equal((await db.query('SELECT song_details FROM lyric_document_extras')).rows[0].song_details.credits.length,1);
 });
