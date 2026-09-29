@@ -13,7 +13,7 @@ export async function reserveExplanation(database,{key,doc,translation,selection
     const prior=await first(db,'SELECT * FROM study_explanations WHERE cache_key=$1',[key]);
     if(prior)return {created:false,row:prior};
     if(!settings?.enabled)throw new LibraryError('generation_disabled',503);
-    const user=await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
+    const user=await first(db,'SELECT id,unlimited_generation FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
     if(!user)throw new LibraryError('unauthorized',401);
     if(translation) {
       const head=await first(db,`SELECT h.revision_id FROM translation_heads h JOIN song_translations t ON t.id=h.translation_id WHERE t.document_id=$1 AND t.target=$2 FOR UPDATE OF t`,[doc.id,translation.target??'en']);
@@ -22,11 +22,13 @@ export async function reserveExplanation(database,{key,doc,translation,selection
     const active=await first(db,`SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown')
       UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1`,[userID]);
     if(active)throw new LibraryError('user_busy',429);
-    const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,count(*) AS monthly
-      FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations) attempts
-      WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
-    if(Number(counts.daily)>=settings.user_daily||Number(counts.monthly)>=settings.user_monthly)throw new LibraryError('generation_allowance_exhausted',429);
-    checkBudget(settings,await budget(db),amount);
+    if(!user.unlimited_generation) {
+      const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,count(*) AS monthly
+        FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations) attempts
+        WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
+      if(Number(counts.daily)>=settings.user_daily||Number(counts.monthly)>=settings.user_monthly)throw new LibraryError('generation_allowance_exhausted',429);
+      checkBudget(settings,await budget(db),amount);
+    }
     const id=randomUUID();
     const row=await first(db,`INSERT INTO study_explanations(id,cache_key,document_id,revision_id,source_id,lower_offset,upper_offset,recipe,user_id,state,contract_version,explanation_language,study_text,selection_text_hash,generation_request)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'queued',$10,$11,$12,$13,$14) RETURNING *`,[id,key,doc.id,translation?.id??null,selection.sourceID,selection.lower,selection.upper,recipe,userID,selection.studyText?2:1,explanationLanguage,selection.studyText?JSON.stringify(selection.studyText):null,selection.textHash??null,generationRequest?JSON.stringify(generationRequest):null]);

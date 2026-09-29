@@ -10,7 +10,8 @@ import {migrateLibrary} from './library-migrations.js';
 
 const {values,positionals}=parseArgs({allowPositionals:true,options:{
   id:{type:'string'},'token-file':{type:'string'},'daily-usd':{type:'string'},'monthly-usd':{type:'string'},enable:{type:'boolean'},
-  'user-daily':{type:'string',default:'10'},'user-monthly':{type:'string',default:'50'},'max-daily':{type:'string',default:'5'}
+  'user-daily':{type:'string',default:'10'},'user-monthly':{type:'string',default:'50'},'max-daily':{type:'string',default:'5'},
+  unlimited:{type:'boolean'},limited:{type:'boolean'}
 }});
 const dollars=value=> {
   if(typeof value!=='string'||!/^\d+(\.\d{1,6})?$/.test(value))throw new Error('Specify an explicit nonnegative USD amount.');
@@ -41,12 +42,16 @@ try {
     const token=randomBytes(32).toString('base64url');
     await writeFile(path,token+'\n',{mode:0o600,flag:'wx'});
     await store.createUser(values.id,token);console.log(JSON.stringify({userID:values.id,tokenFile:path}));
+  } else if(command==='user-access') {
+    if(!values.id||(values.unlimited===true)===(values.limited===true))throw new Error('user-access requires --id and exactly one of --unlimited or --limited.');
+    await store.configureUserAccess(values.id,{unlimitedGeneration:values.unlimited===true});
+    console.log(JSON.stringify({userID:values.id,unlimitedGeneration:values.unlimited===true}));
   } else if(command==='usage') {
     console.log(JSON.stringify({usage:await store.usage(),budget:await store.budget()}));
   } else if(command==='reports') {
     const result=await db.query('SELECT id,document_id,translation_id,source_id,category,detail,status,created_at FROM correction_reports ORDER BY created_at DESC LIMIT 100');
     console.log(JSON.stringify(result.rows,null,2));
-  } else throw new Error('Commands: migrate, configure, configure-reviews, configure-publication, disable, user, usage, reports.');
+  } else throw new Error('Commands: migrate, configure, configure-reviews, configure-publication, disable, user, user-access, usage, reports.');
 } catch(error) {
   // Never print connection strings, tokens, provider bodies or driver diagnostics.
   console.error(error.code??'admin_command_failed');process.exitCode=1;
