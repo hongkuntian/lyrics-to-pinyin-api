@@ -13,9 +13,9 @@ const recordings=productionRecordings.map(entry=>({...entry,source:{...entry.sou
   ...(entry.source.lyricsFingerprint?{lyricsFingerprint:timingFingerprint({lines:[{text:'Fixture sunrise',timestamp:15.5},{text:'Fixture moonlight',timestamp:30.25}]})}:{})}}));
 const lookupReviewedRecording=(request,context)=>lookupReviewed(request,context,{reviews:recordings});
 function fixture(entry,mutate=()=>{},signal) {
-  const calls=[];
+  const calls=[],signals=[];
   const fetchFn=async (url,init)=>{
-    calls.push(url);if(signal) assert.equal(init.signal,signal);
+    calls.push(url);signals.push(init.signal);if(signal) assert.ok(init.signal);
     const u=new URL(url);let body;
     if(u.hostname==='itunes.apple.com') {
       assert.equal(u.searchParams.get('id'),entry.acceptedRequests[0].catalog_id);
@@ -32,7 +32,7 @@ function fixture(entry,mutate=()=>{},signal) {
     }
     mutate(body,u);return {ok:true,json:async()=>body};
   };
-  return {calls,fetchFn,signal};
+  return {calls,signals,fetchFn,signal};
 }
 for(const entry of recordings) {
   test(`${entry.id}: every reviewed full request validates live anchors and source`,async()=>{
@@ -72,14 +72,14 @@ for(const entry of recordings) {
   for(const [index,change] of sourceChanges.entries()) test(`${entry.id}: reject upstream source mutation ${index}`,async()=>{
     const context=fixture(entry,(body,u)=>{if(u.pathname==='/song/detail') change(body.songs[0]);});
     assert.equal(await lookupReviewedRecording(base,context),null);
-    assert.ok(!context.calls.some(url=>url.includes('/lyric?')));
+    assert.equal(context.calls.filter(url=>url.includes('/lyric?')).length,1);
   });
-  test(`${entry.id}: reject all changed catalog anchors before requesting lyrics`,async()=>{
+  test(`${entry.id}: changed catalog anchors never admit speculative source lyrics`,async()=>{
     for(const change of [s=>s.trackId++,s=>s.artistName+=' & Guest',s=>s.collectionName='Another Album',
       s=>s.trackName+=' (Live)',s=>s.trackTimeMillis+=501,s=>s.kind='music-video']) {
       const context=fixture(entry,(body,u)=>{if(u.hostname==='itunes.apple.com')change(body.results[0]);});
       assert.equal(await lookupReviewedRecording(base,context),null);
-      assert.ok(!context.calls.some(url=>url.includes('/song/detail')));
+      assert.equal(context.calls.length,entry.catalogAnchors.length+2);
     }
   });
   test(`${entry.id}: reject unavailable, multiple, or wrong-ID detail results`,async()=>{
@@ -104,6 +104,20 @@ test('listening-reviewed NetEase source rejects changed words or timestamps',asy
     })),null);
   }
 });
+test('reviewed exact-ID requests overlap slow upstream reads without skipping identity checks',async()=>{
+  const entry=recordings.find(x=>x.source.lyricsFingerprint),context=fixture(entry);
+  let release,reads=0;const gate=new Promise(resolve=>{release=resolve;});
+  const lookup=lookupReviewedRecording(entry.acceptedRequests[0],{fetchFn:async(...args)=>{
+    const response=await context.fetchFn(...args);
+    reads++;await gate;
+    return response;
+  }});
+  await new Promise(resolve=>setImmediate(resolve));
+  try {
+    assert.equal(reads,entry.catalogAnchors.length+2);
+  } finally {release();}
+  assert.ok(await lookup);
+});
 test('artist names must stay paired with their reviewed provider entity IDs',async()=>{
   const entry=recordings.find(x=>x.source.artists.length>1);
   const context=fixture(entry,(body,u)=>{if(u.pathname==='/song/detail') {
@@ -124,20 +138,22 @@ test('duration tolerance never compounds through a reviewed anchor',async()=>{
 test('upstream failures fail closed and cannot trigger unreviewed discovery',async()=>{
   const entry=recordings[0];let calls=0;
   assert.equal(await lookupReviewedRecording(entry.acceptedRequests[0],{fetchFn:async()=>{calls++;throw new Error('Unavailable');}}),null);
-  assert.equal(calls,entry.catalogAnchors.length);
+  assert.equal(calls,entry.catalogAnchors.length+2);
 });
 test('abort signal reaches catalog, detail, and lyric requests',async()=>{
   const controller=new AbortController(),entry=recordings[0];
-  assert.ok(await lookupReviewedRecording(entry.acceptedRequests[0],fixture(entry,()=>{},controller.signal)));
+  const context=fixture(entry,()=>{},controller.signal);
+  assert.ok(await lookupReviewedRecording(entry.acceptedRequests[0],context));
+  assert.ok(context.signals.every(signal=>signal.aborted));
   controller.abort();let calls=0;
   await assert.rejects(lookupReviewedRecording(entry.acceptedRequests[0],{signal:controller.signal,fetchFn:async()=>{calls++;}}),{name:'AbortError'});
   assert.equal(calls,0);
 });
-test('abort after metadata fetch never proceeds to lyric retrieval',async()=>{
+test('abort during metadata fetch cancels speculative lyric retrieval',async()=>{
   const controller=new AbortController(),entry=recordings[0];
   const context=fixture(entry,(_,u)=>{if(u.pathname==='/song/detail')controller.abort();},controller.signal);
   await assert.rejects(lookupReviewedRecording(entry.acceptedRequests[0],context),{name:'AbortError'});
-  assert.ok(!context.calls.some(url=>url.includes('/lyric?')));
+  assert.ok(context.signals.every(signal=>signal.aborted));
 });
 test('caller deadline cancels a pending upstream fetch',async()=>{
   const entry=recordings[0];let aborted=0;
@@ -145,5 +161,19 @@ test('caller deadline cancels a pending upstream fetch',async()=>{
     fetchFn:async(_,init)=>new Promise((resolve,reject)=>init.signal.addEventListener('abort',()=>{
       aborted++;const error=new Error('cancelled');error.name='AbortError';reject(error);
     },{once:true}))}),15),{code:'provider_timeout'});
-  assert.equal(aborted,entry.catalogAnchors.length);
+  assert.equal(aborted,entry.catalogAnchors.length+2);
+});
+test('metadata mismatch cancels a pending lyric read without admitting content',async()=>{
+  const entry=recordings[0],context=fixture(entry,(body,u)=>{
+    if(u.pathname==='/song/detail')body.songs[0].name='A different recording';
+  });
+  let lyricSignal;
+  const result=await lookupReviewedRecording(entry.acceptedRequests[0],{fetchFn:async(url,init)=>{
+    if(new URL(url).pathname!=='/lyric')return context.fetchFn(url,init);
+    lyricSignal=init.signal;
+    return new Promise((_,reject)=>init.signal.addEventListener('abort',()=>{
+      const error=new Error('cancelled');error.name='AbortError';reject(error);
+    },{once:true}));
+  }});
+  assert.equal(result,null);assert.equal(lyricSignal.aborted,true);
 });

@@ -50,9 +50,21 @@ export async function lookupReviewedRecording(request,context={}, {reviews=recor
   checkAbort(context.signal);
   const entry=reviews.find(item=>item.acceptedRequests.some(signature=>sameSignature(request,signature)));
   if(!entry) return null;
-  const get=async url=>{checkAbort(context.signal);const data=await fetchJSON(url,context);checkAbort(context.signal);return data;};
+  const controller=new AbortController(),cancel=()=>controller.abort();
+  context.signal?.addEventListener('abort',cancel,{once:true});
+  if(context.signal?.aborted) cancel();
+  const get=async url=>{
+    checkAbort(controller.signal);
+    const data=await fetchJSON(url,{...context,signal:controller.signal});
+    checkAbort(controller.signal);return data;
+  };
   try {
-    const anchors=await Promise.all(entry.catalogAnchors.map(async anchor=>{
+    // All IDs are already bound by the full reviewed request signature. Fetch
+    // their current evidence together: serial cross-region reads can exceed
+    // the caller's budget even when every upstream request succeeds.
+    // Nothing is admitted until both metadata checks and the lyric fingerprint
+    // pass. A failure/cancellation aborts any remaining speculative reads.
+    const anchors=Promise.all(entry.catalogAnchors.map(async anchor=>{
       const params=new URLSearchParams({id:anchor.signature.catalog_id,country:anchor.storefront,
         lang:anchor.storefront==='tw'?'zh_tw':anchor.storefront==='cn'?'zh_cn':'en_us'});
       try {
@@ -61,12 +73,15 @@ export async function lookupReviewedRecording(request,context={}, {reviews=recor
           && closeDuration(song.trackTimeMillis/1000,request.duration));
       } catch(error) {if(error.name==='AbortError' || context.signal?.aborted) throw error;return false;}
     }));
-    if(!anchors.some(Boolean)) return null;
-    const detail=await get(`${provider}/song/detail?ids=${entry.source.id}`);
-    if(detail.code!==200 || !Array.isArray(detail.songs) || detail.songs.length!==1
-      || !verifiedSource(detail.songs[0],entry.source) || !closeDuration(detail.songs[0].dt/1000,request.duration)) return null;
-    const raw=detail.songs[0];
-    const response=await get(`${provider}/lyric?id=${entry.source.id}`);
+    const verified=Promise.all([anchors,get(`${provider}/song/detail?ids=${entry.source.id}`)])
+      .then(([matches,detail])=>{
+        if(!matches.some(Boolean) || detail.code!==200 || !Array.isArray(detail.songs) || detail.songs.length!==1
+          || !verifiedSource(detail.songs[0],entry.source) || !closeDuration(detail.songs[0].dt/1000,request.duration)) {
+          throw new Error('Reviewed recording metadata changed');
+        }
+        return detail.songs[0];
+      });
+    const [raw,response]=await Promise.all([verified,get(`${provider}/lyric?id=${entry.source.id}`)]);
     if(response.code!==200 || !present(response.lrc?.lyric)) return null;
     // Explicit identity tags in the lyric body must not contradict the exact
     // provider record just verified above. Parse them before LRC strips tags.
@@ -90,5 +105,7 @@ export async function lookupReviewedRecording(request,context={}, {reviews=recor
   } catch(error) {
     if(error.name==='AbortError' || context.signal?.aborted) {checkAbort(context.signal);throw error;}
     return null;
+  } finally {
+    controller.abort();context.signal?.removeEventListener('abort',cancel);
   }
 }

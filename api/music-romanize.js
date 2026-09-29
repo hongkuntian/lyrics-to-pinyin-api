@@ -30,7 +30,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
     redis=createRedisFromEnv(),detectLanguageFn=detectLanguage,getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,
     getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,getCacheKeyFn=getCacheKey,
     getCachedFn=getCached,setCachedFn=setCached,getMusicAPIFn=getMusicAPI,getAvailableAPIsFn=getAvailableAPIs,
-    getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,hedgeDelayMs=350,untimedGraceMs=2500,cacheTimeoutMs=300,
+    getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,reviewedTimeoutMs=providerTimeoutMs*2,hedgeDelayMs=350,untimedGraceMs=2500,cacheTimeoutMs=300,
     applyTimingCorrectionFn=applyTimingCorrection,resolveCatalogAliasesFn=resolveCatalogAliases,lookupReviewedRecordingFn=lookupReviewedRecording,lookupListeningReviewedRecordingFn=lookupListeningReviewedRecording,lookupOfficialTranscriptionFn=lookupOfficialTranscription,waitUntilFn=waitUntil,logger=console,
     responseCache=new BoundedCache(),aliasCache=new BoundedCache({ttlMs:86400000})
   }=dependencies;
@@ -128,7 +128,7 @@ export function createMusicRomanizeHandler(dependencies={}) {
         let result=!preferred ? await measure('reviewed_recording',()=>withDeadline(async signal=> {
           const candidate=await lookupListeningReviewedRecordingFn(request,{signal}) ?? await lookupReviewedRecordingFn(request,{signal});
           return candidate ? applyTimingCorrectionFn(candidate,request,{signal,deadline}):null;
-        },Math.min(providerTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null):null;
+        },Math.min(reviewedTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null):null;
         if(!result && !preferred) result=await measure('official_transcription',()=>withDeadline(
           signal=>lookupOfficialTranscriptionFn(request,{signal,diagnose:event=>logger.info?.('official_transcription',{requestID,...event})}),Math.min(providerTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null);
         if(mayImprove(result) && knownAliases?.length) result=better(result,await tryRecording(knownAliases[0]));

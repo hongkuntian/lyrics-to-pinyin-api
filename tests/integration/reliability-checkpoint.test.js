@@ -89,6 +89,25 @@ test('reviewed source failures cannot suppress an ordinary verified result',asyn
  assert.equal(result.body.metadata.reviewed_recording,undefined);
 });
 
+test('reviewed recovery has a bounded multi-request budget independent of ordinary provider timeout',async()=>{
+ const result=await invoke(make(null,{providerTimeoutMs:10,reviewedTimeoutMs:200,
+  getAvailableAPIsFn:()=>[{name:'Unused',searchSong:()=>assert.fail('reviewed timing should survive the ordinary timeout')}],
+  lookupReviewedRecordingFn:async original=>{
+   await new Promise(resolve=>setTimeout(resolve,30));
+   return {song,lyrics:{lines:[{text:'Reviewed timing',timestamp:4}]},api:{name:'NeteaseAPI'},target:original};
+  }}));
+ assert.equal(result.statusCode,200);assert.equal(result.body.quality.synced,true);
+ assert.equal(result.body.lines[0].original,'Reviewed timing');
+});
+
+test('reviewed recovery timeout cancels its reads and leaves ordinary fallback available',async()=>{
+ let signal;
+ const result=await invoke(make({lines:[{text:'Readable fallback',timestamp:null}]},{providerTimeoutMs:200,reviewedTimeoutMs:10,
+  lookupReviewedRecordingFn:async(_,context)=>{signal=context.signal;return new Promise(()=>{});}}));
+ assert.equal(signal.aborted,true);assert.equal(result.statusCode,200);
+ assert.equal(result.body.quality.synced,false);assert.equal(result.body.lines[0].original,'Readable fallback');
+});
+
 function partialCandidate(original) {
  return {song:{...song,id:'official_123'},lyrics:{partial:true,instrumental:false,lines:[{text:'Known official phrase',timestamp:null}]},api:{name:'OfficialDescription'},target:original};
 }
