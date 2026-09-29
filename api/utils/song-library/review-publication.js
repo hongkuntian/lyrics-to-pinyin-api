@@ -1,3 +1,4 @@
+import {SUPPORTED_MODELS} from './model-policy.js';
 import {LibraryError,digest} from './store.js';
 import {publishRevision} from './revisions.js';
 import {first,within,reviewContext,saveReviewBatch} from './review-context.js';
@@ -40,7 +41,7 @@ export async function advanceReviews(db,settings) {
     if(a.spend_state!=='settled')continue;
     if(!await currentHead(db,a.revision_id)) {await outcome(db,a,'superseded','translation_revision_superseded');counts.closed++;continue;}
     try {
-      if(a.error_code||a.spend_error||a.model!=='gpt-5.6-luna'||a.policy_version!==REVIEW_POLICY||!a.provider_response_id)throw new LibraryError('assessment_not_eligible');
+      if(a.error_code||a.spend_error||!SUPPORTED_MODELS.includes(a.model)||a.policy_version!==REVIEW_POLICY||!a.provider_response_id)throw new LibraryError('assessment_not_eligible');
       c=await reviewContext(db,a.revision_id);assessment=validatedAssessment(a.result,c.doc,c.content);
     } catch(e) {
       if(!(e instanceof LibraryError))throw e;
@@ -57,7 +58,7 @@ export async function advanceReviews(db,settings) {
     let comparison;
     try {
       if(v.error_code||v.spend_error||v.policy_version!==VERIFICATION_POLICY||!v.provider_response_id)throw new LibraryError('comparison_not_eligible');
-      const body=verificationBody(c.doc,c.content,assessment,v.comparison_context);
+      const body=verificationBody(c.doc,c.content,assessment,v.comparison_context,{model:a.model});
       if(stableJSON(body)!==stableJSON(v.request_body))throw new LibraryError('comparison_request_changed');
       comparison=parseVerification(JSON.stringify(v.result),c.doc);
     } catch(e) {
@@ -80,22 +81,22 @@ export async function advanceReviews(db,settings) {
 
 export async function prepareVerifications(db,settings) {
   if(!settings.review_publication_enabled)return null;
-  const candidates=(await db.query(`SELECT a.*,o.id AS verification_id,o.reserved_micros FROM correction_batch_items a
+  const candidates=(await db.query(`SELECT a.*,r.model,o.id AS verification_id,o.reserved_micros FROM correction_batch_items a
     JOIN library_spend_operations o ON o.review_id=a.review_id AND o.kind='review_verification'
     JOIN library_spend_operations assessed ON assessed.id=a.operation_id JOIN translation_reviews r ON r.id=a.review_id
     WHERE a.stage='assessment' AND a.state='done' AND a.result->>'decision'='correct' AND o.state='reserved'
       AND a.error_code IS NULL AND a.provider_response_id IS NOT NULL AND assessed.state='settled' AND assessed.error_code IS NULL
-      AND r.policy_version=$1 AND r.model='gpt-5.6-luna'
+      AND r.policy_version=$1 AND r.model=ANY($2::text[])
       AND NOT EXISTS(SELECT 1 FROM correction_review_outcomes d WHERE d.review_id=a.review_id)
       AND NOT EXISTS(SELECT 1 FROM correction_batch_items v WHERE v.review_id=a.review_id AND v.stage='verification')
-    ORDER BY a.completed_at,a.operation_id LIMIT 5`,[REVIEW_POLICY])).rows;
+    ORDER BY a.completed_at,a.operation_id LIMIT 5`,[REVIEW_POLICY,SUPPORTED_MODELS])).rows;
   const items=[];
   for(const a of candidates) {
     let body,context;
     try {
       if(!await currentHead(db,a.revision_id))throw new LibraryError('translation_revision_superseded');
       const c=await reviewContext(db,a.revision_id),assessment=validatedAssessment(a.result,c.doc,c.content);
-      context=comparisonContext(c.doc,c.content,assessment);body=verificationBody(c.doc,c.content,assessment,context);
+      context=comparisonContext(c.doc,c.content,assessment);body=verificationBody(c.doc,c.content,assessment,context,{model:a.model});
       if(batchReservation(body)>Number(a.reserved_micros))throw new LibraryError('verification_reservation_too_small');
     } catch(e) {
       if(!(e instanceof LibraryError))throw e;

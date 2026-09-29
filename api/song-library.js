@@ -3,6 +3,7 @@ import {createMusicRomanizeHandler,SELECTION_REVISION} from './music-romanize.js
 import {SongLibraryStore,LibraryError} from './utils/song-library/store.js';
 import {database} from './utils/song-library/database.js';
 import {makeDocument,recordingRequest,requestKey} from './utils/song-library/document.js';
+import {LEGACY_MODEL} from './utils/song-library/model-policy.js';
 import {generate,requestBody,reservationMicros,LEGACY_RECIPE,translationRecipe} from './utils/song-library/translation.js';
 import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
 
@@ -159,7 +160,7 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
         if(row.state==='queued')waitUntilFn((async()=>{
           if(!await claimExplanation(db.db,row.id))return;
           try { const result=await explainFn(doc,saved,selection,{apiKey,explanationLanguage:row.explanation_language,
-            generationRequest:row.generation_request??explanationBody(doc,saved,selection,'en')});await finishExplanation(db.db,row.id,result); }
+            generationRequest:row.generation_request??explanationBody(doc,saved,selection,'en',{model:LEGACY_MODEL})});await finishExplanation(db.db,row.id,result); }
           catch(error) { await finishExplanation(db.db,row.id,{actualMicros:error.actualMicros??null,response:error.providerResponse??null,errorCode:error.code??'worker_interrupted'}); }
         })().catch(()=>logger.error('study_worker_storage_failure',{jobID:row.id})));
         res.setHeader('Retry-After','3');return send(202,{state:'preparing'});

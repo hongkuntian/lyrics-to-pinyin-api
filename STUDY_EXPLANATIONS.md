@@ -10,7 +10,7 @@ source text, instructions, model, user identity or target language.
 
 The service requires the current accepted English translation. It sends the
 immutable whole-song source, selected range and accepted translation to the
-existing Luna model with a strict schema. The answer contains `meaning`,
+GPT-6 Luna model with `xhigh` reasoning and a strict schema. The answer contains `meaning`,
 `context`, `grammar`, `uncertainty` and the exact selected `sourceQuote`.
 Metadata includes source occurrence/range, document and translation revision,
 and recipe `study-occurrence-2`. A line translation or dictionary result is not

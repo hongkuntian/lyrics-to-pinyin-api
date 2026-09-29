@@ -1,6 +1,7 @@
 import {randomInt} from 'node:crypto';
 import {LibraryError,digest} from './store.js';
 import {requestBody,strictJSON} from './translation.js';
+import {MODEL} from './model-policy.js';
 import {parseAssessment} from './review-assessment.js';
 import {stableJSON} from './batch-provider.js';
 export const VERIFICATION_POLICY='song-review-comparison-1';
@@ -19,10 +20,10 @@ export function comparisonContext(doc,content,assessment,candidateSlot=randomInt
   if(assessment.decision!=='correct')throw new LibraryError('correction_not_proposed');
   return {candidateSlot,sourceHash:doc.sourceHash,baselineHash:hash(content),assessmentHash:hash(assessment),candidateHash:hash(assessment.candidate),policyVersion:VERIFICATION_POLICY};
 }
-export function verificationBody(doc,content,assessment,context) {
+export function verificationBody(doc,content,assessment,context,{model=MODEL}={}) {
   const expected=comparisonContext(doc,content,assessment,context?.candidateSlot);
   if(stableJSON(context)!==stableJSON(expected))throw new LibraryError('comparison_context_changed');
-  const original=requestBody(doc),data=JSON.parse(original.input[0].content),ids=doc.structure.occurrences.map(o=>o.sourceID);
+  const original=requestBody(doc,'en',{model}),data=JSON.parse(original.input[0].content),ids=doc.structure.occurrences.map(o=>o.sourceID);
   const baseline=Object.fromEntries(content.lines.map(l=>[l.sourceID,l.lyricText??l.text]));
   const variants=context.candidateSlot==='A'?{A:assessment.candidate.translations,B:baseline}:{A:baseline,B:assessment.candidate.translations};
   return {...original,instructions:`Compare two anonymous English translations of the same complete song. Read the full source and both variants before deciding. Neither variant has a privileged origin. Prefer neither the first nor the longer variant by default.

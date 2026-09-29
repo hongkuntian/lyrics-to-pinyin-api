@@ -3,14 +3,17 @@ const require=createRequire(import.meta.url);
 const prompt=require('./prompt.json'),multilingualPrompt=require('./multilingual-prompt.json'),lexicon=require('./lexicon.json');
 import {canonicalTarget,TARGETS} from './languages.js';
 import {LibraryError} from './store.js';
-export const MODEL='gpt-5.6-luna';
+import {MODEL,LEGACY_MODEL,modelPolicy} from './model-policy.js';
+export {MODEL} from './model-policy.js';
 export const LEGACY_RECIPE='song-clause-4-vocal-text-1';
 export const RECIPE='song-clause-5-names-1';
 const fidelity=' Preserve personal and place names in their source spelling unless the input supplies a verified localized name. A possible personal name must not silently become its common-noun dictionary meaning; preserve its spelling and note material ambiguity when needed. Preserve temporal scope precisely: a simple did not is not never, and an absent promise is not proof that no promise was ever made. Do not add universal time claims. Keep deliberately code-switched quoted words when their wording matters, with meaning conveyed by surrounding context. Use idiomatic target-language syntax for possessive questions and elliptical images; do not imitate source word order when it sounds unnatural.';
 const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
 export const translationRecipe=target=>canonicalTarget(target)==='en'?RECIPE:'song-multilingual-2';
-export function requestBody(doc,target='en',{legacy=false}={}) {
+export function requestBody(doc,target='en',{legacy=false,model=legacy?LEGACY_MODEL:MODEL}={}) {
   target=canonicalTarget(target);
+  const policy=modelPolicy(model);
+  if(!policy)throw new LibraryError('generation_configuration_unavailable');
   if(legacy&&target!=='en')throw new LibraryError('generation_configuration_unavailable');
   const instructions=(target==='en'?prompt.instructions:multilingualPrompt.instructions.replaceAll('{{language}}',TARGETS[target].name).replaceAll('{{unclear}}',TARGETS[target].unclear))+(legacy?'':fidelity);
   const ids=doc.structure.occurrences.map(o=>o.sourceID),text=doc.structure.occurrences.map(o=>o.sourceText).join('\n');
@@ -20,7 +23,7 @@ export function requestBody(doc,target='en',{legacy=false}={}) {
     sourceLanguageLabel:doc.response.song.language,sourceDocument:{version:doc.structure.version,
       speakers:doc.structure.speakers,occurrences:doc.structure.occurrences},verifiedBackground:[],
     lexicalContext:{terms,sources:lexicon.sources.filter(s=>sourceIDs.has(s.id))}};
-  return {model:MODEL,reasoning:{effort:'high'},service_tier:'default',max_output_tokens:16384,store:false,
+  return {model,reasoning:{effort:policy.effort},service_tier:'default',max_output_tokens:16384,store:false,
     instructions,input:[{role:'user',content:JSON.stringify(data)}],text:{format:{
       type:'json_schema',name:'song_fidelity',strict:true,schema:object({
         translations:object(Object.fromEntries(ids.map(id=>[id,{type:'string'}]))),
@@ -28,16 +31,19 @@ export function requestBody(doc,target='en',{legacy=false}={}) {
           kind:{type:'string',enum:['uncertain_source','ambiguous_reading']},explanation:{type:'string'}})}
       })}}};
 }
-// Rates verified 2026-09-13. Integer microdollars keep admission comparisons exact.
+// Integer microdollars keep admission comparisons exact.
 // Charge input at the more conservative cache-write price even when uncached/cached is cheaper.
-export function reservationMicros(body) {
+export function reservationMicros(body,{batch=false}={}) {
+  const policy=modelPolicy(body.model);
+  if(!policy)throw new LibraryError('generation_configuration_unavailable');
   const inputTokenUpperBound=Buffer.byteLength(JSON.stringify(body),'utf8')+4096;
   if(inputTokenUpperBound>100_000) throw new LibraryError('source_too_large',422);
-  return Math.ceil(inputTokenUpperBound*0.25+body.max_output_tokens*1.2);
+  return Math.ceil((inputTokenUpperBound*policy.input+body.max_output_tokens*policy.output)*(batch?0.5:1));
 }
-export function usageMicros(usage) {
+export function usageMicros(usage,model=MODEL,{batch=false}={}) {
+  const policy=modelPolicy(model);if(!policy)return null;
   if(!usage||!['input_tokens','output_tokens'].every(k=>Number.isSafeInteger(usage[k])&&usage[k]>=0&&usage[k]<=10_000_000)) return null;
-  return Math.ceil(usage.input_tokens*0.25+usage.output_tokens*1.2);
+  return Math.ceil((usage.input_tokens*policy.input+usage.output_tokens*policy.output)*(batch?0.5:1));
 }
 export function strictJSON(text) {
   if(typeof text!=='string'||Buffer.byteLength(text)>500_000) throw new LibraryError('invalid_json',502);
@@ -91,7 +97,7 @@ export async function generate(doc,{apiKey,fetchFn=fetch,target='en',generationR
     try {response=JSON.parse(text);}catch{throw new LibraryError('invalid_provider_response',502);}
     if(!result.ok) throw new LibraryError('provider_rejected',502);
     if(response.model!==body.model||response.service_tier!==body.service_tier) throw new LibraryError('provider_configuration_changed',502);
-    actualMicros=usageMicros(response.usage);
+    actualMicros=usageMicros(response.usage,body.model);
     if(response.status!=='completed') throw new LibraryError('provider_incomplete',502);
     const parts=(response.output??[]).filter(o=>o.type==='message').flatMap(o=>o.content??[]);
     if(parts.some(p=>p.type==='refusal')) throw new LibraryError('provider_refused',422);

@@ -10,7 +10,7 @@ const good={preferred:'A',sourceSufficient:true,noRegressions:true,materialImpro
 test('fresh comparison is anonymous, source-complete and fixed to Luna for either ordering',()=> {
   for(const slot of ['A','B']) {
     const c=comparisonContext(source,content,a,slot),body=verificationBody(source,content,a,c),data=JSON.parse(body.input[0].content);
-    assert.equal(body.model,'gpt-5.6-luna');assert.equal(body.tools,undefined);assert.equal(body.store,false);
+    assert.equal(body.model,'gpt-6-luna');assert.equal(body.tools,undefined);assert.equal(body.store,false);
     assert.deepEqual(data.sourceDocument.occurrences,source.structure.occurrences);
     assert.equal(data.variants[slot].L0001,a.candidate.translations.L0001);
     assert.equal(data.variants[slot==='A'?'B':'A'].L0001,content.lines[0].lyricText);

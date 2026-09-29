@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {libraryDB,source} from '../helpers/library-db.js';
+import {digest} from '../../api/utils/song-library/store.js';
+import {batchInput} from '../../api/utils/song-library/batch-provider.js';
+import {batchReservation} from '../../api/utils/song-library/review-assessment.js';
 import {parseTranslation} from '../../api/utils/song-library/translation.js';
 import {ReviewQueue,runReviewQueue} from '../../api/utils/song-library/review-queue.js';
 import {REVIEW_POLICY,VERIFICATION_RESERVATION} from '../../api/utils/song-library/review-assessment.js';
@@ -25,7 +28,7 @@ async function fixture(t,{report=true,second=false}={}) {
   };
   return {...f,database:db,ids,provider,run:()=>runReviewQueue({db,provider}),queue:()=>new ReviewQueue(db)};
 }
-const record=(id,decision='keep')=>({custom_id:id,response:{status_code:200,body:{id:'response-test',model:'gpt-5.6-luna',service_tier:'default',status:'completed',usage:{input_tokens:1000,output_tokens:1000},
+const record=(id,decision='keep')=>({custom_id:id,response:{status_code:200,body:{id:'response-test',model:'gpt-6-luna',service_tier:'default',status:'completed',usage:{input_tokens:1000,output_tokens:1000},
   output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({decision,summary:'The imagery is clear.',changes:decision==='correct'?[{sourceID:'L0001',sourceQuote:source.structure.occurrences[0].sourceText,replacement:'Turn today into a song.',reason:'Preserve the original image.'}]:[]})}]}]}}});
 async function complete(f,decision='keep') {
   const items=(await f.db.query("SELECT * FROM correction_batch_items WHERE batch_id=(SELECT id FROM correction_batches WHERE state NOT IN ('completed','cancelled')) ORDER BY operation_id")).rows;
@@ -65,8 +68,8 @@ test('upload uncertainty reconciles the existing file without uploading twice',a
 });
 test('reordered completed results settle once, release unused verification, and never publish',async t=> {
   const f=await fixture(t,{second:true});await f.run();await complete(f);assert.equal((await f.run()).state,'assessed');
-  assert.equal(Number((await f.store.budget()).held),0);assert.equal(Number((await f.store.budget()).daily),3450);
-  await f.run();assert.equal(Number((await f.store.budget()).daily),3450);assert.equal(f.provider.submits,1);
+  assert.equal(Number((await f.store.budget()).held),0);assert.equal(Number((await f.store.budget()).daily),2626);
+  await f.run();assert.equal(Number((await f.store.budget()).daily),2626);assert.equal(f.provider.submits,1);
   assert.equal((await f.db.query("SELECT count(*) FROM correction_review_queue WHERE state='kept'")).rows[0].count,2);
   assert.equal((await f.db.query("SELECT count(*) FROM correction_reports WHERE status='rejected'")).rows[0].count,2);
   assert.equal((await f.store.revisions(source.id,'en')).length,1);
@@ -81,13 +84,13 @@ test('partial expiration settles successful and explicitly unexecuted requests w
   const f=await fixture(t,{second:true});await f.run();const items=await complete(f);
   f.provider.remote.status='expired';f.provider.text=JSON.stringify(record(items[0].operation_id))+'\n'+JSON.stringify({custom_id:items[1].operation_id,response:null,error:{code:'batch_expired'}});
   assert.equal((await f.run()).state,'assessed');assert.equal(Number((await f.store.budget()).held),0);
-  assert.equal(Number((await f.store.budget()).daily),2725);await f.run();assert.equal(f.provider.submits,1);
+  assert.equal(Number((await f.store.budget()).daily),2313);await f.run();assert.equal(f.provider.submits,1);
 });
 test('missing or unpriced results retain reservations, reconcile later and settle known siblings once',async t=> {
   const f=await fixture(t,{second:true});await f.run();const items=await complete(f);
   const all=f.provider.text;f.provider.text=JSON.stringify(record(items[0].operation_id));
   assert.equal((await f.run()).state,'reconciliation_required');assert.ok(Number((await f.store.budget()).held)>0);
-  f.provider.text=all;assert.equal((await f.run()).state,'assessed');assert.equal(Number((await f.store.budget()).daily),3450);
+  f.provider.text=all;assert.equal((await f.run()).state,'assessed');assert.equal(Number((await f.store.budget()).daily),2626);
 });
 test('duplicate output identities cannot settle any operation',async t=> {
   const f=await fixture(t);await f.run();await complete(f);f.provider.text+='\n'+f.provider.text;
@@ -136,7 +139,7 @@ test('a transaction failure rolls back both result persistence and settlement, t
   assert.equal((await runReviewQueue({db:database,provider:f.provider})).state,'worker_storage_failure');
   assert.equal(Number((await f.store.budget()).held),held);
   assert.equal((await f.db.query('SELECT result FROM correction_batch_items')).rows[0].result,null);
-  assert.equal((await f.run()).state,'assessed');assert.equal(Number((await f.store.budget()).daily),1725);
+  assert.equal((await f.run()).state,'assessed');assert.equal(Number((await f.store.budget()).daily),1313);
 });
 test('late duplicate reports never reopen an assessed revision or start another paid assessment',async t=> {
   const f=await fixture(t);await f.run();await complete(f);await f.run();
@@ -174,7 +177,7 @@ test('two-stage review publishes exactly once, closes frozen reports and retains
   assert.equal(f.provider.submits,2);assert.equal(Number((await f.store.budget()).held),VERIFICATION_RESERVATION);
   await comparison(f);assert.equal((await f.run()).state,'published');
   const head=await f.store.translation(source.id,'en');assert.notEqual(head.id,f.ids[0]);assert.equal(head.lines[0].lyricText,'Turn today into a song.');
-  assert.equal(Number((await f.store.budget()).held),0);assert.equal(Number((await f.store.budget()).daily),2450);
+  assert.equal(Number((await f.store.budget()).held),0);assert.equal(Number((await f.store.budget()).daily),1626);
   assert.equal((await f.db.query('SELECT status FROM correction_reports')).rows[0].status,'accepted');
   assert.equal((await f.db.query('SELECT published_revision_id FROM correction_review_outcomes')).rows[0].published_revision_id,head.id);
   await f.run();assert.equal(f.provider.submits,2);assert.equal((await f.store.revisions(source.id,'en')).length,2);
@@ -203,7 +206,7 @@ test('stale submitted comparison settles its cost but never overwrites a newer r
   const f=await fixture(t);await comparing(f);
   const changed=await f.store.publishRevision({expectedRevisionID:f.ids[0],sourceHash:source.sourceHash,publicationKey:'concurrent',actor:'test',reason:'Concurrent edit',candidate:{translations:{L0001:'Today is a song.'},sourceNotes:[]}});
   await comparison(f);await f.run();assert.equal((await f.store.translation(source.id,'en')).id,changed.id);
-  assert.equal(Number((await f.store.budget()).held),0);assert.equal(Number((await f.store.budget()).daily),2450);
+  assert.equal(Number((await f.store.budget()).held),0);assert.equal(Number((await f.store.budget()).daily),1626);
   assert.equal((await f.db.query('SELECT disposition FROM correction_review_outcomes')).rows[0].disposition,'superseded');
 });
 test('unknown comparison usage and model substitution cannot authorize publication',async t=> {
@@ -250,7 +253,7 @@ test('verification cost overrun records the full charge and pauses automatic pub
   r.response.body.usage.output_tokens=100_000;f.provider.text=JSON.stringify(r);await f.run();
   assert.equal((await f.store.translation(source.id,'en')).id,f.ids[0]);
   assert.equal((await f.db.query('SELECT enabled FROM library_settings')).rows[0].enabled,false);
-  assert.equal(Number((await f.store.budget()).daily),61_850);assert.equal(Number((await f.store.budget()).held),0);
+  assert.equal(Number((await f.store.budget()).daily),26_376);assert.equal(Number((await f.store.budget()).held),0);
 });
 test('stale prepared verification releases only unsubmitted funds and keeps the assessment charge',async t=> {
   const f=await fixture(t);await f.db.query('UPDATE library_settings SET review_publication_enabled=true');
@@ -259,7 +262,7 @@ test('stale prepared verification releases only unsubmitted funds and keeps the 
   assert.equal(batch.stage,'verification');
   await f.store.publishRevision({expectedRevisionID:f.ids[0],sourceHash:source.sourceHash,publicationKey:'stale-prepared',actor:'test',reason:'New version',candidate:{translations:{L0001:'Today is a song.'},sourceNotes:[]}});
   await f.run();await f.run();assert.equal(f.provider.submits,1);
-  assert.equal(Number((await f.store.budget()).held),0);assert.equal(Number((await f.store.budget()).daily),1725);
+  assert.equal(Number((await f.store.budget()).held),0);assert.equal(Number((await f.store.budget()).daily),1313);
 });
 test('changing the frozen comparison request or slot cannot publish its response',async t=> {
   for(const field of ['body','slot']) {
@@ -269,4 +272,28 @@ test('changing the frozen comparison request or slot cannot publish its response
     await f.run();assert.equal((await f.store.translation(source.id,'en')).id,f.ids[0]);
     assert.equal((await f.db.query('SELECT reason FROM correction_review_outcomes')).rows[0].reason,'comparison_request_changed');
   }
+});
+
+
+test('an admitted GPT-5.6 review survives the upgrade through settlement and publication',async t=> {
+  const f=await fixture(t),q=f.queue();
+  await f.db.query('UPDATE library_settings SET review_publication_enabled=true');
+  await q.acquire();const {batch}=await q.prepare();await q.release('fixture');
+  const item=(await q.items(batch.id))[0];
+  // Model an immutable request admitted by the previously deployed worker.
+  item.request_body.model='gpt-5.6-luna';item.request_body.reasoning.effort='high';
+  await f.db.query("UPDATE translation_reviews SET model='gpt-5.6-luna' WHERE id=$1",[item.review_id]);
+  await f.db.query('UPDATE correction_batch_items SET request_body=$2 WHERE operation_id=$1',[item.operation_id,JSON.stringify(item.request_body)]);
+  await f.db.query('UPDATE correction_batches SET request_hash=$2 WHERE id=$1',[batch.id,digest(batchInput([item]))]);
+  for(const [kind,amount] of [['review_assessment',batchReservation(item.request_body)],['review_verification',Math.ceil(100_000*0.125+16384*0.6)]])
+    await f.db.query('UPDATE library_spend_operations SET reserved_micros=$3,accounted_micros=$3 WHERE review_id=$1 AND kind=$2',[item.review_id,kind,amount]);
+  assert.equal((await f.run()).state,'processing');await complete(f,'correct');
+  const assessed=JSON.parse(f.provider.text);assessed.response.body.model='gpt-5.6-luna';f.provider.text=JSON.stringify(assessed);
+  assert.equal((await f.run()).state,'assessed');assert.equal((await f.run()).state,'processing');
+  const v=(await f.db.query("SELECT request_body FROM correction_batch_items WHERE stage='verification'")).rows[0];
+  assert.equal(v.request_body.model,'gpt-5.6-luna');assert.equal(v.request_body.reasoning.effort,'high');
+  const compared=await comparison(f);compared.response.body.model='gpt-5.6-luna';f.provider.text=JSON.stringify(compared);
+  assert.equal((await f.run()).state,'published');assert.equal(f.provider.submits,2);
+  assert.equal(Number((await f.store.budget()).daily),2450);assert.equal(Number((await f.store.budget()).held),0);
+  assert.equal((await f.db.query('SELECT enabled FROM library_settings')).rows[0].enabled,true);
 });

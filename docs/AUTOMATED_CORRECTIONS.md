@@ -2,7 +2,7 @@
 
 The approved workflow is reports → grouping → scheduled Luna assessment → fresh Luna comparison for proposed corrections → automatic publication → device refresh. Routine processing does not require manual launch or approval. Ambiguous cases keep the existing translation. The owner receives actionable budget/account/operational alerts through email and the dashboard.
 
-Only `gpt-5.6-luna` is allowed for assessment and verification. No alternate model, paid ranking pass, unbounded research, automatic provider fallback, or automatic resubmission after an uncertain outcome is authorized by this design. Source lyrics, timing and pronunciation corrections need a later evidence workflow; the first automatic publisher changes translations only.
+New assessments and verifications use `gpt-6-luna` with `xhigh` reasoning. Already-admitted GPT-5.6 Luna reviews retain their original model, effort and pricing through both stages. No alternate model, paid ranking pass, unbounded research, automatic provider fallback, or automatic resubmission after an uncertain outcome is authorized by this design. Source lyrics, timing and pronunciation corrections need a later evidence workflow; the first automatic publisher changes translations only.
 
 ## Checkpoint 1: revision and spending foundation
 
@@ -60,9 +60,9 @@ Implemented in `db/005-correction-batches.sql`, `db/006-batch-dashboard.sql`, `r
 - Admission freezes the prompt, selected report IDs/text and policy version, and reserves both assessment and future verification costs in one transaction. Only assessment is submitted in this checkpoint. A correction candidate retains its verification reservation; keep/defer, rejected output, expired unexecuted requests and superseded results release only the never-submitted verification operation once assessment billing is known.
 - A six-minute database lease fences overlapping workers. A separate unique active-batch constraint and durable transitions prevent another batch during an uncertain submission. Database transactions do not remain open during HTTP requests.
 - Uploads and batch submissions are attempted once. An uncertain upload is found by its unique filename and verified against the stored input hash and exact bytes. An uncertain batch submission is found by its local batch ID, input file and request hash in provider metadata. No matching result means funds remain held, not permission to resubmit. Reconciliation scans at most five pages of 100 objects per run; incomplete searches require operational attention.
-- Requests use only `gpt-5.6-luna`, high reasoning, the default service tier, strict structured output, no tools and full-song context. Reports and lyrics are explicitly untrusted data. The parser rejects unknown fields, duplicate JSON keys/occurrence IDs, invented source quotes and malformed replacement lines. A candidate is validated as a complete aligned translation. These controls constrain actions and output structure; they do not establish semantic correctness or eliminate all model susceptibility to misleading text.
+- New requests use `gpt-6-luna`, xhigh reasoning, the default service tier, strict structured output, no tools and full-song context. Reports and lyrics are explicitly untrusted data. The parser rejects unknown fields, duplicate JSON keys/occurrence IDs, invented source quotes and malformed replacement lines. A candidate is validated as a complete aligned translation. These controls constrain actions and output structure; they do not establish semantic correctness or eliminate all model susceptibility to misleading text.
 - Result files are matched by custom ID, independent of output order. Duplicate or foreign identities stop settlement. Each assessment, source-grounded candidate, input/output token counts, provider response ID and cost settlement commits atomically. Completed siblings are not charged again during partial reconciliation. Missing usage remains reserved, including on expired, failed or cancelled batches unless a per-request `batch_expired` record confirms it was unexecuted.
-- Accounting uses conservative Batch cache-write input pricing (US$0.125/million input tokens) and output pricing (US$0.60/million output tokens), with a byte-based input upper bound plus overhead below 100,000 tokens. Verification reserves the maximum allowed request size. Prices are estimates against the fixed policy; a reservation overrun or unexpected response model/tier pauses new paid work. [Luna pricing](https://developers.openai.com/api/docs/models/gpt-5.6-luna), [Batch discount and lifecycle](https://developers.openai.com/api/docs/guides/batch).
+- Accounting uses conservative Batch cache-write input pricing (US$0.0625/million input tokens) and output pricing (US$0.25/million output tokens), with a byte-based input upper bound plus overhead below 100,000 tokens. Verification reserves the maximum allowed request size. Prices are estimates against the fixed policy; a reservation overrun or unexpected response model/tier pauses new paid work. [Luna pricing](https://developers.openai.com/api/docs/models/gpt-6-luna), [Batch discount and lifecycle](https://developers.openai.com/api/docs/guides/batch).
 - The dashboard displays queue counts, review sublimits, last worker/batch status and the saved assessment for the reported revision through curated read-only views. It receives no provider key, submission permissions or raw request/response payloads.
 
 ### Schedule and recovery
@@ -133,3 +133,14 @@ The dashboard computes live conditions independently of persisted episodes, incl
 2. **End-to-end rollout.** Verify a correction and rollback reaching the iPhone. Complete backend/dashboard checks and focused, Full and UI native verification before mainline delivery and the iPhone preview. Backend tests already cover correction/retention/uncertainty, injection-shaped output, concurrency, partial completion, uncertain charges, budget rollover, stale revisions and crash recovery; they do not measure real-world semantic success rates.
 
 Review quality and real token usage determine whether to adjust these limits. The system cannot increase its own budget or substitute another model.
+
+
+## GPT-6 Luna upgrade
+
+Apply migration 015 before deploying the model switch. It widens the review-model
+constraint while preserving historical rows and compatibility with the old worker.
+The new worker admits GPT-6 Luna/xhigh reviews and reconciles pending GPT-5.6
+Luna/high requests against their frozen model and original prices. A verification
+for an already-admitted review keeps that review's model; publication reconstructs
+the matching request before accepting its result. No saved translation is
+invalidated and no budget, schedule, retry or token limit changes.

@@ -135,7 +135,7 @@ export class ReviewQueue {
           continue;
         }
         const c=await context(db,i.revision_id);
-        const assessed=record?assessRecord(record,c.doc,c.content,i.stage==='verification'?parseVerification:undefined):{actualMicros:null,result:null,errorCode:'batch_result_missing'};
+        const assessed=record?assessRecord(record,c.doc,c.content,i.stage==='verification'?parseVerification:undefined,i.request_body):{actualMicros:null,result:null,errorCode:'batch_result_missing'};
         const current=!!await first(db,'SELECT 1 FROM translation_heads WHERE revision_id=$1',[i.revision_id]);
         if(!current&&assessed.errorCode!=='provider_configuration_changed')assessed.errorCode='translation_revision_superseded';
         await finishReviewOperation(within(db),i.operation_id,{actualMicros:assessed.actualMicros,providerID:remote.id,errorCode:assessed.errorCode});

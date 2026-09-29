@@ -52,7 +52,7 @@ lyrics and playback can remain visible while preparation finishes or is unavaila
 ## Generation and spend
 
 Keep the evaluated `song-clause-4` instructions, lexical inventory, direct whole-song
-request, `gpt-5.6-luna`, high reasoning, standard tier and 16,384 output-token budget.
+request, `gpt-6-luna`, xhigh reasoning, standard tier and 16,384 output-token budget.
 The new parser independently rejects and retains invalid auxiliary notes; complete
 lyric occurrence coverage and source-owned speaker structure stay strict. Accepted
 notes and `[unclear source]` markers remain visible in the returned content. A valid
@@ -87,6 +87,13 @@ usage before any replacement attempt. A function timeout is not proof of zero co
 `waitUntil` runs the bounded worker for up to the function's 300-second lifetime;
 the provider timeout is 270 seconds. This is an at-most-one-dispatch checkpoint,
 not a guarantee that every accepted job completes after a server interruption.
+
+New requests use GPT-6 Luna with `xhigh` effort. Migration 015 permits both Luna
+versions in review history. Already-admitted translation, Study and correction
+requests retain GPT-5.6 Luna/high and its original accounting rates; saved content
+is reused rather than regenerated. Standard GPT-6 accounting reserves US$0.125
+per million input tokens and US$0.50 per million output/reasoning tokens (verified
+2026-09-29). Output caps, timeouts and configured spending limits are unchanged.
 
 ## Deployment and operations
 
@@ -134,6 +141,6 @@ The explicit response schema lives in `contracts/song-library.schema.json`.
 Sources: [Vercel storage](https://vercel.com/docs/storage),
 [Neon integration](https://vercel.com/marketplace/neon),
 [function duration](https://vercel.com/docs/functions/limitations),
-[Luna configuration/pricing](https://developers.openai.com/api/docs/models/gpt-5.6-luna),
+[Luna configuration/pricing](https://developers.openai.com/api/docs/models/gpt-6-luna),
 [OpenAI spend limits](https://developers.openai.com/api/docs/guides/spend-limits),
 [untrusted-input isolation](https://developers.openai.com/api/docs/guides/agent-builder-safety).

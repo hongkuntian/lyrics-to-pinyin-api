@@ -19,6 +19,7 @@ export async function libraryDB(path) {
     await db.exec(await readFile(new URL('../../db/013-pronunciation-aids.sql',import.meta.url),'utf8'));
   if(!(await db.query("SELECT 1 FROM information_schema.columns WHERE table_name='lyric_requests' AND column_name='checked_at'")).rows.length)
     await db.exec(await readFile(new URL('../../db/014-lyric-source-refresh.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../../db/015-gpt6-luna.sql',import.meta.url),'utf8'));
   const store=new SongLibraryStore({query:(...args)=>db.query(...args),transaction:fn=>db.transaction(fn)});
   await store.configure({enabled:true,dailyMicros:1_000_000,monthlyMicros:5_000_000});
   await store.createUser('reader-a','token-a');

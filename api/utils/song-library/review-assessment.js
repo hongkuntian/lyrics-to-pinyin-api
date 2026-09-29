@@ -1,5 +1,6 @@
 import {LibraryError} from './store.js';
-import {MODEL,requestBody,parseTranslation,strictJSON} from './translation.js';
+import {modelPolicy} from './model-policy.js';
+import {MODEL,requestBody,parseTranslation,strictJSON,reservationMicros,usageMicros} from './translation.js';
 
 export const REVIEW_POLICY='song-review-assessment-1';
 const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
@@ -23,16 +24,10 @@ For correct, give each changed sourceID once, quote its entire sourceText exactl
 }
 // Batch is half the standard price. Cache-write input pricing is used conservatively;
 // cached reads are never assumed. Byte-bound input stays below long-context thresholds.
-export function batchReservation(body) {
-  const input=Buffer.byteLength(JSON.stringify(body))+4096;
-  if(input>100_000) throw new LibraryError('source_too_large',422);
-  return Math.ceil(input*0.125+body.max_output_tokens*0.6);
-}
-export const VERIFICATION_RESERVATION=Math.ceil(100_000*0.125+16384*0.6);
-export function batchUsage(usage) {
-  if(!usage||!['input_tokens','output_tokens'].every(k=>Number.isSafeInteger(usage[k])&&usage[k]>=0&&usage[k]<=10_000_000))return null;
-  return Math.ceil(usage.input_tokens*0.125+usage.output_tokens*0.6);
-}
+export const batchReservation=body=>reservationMicros(body,{batch:true});
+const pricing=modelPolicy(MODEL);
+export const VERIFICATION_RESERVATION=Math.ceil((100_000*pricing.input+16384*pricing.output)/2);
+export const batchUsage=(usage,model=MODEL)=>usageMicros(usage,model,{batch:true});
 export function parseAssessment(text,doc,content) {
   const v=strictJSON(text),validText=s=>typeof s==='string'&&s.trim()&&s.length<=2000;
   if(!v||Array.isArray(v)||Object.keys(v).sort().join(',')!=='changes,decision,summary'||
@@ -50,11 +45,11 @@ export function parseAssessment(text,doc,content) {
   if(parsed.rejectedNotes.length)throw new LibraryError('invalid_assessment_evidence',502);
   return {...v,candidate:v.decision==='correct'?candidate:null};
 }
-export function assessRecord(record,doc,content,parse=parseAssessment) {
+export function assessRecord(record,doc,content,parse=parseAssessment,request={model:MODEL,service_tier:'default'}) {
   const body=record?.response?.body;
   if(record?.response===null&&record?.error?.code==='batch_expired')return {actualMicros:0,result:null,errorCode:'batch_expired'};
-  if(!body||body.model!==MODEL||body.service_tier!=='default')return {actualMicros:null,result:null,errorCode:body?'provider_configuration_changed':'provider_usage_unknown'};
-  const actualMicros=batchUsage(body.usage);
+  if(!body||body.model!==request.model||body.service_tier!==request.service_tier)return {actualMicros:null,result:null,errorCode:body?'provider_configuration_changed':'provider_usage_unknown'};
+  const actualMicros=batchUsage(body.usage,request.model);
   try {
     if(record.response.status_code!==200||body.status!=='completed')throw new LibraryError('provider_incomplete',502);
     const parts=(body.output??[]).filter(o=>o.type==='message').flatMap(o=>o.content??[]);

@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto';
+import {MODEL} from './model-policy.js';
 import {LibraryError} from './store.js';
 
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??null;
@@ -20,9 +21,9 @@ export async function configureReviews(db,{enabled,dailyMicros,monthlyMicros,max
   await db.query('UPDATE library_settings SET review_enabled=$1,review_daily_micros=$2,review_monthly_micros=$3,review_max_daily=$4 WHERE id=1',
     [enabled,dailyMicros,monthlyMicros,maxDaily]);
 }
-export async function reserveReview(database,{revisionID,policyVersion,assessmentMicros,verificationMicros,model='gpt-5.6-luna'}) {
+export async function reserveReview(database,{revisionID,policyVersion,assessmentMicros,verificationMicros,model=MODEL}) {
   if(typeof revisionID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(revisionID)||
-    typeof policyVersion!=='string'||!policyVersion.trim()||policyVersion.length>100||model!=='gpt-5.6-luna'||
+    typeof policyVersion!=='string'||!policyVersion.trim()||policyVersion.length>100||model!==MODEL||
     !positive(assessmentMicros)||!positive(verificationMicros)||!positive(assessmentMicros+verificationMicros)) throw new LibraryError('invalid_review',400);
   return database.transaction(async db=> {
     const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
