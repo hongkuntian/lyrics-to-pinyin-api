@@ -239,3 +239,9 @@ Add `--apply --execute` to that same retry command to admit and execute one atte
 Repeating its request key is idempotent; a ready/running job never dispatches again.
 An admitted queued attempt can be resumed with `run-translation --id JOB_UUID --execute`.
 The public API never resets failed jobs or retries paid work automatically.
+
+Migration 019 keeps the dashboard's song, line and revision views aligned with
+verified bindings. Owner rollback through a reused document preserves the original
+revision source hash. Job costs include all attempts, and stalled detection uses
+the current attempt's admission time. Existing reader permissions and response
+columns remain unchanged.
