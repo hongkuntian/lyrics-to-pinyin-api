@@ -25,6 +25,18 @@ test('verified query order is independent of which storefront supplied the title
  assert.deepEqual(a.resolution.searches,b.resolution.searches);
  assert.equal(b.resolution.searches[0].title,en.trackName);
 });
+test('a slow optional territory cannot discard completed original-ID evidence',async()=>{
+ const visited=[];
+ const fetchFn=async(url,init)=>{
+  const country=new URL(url).searchParams.get('country');visited.push(country);
+  if(!['ca','us','hk'].includes(country))return new Promise((resolve,reject)=>init.signal.addEventListener('abort',()=>reject(new Error('aborted')),{once:true}));
+  return {ok:true,json:async()=>({results:[country==='hk'?chinese:english]})};
+ };
+ const aliases=await resolveCatalogAliases(request,{fetchFn,appleCatalog:null,catalogBudgetMs:30});
+ assert.ok(aliases.some(s=>s.title===chinese.trackName));
+ assert.deepEqual(visited.slice(0,3),['ca','us','hk']);
+ assert.equal(aliases.resolution.method,'same_catalog_id');
+});
 test('equivalent IDs and matching ISRC do not excuse version, duration or performer conflicts',()=>{
  const anchor={catalog_id:'1',isrc:'USABC2300001',duration:220,title:'Song',artist:'Singer',album:'Album',artist_ids:['42'],content_rating:'explicit'};
  assert.ok(sameCatalogRecording(anchor,{...anchor,catalog_id:'2'}));
