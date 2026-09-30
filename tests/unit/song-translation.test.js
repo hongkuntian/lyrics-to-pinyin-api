@@ -12,7 +12,7 @@ const doc=makeDocument(recording,response,'test-selection');
 const translated={translations:{L0001:'Make a song of today.',L0002:'Let the melody keep me company.',L0003:'Sing this day into a song.'},sourceNotes:[]};
 test('whole song request retains ordered repeated occurrences, fixed model and frozen prompt',()=> {
   const body=requestBody(doc);assert.equal(body.model,'gpt-6-luna');assert.equal(body.reasoning.effort,'xhigh');
-  assert.equal(body.max_output_tokens,16384);assert.equal(body.store,false);assert.equal(body.service_tier,'default');
+  assert.equal(body.max_output_tokens,32768);assert.equal(body.store,false);assert.equal(body.service_tier,'default');
   assert.equal(body.tools,undefined);assert.ok(body.instructions.includes('Preserve the scope of each clause'));
   const data=JSON.parse(body.input[0].content);assert.equal(data.sourceDocument.occurrences.length,3);
   assert.deepEqual(data.sourceDocument.occurrences.map(x=>x.sourceID),['L0001','L0002','L0003']);
@@ -51,7 +51,7 @@ test('partial, oversized or unsupported source shapes are withheld without trunc
   assert.throws(()=>recordingRequest({...recording,model:'gpt-6-astra'}),{code:'invalid_recording'});
 });
 test('reservation includes maximum reasoning/output and a conservative input bound',()=> {
-  const body=requestBody(doc);assert.ok(reservationMicros(body)>Math.ceil(16384*0.5));
+  const body=requestBody(doc);assert.ok(reservationMicros(body)>Math.ceil(32768*0.5));
   assert.ok(usageMicros({input_tokens:1000,output_tokens:1000})<reservationMicros(body));
   assert.equal(usageMicros({input_tokens:-1,output_tokens:4}),null);
   assert.equal(usageMicros({}),null);
@@ -72,3 +72,5 @@ test('provider timeout is one attempt and retains unknown cost',async()=> {
   await assert.rejects(generate(doc,{apiKey:'test',fetchFn:async()=>{calls++;throw new Error('timeout');}}),error=>error.code==='provider_unavailable' && error.actualMicros===null);
   assert.equal(calls,1);
 });
+
+test('legacy queued configuration retains its original output budget',()=>{assert.equal(requestBody(doc,'en',{legacy:true}).max_output_tokens,16384);});

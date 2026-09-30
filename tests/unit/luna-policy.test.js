@@ -27,8 +27,8 @@ test('standard and Batch accounting use the admitted model and reject unknown mo
   for(const model of ['gpt-6-luna','gpt-5.6-luna']) {
     const body=requestBody(source,'en',{model}),input=Buffer.byteLength(JSON.stringify(body))+4096;
     const rates=model==='gpt-6-luna'?[0.125,0.5]:[0.25,1.2];
-    assert.equal(reservationMicros(body),Math.ceil(input*rates[0]+16384*rates[1]));
-    assert.equal(batchReservation(body),Math.ceil((input*rates[0]+16384*rates[1])/2));
+    assert.equal(reservationMicros(body),Math.ceil(input*rates[0]+body.max_output_tokens*rates[1]));
+    assert.equal(batchReservation(body),Math.ceil((input*rates[0]+body.max_output_tokens*rates[1])/2));
   }
   assert.throws(()=>reservationMicros({...requestBody(source),model:'unknown'}),{code:'generation_configuration_unavailable'});
   assert.throws(()=>requestBody(source,'en',{model:'unknown'}),{code:'generation_configuration_unavailable'});

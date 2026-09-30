@@ -22,7 +22,7 @@ test('personal unlimited access bypasses zero daily/monthly quotas and budgets, 
   assert.equal(Number((await store.budget()).daily),1000);
   assert.equal(Number((await store.usage()).accounted_micros),1000);
   assert.ok((await db.query('SELECT * FROM library_spend_events')).rows.length>=3);
-  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two'});
+  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}});
   assert.equal((await store.reserve({...reservation,documentID:'doc-two'})).kind,'created');
   // A reader joins already-admitted shared work instead of paying again.
   assert.equal((await store.reserve({...reservation,documentID:'doc-two',userID:'reader-b'})).kind,'pending');
@@ -62,7 +62,7 @@ test('unlimited access preserves disable switches, authorization and in-flight p
   await assert.rejects(store.reserve(reservation),{code:'unauthorized'});
   await db.query("UPDATE library_users SET disabled=false WHERE id='reader-a'");
   await store.reserve(reservation);
-  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two'});
+  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}});
   await assert.rejects(store.reserve({...reservation,documentID:'doc-two'}),{code:'user_busy'});
 });
 

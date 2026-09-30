@@ -19,6 +19,10 @@ export async function migrateSourceContent(database) {
       const busy=await db.query(`SELECT 1 FROM translation_jobs WHERE document_id=$1 AND state IN ('queued','running')
         UNION ALL SELECT 1 FROM study_explanations WHERE document_id=$1 AND state IN ('queued','running') LIMIT 1`,[old.id]);
       if(busy.rows.length) throw new Error('source_migration_active_generation');
+      // Keep the exact pre-cleanup source so translations can be verified later.
+      await db.query(`INSERT INTO lyric_source_archives(document_id,source_hash,response,structure,verification)
+        VALUES($1,$2,$3,$4,'original') ON CONFLICT(document_id) DO NOTHING`,
+        [old.id,old.source_hash,JSON.stringify(old.response),JSON.stringify(old.structure)]);
       const response=old.response,structure=old.structure;
       const timestamps=new Map((structure.occurrences??[]).map((o,i)=>[o.sourceIndex,response.lines[i]?.timestamp]));
       const raw=structure.sourceRows?.length?structure.sourceRows.map((row,i)=>({...row,timestamp:timestamps.has(i)?timestamps.get(i):row.timestamp}))

@@ -31,7 +31,7 @@ test('concurrent users join one durable generation job and reserve only once',as
 });
 test('concurrent distinct jobs cannot overspend the remaining global budget',async t=> {
   const {store}=await fixture(t);await store.configure({enabled:true,dailyMicros:45_000,monthlyMicros:45_000});
-  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two'});
+  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}});
   const results=await Promise.allSettled([store.reserve(reservation),store.reserve({...reservation,userID:'reader-b',documentID:'doc-two'})]);
   assert.equal(results.filter(x=>x.status==='fulfilled').length,1);
   assert.equal(results.find(x=>x.status==='rejected').reason.code,'budget_exhausted');
@@ -42,7 +42,7 @@ test('monthly budget also stops new work when daily allowance remains',async t=>
   await assert.rejects(store.reserve(reservation),{code:'budget_exhausted'});
 });
 test('per-user active limits survive token rotation',async t=> {
-  const {store}=await fixture(t);await store.saveDocument({...source,id:'doc-two',requestKey:'request-two'});
+  const {store}=await fixture(t);await store.saveDocument({...source,id:'doc-two',requestKey:'request-two',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}});
   const job=await store.reserve(reservation);
   await assert.rejects(store.reserve({...reservation,documentID:'doc-two'}),{code:'user_busy'});
   await store.claim(job.job.id);await store.fail(job.job.id,'provider_timeout',null);
@@ -56,7 +56,7 @@ test('per-user daily and monthly attempt allowances include completed work',asyn
   const {store,db}=await fixture(t);
   const job=await store.reserve(reservation);await store.claim(job.job.id);
   await store.complete(job.job.id,{lines:[],sourceNotes:[]},1000,{});
-  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two'});
+  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}});
   await store.configure({enabled:true,dailyMicros:1_000_000,monthlyMicros:5_000_000,userDaily:1,userMonthly:50});
   await assert.rejects(store.reserve({...reservation,documentID:'doc-two'}),{code:'generation_allowance_exhausted'});
   await store.configure({enabled:true,dailyMicros:1_000_000,monthlyMicros:5_000_000,userDaily:10,userMonthly:1});
@@ -69,7 +69,7 @@ test('unexpected provider configuration retains the reservation and disables gen
   const {store}=await fixture(t);const job=await store.reserve(reservation);await store.claim(job.job.id);
   await store.fail(job.job.id,'provider_configuration_changed',null);
   assert.equal(Number((await store.usage()).accounted_micros),30_000);
-  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two'});
+  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}});
   await assert.rejects(store.reserve({...reservation,documentID:'doc-two',userID:'reader-b'}),{code:'generation_disabled'});
 });
 test('timeouts keep reservations and do not cause automatic paid retries',async t=> {
@@ -99,13 +99,13 @@ test('disabled generation still serves saved translations',async t=> {
   await store.complete(job.job.id,{lines:[{sourceID:'L0001',text:'Saved.'}],sourceNotes:[],rejectedNotes:[]},1000,{});
   await store.configure({enabled:false,dailyMicros:0,monthlyMicros:0});
   assert.equal((await store.reserve(reservation)).kind,'ready');
-  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two'});
+  await store.saveDocument({...source,id:'doc-two',requestKey:'request-two',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}});
   await assert.rejects(store.reserve({...reservation,documentID:'doc-two'}),{code:'generation_disabled'});
 });
 test('source revision changes keep old translations separate',async t=> {
   const {store}=await fixture(t);const job=await store.reserve(reservation);await store.claim(job.job.id);
   await store.complete(job.job.id,{lines:[{sourceID:'L0001',text:'Old version.'}],sourceNotes:[],rejectedNotes:[]},1000,{});
-  await store.saveDocument({...source,id:'doc-revised',sourceHash:'new-hash',selectionRevision:'new-selection'});
+  await store.saveDocument({...source,id:'doc-revised',sourceHash:'new-hash',selectionRevision:'new-selection',structure:{...source.structure,occurrences:source.structure.occurrences.map(o=>({...o,sourceText:'把明天唱成一首歌',lyricText:'把明天唱成一首歌'}))}});
   assert.equal((await store.documentForRequest(source.requestKey,'new-selection')).id,'doc-revised');
   assert.equal(await store.translation('doc-revised','en'),null);
   assert.equal((await store.translation(source.id,'en')).lines[0].text,'Old version.');

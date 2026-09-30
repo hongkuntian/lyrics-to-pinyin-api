@@ -7,6 +7,22 @@ const recording={catalog_id:'123',artist:'Test artist',title:'Original song',dur
 const response={song:{id:'source-1',title:{original:'Original song'},artist:{original:'Test artist'},language:'zh',romanization_system:'pinyin'},
   lines:[{original:'一起唱',romanized:'yī qǐ chàng',timestamp:0}],metadata:{source:'test',selection_revision:'test'},quality:{synced:true,partial:false,instrumental:false}};
 const fakeGeneration=async()=>({content:{lines:[{sourceID:'L0001',lyricText:'Sing together.',text:'Sing together.',speakerID:null,startsTurn:false}],sourceNotes:[],rejectedNotes:[]},actualMicros:1000,response:{id:'test-response'}});
+test('v1 storefront aliases coalesce generation and status returns the requested document metadata',async t=>{
+ let release;const barrier=new Promise(resolve=>release=resolve);let calls=0;
+ const {call,pending,store}=await setup(t,{generateFn:async()=>{calls++;await barrier;return fakeGeneration();}});
+ const a=(await call({action:'lyrics',recording})).body.document;
+ const b=(await call({action:'lyrics',recording:{...recording,storefront:'ca'}})).body.document;
+ assert.notEqual(a.id,b.id);
+ const first=await call({action:'translate',documentID:a.id,sourceHash:a.sourceHash});
+ const joined=await call({action:'translate',documentID:b.id,sourceHash:b.sourceHash},'token-b');
+ assert.equal(first.code,202);assert.equal(joined.code,202);assert.equal(joined.body.job.documentID,b.id);
+ release();await Promise.all(pending);
+ const status=await call({action:'status',jobID:joined.body.job.id},'token-b');
+ assert.equal(status.body.version,1);assert.equal(status.body.state,'ready');assert.equal(status.body.job.id,joined.body.job.id);
+ assert.equal(status.body.translation.documentID,b.id);assert.equal(status.body.translation.sourceHash,b.sourceHash);
+ assert.equal((await call({action:'translate',documentID:b.id,sourceHash:b.sourceHash})).body.translation.id,status.body.translation.id);
+ assert.equal(calls,1);assert.equal(Number((await store.usage()).jobs),1);
+});
 async function setup(t,overrides={}) {
   const {db,store}=await libraryDB();t.after(()=>db.close());const pending=[];
   const options={store,selectionRevision:'test',loadLyrics:async()=>response,generateFn:fakeGeneration,

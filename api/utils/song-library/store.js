@@ -2,6 +2,8 @@ import {canonicalTarget} from './languages.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {currentTranslationSQL,publishRevision,revisions} from './revisions.js';
 import {budget,checkBudget,configureReviews,reserveReview,claimReviewOperation,finishReviewOperation,releaseReviewOperation} from './spending.js';
+import {translationIdentity} from './translation-identity.js';
+import {reusableTranslation,jobForDocument} from './translation-reuse.js';
 
 export class LibraryError extends Error {
   constructor(code,status=409) { super(code);this.code=code;this.status=status; }
@@ -56,8 +58,8 @@ export class SongLibraryStore {
         if(!lease) throw new LibraryError('lookup_superseded');
       }
       const {song_details,provider_translation,...lyricResponse}=value.response;
-      await db.query(`INSERT INTO lyric_documents(id,recording_key,source_hash,selection_revision,response,structure)
-        VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO NOTHING`,[value.id,value.recordingKey,value.sourceHash,value.selectionRevision,JSON.stringify(lyricResponse),JSON.stringify(value.structure)]);
+      await db.query(`INSERT INTO lyric_documents(id,recording_key,source_hash,selection_revision,response,structure,translation_identity)
+        VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO NOTHING`,[value.id,value.recordingKey,value.sourceHash,value.selectionRevision,JSON.stringify(lyricResponse),JSON.stringify(value.structure),translationIdentity(value)]);
       await db.query(`INSERT INTO lyric_document_extras(document_id,song_details,provider_translation)
         VALUES($1,$2,$3) ON CONFLICT(document_id) DO UPDATE SET song_details=$2,provider_translation=$3,checked_at=now()`,
         [value.id,JSON.stringify(song_details??null),JSON.stringify(provider_translation??null)]);
@@ -95,7 +97,8 @@ export class SongLibraryStore {
   }
   async releaseLookup(key,revision,owner) { await this.db.query('DELETE FROM lyric_lookups WHERE request_key=$1 AND selection_revision=$2 AND owner=$3',[key,revision,owner]); }
   async translation(documentID,target) {
-    const row=await first(this.db,currentTranslationSQL,[documentID,target]);
+    const doc=await this.document(documentID);if(!doc)return null;
+    const row=await reusableTranslation(this.db,doc,target);
     return row && {...row.content,id:row.id,recipe:row.recipe,target:row.target,documentID:row.document_id,sourceHash:row.source_hash,notesLanguage:row.target};
   }
   publishRevision(args) { return publishRevision(this.db,args); }
@@ -117,39 +120,46 @@ export class SongLibraryStore {
       if(await first(db,'SELECT 1 FROM lyric_documents WHERE id=$1 AND superseded_by IS NOT NULL',[documentID])) throw new LibraryError('source_revision_superseded');
       const user=await first(db,'SELECT id,unlimited_generation FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
       if(!user) throw new LibraryError('unauthorized',401);
-      const saved=await first(db,currentTranslationSQL,[documentID,target]);
+      const doc=document(await first(db,'SELECT * FROM lyric_documents WHERE id=$1 AND superseded_by IS NULL',[documentID]));
+      if(!doc)throw new LibraryError('document_not_found',404);
+      const identity=translationIdentity(doc);
+      const saved=await reusableTranslation(db,doc,target);
       if(saved) return {kind:'ready',translation:{...saved.content,id:saved.id,recipe:saved.recipe,target:saved.target,documentID:saved.document_id,sourceHash:saved.source_hash,notesLanguage:saved.target}};
-      const prior=await first(db,'SELECT * FROM translation_jobs WHERE document_id=$1 AND target=$2',[documentID,target]);
-      if(prior) return {kind:prior.state==='queued'||prior.state==='running'?'pending':prior.state,job:publicJob(prior)};
+      const prior=await first(db,`SELECT j.* FROM translation_jobs j WHERE j.document_id=$1 AND j.target=$2
+        UNION ALL SELECT j.* FROM translation_generation_keys k JOIN translation_jobs j ON j.id=k.job_id
+        WHERE k.identity=$3 AND k.target=$2 LIMIT 1`,[documentID,target,identity]);
+      if(prior) return {kind:prior.state==='queued'||prior.state==='running'?'pending':prior.state,job:await jobForDocument(db,prior,documentID)};
       if(!settings.enabled) throw new LibraryError('generation_disabled',503);
       const active=await first(db,"SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown') UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1",[userID]);
       if(active) throw new LibraryError('user_busy',429);
       if(!user.unlimited_generation) {
         const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,
-          count(*) AS monthly FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations) attempts WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
+          count(*) AS monthly FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations UNION ALL SELECT j.user_id,r.created_at FROM translation_retry_requests r JOIN translation_jobs j ON j.id=r.job_id) attempts WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
         if(Number(counts.daily)>=settings.user_daily || Number(counts.monthly)>=settings.user_monthly) throw new LibraryError('generation_allowance_exhausted',429);
         checkBudget(settings,await budget(db),reservedMicros);
       }
       const row=await first(db,`INSERT INTO translation_jobs(id,document_id,target,recipe,user_id,state,reserved_micros,accounted_micros,generation_request)
         VALUES($1,$2,$3,$4,$5,'queued',$6,$6,$7) RETURNING *`,[randomUUID(),documentID,target,recipe,userID,reservedMicros,generationRequest?JSON.stringify(generationRequest):null]);
+      if(identity)await db.query('INSERT INTO translation_generation_keys(identity,target,job_id) VALUES($1,$2,$3) ON CONFLICT(identity,target) DO NOTHING',[identity,target,row.id]);
       return {kind:'created',job:publicJob(row)};
     });
   }
   async claim(id) {
     // A running/unknown job is never reclaimed: the provider may already have charged it.
-    return first(this.db,"UPDATE translation_jobs SET state='running',started_at=now() WHERE id=$1 AND state='queued' RETURNING *",[id]);
+    return first(this.db,`UPDATE translation_jobs SET state='running',started_at=now()
+      WHERE id=coalesce((SELECT job_id FROM translation_job_aliases WHERE id=$1),$1) AND state='queued' RETURNING *`,[id]);
   }
-  async complete(id,content,actualMicros,response) {
-    return this.finish(id,{content,actualMicros,response,state:'ready',errorCode:null});
+  async complete(id,content,actualMicros,response,attempt=null) {
+    return this.finish(id,{content,actualMicros,response,state:'ready',errorCode:null,attempt});
   }
-  async fail(id,errorCode,actualMicros,response=null) {
-    return this.finish(id,{actualMicros,response,state:actualMicros===null?'unknown':'failed',errorCode});
+  async fail(id,errorCode,actualMicros,response=null,attempt=null) {
+    return this.finish(id,{actualMicros,response,state:actualMicros===null?'unknown':'failed',errorCode,attempt});
   }
-  async finish(id,{content,actualMicros,response,state,errorCode}) {
+  async finish(id,{content,actualMicros,response,state,errorCode,attempt=null}) {
     if(actualMicros!==null && (!Number.isSafeInteger(actualMicros)||actualMicros<0)) throw new LibraryError('invalid_usage',500);
     return this.db.transaction(async db=> {
       await db.query('SELECT id FROM library_settings WHERE id=1 FOR UPDATE');
-      const job=await first(db,"SELECT * FROM translation_jobs WHERE id=$1 AND state='running' FOR UPDATE",[id]);
+      const job=await first(db,"SELECT * FROM translation_jobs WHERE id=$1 AND state='running' AND ($2::integer IS NULL OR attempt=$2) FOR UPDATE",[id,attempt]);
       if(!job) return;
       const charged=actualMicros ?? Number(job.reserved_micros);
       if(errorCode==='provider_configuration_changed') await db.query('UPDATE library_settings SET enabled=false WHERE id=1');
@@ -162,10 +172,12 @@ export class SongLibraryStore {
     });
   }
   async job(id) {
+    const alias=await first(this.db,'SELECT * FROM translation_job_aliases WHERE id=$1',[id]);
+    const jobID=alias?.job_id??id;
     // A crashed worker is visible as unknown after its execution window. Its reservation remains.
-    await this.db.query("UPDATE translation_jobs SET state='unknown',error_code='worker_interrupted' WHERE id=$1 AND state='running' AND started_at<now()-interval '6 minutes'",[id]);
-    const row=await first(this.db,'SELECT * FROM translation_jobs WHERE id=$1',[id]);
-    return row && publicJob(row);
+    await this.db.query("UPDATE translation_jobs SET state='unknown',error_code='worker_interrupted' WHERE id=$1 AND state='running' AND started_at<now()-interval '6 minutes'",[jobID]);
+    const row=await first(this.db,'SELECT * FROM translation_jobs WHERE id=$1',[jobID]);
+    return row && {...publicJob(row),id,documentID:alias?.document_id??row.document_id};
   }
   async usage() { return first(this.db,`SELECT coalesce(sum(accounted_micros),0) AS accounted_micros,
     count(*) FILTER(WHERE kind='generation') AS jobs,count(*) FILTER(WHERE kind<>'generation') AS review_operations FROM library_spend_operations`); }
@@ -176,8 +188,8 @@ export class SongLibraryStore {
     const doc=await this.document(documentID);
     if(!doc||!doc.structure.occurrences.some(x=>x.sourceID===sourceID)||!['lyrics','translation','pronunciation','timing'].includes(category)||typeof detail!=='string'||!detail.trim()||detail.length>2000) throw new LibraryError('invalid_report',400);
     if(translationID) {
-      const row=await first(this.db,`SELECT r.id FROM translation_revisions r JOIN song_translations t ON t.id=r.translation_id
-        WHERE r.id=$1 AND t.document_id=$2`,[translationID,documentID]);
+      const row=await first(this.db,`SELECT r.id FROM translation_revisions r JOIN translation_document_bindings b ON b.translation_id=r.translation_id
+        WHERE r.id=$1 AND b.document_id=$2`,[translationID,documentID]);
       if(!row) throw new LibraryError('invalid_report',400);
     }
     const fingerprint=digest([userID,documentID,translationID,sourceID,category,detail.trim()]);

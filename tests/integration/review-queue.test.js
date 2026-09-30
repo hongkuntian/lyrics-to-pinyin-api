@@ -12,7 +12,7 @@ async function fixture(t,{report=true,second=false}={}) {
   const f=await libraryDB();t.after(()=>f.db.close());const db={query:(...a)=>f.db.query(...a),transaction:fn=>f.db.transaction(fn)};
   await f.store.configureReviews({enabled:true,dailyMicros:250_000,monthlyMicros:1_000_000,maxDaily:5});
   const ids=[];
-  for(const doc of second?[source,{...source,id:'doc-two',requestKey:'request-two'}]:[source]) {
+  for(const doc of second?[source,{...source,id:'doc-two',requestKey:'request-two',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}}]:[source]) {
     await f.store.saveDocument(doc);
     const j=await f.store.reserve({userID:'reader-a',documentID:doc.id,target:'en',recipe:'fixture',reservedMicros:30_000});
     await f.store.claim(j.job.id);await f.store.complete(j.job.id,parseTranslation(JSON.stringify({translations:{L0001:'Make a song of today.'},sourceNotes:[]}),doc),1000,{id:'test'});

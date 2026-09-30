@@ -4,7 +4,8 @@ import {SongLibraryStore,LibraryError} from './utils/song-library/store.js';
 import {database} from './utils/song-library/database.js';
 import {makeDocument,recordingRequest,requestKey} from './utils/song-library/document.js';
 import {LEGACY_MODEL} from './utils/song-library/model-policy.js';
-import {generate,requestBody,reservationMicros,LEGACY_RECIPE,translationRecipe} from './utils/song-library/translation.js';
+import {generate,requestBody,reservationMicros,translationRecipe} from './utils/song-library/translation.js';
+import {executeTranslationJob} from './utils/song-library/translation-worker.js';
 import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
 
 import {canonicalTarget,environmentLanguagePolicy,requireDirection,capabilities} from './utils/song-library/languages.js';
@@ -26,18 +27,7 @@ export function lyricLoader(handler=createMusicRomanizeHandler()) {
 export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,apiKey=process.env.OPENAI_API_KEY,
   selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null,pronunciationFn=annotationFor,pronunciationProfiles=enabledProfiles}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
-  async function execute(db,id,doc) {
-    const claimed=await db.claim(id);if(!claimed)return;
-    try {
-      // An old queued job has only the frozen English recipe; never reinterpret it.
-      if(!claimed.generation_request&&(claimed.target!=='en'||claimed.recipe!==LEGACY_RECIPE))throw new LibraryError('generation_configuration_unavailable');
-      const result=await generateFn(doc,{apiKey,target:claimed.target,generationRequest:claimed.generation_request??requestBody(doc,'en',{legacy:true})});
-      await db.complete(id,result.content,result.actualMicros,result.response);
-    } catch(error) {
-      // A timeout/storage interruption never releases money or starts a second provider request.
-      await db.fail(id,error.code??'worker_interrupted',error.actualMicros??null,error.providerResponse??null);
-    }
-  }
+  const execute=(db,id,doc)=>executeTranslationJob(db,id,{apiKey,generateFn,doc});
   return async(req,res)=> {
     res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','private, no-store');
     const send=(status,body)=>res.status(status).json({version:1,...body});

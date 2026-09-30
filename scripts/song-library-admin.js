@@ -7,11 +7,15 @@ import {parseArgs} from 'node:util';
 import {database} from '../api/utils/song-library/database.js';
 import {SongLibraryStore} from '../api/utils/song-library/store.js';
 import {migrateLibrary} from './library-migrations.js';
+import {repairTranslationReuse} from './repair-translation-reuse.js';
+import {retryTranslation} from '../api/utils/song-library/translation-retry.js';
+import {executeTranslationJob} from '../api/utils/song-library/translation-worker.js';
 
 const {values,positionals}=parseArgs({allowPositionals:true,options:{
   id:{type:'string'},'token-file':{type:'string'},'daily-usd':{type:'string'},'monthly-usd':{type:'string'},enable:{type:'boolean'},
   'user-daily':{type:'string',default:'10'},'user-monthly':{type:'string',default:'50'},'max-daily':{type:'string',default:'5'},
-  unlimited:{type:'boolean'},limited:{type:'boolean'}
+  unlimited:{type:'boolean'},limited:{type:'boolean'},apply:{type:'boolean'},execute:{type:'boolean'},
+  'expected-attempt':{type:'string'},'request-key':{type:'string'},actor:{type:'string'},reason:{type:'string'}
 }});
 const dollars=value=> {
   if(typeof value!=='string'||!/^\d+(\.\d{1,6})?$/.test(value))throw new Error('Specify an explicit nonnegative USD amount.');
@@ -24,6 +28,16 @@ try {
   if(command==='migrate') {
     await migrateLibrary(db);
     console.log('Song library schema ready. New installations default to generation and review disabled.');
+  } else if(command==='repair-translations') {
+    console.log(JSON.stringify(await repairTranslationReuse(db,{dryRun:!values.apply})));
+  } else if(command==='retry-translation') {
+    if(values.execute&&(!values.apply||!process.env.OPENAI_API_KEY))throw new Error('Execution requires --apply and configured provider credentials.');
+    const receipt=await retryTranslation(db,{jobID:values.id,expectedAttempt:Number(values['expected-attempt']),requestKey:values['request-key'],actor:values.actor,reason:values.reason,dryRun:!values.apply});
+    if(values.apply&&values.execute){await executeTranslationJob(store,receipt.jobID,{apiKey:process.env.OPENAI_API_KEY});receipt.job=await store.job(receipt.jobID);}
+    console.log(JSON.stringify(receipt));
+  } else if(command==='run-translation') {
+    if(!values.id||!values.execute||!process.env.OPENAI_API_KEY)throw new Error('run-translation requires --id, --execute and configured provider credentials.');
+    await executeTranslationJob(store,values.id,{apiKey:process.env.OPENAI_API_KEY});console.log(JSON.stringify(await store.job(values.id)));
   } else if(command==='configure') {
     const configuration={enabled:values.enable===true,dailyMicros:dollars(values['daily-usd']),monthlyMicros:dollars(values['monthly-usd']),
       userDaily:Number(values['user-daily']),userMonthly:Number(values['user-monthly'])};
@@ -51,7 +65,7 @@ try {
   } else if(command==='reports') {
     const result=await db.query('SELECT id,document_id,translation_id,source_id,category,detail,status,created_at FROM correction_reports ORDER BY created_at DESC LIMIT 100');
     console.log(JSON.stringify(result.rows,null,2));
-  } else throw new Error('Commands: migrate, configure, configure-reviews, configure-publication, disable, user, user-access, usage, reports.');
+  } else throw new Error('Commands: migrate, repair-translations, retry-translation, run-translation, configure, configure-reviews, configure-publication, disable, user, user-access, usage, reports.');
 } catch(error) {
   // Never print connection strings, tokens, provider bodies or driver diagnostics.
   console.error(error.code??'admin_command_failed');process.exitCode=1;

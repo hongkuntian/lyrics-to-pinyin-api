@@ -23,7 +23,7 @@ export function requestBody(doc,target='en',{legacy=false,model=legacy?LEGACY_MO
     sourceLanguageLabel:doc.response.song.language,sourceDocument:{version:doc.structure.version,
       speakers:doc.structure.speakers,occurrences:doc.structure.occurrences},verifiedBackground:[],
     lexicalContext:{terms,sources:lexicon.sources.filter(s=>sourceIDs.has(s.id))}};
-  return {model,reasoning:{effort:policy.effort},service_tier:'default',max_output_tokens:16384,store:false,
+  return {model,reasoning:{effort:policy.effort},service_tier:'default',max_output_tokens:legacy?16384:32768,store:false,
     instructions,input:[{role:'user',content:JSON.stringify(data)}],text:{format:{
       type:'json_schema',name:'song_fidelity',strict:true,schema:object({
         translations:object(Object.fromEntries(ids.map(id=>[id,{type:'string'}]))),

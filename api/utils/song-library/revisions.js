@@ -1,12 +1,14 @@
 import {randomUUID} from 'node:crypto';
 import {LibraryError,digest} from './store.js';
 import {parseTranslation} from './translation.js';
+import {translationSource} from './translation-source.js';
 
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??null;
 const uuid=value=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
-export const currentTranslationSQL=`SELECT r.id,r.recipe,r.content,t.target,t.document_id,r.source_hash FROM song_translations t
+export const currentTranslationSQL=`SELECT r.id,r.recipe,r.content,t.target,b.document_id,d.source_hash FROM song_translations t
   JOIN translation_heads h ON h.translation_id=t.id JOIN translation_revisions r ON r.id=h.revision_id
-  WHERE t.document_id=$1 AND t.target=$2`;
+  JOIN translation_document_bindings b ON b.translation_id=t.id JOIN lyric_documents d ON d.id=b.document_id
+  WHERE b.document_id=$1 AND t.target=$2`;
 
 // Trusted backend primitive only. No public handler dispatches to this function.
 // The review publisher validates persisted assessment and comparison before calling it.
@@ -30,8 +32,8 @@ export async function publishRevision(database,args,{rollback=false}={}) {
     }
     const head=await first(db,'SELECT revision_id FROM translation_heads WHERE translation_id=$1',[base.translation_id]);
     if(head?.revision_id!==expectedRevisionID) throw new LibraryError('translation_revision_superseded');
-    const row=await first(db,'SELECT * FROM lyric_documents WHERE id=$1',[base.document_id]);
-    if(row.source_hash!==sourceHash||base.source_hash!==sourceHash) throw new LibraryError('source_changed');
+    const row=await translationSource(db,base.translation_id);
+    if(!row||row.sourceHash!==sourceHash||base.source_hash!==sourceHash) throw new LibraryError('source_changed');
     let content,recipe=base.recipe;
     if(rollback) {
       const restored=await first(db,'SELECT content,recipe FROM translation_revisions WHERE id=$1 AND translation_id=$2 AND source_hash=$3',
@@ -59,5 +61,6 @@ export async function revisions(db,documentID,target) {
   return (await db.query(`SELECT r.id,r.sequence,r.base_revision_id,r.source_hash,r.recipe,r.origin,r.actor,r.reason,
     r.restored_from,r.created_at,(h.revision_id=r.id) AS current
     FROM translation_revisions r JOIN song_translations t ON t.id=r.translation_id
-    JOIN translation_heads h ON h.translation_id=t.id WHERE t.document_id=$1 AND t.target=$2 ORDER BY r.sequence DESC LIMIT 100`,[documentID,target])).rows;
+    JOIN translation_heads h ON h.translation_id=t.id JOIN translation_document_bindings b ON b.translation_id=t.id
+    WHERE b.document_id=$1 AND t.target=$2 ORDER BY r.sequence DESC LIMIT 100`,[documentID,target])).rows;
 }

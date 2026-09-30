@@ -21,6 +21,9 @@ test('legacy credits are moved out of stored source arrays and history is retire
   assert.ok(!JSON.stringify(persisted).includes('测试乐手'));
   const retired=(await db.query('SELECT response,structure FROM lyric_documents WHERE id=$1',[old.id])).rows[0];
   assert.deepEqual(retired.response,{retired:true,replacement_id:next.id});
+  const archive=(await db.query('SELECT response,structure FROM lyric_source_archives WHERE document_id=$1',[old.id])).rows[0];
+  assert.deepEqual(archive.structure,old.structure);assert.deepEqual(archive.response.lines,old.response.lines);
+  await assert.rejects(db.query('DELETE FROM lyric_source_archives WHERE document_id=$1',[old.id]),/translation_revision_immutable/);
   assert.ok(!JSON.stringify(retired).includes('测试乐手'));assert.equal(await store.document(old.id),null);
   assert.deepEqual(await migrateSourceContent(db),{migrated:0});
 });

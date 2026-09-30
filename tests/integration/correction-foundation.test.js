@@ -84,7 +84,7 @@ test('review and generation compete for the same cap, including old outstanding 
   await store.reserveReview(review(revisionID));
   // A month-old reservation still consumes both the daily and monthly headroom.
   await db.query("UPDATE library_spend_operations SET created_at=now()-interval '40 days' WHERE kind<>'generation'");
-  await store.saveDocument({...source,id:'other-doc',requestKey:'other-request'});
+  await store.saveDocument({...source,id:'other-doc',requestKey:'other-request',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}});
   await assert.rejects(store.reserve({userID:'reader-b',documentID:'other-doc',target:'en',recipe:'fixture',reservedMicros:20_000}),{code:'budget_exhausted'});
   const budget=await store.budget();
   assert.equal(Number(budget.daily),31_000);assert.equal(Number(budget.monthly),31_000);
@@ -153,6 +153,8 @@ test('migration backfills legacy records, tolerates reruns and captures writes f
   await db.query("INSERT INTO song_translations(id,document_id,target,recipe,content) VALUES($1,$2,'en','legacy',$3)",[id,source.id,JSON.stringify(parseTranslation(JSON.stringify(input),source))]);
   await db.query("UPDATE translation_jobs SET state='ready',accounted_micros=1500,provider_response=$2,finished_at=now() WHERE id=$1",[id,JSON.stringify({usage:{input_tokens:1000,output_tokens:1000}})]);
   await db.exec(await sql('003-correction-foundation.sql'));
+  const adapt=client=>({query:(sql,args)=>args?client.query(sql,args):client.exec(sql).then(r=>r.at(-1)),transaction:fn=>db.transaction(client=>fn(adapt(client)))});
+  await migrateLibrary(adapt(db));
   assert.equal((await store.translation(source.id,'en')).id,id);
   assert.equal((await store.revisions(source.id,'en')).length,1);
   assert.equal(Number((await store.budget()).daily),1500);

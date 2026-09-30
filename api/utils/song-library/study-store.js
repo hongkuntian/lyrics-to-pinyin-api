@@ -16,7 +16,8 @@ export async function reserveExplanation(database,{key,doc,translation,selection
     const user=await first(db,'SELECT id,unlimited_generation FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
     if(!user)throw new LibraryError('unauthorized',401);
     if(translation) {
-      const head=await first(db,`SELECT h.revision_id FROM translation_heads h JOIN song_translations t ON t.id=h.translation_id WHERE t.document_id=$1 AND t.target=$2 FOR UPDATE OF t`,[doc.id,translation.target??'en']);
+      const head=await first(db,`SELECT h.revision_id FROM translation_heads h JOIN song_translations t ON t.id=h.translation_id
+        JOIN translation_document_bindings b ON b.translation_id=t.id WHERE b.document_id=$1 AND t.target=$2 FOR UPDATE OF t`,[doc.id,translation.target??'en']);
       if(head?.revision_id!==translation.id)throw new LibraryError('translation_revision_superseded');
     }
     const active=await first(db,`SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown')
@@ -24,7 +25,7 @@ export async function reserveExplanation(database,{key,doc,translation,selection
     if(active)throw new LibraryError('user_busy',429);
     if(!user.unlimited_generation) {
       const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,count(*) AS monthly
-        FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations) attempts
+        FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations UNION ALL SELECT j.user_id,r.created_at FROM translation_retry_requests r JOIN translation_jobs j ON j.id=r.job_id) attempts
         WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
       if(Number(counts.daily)>=settings.user_daily||Number(counts.monthly)>=settings.user_monthly)throw new LibraryError('generation_allowance_exhausted',429);
       checkBudget(settings,await budget(db),amount);

@@ -20,8 +20,8 @@ test('missing schema fails the build and releases its connection',async()=>{
 test('explicit production migration runs before readiness check and logs only receipt names',async()=>{
  const events=[];
  await verifyBuildSchema({env:{...production,LYRA_LIBRARY_MIGRATE_ON_BUILD:'1'},open:()=>({query:async()=>{events.push('verify');return {rows:[{}]};},close:async()=>events.push('close')}),
-  migrate:async()=>{events.push('migrate');return [migrationNames.at(-1)];},migrateSources:async()=>{events.push('sources');return {migrated:2};},log:message=>{assert.ok(!message.includes('postgres'));events.push('log');}});
- assert.deepEqual(events,['migrate','log','sources','log','verify','log','close']);
+  migrate:async()=>{events.push('migrate');return [migrationNames.at(-1)];},migrateSources:async()=>{events.push('sources');return {migrated:2};},repairTranslations:async()=>{events.push('reuse');return {indexed:3,recovered:1,deferred:[]};},log:message=>{assert.ok(!message.includes('postgres'));events.push('log');}});
+ assert.deepEqual(events,['migrate','log','sources','log','reuse','log','verify','log','close']);
 });
 test('migration errors never continue to readiness and still close',async()=>{
  let closed=0;

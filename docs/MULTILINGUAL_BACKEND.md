@@ -200,3 +200,42 @@ no new wildcard targets are enabled. Non-English automatic correction remains of
 English Study v1 and v2 keep their existing recipe identities and exact prompts.
 Non-English v2 explanations use `study-text-2`, so their grammar improvement cannot
 reuse an older explanation cache. Clients validate that language-specific recipe.
+
+## Translation reuse and explicit recovery
+
+Translation identity covers the complete ordered source occurrences, speaker turns,
+source language, and song title/artist context. Recording timing, pronunciation,
+storefront and source-normalizer version remain independent. Verified bindings
+serve the same current revision with the requesting document's ID and source hash;
+job aliases coalesce pending work while preserving the v1 client contract. Corrections,
+rollback history, reports and translated Study keep the shared revision identity.
+
+Migration 017 adds reuse bindings and immutable source archives. The build's explicit
+production migration route indexes current documents and repairs retired translations
+only when a reconstructed or archived source matches the historical SHA-256 hash,
+the complete source semantics agree, and the saved output covers every occurrence.
+Unproven sources stay deferred. Future source migrations archive the original document
+before retirement. No migration generates translations or replaces existing heads.
+
+Migration 018 preserves the logical job ID and records each owner-authorized retry as
+a separate spend operation and immutable attempt receipt. Previous charges remain
+settled. Unknown costs, active work, stale attempts, disabled generation, and exhausted
+user/global allowances prevent admission. Token rotation cannot reset this history.
+New translation requests reserve 32,768 output tokens at the current model/effort;
+already admitted requests and legacy reconstruction retain their original limits.
+
+Run operator commands with the database/provider credentials loaded through a private
+environment file. Both recovery commands default to a dry run:
+
+```sh
+node scripts/song-library-admin.js repair-translations
+node scripts/song-library-admin.js repair-translations --apply
+node scripts/song-library-admin.js retry-translation --id JOB_UUID \
+  --expected-attempt 1 --request-key UNIQUE_RECOVERY_KEY \
+  --actor OPERATOR --reason 'Known failure; reviewed configuration change'
+```
+
+Add `--apply --execute` to that same retry command to admit and execute one attempt.
+Repeating its request key is idempotent; a ready/running job never dispatches again.
+An admitted queued attempt can be resumed with `run-translation --id JOB_UUID --execute`.
+The public API never resets failed jobs or retries paid work automatically.
