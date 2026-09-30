@@ -3,7 +3,7 @@ import chinese from 'chinese-conv';
 const require=createRequire(import.meta.url);
 const roster=require('../data/lyric-performers.json');
 export const LYRIC_NORMALIZATION_VERSION='lyric-annotations-3';
-export const LYRIC_SELECTION_REVISION='lyrics-selection-2026-09-29-source-content-3';
+export const LYRIC_SELECTION_REVISION='lyrics-selection-2026-09-30-storefront-1';
 export const reviewedSpeakerLabels=catalogID=>roster.reviewedRecordings[catalogID]??{};
 
 // Normalize labels for comparison only. Never rewrite the sung words.

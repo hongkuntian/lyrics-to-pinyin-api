@@ -6,11 +6,13 @@ const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex
 
 // Translation text has no recording clock or pronunciation overlay. Preserve the
 // complete ordered source and speaker semantics; names alone never establish reuse.
-export function translationIdentity(doc) {
+export function translationIdentity(doc,{omitContext=false}={}) {
   const song=doc.response?.song,structure=doc.structure;
   if(!song?.language || !song.title?.original || !song.artist?.original || !structure?.occurrences?.length) return null;
   return hash({version:TRANSLATION_IDENTITY_VERSION,language:song.language,
-    context:{title:label(song.title.original),artist:label(song.artist.original)},
+    context:omitContext ? null : doc.response.metadata?.catalog_resolution?.canonical_context
+      ? {title:label(doc.response.metadata.catalog_resolution.canonical_context.title),artist:label(doc.response.metadata.catalog_resolution.canonical_context.artist)}
+      : {title:label(song.title.original),artist:label(song.artist.original)},
     speakers:(structure.speakers??[]).map(s=>({id:s.id,sourceLabel:s.sourceLabel,displayName:s.displayName})),
     occurrences:structure.occurrences.map(o=>({sourceID:o.sourceID,sourceText:o.sourceText,lyricText:o.lyricText,
       speakerID:o.speakerID??null,startsTurn:Boolean(o.startsTurn),sourcePrefix:o.sourcePrefix??''}))});

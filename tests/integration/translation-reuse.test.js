@@ -6,6 +6,7 @@ import {repairTranslationReuse} from '../../scripts/repair-translation-reuse.js'
 import {parseTranslation} from '../../api/utils/song-library/translation.js';
 import {reviewContext} from '../../api/utils/song-library/review-context.js';
 import {reserveExplanation} from '../../api/utils/song-library/study-store.js';
+import {digest} from '../../api/utils/song-library/store.js';
 
 const request={userID:'reader-a',documentID:source.id,target:'en',recipe:'fixture',reservedMicros:30_000};
 const candidate={translations:{L0001:'Make a song of today.'},sourceNotes:[]};
@@ -21,6 +22,22 @@ test('timing, reading, normalization and storefront changes reuse the same revis
  assert.equal(Number((await store.usage()).jobs),1);assert.equal(Number((await store.usage()).accounted_micros),1000);
  assert.equal((await store.document(doc.id)).response.lines[0].timestamp,42);
  assert.equal((await db.query('SELECT count(*) AS n FROM translation_reuse_events')).rows[0].n,1);
+});
+test('verified catalog evidence bridges translated names without timing or reading identity',async t=>{
+ const {store,db}=await fixture(t),id=await ready(store);
+ const recordingKey=digest({catalogID:'123',storefront:'hk'});
+ await db.query('UPDATE lyric_documents SET recording_key=$2 WHERE id=$1',[source.id,recordingKey]);
+ const doc=alias();doc.canonicalRecordingID='apple:123';doc.textRevision='text';doc.timingRevision='clock';doc.readingRevision='reading';
+ doc.response.song.title.original='Localized title';
+ doc.response.metadata.catalog_resolution={canonical_context:{title:'International title',artist:'International artist'},
+  catalog_items:[{catalog_id:'123',storefront:'hk'}]};
+ await store.saveDocument(doc);
+ await store.configure({enabled:false,dailyMicros:0,monthlyMicros:0});
+ assert.equal((await store.translation(doc.id,'en')).id,id);
+ assert.equal((await store.reserve({...request,documentID:doc.id})).kind,'ready');
+ assert.equal(Number((await store.usage()).jobs),1);
+ const changed=structuredClone(doc);changed.id='changed-source';changed.requestKey='changed-source';changed.structure.occurrences[0].sourceText+='改';
+ await store.saveDocument(changed);assert.equal(await store.translation(changed.id,'en'),null);
 });
 test('changed lyrics, repeated occurrence order, speaker turns, language and song context never share an identity',()=>{
  const identity=translationIdentity(source);

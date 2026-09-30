@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createMusicRomanizeHandler} from '../../api/music-romanize.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
+import {resolveCatalogAliases} from '../../api/utils/catalog-aliases.js';
 const request={artist:'Eric Chou',title:'Unbreakable Love',duration:258.264,catalog_id:'1321295664'};
 const localized={artist:'周興哲',title:'永不失聯的愛',album:'如果雨之後',duration:258.264,catalog_id:'1321295664'};
 async function run(api, body=request, deps={}) {
@@ -9,15 +10,37 @@ async function run(api, body=request, deps={}) {
   await createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[api],resolveCatalogAliasesFn:async()=>[localized],logger:{error(){},info(){}},...deps})(createMockReq({body}),res);
   return res;
 }
-test('English catalog names do not suppress Chinese pronunciation',async()=> {
+test('English catalog names do not hide Chinese text or invent its pronunciation dialect',async()=> {
   const api={name:'Fixture',searchSong:async()=>({...request,id:1}),getLyrics:async()=>({lines:[{text:'一起唱',timestamp:0},{text:'Sing with me',timestamp:4}]})};
   const res=await run(api);
   assert.equal(res.statusCode,200);
   assert.equal(res.body.song.language,'zh');
-  assert.equal(res.body.song.romanization_system,'pinyin');
-  assert.equal(res.body.lines[0].romanized,'yì qǐ chàng');
+  assert.equal(res.body.song.romanization_system,'none');
+  assert.equal(res.body.lines[0].romanized,'一起唱');
+  assert.equal(res.body.metadata.language_details.pronunciation_language,null);
   assert.equal(res.body.lines[1].romanized,'Sing with me');
   assert.equal(res.body.song.title.romanized,'Unbreakable Love');
+});
+test('verified storefront callers coalesce provider work and receive their own original anchor',async()=>{
+ const english={kind:'song',trackId:1321295664,trackName:request.title,artistName:request.artist,collectionName:'The Chaos After You',trackTimeMillis:258264};
+ const native={...english,trackName:localized.title,artistName:localized.artist,collectionName:localized.album};
+ const fetchFn=async url=>({ok:true,json:async()=>({results:new URL(url).searchParams.get('country')==='us'?[english]:[native]})});
+ let calls=0;
+ const api={name:'Fixture',searchSong:async(a,t)=>{calls++;await new Promise(r=>setTimeout(r,20));return t===request.title?{...request,album:english.collectionName,id:1}:{...localized,id:1};},
+  getLyrics:async()=>({lines:[{text:'一起唱',timestamp:0}]})};
+ const handler=createMusicRomanizeHandler({redis:null,getAvailableAPIsFn:()=>[api],lookupReviewedRecordingFn:async()=>null,
+  lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
+  resolveCatalogAliasesFn:(r,c)=>resolveCatalogAliases(r,{...c,fetchFn,appleCatalog:null}),logger:{info(){},error(){}}});
+ const run=async body=>{const res=createMockRes();await handler(createMockReq({body}),res);return res;};
+ const inputs=[{...request,album:english.collectionName,storefront:'ca'},{...localized,storefront:'jp'}];
+ const results=await Promise.all(inputs.map(run));
+ assert.equal(calls,1);
+ for(let i=0;i<results.length;i++){
+  assert.equal(results[i].statusCode,200);
+  assert.equal(results[i].body.metadata.catalog_resolution.requested.storefront,inputs[i].storefront);
+ }
+ const cached=await run({...inputs[1],storefront:'hk'});assert.equal(cached.statusCode,200);assert.equal(calls,1);
+ const wrong=await run({...inputs[1],artist:'Cover Artist'});assert.equal(wrong.statusCode,409);
 });
 test('verified aliases retry providers and return identity evidence for iOS',async()=> {
   const queries=[];
@@ -81,7 +104,7 @@ test('a failed optional timing upgrade preserves the original plain response',as
  }
 });
 
-test('timed and explicit instrumental results do not trigger optional alias discovery',async()=>{
+test('catalog evidence failure cannot suppress a timed or instrumental result',async()=>{
  for(const lyrics of [{lines:[{text:'一起唱',timestamp:0}]},{instrumental:true,lines:[]}]) {
   const api={name:'Fixture',searchSong:async()=>({...request,id:1}),getLyrics:async()=>lyrics};
   const res=await run(api,request,{resolveCatalogAliasesFn:()=>assert.fail('no optional lookup needed')});

@@ -12,6 +12,49 @@ A Node.js serverless backend (Vercel) for romanizing multilingual lyrics and tex
   - `netease`
   - `lrclib`
 
+Lyric discovery through LRCLIB accepts other language tags, including Latin,
+Cyrillic, Arabic and Indic scripts. Discovery support does not guarantee provider
+coverage or a pronunciation processor. Original words stay readable when a
+language or pronunciation dialect cannot be established.
+
+## Storefront-independent lyric resolution
+
+Version 2.5 keeps catalog identity separate from localized display names. Send
+the original `catalog_id`, `storefront`, album and duration; `account_storefront`
+and `isrc` are optional hints. The server checks the item across US, HK, TW, CN,
+JP, KR and the caller's territories with three concurrent reads under a 2.5 second
+catalog budget. Fixed verified query order lets Japanese and international titles
+find the same timed source. The total provider budget remains 16 seconds, with at
+most four name queries and two concurrent providers per query.
+
+Configure `APPLE_MUSIC_TEAM_ID`, `APPLE_MUSIC_KEY_ID` and
+`APPLE_MUSIC_PRIVATE_KEY` in server environment variables. The ES256 private key
+must stay outside source control and app bundles. Authenticated lookup negotiates
+the storefront's advertised languages, requests equivalent IDs and falls back to
+ISRC lookup. Cross-ID timing requires a single candidate with matching server
+ISRC, full artist IDs, content rating, version markers and duration within 0.5
+seconds. A client ISRC alone cannot establish equivalence. Same-ID public iTunes
+lookup remains available if server authentication or Apple catalog calls fail.
+
+Verified recordings share a bounded memory cache and in-flight provider work;
+responses retain each caller's original catalog anchor. Migration 020 adds durable
+catalog bindings and separate text, timing and reading revisions without changing
+existing document IDs or generation keys. Complete lyrics outrank partial timing.
+Translations bridge historical localized names only with verified catalog evidence
+and exact ordered words, language and speaker turns. Archived source references
+remain readable, while retired sources retain the existing paid-generation fence.
+
+`metadata.language_details` reports script, estimated language, uncertainty and
+mixed passages independently of reading support. Han text alone never proves
+Mandarin or Cantonese. `metadata.timing_quality` separates usable timestamp
+coverage from listening-reviewed alignment. `lyrics_resolution` logs contain
+method, territory count, language and quality, without keys, tokens or lyric text.
+
+Set `LYRA_CATALOG_EQUIVALENTS_ENABLED=0` to disable cross-ID recovery, or
+`LYRA_CATALOG_RESOLUTION_ENABLED=0` to disable catalog discovery. No lyric words
+or timing are synthesized. Missing provider coverage, ambiguous versions and
+uncertain short-language samples remain explicit limits.
+
 ## Endpoints
 
 ### `POST /api/romanize`

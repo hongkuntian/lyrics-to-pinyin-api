@@ -6,7 +6,10 @@ import chinese from 'chinese-conv';
 import {cleanLyrics,hasUsableLyrics} from '../utils/lyric-quality.js';
 import {isRejectedLyrics} from '../utils/rejected-lyrics.js';
 export class LRCAPI extends BaseMusicAPI {
-  constructor({rejectLyrics=isRejectedLyrics}={}) { super('LRCAPI',['zh','en','ja','ko']); this.baseURL='https://lrclib.net/api'; this.rejectLyrics=rejectLyrics; }
+  constructor({rejectLyrics=isRejectedLyrics}={}) { super('LRCAPI',['zh','yue','en','ja','ko','ru']); this.baseURL='https://lrclib.net/api'; this.rejectLyrics=rejectLyrics; this.languageAgnosticDiscovery=true; }
+  // Search accepts Unicode metadata independently of reading-aid coverage.
+  // This is discovery capability, not a promise that a transcript exists.
+  supportsLanguage(language) { return typeof language==='string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(language); }
   async searchSong(artist,title,context={}) {
     const request={artist,title,...context}, records=new Map();
     let failure;

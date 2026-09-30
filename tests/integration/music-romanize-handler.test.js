@@ -17,6 +17,7 @@ test('listening-reviewed recovery exposes corrected source timing and recording 
   const request={artist:'Fixture Singer',title:'Fixture Song (Remastered)',album:'Fixture Album',duration:221.412,catalog_id:'123'};
   const correction={id:'fixture-review',status:'replacement',basis:'recording_listening_review',offset_seconds:-8.5};
   const handler=createMusicRomanizeHandler({redis:null,logger:{info(){},error(){}},
+    resolveCatalogAliasesFn:async()=>[],
     getAvailableAPIsFn:()=>[{name:'FixtureAPI',searchSong:()=>assert.fail('reviewed recovery needs no broad search')}],
     lookupListeningReviewedRecordingFn:async target=>({song:{id:987,title:'Fixture Song',artist:request.artist,album:request.album,duration:221,source:'lrclib'},
       lyrics:{lines:[{text:'Fixture opening',timestamp:28.18},{text:'Fixture chorus',timestamp:82.44},{text:'Fixture ending',timestamp:190.95}],source:'lrclib'},

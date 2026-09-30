@@ -102,6 +102,15 @@ test("catalog alias identity is an additive typed response contract", async () =
   assert.equal(res.statusCode,200);
   assertSchemaMatch(musicSuccessSchema,res.body);
   assert.deepEqual(res.body.metadata.recording_match,{method:'catalog_alias',...original});
+  const proof={version:'catalog-recording-1',method:'same_catalog_id',requested:{catalog_id:original.catalog_id,storefront:null},
+    canonical_recording_id:'apple:'+original.catalog_id,canonical_context:{title:original.title,artist:original.artist},
+    catalog_items:[{catalog_id:original.catalog_id,storefront:'hk',provenance:'apple_music'}]};
+  const upgraded=structuredClone(res.body);upgraded.metadata.catalog_resolution=proof;
+  assertSchemaMatch(musicSuccessSchema,upgraded);
+  upgraded.metadata.catalog_resolution.requested.catalog_id=123;
+  assert.ok(validateSchema(musicSuccessSchema,upgraded).length);
+  const badLanguage=structuredClone(res.body);badLanguage.metadata.language_details.mixed='true';
+  assert.ok(validateSchema(musicSuccessSchema,badLanguage).length);
 });
 
 test('normalized annotation metadata is typed and optional for older clients', async () => {

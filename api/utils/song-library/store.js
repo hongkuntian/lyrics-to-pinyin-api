@@ -11,6 +11,7 @@ export class LibraryError extends Error {
 export const digest=value=>createHash('sha256').update(typeof value==='string'?value:JSON.stringify(value)).digest('hex');
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0] ?? null;
 const document=row=>row && ({id:row.id,recordingKey:row.recording_key,sourceHash:row.source_hash,
+  canonicalRecordingID:row.canonical_recording_id??null,textRevision:row.text_revision??null,timingRevision:row.timing_revision??null,readingRevision:row.reading_revision??null,
   selectionRevision:row.selection_revision,checkedAt:row.checked_at??null,response:{...row.response,...(row.song_details?{song_details:row.song_details}:{}),...(row.provider_translation?{provider_translation:row.provider_translation}:{})},structure:row.structure});
 const publicJob=row=>({id:row.id,state:row.state,documentID:row.document_id,target:row.target,errorCode:row.error_code});
 
@@ -60,6 +61,21 @@ export class SongLibraryStore {
       const {song_details,provider_translation,...lyricResponse}=value.response;
       await db.query(`INSERT INTO lyric_documents(id,recording_key,source_hash,selection_revision,response,structure,translation_identity)
         VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO NOTHING`,[value.id,value.recordingKey,value.sourceHash,value.selectionRevision,JSON.stringify(lyricResponse),JSON.stringify(value.structure),translationIdentity(value)]);
+      if(value.canonicalRecordingID) {
+        await db.query(`UPDATE lyric_documents SET canonical_recording_id=$2,text_revision=$3,timing_revision=$4,reading_revision=$5 WHERE id=$1 AND canonical_recording_id IS NULL`,
+          [value.id,value.canonicalRecordingID,value.textRevision,value.timingRevision,value.readingRevision]);
+        const proof=value.response.metadata.catalog_resolution;
+        for(const item of proof.catalog_items??[]) {
+          await db.query(`INSERT INTO catalog_recording_bindings(catalog_id,storefront,canonical_recording_id,evidence)
+            VALUES($1,$2,$3,$4) ON CONFLICT(catalog_id,storefront) DO UPDATE SET canonical_recording_id=$3,evidence=$4,checked_at=now()`,
+            [item.catalog_id,item.storefront,value.canonicalRecordingID,JSON.stringify(proof)]);
+        }
+        await db.query(`INSERT INTO recording_lyric_heads(canonical_recording_id,selection_revision,document_id)
+          VALUES($1,$2,$3) ON CONFLICT(canonical_recording_id,selection_revision) DO UPDATE SET document_id=$3,checked_at=now()
+          WHERE NOT EXISTS(SELECT 1 FROM lyric_documents d WHERE d.id=recording_lyric_heads.document_id
+            AND (d.response->'quality'->>'synced')::boolean AND NOT $4)`,
+          [value.canonicalRecordingID,value.selectionRevision,value.id,value.response.quality.synced===true]);
+      }
       await db.query(`INSERT INTO lyric_document_extras(document_id,song_details,provider_translation)
         VALUES($1,$2,$3) ON CONFLICT(document_id) DO UPDATE SET song_details=$2,provider_translation=$3,checked_at=now()`,
         [value.id,JSON.stringify(song_details??null),JSON.stringify(provider_translation??null)]);
@@ -84,7 +100,37 @@ export class SongLibraryStore {
     return document(await first(this.db,`SELECT d.*,r.checked_at,r.selection_revision AS selection_revision,x.song_details,x.provider_translation FROM lyric_requests r JOIN lyric_documents d ON d.id=r.document_id LEFT JOIN lyric_document_extras x ON x.document_id=d.id
       WHERE r.request_key=$1 AND r.selection_revision=$2`,[key,revision]));
   }
-  async document(id) { return document(await first(this.db,'SELECT d.*,x.song_details,x.provider_translation FROM lyric_documents d LEFT JOIN lyric_document_extras x ON x.document_id=d.id WHERE d.id=$1 AND d.superseded_by IS NULL',[id])); }
+  // Old immutable references remain readable. Admission checks separately reject
+  // retired sources, so reading a saved translation never starts fresh paid work.
+  async document(id) {
+    const row=await first(this.db,`SELECT d.*,x.song_details,x.provider_translation,a.response AS archived_response,a.structure AS archived_structure
+      FROM lyric_documents d LEFT JOIN lyric_document_extras x ON x.document_id=d.id LEFT JOIN lyric_source_archives a ON a.document_id=d.id WHERE d.id=$1`,[id]);
+    if(row?.superseded_by) {
+      if(!row.archived_response?.lines?.length || !row.archived_structure?.occurrences?.length)return null;
+      row.response=row.archived_response;row.structure=row.archived_structure;
+    }
+    return document(row);
+  }
+  async bindRecordingHead(request,key,revision) {
+    if(!request.storefront)return null;
+    return this.db.transaction(async db=>{
+      const row=await first(db,`SELECT d.*,h.checked_at,h.selection_revision,x.song_details,x.provider_translation,b.evidence
+        FROM catalog_recording_bindings b JOIN recording_lyric_heads h ON h.canonical_recording_id=b.canonical_recording_id
+        JOIN lyric_documents d ON d.id=h.document_id LEFT JOIN lyric_document_extras x ON x.document_id=d.id
+        WHERE b.catalog_id=$1 AND b.storefront=$2 AND h.selection_revision=$3 AND b.checked_at>now()-interval '1 day'
+          AND d.superseded_by IS NULL`,[request.catalog_id,request.storefront,revision]);
+      if(!row)return null;
+      // Metadata validation is replayed by the resolver before new bindings are
+      // created; this path accepts only a previously checked request signature.
+      const proof=row.evidence;
+      const original=proof?.accepted_request;
+      if(!original || original.catalog_id!==request.catalog_id || original.artist!==request.artist || original.title!==request.title
+        || original.album!==request.album || original.duration!==request.duration)return null;
+      await db.query(`INSERT INTO lyric_requests(request_key,selection_revision,document_id,checked_at) VALUES($1,$2,$3,$4)
+        ON CONFLICT(request_key,selection_revision) DO NOTHING`,[key,revision,row.id,row.checked_at]);
+      return document(row);
+    });
+  }
   async isCurrentDocument(id,revision) {
     return !!await first(this.db,'SELECT 1 FROM lyric_requests WHERE document_id=$1 AND selection_revision=$2 LIMIT 1',[id,revision]);
   }

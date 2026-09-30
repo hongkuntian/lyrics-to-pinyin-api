@@ -326,6 +326,261 @@
               "exclusiveMinimum": 0
             }
           }
+        },
+        "catalog_resolution": {
+          "type": "object",
+          "required": [
+            "version",
+            "method",
+            "requested",
+            "canonical_recording_id",
+            "canonical_context",
+            "catalog_items"
+          ],
+          "properties": {
+            "version": {
+              "type": "string",
+              "enum": [
+                "catalog-recording-1"
+              ]
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "same_catalog_id",
+                "catalog_equivalent",
+                "reviewed_alias"
+              ]
+            },
+            "requested": {
+              "type": "object",
+              "required": [
+                "catalog_id",
+                "storefront"
+              ],
+              "properties": {
+                "catalog_id": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "storefront": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            },
+            "canonical_recording_id": {
+              "type": "string",
+              "pattern": "^apple:[0-9]{1,20}$"
+            },
+            "canonical_context": {
+              "type": "object",
+              "required": [
+                "title",
+                "artist"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "artist": {
+                  "type": "string"
+                }
+              }
+            },
+            "catalog_items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "catalog_id",
+                  "storefront",
+                  "provenance"
+                ],
+                "properties": {
+                  "catalog_id": {
+                    "type": "string",
+                    "pattern": "^[0-9]{1,20}$"
+                  },
+                  "storefront": {
+                    "type": "string",
+                    "pattern": "^[a-z]{2}$"
+                  },
+                  "provenance": {
+                    "type": "string",
+                    "enum": [
+                      "apple_music",
+                      "itunes"
+                    ]
+                  }
+                }
+              }
+            },
+            "isrc": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "accepted_request": {
+              "type": "object",
+              "required": [
+                "catalog_id",
+                "artist",
+                "title",
+                "album",
+                "duration"
+              ],
+              "properties": {
+                "catalog_id": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "artist": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "album": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "duration": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "language_details": {
+          "type": "object",
+          "required": [
+            "version",
+            "primary",
+            "languages",
+            "scripts",
+            "mixed",
+            "confidence",
+            "pronunciation_language",
+            "pronunciation_basis",
+            "lines"
+          ],
+          "properties": {
+            "version": {
+              "type": "number",
+              "enum": [
+                1
+              ]
+            },
+            "primary": {
+              "type": "string"
+            },
+            "languages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "scripts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "mixed": {
+              "type": "boolean"
+            },
+            "confidence": {
+              "type": "string"
+            },
+            "pronunciation_language": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "pronunciation_basis": {
+              "type": "string"
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sourceID",
+                  "language",
+                  "confidence"
+                ],
+                "properties": {
+                  "sourceID": {
+                    "type": "string"
+                  },
+                  "language": {
+                    "type": "string"
+                  },
+                  "confidence": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "timing_quality": {
+          "type": "object",
+          "required": [
+            "usable",
+            "coverage",
+            "alignment"
+          ],
+          "properties": {
+            "usable": {
+              "type": "boolean"
+            },
+            "coverage": {
+              "type": "number"
+            },
+            "alignment": {
+              "type": "string",
+              "enum": [
+                "provider",
+                "listening_reviewed"
+              ]
+            }
+          }
         }
       }
     },

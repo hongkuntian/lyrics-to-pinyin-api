@@ -63,6 +63,7 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
         if(input.refresh!==undefined && input.refresh!==true && input.refresh!=='true') throw new LibraryError('invalid_request',400);
         const recording=recordingRequest(input.recording),key=requestKey(recording),explicit=Boolean(input.refresh);
         let doc=await db.documentForRequest(key,selectionRevision);
+        if(!doc && !explicit && db.bindRecordingHead) doc=await db.bindRecordingHead(recording,key,selectionRevision);
         const stale=value=>!value || Date.now()-new Date(value.checkedAt??0).getTime()>((value.response.quality.synced && !value.response.quality.partial)?86400000:300000);
         if(explicit || stale(doc)) {
           const owner=await db.claimLookup(key,selectionRevision);
@@ -77,10 +78,10 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
             }
           } catch(error) {
             if(!doc || explicit) throw error;
-            return send(200,{state:'ready',document:publicDocument(doc),refreshError:error.code??'lyrics_unavailable'});
+            return send(200,{state:'ready',document:publicDocument(doc,recording),refreshError:error.code??'lyrics_unavailable'});
           } finally {await db.releaseLookup(key,selectionRevision,owner);}
         }
-        return send(200,{state:'ready',document:publicDocument(doc)});
+        return send(200,{state:'ready',document:publicDocument(doc,recording)});
       }
       if(input.action==='translate'||input.action==='current') {
         if(typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string') throw new LibraryError('invalid_request',400);

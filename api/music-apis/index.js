@@ -17,10 +17,10 @@ musicAPIs.set("kugou", new KugouAPI());
 // Script to platform mapping - NetEase as primary, LRC Lib as backup
 const scriptPlatformMap = {
   "zh": ["netease", "lrclib", "kugou"], // Recording-verified fallback after the existing sources.
-  "yue": ["netease", "kugou"],
+  "yue": ["netease", "lrclib", "kugou"],
   "ja": ["lrclib"],            // Japanese - LRC Lib only
   "ko": ["lrclib"],            // Korean - LRC Lib only
-  "ru": [],                    // Russian (no API available yet)
+  "ru": ["lrclib"],
   "en": ["netease", "lrclib", "kugou"]
 };
 
@@ -36,7 +36,7 @@ export function getMusicAPI(script, platform = null) {
   if (platform) return null;
 
   // Otherwise, get the best available API for the script
-  const availablePlatforms = scriptPlatformMap[script] || [];
+  const availablePlatforms = scriptPlatformMap[script] || Array.from(musicAPIs.entries()).filter(([,api])=>api.languageAgnosticDiscovery).map(([name])=>name);
   for (const platformName of availablePlatforms) {
     if (musicAPIs.has(platformName)) {
       const api = musicAPIs.get(platformName);
@@ -51,7 +51,7 @@ export function getMusicAPI(script, platform = null) {
 
 // New function to get all available APIs for a script (for fallback logic)
 export function getAvailableAPIs(script) {
-  const availablePlatforms = scriptPlatformMap[script] || [];
+  const availablePlatforms = scriptPlatformMap[script] || Array.from(musicAPIs.entries()).filter(([,api])=>api.languageAgnosticDiscovery).map(([name])=>name);
   const apis = [];
   
   for (const platformName of availablePlatforms) {

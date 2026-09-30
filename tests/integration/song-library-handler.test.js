@@ -1,12 +1,33 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {LibraryError} from '../../api/utils/song-library/store.js';
+import {digest} from '../../api/utils/song-library/store.js';
 import {libraryDB} from '../helpers/library-db.js';
 import {createSongLibraryHandler} from '../../api/song-library.js';
 const recording={catalog_id:'123',artist:'Test artist',title:'Original song',duration:15};
 const response={song:{id:'source-1',title:{original:'Original song'},artist:{original:'Test artist'},language:'zh',romanization_system:'pinyin'},
   lines:[{original:'一起唱',romanized:'yī qǐ chàng',timestamp:0}],metadata:{source:'test',selection_revision:'test'},quality:{synced:true,partial:false,instrumental:false}};
 const fakeGeneration=async()=>({content:{lines:[{sourceID:'L0001',lyricText:'Sing together.',text:'Sing together.',speakerID:null,startsTurn:false}],sourceNotes:[],rejectedNotes:[]},actualMicros:1000,response:{id:'test-response'}});
+test('durable verified recording head binds another storefront and rejects unvalidated metadata',async t=>{
+ let calls=0;
+ const {call}=await setup(t,{loadLyrics:async request=>{
+  calls++;if(request.artist!==recording.artist)throw new LibraryError('recording_mismatch');
+  const value=structuredClone(response);
+  value.metadata.catalog_resolution={version:'catalog-recording-1',method:'same_catalog_id',requested:{catalog_id:'123',storefront:request.storefront},
+   canonical_recording_id:'apple:123',canonical_context:{title:recording.title,artist:recording.artist},
+   accepted_request:{catalog_id:'123',artist:request.artist,title:request.title,album:request.album??null,duration:request.duration},
+   catalog_items:['us','ca'].map(storefront=>({catalog_id:'123',storefront,provenance:'apple_music'}))};
+  return value;
+ }});
+ const first=await call({action:'lyrics',recording:{...recording,storefront:'us'}});
+ const canadian=await call({action:'lyrics',recording:{...recording,storefront:'ca'}});
+ assert.equal(first.code,200);assert.equal(canadian.code,200);assert.equal(calls,1);
+ assert.equal(canadian.body.document.id,first.body.document.id);
+ assert.equal(canadian.body.document.recordingKey,digest({catalogID:'123',storefront:'ca'}));
+ assert.equal(canadian.body.document.response.metadata.catalog_resolution.requested.storefront,'ca');
+ assert.equal((await call({action:'lyrics',recording:{...recording,artist:'Cover Artist',storefront:'ca'}})).code,409);
+ assert.equal(calls,2);
+});
 test('v1 storefront aliases coalesce generation and status returns the requested document metadata',async t=>{
  let release;const barrier=new Promise(resolve=>release=resolve);let calls=0;
  const {call,pending,store}=await setup(t,{generateFn:async()=>{calls++;await barrier;return fakeGeneration();}});

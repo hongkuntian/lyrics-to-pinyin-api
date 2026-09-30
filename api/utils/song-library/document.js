@@ -3,17 +3,19 @@ import {reviewedSpeakerLabels,validLyricStructure} from '../lyric-annotations.js
 
 // Source metadata carried forward from the reviewed corpus, not guessed from arbitrary colons.
 export function recordingRequest(value) {
-  const keys=['catalog_id','artist','title','album','duration','storefront'];
+  const keys=['catalog_id','artist','title','album','duration','storefront','account_storefront','isrc'];
   if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!keys.includes(k))||
     typeof value.catalog_id!=='string'||!/^\d{1,20}$/.test(value.catalog_id)||
     ['artist','title'].some(k=>typeof value[k]!=='string'||!value[k].trim()||value[k].length>500)||
     (value.album!=null&&(typeof value.album!=='string'||value.album.length>500))||
     !Number.isFinite(value.duration)||value.duration<=0||value.duration>7200||
-    (value.storefront!=null&&!/^[a-z]{2}$/.test(value.storefront))) throw new LibraryError('invalid_recording',400);
+    (value.storefront!=null&&(typeof value.storefront!=='string'||!/^[a-z]{2}$/.test(value.storefront)))||
+    (value.account_storefront!=null&&(typeof value.account_storefront!=='string'||!/^[a-z]{2}$/.test(value.account_storefront)))||
+    (value.isrc!=null&&(typeof value.isrc!=='string'||!/^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$/.test(value.isrc)))) throw new LibraryError('invalid_recording',400);
   return {catalog_id:value.catalog_id,artist:value.artist.trim(),title:value.title.trim(),album:value.album??null,
-    duration:value.duration,storefront:value.storefront??null};
+    duration:value.duration,storefront:value.storefront??null,...(value.account_storefront?{account_storefront:value.account_storefront}:{}),...(value.isrc?{isrc:value.isrc}:{})};
 }
-export const requestKey=request=>digest(recordingRequest(request));
+export const requestKey=request=>{const {account_storefront,isrc,...identity}=recordingRequest(request);return digest(identity);};
 export function makeDocument(request,response,selectionRevision,labels=reviewedSpeakerLabels(request.catalog_id)) {
   request=recordingRequest(request);
   if(!response?.song||!Array.isArray(response.lines)||!response.metadata||!response.quality) throw new LibraryError('invalid_source',502);
@@ -44,5 +46,16 @@ export function makeDocument(request,response,selectionRevision,labels=reviewedS
   const recordingKey=digest({catalogID:request.catalog_id,storefront:request.storefront});
   const sourceHash=digest({language:response.song.language,lines:response.lines,structure});
   const id=digest({recordingKey,sourceHash});
-  return {id,recordingKey,sourceHash,requestKey:requestKey(request),selectionRevision,response,structure};
+  const resolution=response.metadata.catalog_resolution;
+  const accepted=resolution?.accepted_request;
+  const canonicalRecordingID=resolution?.version==='catalog-recording-1'&&resolution.requested?.catalog_id===request.catalog_id
+    && resolution.requested?.storefront===request.storefront
+    && accepted?.catalog_id===request.catalog_id&&accepted.artist===request.artist&&accepted.title===request.title
+    && (accepted.album??null)===request.album&&accepted.duration===request.duration
+    && resolution.catalog_items?.some(item=>item.catalog_id===request.catalog_id)
+    && /^apple:\d{1,20}$/.test(resolution.canonical_recording_id)?resolution.canonical_recording_id:null;
+  const textRevision=digest({language:response.song.language,speakers:structure.speakers,occurrences:structure.occurrences.map(o=>({sourceID:o.sourceID,lyricText:o.lyricText,speakerID:o.speakerID,startsTurn:o.startsTurn,sourcePrefix:o.sourcePrefix}))});
+  return {id,recordingKey,sourceHash,requestKey:requestKey(request),selectionRevision,response,structure,canonicalRecordingID,textRevision,
+    timingRevision:digest({recording:canonicalRecordingID??recordingKey,textRevision,timestamps:response.lines.map(l=>l.timestamp??null)}),
+    readingRevision:digest({textRevision,system:response.song.romanization_system,readings:response.lines.map(l=>l.romanized)})};
 }
