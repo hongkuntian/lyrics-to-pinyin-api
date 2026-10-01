@@ -111,3 +111,29 @@ test('catalog evidence failure cannot suppress a timed or instrumental result',a
   assert.equal(res.statusCode,200);
  }
 });
+
+test('the reported Douyin recording resolves through its Traditional Chinese catalog spelling',async()=>{
+ const request={artist:'Zihao Zhang',title:'可不可以 (抖音热歌)',album:'可不可以 (抖音热歌) - Single',duration:240.889,catalog_id:'1441957721',storefront:'us'};
+ const english={kind:'song',trackId:1441957721,trackName:request.title,artistName:request.artist,collectionName:request.album,trackTimeMillis:240889};
+ const native={...english,trackName:'可不可以 (抖音熱歌)',artistName:'張紫豪',collectionName:'可不可以 (抖音熱歌) - Single'};
+ const fetchFn=async url=>({ok:true,json:async()=>({results:new URL(url).searchParams.get('country')==='us'?[english]:[native]})});
+ const calls=[];
+ const api={name:'Fixture',searchSong:async(artist,title)=>{
+  calls.push({artist,title});
+  return artist==='張紫豪'?{id:553755659,title:'可不可以',artist:'张紫豪',album:'可不可以',duration:240.889}:null;
+ },getLyrics:async()=>({lines:[{text:'一起唱',timestamp:16.56},{text:'听这首歌',timestamp:19.97}]})};
+ const handler=createMusicRomanizeHandler({redis:null,getAvailableAPIsFn:()=>[api],lookupReviewedRecordingFn:async()=>null,
+  lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
+  resolveCatalogAliasesFn:(r,c)=>resolveCatalogAliases(r,{...c,fetchFn,appleCatalog:null}),logger:{info(){},error(){}}});
+ for(const body of [request,{...request,artist:native.artistName,title:native.trackName,album:native.collectionName,storefront:'hk'}]) {
+  const res=createMockRes();await handler(createMockReq({body}),res);
+  assert.equal(res.statusCode,200);
+  assert.equal(res.body.quality.synced,true);
+  assert.equal(res.body.lines.length,2);
+  assert.equal(res.body.metadata.catalog_resolution.canonical_recording_id,'apple:1441957721');
+  assert.equal(res.body.metadata.recording_match.catalog_id,body.catalog_id);
+  assert.equal(res.body.metadata.recording_match.title,body.title);
+  assert.equal(res.body.metadata.recording_match.artist,body.artist);
+ }
+ assert.deepEqual(calls.slice(0,2),[{artist:request.artist,title:request.title},{artist:native.artistName,title:native.trackName}]);
+});

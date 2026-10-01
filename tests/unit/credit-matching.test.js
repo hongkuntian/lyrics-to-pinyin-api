@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {recordingScore,findRecording} from '../../api/utils/recording-match.js';
+import {recordingScore,findRecording,searchTitle} from '../../api/utils/recording-match.js';
 const request={title:'说好不哭',artist:'Jay Chou & Ashin Chen',album:'说好不哭 - Single',duration:222.333};
 test('collaborator separators and ordering represent the same full credit',()=>{
  for(const artist of ['Jay Chou feat. Ashin Chen','Jay Chou, Ashin Chen','Ashin Chen / Jay Chou'])
@@ -36,6 +36,18 @@ test('soundtrack descriptions are not recording versions',()=>{
  assert.ok(recordingScore({...english,title:'A Little Happiness (From "Our Times")'},english)>=0);
  for(const suffix of ['Live','Remastered','Instrumental','Acapella','Cover','主題曲 Live','From Our Times - Remastered']) assert.equal(recordingScore({...english,title:`A Little Happiness (${suffix})`},english),-1);
  assert.equal(recordingScore({...base,title:'小幸運 (電影《我的少女時代》主題曲)',duration:300},base),-1);
+});
+test('Douyin title descriptions match in both Chinese scripts without weakening recording identity',()=>{
+ const song={id:553755659,title:'可不可以',artist:'张紫豪',album:'可不可以',duration:240.889};
+ for(const suffix of ['(抖音热歌)','(抖音熱歌)','（抖音熱歌）']) {
+  const request={...song,title:`可不可以 ${suffix}`,album:`可不可以 ${suffix} - Single`};
+  assert.equal(searchTitle(request.title),'可不可以');
+  assert.equal(findRecording([song],request).id,song.id);
+  for(const changed of [{artist:'Cover Artist'},{artist:'张紫豪 & Guest'},{duration:245},{title:'可不可以 (Live)'},{title:'可不可以 (伴奏)'},{title:'可不可以 (Remix)'}])
+   assert.equal(recordingScore({...song,...changed},request),-1,JSON.stringify(changed));
+ }
+ for(const suffix of ['抖音熱歌 Live','抖音熱歌 Remix','抖音熱歌 伴奏'])
+  assert.equal(recordingScore({...song,title:`可不可以 (${suffix})`},song),-1,suffix);
 });
 
 
