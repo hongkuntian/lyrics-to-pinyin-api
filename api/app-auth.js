@@ -11,7 +11,7 @@ export function createAppAuthHandler({store,logger=console}={}) {
       const body=req.body,fields={challenge:['purpose'],register:['challenge','attestation'],session:['challenge','assertion']};
       if(!body||typeof body!=='object'||Array.isArray(body)||!Object.hasOwn(fields,body.action)||
         Object.keys(body).some(k=>!['action','keyID','bundleID',...fields[body.action]].includes(k))||Buffer.byteLength(JSON.stringify(body))>32768||
-        typeof body.keyID!=='string'||!/^[A-Za-z0-9+/]{43}=$/.test(body.keyID)||typeof body.bundleID!=='string'||body.bundleID.length>128||
+        typeof body.keyID!=='string'||!/^[A-Za-z0-9+/]{43}=$/.test(body.keyID)||!validBase64(body.keyID)||typeof body.bundleID!=='string'||body.bundleID.length>128||
         (body.action!=='challenge'&&(typeof body.challenge!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(body.challenge)))||
         (body.action==='register'&&(typeof body.attestation!=='string'||body.attestation.length>28000||!validBase64(body.attestation)))||
         (body.action==='session'&&(typeof body.assertion!=='string'||body.assertion.length>8192||!validBase64(body.assertion))))throw new LibraryError('invalid_request',400);

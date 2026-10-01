@@ -47,8 +47,9 @@ production-only `CRON_SECRET`, with no app-session or anonymous access.
 - Explicit lyric refresh: six calls per minute per account.
 - Bodies: auth/text/music 32 KiB, library 8 KiB. Text, metadata, base64 and
   option fields have additional bounds.
-- Coarse Vercel IP rule: POST to the four app endpoints, 300 requests per
-  60 seconds. Shared IPs can share this allowance. Counters are per region.
+- Coarse Vercel IP rule: POST under `/api/`, 300 requests per 60 seconds.
+  This covers Vercel's `.js` function aliases as well as the canonical app routes;
+  the cron uses GET. Shared IPs share this allowance. Counters are per region.
 - Emergency spend: default $5 per UTC day and $50 per UTC month, including
   held reservations, generation, Study, retries and reviews. Personal unlimited
   access bypasses ordinary quotas, never these emergency caps. Database triggers

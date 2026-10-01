@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {libraryDB,source} from '../helpers/library-db.js';
 import {AppAuthStore,authPolicy} from '../../api/utils/app-auth/store.js';
+import {SongLibraryStore} from '../../api/utils/song-library/store.js';
 import {createAppAuthHandler} from '../../api/app-auth.js';
 import {createMusicRomanizeHandler} from '../../api/music-romanize.js';
 import {createRomanizeHandler} from '../../api/romanize.js';
@@ -73,14 +74,21 @@ test('all public app routes reject anonymous and raw beta credentials before wor
 test('authentication HTTP rejects malformed, oversized and anonymous enrollment',async t=>{
  const {auth}=await fixture(t),handler=createAppAuthHandler({store:auth});
  for(const [body,token,status] of [[{},null,401],[{action:'challenge',keyID,bundleID,purpose:'session',extra:true},'token-a',400],
+  [{action:'challenge',keyID:'A'.repeat(42)+'B=',bundleID,purpose:'session'},'token-a',400],
   [{action:'register',keyID,bundleID,challenge:'a'.repeat(43),attestation:'x'.repeat(33000)},'token-a',400]]){
   const res=createMockRes();await handler({method:'POST',headers:{authorization:token?`Bearer ${token}`:undefined},body},res);assert.equal(res.statusCode,status);
  }
 });
 test('durable auth, business and explicit refresh quotas survive a new instance',async t=>{
- const {auth,store}=await fixture(t),session=await enroll(auth),handler=createSongLibraryHandler({authStore:auth,store});
- for(let i=0;i<61;i++){const res=createMockRes();await handler({method:'POST',headers:{authorization:`Bearer ${session.token}`},body:{action:'capabilities'}},res);assert.equal(res.statusCode,i<60?200:429);}
- for(let i=0;i<7;i++){if(i<6)await auth.limit('reader-b',true);else await assert.rejects(auth.limit('reader-b',true),{code:'rate_limited'});}
+ const {auth,db}=await fixture(t),session=await enroll(auth);
+ // PostgreSQL now() is fixed within a transaction: the test cannot straddle a
+ // real minute boundary while asserting one durable quota window.
+ await db.transaction(async tx=>{
+  const instance=new AppAuthStore(tx,{policy}),handler=createSongLibraryHandler({authStore:instance,store:new SongLibraryStore(tx)});
+  for(let i=0;i<61;i++){const res=createMockRes();await handler({method:'POST',headers:{authorization:`Bearer ${session.token}`},body:{action:'capabilities'}},res);assert.equal(res.statusCode,i<60?200:429);}
+  for(let i=0;i<7;i++){if(i<6)await instance.limit('reader-b',true);else await assert.rejects(instance.limit('reader-b',true),{code:'rate_limited'});}
+  for(let i=0;i<31;i++){if(i<30)await instance.limit('reader-b');else await assert.rejects(instance.limit('reader-b'),{code:'rate_limited'});}
+ });
 });
 test('emergency cap covers unlimited generation and direct database admissions',async t=>{
  const {store,db}=await fixture(t);await store.saveDocument(source);await store.configureUserAccess('reader-a',{unlimitedGeneration:true});
