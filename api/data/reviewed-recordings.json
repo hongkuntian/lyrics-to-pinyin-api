@@ -217,6 +217,76 @@
           "timingAdjustment": 0
         }
       ]
+    },
+    {
+      "id": "apple-6763663750-netease-2643800682",
+      "reviewedDate": "2026-10-01",
+      "reason": "The original soundtrack album lists Eason Chan as its artist; the already reviewed provider credits also list Arcane and League of Legends. Bind this metadata exception to the exact soundtrack album catalog ID, live signatures and complete lyric/timing fingerprint.",
+      "acceptedRequests": [
+        {
+          "catalog_id": "6763663750",
+          "title": "这样很好 (Isha’s Song) [from the series Arcane League of Legends]",
+          "artist": "Eason Chan",
+          "album": "Arcane League of Legends: Season 2 (Soundtrack from the Animated Series)",
+          "duration": 264.68
+        },
+        {
+          "catalog_id": "6763663750",
+          "title": "这样很好 (Isha’s Song) [from the series Arcane League of Legends]",
+          "artist": "陈奕迅",
+          "album": "Arcane League of Legends: Season 2 (Soundtrack from the Animated Series)",
+          "duration": 264.68
+        }
+      ],
+      "catalogAnchors": [
+        {
+          "storefront": "us",
+          "signature": {
+            "catalog_id": "6763663750",
+            "title": "这样很好 (Isha’s Song) [from the series Arcane League of Legends]",
+            "artist": "Eason Chan",
+            "album": "Arcane League of Legends: Season 2 (Soundtrack from the Animated Series)",
+            "duration": 264.68
+          }
+        },
+        {
+          "storefront": "cn",
+          "signature": {
+            "catalog_id": "6763663750",
+            "title": "这样很好 (Isha’s Song) [from the series Arcane League of Legends]",
+            "artist": "陈奕迅",
+            "album": "Arcane League of Legends: Season 2 (Soundtrack from the Animated Series)",
+            "duration": 264.68
+          }
+        }
+      ],
+      "source": {
+        "id": "2643800682",
+        "title": "这样很好 (Isha's Song)",
+        "album": "这样很好 (Isha's Song)",
+        "album_id": "252974848",
+        "duration": 264.68,
+        "artists": [
+          {
+            "id": "2116",
+            "name": "陈奕迅"
+          },
+          {
+            "id": "50428486",
+            "name": "双城之战"
+          },
+          {
+            "id": "1047337",
+            "name": "英雄联盟"
+          }
+        ],
+        "lyricsFingerprint": "edf08e43863bc433f9d3cc3e9c435668cd38a7b013efe84277da161f4424269c"
+      },
+      "provenance": [
+        "https://music.apple.com/us/song/6763663750",
+        "https://music.apple.com/cn/song/6763663750",
+        "https://music.163.com/song?id=2643800682"
+      ]
     }
   ]
 }

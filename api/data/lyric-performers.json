@@ -27,6 +27,19 @@
         "https://music.163.com/song?id=2734065329"
       ],
       "note": "Member identities from the group's release announcement; compound labels observed in the provider transcription. Applies to this artist's songs, not arbitrary same-name text."
+    },
+    {
+      "id": "dick-cowboy",
+      "names": [
+        "Dick & Cowboy",
+        "迪克牛仔"
+      ],
+      "members": [],
+      "provenance": [
+        "https://music.apple.com/sa/song/1443355415",
+        "https://music.apple.com/tw/song/1443355415"
+      ],
+      "note": "Apple artist 380642076 is one performer under both localized names. Preserve the ampersand inside the complete stage name; additional guest syntax remains separate. Name localization still requires catalog evidence."
     }
   ],
   "reviewedRecordings": {

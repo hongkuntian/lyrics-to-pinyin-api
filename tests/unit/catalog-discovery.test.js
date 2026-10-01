@@ -46,3 +46,15 @@ test('reviewed English MusicKit signature bridges a missing storefront without a
  }
  assert.deepEqual(await resolveCatalogAliases(req,{fetchFn:async()=>({ok:true,json:async()=>({results:[{...anchor,trackName:'Different'}]})})}),[]);
 });
+
+test('Dick & Cowboy is one reviewed artist and missing English storefronts use exact catalog anchors',async()=>{
+ const req={catalog_id:'1443355415',artist:'Dick & Cowboy',title:'有多少愛可以重來',album:'傳奇',duration:293.493};
+ const anchor={kind:'song',trackId:1443355415,artistName:'迪克牛仔',trackName:req.title,collectionName:req.album,trackTimeMillis:293493};
+ const context={appleCatalog:null,fetchFn:async()=>({ok:true,json:async()=>({results:[anchor]})})};
+ const aliases=await resolveCatalogAliases(req,context);
+ assert.ok(aliases.some(s=>s.artist==='迪克牛仔'));
+ assert.equal(aliases.resolution.method,'reviewed_alias');
+ for(const change of [{artist:'Dick & Cowboy & Guest'},{title:req.title+' (Live)'},{album:'Another release'},
+  {duration:300},{catalog_id:'999'}])assert.deepEqual(await resolveCatalogAliases({...req,...change},context),[]);
+ assert.deepEqual(await resolveCatalogAliases(req,{...context,fetchFn:async()=>({ok:true,json:async()=>({results:[{...anchor,artistName:'Different singer'}]})})}),[]);
+});
