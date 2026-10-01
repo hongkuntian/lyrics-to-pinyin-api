@@ -14,7 +14,7 @@ import {performance} from 'node:perf_hooks';
 import {BoundedCache} from './utils/bounded-cache.js';
 import {cleanLyrics,hasUsableLyrics} from './utils/lyric-quality.js';
 import {LYRIC_NORMALIZATION_VERSION,LYRIC_SELECTION_REVISION} from './utils/lyric-annotations.js';
-import {applyTimingCorrection} from './utils/timing-corrections.js';
+import {applyTimingCorrection,lyricSourceNeedsRefresh} from './utils/timing-corrections.js';
 import {hedgedLookup} from './utils/hedged-lookup.js';
 import {lookupReviewedRecording} from './utils/reviewed-recordings.js';
 import {lookupOfficialTranscription} from './utils/official-transcriptions.js';
@@ -74,14 +74,14 @@ export function createMusicRomanizeService(dependencies={}) {
       // Sort option keys without relaxing recording or request-bound alias identity.
       const stableOptions=Object.fromEntries(Object.entries(options).sort(([a],[b])=>a.localeCompare(b)));
       const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,isrc,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,selectionPolicy:SELECTION_REVISION,normalizationPolicy:LYRIC_NORMALIZATION_VERSION}),searchScript,searchSystem,stableOptions);
-      const local=options.refresh===true?null:responseCache.get(key);
-      if(local) { cacheStatus='MEMORY';return send({status:200,body:local}); }
-      if(inflight.has(key)) { cacheStatus='COALESCED';return send(await measure('shared',()=>inflight.get(key))); }
       const request={artist,title,album,duration,catalog_id,storefront,...(account_storefront?{account_storefront}:{}),...(isrc?{isrc}:{})};
+      const local=options.refresh===true?null:responseCache.get(key);
+      if(local && !lyricSourceNeedsRefresh(local,request)) { cacheStatus='MEMORY';return send({status:200,body:local}); }
+      if(inflight.has(key)) { cacheStatus='COALESCED';return send(await measure('shared',()=>inflight.get(key))); }
       const compute=async()=> {
         if(options.refresh!==true && redis && !cacheUnavailable(redis)) {
           const cached=await measure('cache_read',()=>withDeadline(()=>getCachedFn(redis,key),cacheTimeoutMs)).catch(error=>{suspendCache(redis,error);return null;});
-          if(cached?.metadata?.version===RESPONSE_VERSION && cached.metadata.selection_revision===SELECTION_REVISION && cached.metadata.timing_correction?.status!=='untimed_fallback' && remainingLifetimeMs(cached)>0) {
+          if(cached?.metadata?.version===RESPONSE_VERSION && cached.metadata.selection_revision===SELECTION_REVISION && cached.metadata.timing_correction?.status!=='untimed_fallback' && remainingLifetimeMs(cached)>0 && !lyricSourceNeedsRefresh(cached,request)) {
             responseCache.set(key,cached,{ttlMs:remainingLifetimeMs(cached)});cacheStatus='REDIS';return {status:200,body:cached};
           }
         }
@@ -145,7 +145,7 @@ export function createMusicRomanizeService(dependencies={}) {
           song_details:{...body.song_details,catalog_id:catalog_id??null}});
         if(canonicalKey && options.refresh!==true) {
           const cached=canonicalCache.get(canonicalKey);
-          if(cached){cacheStatus='RECORDING_MEMORY';return {status:200,body:bind(cached)};}
+          if(cached && !lyricSourceNeedsRefresh(cached,request)){cacheStatus='RECORDING_MEMORY';return {status:200,body:bind(cached)};}
           if(canonicalInflight.has(canonicalKey)) {
             const shared=await canonicalInflight.get(canonicalKey);
             if(shared.status===200){cacheStatus='RECORDING_COALESCED';return {...shared,body:bind(shared.body)};}

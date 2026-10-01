@@ -41,3 +41,43 @@ test('a reviewed catalog localization validates the replacement against its cano
  const result=await applyTimingCorrection(candidate,localized,{}, {rules:[bound],fetchJSONFn:async()=>raw});
  assert.equal(result.timingCorrection.status,'replacement');assert.equal(result.target,localized);
 });
+
+test('reviewed title and album localizations stay bound to the exact catalog and fingerprint',async()=>{
+ const localized={...request,title:'Example in another script',album:'Localized album',artist:'Localized singer'};
+ const bound={...rule,titles:[request.title,localized.title],albums:[request.album,localized.album],
+  artists:[request.artist,localized.artist],canonicalTitle:request.title,canonicalArtist:request.artist};
+ const options={rules:[bound],fetchJSONFn:async()=>raw};
+ assert.equal((await applyTimingCorrection(candidate,localized,{},options)).timingCorrection.status,'replacement');
+ for(const change of [{catalog_id:'124'},{title:'Example (Live)'},{album:'Other'},{artist:'Cover singer'},{duration:101}]) {
+  assert.equal(await applyTimingCorrection(candidate,{...localized,...change},{},{rules:[bound],fetchJSONFn:()=>assert.fail('must not fetch')}),candidate);
+ }
+ const changed=await applyTimingCorrection({...candidate,lyrics:replacement},localized,{},options);
+ assert.equal(changed.timingCorrection,undefined);
+});
+
+test('cache repair detects note placeholders and exact rejected timing without invalidating other recordings',async()=>{
+ const {lyricSourceNeedsRefresh,timingCorrections}=await import('../../api/utils/timing-corrections.js');
+ const cached={lines:lyrics.lines.map(l=>({original:l.text,timestamp:l.timestamp}))};
+ assert.equal(lyricSourceNeedsRefresh(cached,request,{rules:[rule]}),true);
+ assert.equal(lyricSourceNeedsRefresh(cached,{...request,catalog_id:'124'},{rules:[rule]}),false);
+ assert.equal(lyricSourceNeedsRefresh({lines:replacement.lines.map(l=>({original:l.text,timestamp:l.timestamp}))},request,{rules:[rule]}),false);
+ assert.equal(lyricSourceNeedsRefresh({lines:[{original:'♪',timestamp:37.19}]},request),true);
+ assert.equal(lyricSourceNeedsRefresh({lines:[{original:'Sing ♪ with me',timestamp:37.19}]},request),false);
+ const reviewed=timingCorrections.find(r=>r.catalog_id==='1560789314');
+ assert.deepEqual(reviewed.titles,['獨角戲','Du Jiao Xi']);
+ assert.deepEqual(reviewed.albums,['茹此精彩十三首','So Bravo 13 Songs']);
+ assert.equal(reviewed.replacementID,11773385);
+ assert.equal(reviewed.duration,277.093);
+});
+
+test('reviewed replacement rejects metadata drift and clears every fallback timeline representation',async()=>{
+ const {cleanLyrics}=await import('../../api/utils/lyric-quality.js');
+ const source={...candidate,lyrics:cleanLyrics(lyrics)};
+ const bound={...rule,replacementSignature:{title:request.title,artist:request.artist,album:request.album,duration:100}};
+ for(const change of [{albumName:'Another album'},{duration:101},{trackName:'Example (Live)'},{artistName:'Cover singer'}]) {
+  const result=await applyTimingCorrection(source,request,{}, {rules:[bound],fetchJSONFn:async()=>({...raw,...change})});
+  assert.equal(result.timingCorrection.status,'untimed_fallback');
+  assert.ok(result.lyrics.lines.every(l=>l.timestamp===null));
+  assert.ok(result.lyrics.lyricStructure.sourceRows.every(l=>l.timestamp===null));
+ }
+});

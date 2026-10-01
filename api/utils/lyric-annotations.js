@@ -46,6 +46,10 @@ const roleLabels=new Set(roles.flatMap(([zh,en])=>[
 const ambiguousRoles=new Set(['chorus','和声','backingvocal','backingvocals']);
 const sourceCredit=/^取材自歌曲[《〈].+[》〉]\s*[（(]\s*[词詞]\s*[:：].+曲\s*[:：].+[）)]$/u;
 const instrumental=/^(?:纯音乐[，,。\s]*(?:请欣赏)?|純音樂[，,。\s]*(?:請欣賞)?|instrumental)[。.!\s]*$/iu;
+// Provider placeholders describe a break, not performed words. Keep notes
+// embedded in actual lyrics; presentation owns the instrumental indicator.
+const musicNotes=/^[♩♪♫♬🎵🎶\s\uFE0E\uFE0F]+$/u;
+export const isMusicNotePlaceholder=text=>typeof text==='string' && musicNotes.test(text.trim());
 const genericLabels=new Map([['合','All'],['合唱','All'],['齐唱','All'],['all','All'],['chorus','All'],['男','Male'],['女','Female']]);
 
 export function performerAliases({artist='',catalogID,performers=[]}={}) {
@@ -141,7 +145,7 @@ export function normalizeLyricAnnotations(data,options={}) {
     const heading=options.title && options.artist && labelKey(text)===labelKey(`${options.title} - ${options.artist}`);
     const rights=/^[【\[]?本作品声明[，,].*(?:著作权|著作權).*权利保留.*[】\]]?$/u.test(text);
     const role=strippedPrefix?null:heading?'recording_heading':rights?'rights_notice':creditRole(text,aliases);
-    if(!text || role || (!strippedPrefix && instrumental.test(text))) {
+    if(!text || role || (!strippedPrefix && (instrumental.test(text) || isMusicNotePlaceholder(text)))) {
       if(role) {
         const match=text.match(/^([^:：]+)[:：]\s*(.+)$/u);
         const credit={role:role==='recording_heading'?'Recording':role==='rights_notice'?'Rights':match?.[1].trim()??'Source',contributors:match?match[2].split(/\s*[、/／&，,]\s*/u).filter(Boolean):[],

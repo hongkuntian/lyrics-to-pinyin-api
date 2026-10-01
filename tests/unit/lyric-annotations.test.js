@@ -114,3 +114,15 @@ test('repeated caret translations retain alignment and provenance outside source
     const data={lines:rows(source)};assert.deepEqual(cleanLyrics(data).lines,data.lines);
   }
 });
+
+test('note-only provider placeholders leave vocal text, timing and source mapping intact',()=>{
+  const data={source:'lrclib',lines:rows(['♪','Opening phrase','♫ ♬','Sing ♪ with me','♩\uFE0F','Second phrase','🎵 🎶'])};
+  const result=cleanLyrics(data);
+  assert.deepEqual(result.lines,[data.lines[1],data.lines[3],data.lines[5]]);
+  assert.deepEqual(result.lyricStructure.sourceRows,result.lines);
+  assert.deepEqual(result.lyricStructure.occurrences.map(o=>o.sourceIndex),[0,1,2]);
+  assert.deepEqual(result.lyricStructure.occurrences.map(o=>o.sourceID),['L0001','L0002','L0003']);
+  assert.equal(result.instrumental,false);
+  assert.deepEqual(cleanLyrics(result),result);
+  assert.equal(cleanLyrics({source:'lrclib',lines:rows(['♪','♫'])}).instrumental,false);
+});

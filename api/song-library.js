@@ -4,6 +4,7 @@ import {createMusicRomanizeService,SELECTION_REVISION} from './music-romanize.js
 import {SongLibraryStore,LibraryError} from './utils/song-library/store.js';
 import {database} from './utils/song-library/database.js';
 import {makeDocument,recordingRequest,requestKey} from './utils/song-library/document.js';
+import {lyricSourceNeedsRefresh} from './utils/timing-corrections.js';
 import {LEGACY_MODEL} from './utils/song-library/model-policy.js';
 import {generate,requestBody,reservationMicros,translationRecipe} from './utils/song-library/translation.js';
 import {executeTranslationJob} from './utils/song-library/translation-worker.js';
@@ -26,7 +27,8 @@ export function lyricLoader(handler=createMusicRomanizeService()) {
   };
 }
 export function createSongLibraryService({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,apiKey=process.env.OPENAI_API_KEY,
-  selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null,pronunciationFn=annotationFor,pronunciationProfiles=enabledProfiles}={}) {
+  selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null,pronunciationFn=annotationFor,pronunciationProfiles=enabledProfiles,
+  lyricSourceNeedsRefreshFn=lyricSourceNeedsRefresh}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
   const execute=(db,id,doc)=>executeTranslationJob(db,id,{apiKey,generateFn,doc});
   return async(req,res)=> {
@@ -62,7 +64,8 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         const recording=recordingRequest(input.recording),key=requestKey(recording),explicit=Boolean(input.refresh);
         let doc=await db.documentForRequest(key,selectionRevision);
         if(!doc && !explicit && db.bindRecordingHead) doc=await db.bindRecordingHead(recording,key,selectionRevision);
-        const stale=value=>!value || Date.now()-new Date(value.checkedAt??0).getTime()>((value.response.quality.synced && !value.response.quality.partial)?86400000:300000);
+        const stale=value=>!value || lyricSourceNeedsRefreshFn(value.response,recording)
+          || Date.now()-new Date(value.checkedAt??0).getTime()>((value.response.quality.synced && !value.response.quality.partial)?86400000:300000);
         if(explicit || stale(doc)) {
           const owner=await db.claimLookup(key,selectionRevision);
           if(!owner) {res.setHeader('Retry-After','2');return send(202,{state:'loading_lyrics'});}
@@ -71,11 +74,11 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
             if(explicit || stale(doc)) {
               const candidate=makeDocument(recording,await loadLyrics(recording,{refresh:true}),selectionRevision);
               // Provider outages or regressions cannot erase a complete timed source.
-              const keep=doc?.response.quality.synced && !candidate.response.quality.synced;
+              const keep=doc?.response.quality.synced && !candidate.response.quality.synced && !lyricSourceNeedsRefreshFn(doc.response,recording);
               doc=await db.saveDocument(keep?{...doc,requestKey:key}:candidate,{replaceID:doc?.id,lookupOwner:owner});
             }
           } catch(error) {
-            if(!doc || explicit) throw error;
+            if(!doc || explicit || lyricSourceNeedsRefreshFn(doc.response,recording)) throw error;
             return send(200,{state:'ready',document:publicDocument(doc,recording),refreshError:error.code??'lyrics_unavailable'});
           } finally {await db.releaseLookup(key,selectionRevision,owner);}
         }

@@ -215,3 +215,26 @@ test('credits and provider translation persist outside lyric document source arr
   assert.ok(!JSON.stringify(stored).includes('Test musician'));assert.ok(!JSON.stringify(stored).includes('Spring arrives'));
   assert.equal((await db.query('SELECT song_details FROM lyric_document_extras')).rows[0].song_details.credits.length,1);
 });
+
+test('fresh cached note placeholders refresh without an explicit reload',async t=>{
+ let calls=0;
+ const old={...response,lines:[{original:'♪',romanized:'♪',timestamp:0},...response.lines.map(l=>({...l,timestamp:4}))]};
+ const {call,store}=await setup(t,{loadLyrics:async()=>++calls===1?old:response});
+ const first=(await call({action:'lyrics',recording})).body.document;
+ const second=(await call({action:'lyrics',recording})).body.document;
+ assert.notEqual(second.id,first.id);assert.equal(calls,2);
+ assert.deepEqual(second.response.lines,response.lines);
+ assert.equal((await store.document(first.id)).response.lines[0].original,'♪');
+});
+test('known bad cached timing yields to readable fallback and cannot masquerade as valid on an outage',async t=>{
+ const plain={...response,lines:response.lines.map(l=>({...l,timestamp:null})),quality:{...response.quality,synced:false}};
+ const {call,instance,store}=await setup(t);
+ const first=(await call({action:'lyrics',recording})).body.document;
+ const invalid=value=>value.quality.synced;
+ const failed=await instance({lyricSourceNeedsRefreshFn:invalid,loadLyrics:async()=>{throw new LibraryError('provider_timeout',504);}})({action:'lyrics',recording});
+ assert.equal(failed.code,504);assert.equal((await store.document(first.id)).response.quality.synced,true);
+ const fallback=await instance({lyricSourceNeedsRefreshFn:invalid,loadLyrics:async()=>plain})({action:'lyrics',recording});
+ assert.equal(fallback.code,200);assert.equal(fallback.body.document.response.quality.synced,false);
+ assert.deepEqual(fallback.body.document.response.lines,plain.lines);
+ assert.notEqual(fallback.body.document.id,first.id);
+});

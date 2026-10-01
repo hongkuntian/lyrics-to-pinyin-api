@@ -91,3 +91,14 @@ test('lyrics, cached translation and job status remain compatible with API v1 cl
   assert.ok((await store.translation(wire.id,'en')).lines.some(l=>l.startsTurn));
   assert.deepEqual((await store.document(wire.id)).structure,canonical.structure);
 });
+
+test('cached note-only source rows are refreshed before romanization and durable learning identity',async()=>{
+ const fresh=await response(),old=structuredClone(fresh);
+ old.metadata.timestamp=new Date().toISOString();
+ old.lines.splice(1,0,{original:'♪',romanized:'♪',timestamp:8});
+ // Legacy structure is absent; the current provider creates the valid mapping.
+ delete old.metadata.lyric_structure;
+ const current=await response({cache:old});
+ assert.deepEqual(current.lines,fresh.lines);
+ assert.equal(makeDocument(recording,current,current.metadata.selection_revision).structure.occurrences.length,4);
+});
