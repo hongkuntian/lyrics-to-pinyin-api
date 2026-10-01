@@ -9,7 +9,12 @@ const reviewSQL=`SELECT r.*,a.id AS assessment_id,v.id AS verification_id FROM t
   JOIN library_spend_operations a ON a.review_id=r.id AND a.kind='review_assessment'
   JOIN library_spend_operations v ON v.review_id=r.id AND v.kind='review_verification' WHERE r.revision_id=$1`;
 export const budget=db=>first(db,'SELECT * FROM library_spend_totals');
+export function checkEmergencyBudget(settings,totals,amount=0) {
+  if(Number(totals.daily)+amount>Number(settings.emergency_daily_micros)||Number(totals.monthly)+amount>Number(settings.emergency_monthly_micros))
+    throw new LibraryError('emergency_budget_exhausted',429);
+}
 export function checkBudget(settings,totals,amount,{review=false}={}) {
+  checkEmergencyBudget(settings,totals,amount);
   if(Number(totals.daily)+amount>Number(settings.daily_micros)||Number(totals.monthly)+amount>Number(settings.monthly_micros))
     throw new LibraryError('budget_exhausted',429);
   if(review&&(Number(totals.review_daily)+amount>Number(settings.review_daily_micros)||Number(totals.review_monthly)+amount>Number(settings.review_monthly_micros)))
@@ -54,6 +59,7 @@ export async function claimReviewOperation(database,id) {
   return database.transaction(async db=> {
     const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
     if(!settings?.enabled||!settings.review_enabled) return null;
+    checkEmergencyBudget(settings,await budget(db));
     // This transition happens BEFORE any network request. Submitted/unknown work is never reclaimed.
     return first(db,`UPDATE library_spend_operations SET state='submitted',submitted_at=now()
       WHERE id=$1 AND kind<>'generation' AND state='reserved' RETURNING *`,[id]);

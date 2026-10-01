@@ -1,7 +1,7 @@
 import {RESPONSE_VERSION} from '../../api/music-romanize.js';
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createMusicRomanizeHandler, SELECTION_REVISION } from "../../api/music-romanize.js";
+import { createMusicRomanizeService as createMusicRomanizeHandler, SELECTION_REVISION } from "../../api/music-romanize.js";
 import { createMockReq, createMockRes } from "../helpers/mock-http.js";
 
 function createProcessor() {

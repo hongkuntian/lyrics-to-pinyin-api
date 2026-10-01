@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createMusicRomanizeHandler} from '../../api/music-romanize.js';
+import {createMusicRomanizeService as createMusicRomanizeHandler} from '../../api/music-romanize.js';
 import {cleanLyrics} from '../../api/utils/lyric-quality.js';
 import {makeDocument} from '../../api/utils/song-library/document.js';
 import {parseTranslation,requestBody} from '../../api/utils/song-library/translation.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 import {libraryDB} from '../helpers/library-db.js';
-import {createSongLibraryHandler} from '../../api/song-library.js';
+import {createSongLibraryService as createSongLibraryHandler} from '../../api/song-library.js';
 const recording={catalog_id:'1835909383',artist:'TOP登陆少年组合',title:'流星雨',album:'流星雨',duration:271.291};
 const data={source:'netease',lines:[{text:'编曲Arrangement：Example',timestamp:0},
   {text:'合：',timestamp:5},{text:'一起唱这首歌',timestamp:6},
@@ -70,7 +70,7 @@ test('lyrics, cached translation and job status remain compatible with API v1 cl
     loadLyrics:async()=>source,waitUntilFn:task=>pending.push(task),generateFn:async doc=>({actualMicros:1000,response:{},
       content:parseTranslation(JSON.stringify({translations:{L0001:'Sing together.',L0002:'I say: stay.',L0003:'Sing it again.',L0004:'Sing together once more.'},sourceNotes:[]}),doc)})});
   async function call(body) {
-    const res=createMockRes();await handler({method:'POST',headers:{authorization:'Bearer token-a'},body},res);return res;
+    const res=createMockRes();await handler({method:'POST',lyraUser:await store.authenticate('token-a'),headers:{authorization:'Bearer token-a'},body},res);return res;
   }
   const loaded=await call({action:'lyrics',recording});assert.equal(loaded.statusCode,200);
   const wire=loaded.body.document,canonical=await store.document(wire.id);

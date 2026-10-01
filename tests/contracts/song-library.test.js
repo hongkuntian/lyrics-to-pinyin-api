@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {validateSchema} from './schema-validator.js';
 import {libraryDB,source} from '../helpers/library-db.js';
-import {createSongLibraryHandler} from '../../api/song-library.js';
+import {createSongLibraryService as createSongLibraryHandler} from '../../api/song-library.js';
 import {parseTranslation} from '../../api/utils/song-library/translation.js';
 import {cleanLyrics} from '../../api/utils/lyric-quality.js';
 import {makeDocument} from '../../api/utils/song-library/document.js';
@@ -18,7 +18,7 @@ test('song library document, job, translation, status, report and error follow t
     waitUntilFn:task=>pending.push(task)});
   async function call(body) {
     const res={setHeader(){},status(code){this.code=code;return this;},json(value){this.body=value;}};
-    await handler({method:'POST',headers:{authorization:'Bearer token-a'},body},res);
+    await handler({method:'POST',lyraUser:await store.authenticate('token-a'),headers:{authorization:'Bearer token-a'},body},res);
     assert.deepEqual(validateSchema(schema,res.body),[]);return res.body;
   }
   const {document}=await call({action:'lyrics',recording:{catalog_id:'123',artist:'Test artist',title:'Original test song',duration:12}});

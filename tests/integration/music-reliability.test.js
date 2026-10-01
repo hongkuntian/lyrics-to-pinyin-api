@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createMusicRomanizeHandler} from '../../api/music-romanize.js';
+import {createMusicRomanizeService as createMusicRomanizeHandler} from '../../api/music-romanize.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 const song={id:1,title:'晴天',artist:'周杰伦',duration:269};
 const processor={name:'Fixture',romanize:async(text)=>({romanized:text})};

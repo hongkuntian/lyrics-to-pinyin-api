@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createRomanizeHandler } from "../../api/romanize.js";
-import { createMusicRomanizeHandler } from "../../api/music-romanize.js";
+import { createRomanizeService as createRomanizeHandler } from "../../api/romanize.js";
+import { createMusicRomanizeService as createMusicRomanizeHandler } from "../../api/music-romanize.js";
 import { createMockReq, createMockRes } from "../helpers/mock-http.js";
 import { validateSchema } from "./schema-validator.js";
 

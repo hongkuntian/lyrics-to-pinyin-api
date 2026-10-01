@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {LibraryError} from './store.js';
-import {budget,checkBudget,finishReviewOperation} from './spending.js';
+import {budget,checkBudget,checkEmergencyBudget,finishReviewOperation} from './spending.js';
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??null;
 export const publicExplanation=row=>({id:row.id,documentID:row.document_id,translationID:row.revision_id,sourceID:row.source_id,
   lower:row.lower_offset,upper:row.upper_offset,recipe:row.recipe,...row.content,
@@ -23,6 +23,7 @@ export async function reserveExplanation(database,{key,doc,translation,selection
     const active=await first(db,`SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown')
       UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1`,[userID]);
     if(active)throw new LibraryError('user_busy',429);
+    checkEmergencyBudget(settings,await budget(db),amount);
     if(!user.unlimited_generation) {
       const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,count(*) AS monthly
         FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations UNION ALL SELECT j.user_id,r.created_at FROM translation_retry_requests r JOIN translation_jobs j ON j.id=r.job_id) attempts
@@ -40,8 +41,9 @@ export async function reserveExplanation(database,{key,doc,translation,selection
 }
 export async function claimExplanation(database,id) {
   return database.transaction(async db=>{
-    const settings=await first(db,'SELECT enabled FROM library_settings WHERE id=1 FOR UPDATE');if(!settings?.enabled)return false;
-    const row=await first(db,"UPDATE study_explanations SET state='running' WHERE id=$1 AND state='queued' RETURNING id",[id]);if(!row)return false;
+    const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');if(!settings?.enabled)return false;
+    checkEmergencyBudget(settings,await budget(db));
+    const row=await first(db,"UPDATE study_explanations SET state='running' WHERE id=$1 AND state='queued' AND EXISTS(SELECT 1 FROM library_users u WHERE u.id=study_explanations.user_id AND NOT u.disabled) RETURNING id",[id]);if(!row)return false;
     await db.query("UPDATE library_spend_operations SET state='submitted',submitted_at=now() WHERE id=$1 AND state='reserved'",[id]);return true;
   });
 }

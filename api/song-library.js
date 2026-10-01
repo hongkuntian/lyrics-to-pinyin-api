@@ -1,5 +1,6 @@
+import {withAppAuth} from './utils/app-auth/http.js';
 import {waitUntil} from '@vercel/functions';
-import {createMusicRomanizeHandler,SELECTION_REVISION} from './music-romanize.js';
+import {createMusicRomanizeService,SELECTION_REVISION} from './music-romanize.js';
 import {SongLibraryStore,LibraryError} from './utils/song-library/store.js';
 import {database} from './utils/song-library/database.js';
 import {makeDocument,recordingRequest,requestKey} from './utils/song-library/document.js';
@@ -16,7 +17,7 @@ import {annotationFor,pronunciationKey,enabledProfiles} from './utils/pronunciat
 
 export const config={maxDuration:300};
 const actions={capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
-export function lyricLoader(handler=createMusicRomanizeHandler()) {
+export function lyricLoader(handler=createMusicRomanizeService()) {
   return async (recording,{refresh=false}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
     await handler({method:'POST',body:{...recording,options:{tone_style:'marks',separator:' ',case:'lower',...(refresh?{refresh:true}:{})}}},result);
@@ -24,7 +25,7 @@ export function lyricLoader(handler=createMusicRomanizeHandler()) {
     return result.body;
   };
 }
-export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,apiKey=process.env.OPENAI_API_KEY,
+export function createSongLibraryService({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,apiKey=process.env.OPENAI_API_KEY,
   selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null,pronunciationFn=annotationFor,pronunciationProfiles=enabledProfiles}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
   const execute=(db,id,doc)=>executeTranslationJob(db,id,{apiKey,generateFn,doc});
@@ -36,10 +37,7 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
       const input=req.body;
       if(!input||Array.isArray(input)||typeof input!=='object'||Buffer.byteLength(JSON.stringify(input))>8192||
         !Object.hasOwn(actions,input.action)||Object.keys(input).some(k=>k!=='action'&&!actions[input.action].includes(k))) throw new LibraryError('invalid_request',400);
-      const token=req.headers?.authorization?.match(/^Bearer ([A-Za-z0-9_-]{6,256})$/)?.[1];
-      if(!token) throw new LibraryError('unauthorized',401);
-      const db=getStore(),user=await db.authenticate(token);if(!user) throw new LibraryError('unauthorized',401);
-      await db.rateLimit(user.id);
+      const db=getStore(),user=req.lyraUser;if(!user)throw new LibraryError('unauthorized',401);
       const policy=languagePolicy??environmentLanguagePolicy();
       if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
       if(input.action==='pronunciation') {
@@ -176,5 +174,8 @@ export function createSongLibraryHandler({store,loadLyrics=lyricLoader(),generat
       return send(status,{code:known?error.code:'store_unavailable'});
     }
   };
+}
+export function createSongLibraryHandler(dependencies={}) {
+  return withAppAuth(createSongLibraryService(dependencies),{...dependencies,libraryStore:dependencies.store,route:'library'});
 }
 export default createSongLibraryHandler();

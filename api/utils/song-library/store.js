@@ -1,7 +1,7 @@
 import {canonicalTarget} from './languages.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {currentTranslationSQL,publishRevision,revisions} from './revisions.js';
-import {budget,checkBudget,configureReviews,reserveReview,claimReviewOperation,finishReviewOperation,releaseReviewOperation} from './spending.js';
+import {budget,checkBudget,checkEmergencyBudget,configureReviews,reserveReview,claimReviewOperation,finishReviewOperation,releaseReviewOperation} from './spending.js';
 import {translationIdentity} from './translation-identity.js';
 import {reusableTranslation,jobForDocument} from './translation-reuse.js';
 
@@ -178,6 +178,7 @@ export class SongLibraryStore {
       if(!settings.enabled) throw new LibraryError('generation_disabled',503);
       const active=await first(db,"SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown') UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1",[userID]);
       if(active) throw new LibraryError('user_busy',429);
+      checkEmergencyBudget(settings,await budget(db),reservedMicros);
       if(!user.unlimited_generation) {
         const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,
           count(*) AS monthly FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations UNION ALL SELECT j.user_id,r.created_at FROM translation_retry_requests r JOIN translation_jobs j ON j.id=r.job_id) attempts WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
@@ -192,8 +193,13 @@ export class SongLibraryStore {
   }
   async claim(id) {
     // A running/unknown job is never reclaimed: the provider may already have charged it.
-    return first(this.db,`UPDATE translation_jobs SET state='running',started_at=now()
-      WHERE id=coalesce((SELECT job_id FROM translation_job_aliases WHERE id=$1),$1) AND state='queued' RETURNING *`,[id]);
+    return this.db.transaction(async db=>{
+      const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');if(!settings?.enabled)return null;
+      checkEmergencyBudget(settings,await budget(db));
+      return first(db,`UPDATE translation_jobs SET state='running',started_at=now()
+        WHERE id=coalesce((SELECT job_id FROM translation_job_aliases WHERE id=$1),$1) AND state='queued'
+        AND EXISTS(SELECT 1 FROM library_users u WHERE u.id=translation_jobs.user_id AND NOT u.disabled) RETURNING *`,[id]);
+    });
   }
   async complete(id,content,actualMicros,response,attempt=null) {
     return this.finish(id,{content,actualMicros,response,state:'ready',errorCode:null,attempt});

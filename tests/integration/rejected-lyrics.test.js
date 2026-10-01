@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {LRCAPI} from '../../api/music-apis/lrclib.js';
 import {lyricsFingerprint,isRejectedLyrics} from '../../api/utils/rejected-lyrics.js';
-import {createMusicRomanizeHandler} from '../../api/music-romanize.js';
+import {createMusicRomanizeService as createMusicRomanizeHandler} from '../../api/music-romanize.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 
 const request={artist:'Jacky Cheung',title:'我等到花兒也謝了',album:'真愛 新曲+真正精選',duration:278.507,catalog_id:'1440912488'};

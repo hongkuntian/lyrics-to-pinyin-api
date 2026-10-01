@@ -5,7 +5,7 @@ const responseSchema=JSON.parse(await readFile(new URL('../../contracts/song-lib
 const requestSchema=JSON.parse(await readFile(new URL('../../contracts/study-v2-request.schema.json',import.meta.url),'utf8'));
 import assert from 'node:assert/strict';
 import {libraryDB,source} from '../helpers/library-db.js';
-import {createSongLibraryHandler} from '../../api/song-library.js';
+import {createSongLibraryService as createSongLibraryHandler} from '../../api/song-library.js';
 import {languagePolicy} from '../../api/utils/song-library/languages.js';
 import {digest} from '../../api/utils/song-library/store.js';
 import {LEGACY_RECIPE} from '../../api/utils/song-library/translation.js';
@@ -21,7 +21,7 @@ async function fixture(t,{sourceLanguage='zh',policy=languagePolicy({translation
   explainFn:async(doc,translation,selection,options)=>{explanations.push({selection,translation,options});return {content:{meaning:'A phrase',context:'In this song',grammar:'',uncertainty:'',sourceQuote:selection.text},actualMicros:500,response:{id:'test'}};},
   waitUntilFn:p=>pending.push(p),logger:{error(...x){throw new Error(JSON.stringify(x));}}};
  const caller=handler=>async body=>{const res={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
-  await handler({method:'POST',headers:{authorization:'Bearer token-a'},body},res);assert.deepEqual(validateSchema(responseSchema,res.body),[],JSON.stringify(res.body));return res;};
+  await handler({method:'POST',lyraUser:await store.authenticate('token-a'),headers:{authorization:'Bearer token-a'},body},res);assert.deepEqual(validateSchema(responseSchema,res.body),[],JSON.stringify(res.body));return res;};
  const call=caller(createSongLibraryHandler(options));
  const {body:{document:doc}}=await call({action:'lyrics',recording:{catalog_id:'123',artist:'Test artist',title:'Original test song',duration:12}});
  const base={documentID:doc.id,sourceHash:doc.sourceHash};

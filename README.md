@@ -8,6 +8,8 @@ A Node.js serverless backend (Vercel) for romanizing multilingual lyrics and tex
 - Endpoints:
   - `POST /api/romanize`
   - `POST /api/music-romanize`
+  - `POST /api/song-library`
+  - `POST /api/app-auth` (beta enrollment and renewal only)
 - Music sources currently enabled in runtime registry:
   - `netease`
   - `lrclib`
@@ -56,6 +58,12 @@ or timing are synthesized. Missing provider coverage, ambiguous versions and
 uncertain short-language samples remain explicit limits.
 
 ## Endpoints
+
+App endpoints require a short-lived App Attest session bearer. Anonymous calls
+and raw beta credentials are rejected. This is a deliberate breaking change;
+see [API security and operator controls](docs/APP_AUTH.md) for enrollment,
+deployment isolation, spend limits and revocation. The examples below show
+business JSON bodies after authentication.
 
 ### `POST /api/romanize`
 Romanize text with optional language override and per-language options.
@@ -149,8 +157,8 @@ This repo uses a gated, hermetic-first test model.
 - `npm run test:unit`: pure module tests
 - `npm run test:integration`: handler-level tests with mocked dependencies
 - `npm run test:contract`: schema + compatibility checks
-- `npm run test:live`: optional live upstream smoke tests (non-blocking)
-- `npm run test:legacy`: original ad hoc API script
+- `npm run test:live`: read-only production checks for anonymous/legacy credential denial
+- `npm run test:legacy`: historical unauthenticated API script; incompatible with the secured endpoints
 
 ### Contract and compatibility tests
 

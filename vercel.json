@@ -48,6 +48,10 @@
     {
       "src": "api/review-reports.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/app-auth.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -66,6 +70,10 @@
     {
       "src": "/api/review-reports",
       "dest": "/api/review-reports.js"
+    },
+    {
+      "src": "/api/app-auth",
+      "dest": "/api/app-auth.js"
     }
   ],
   "crons": [

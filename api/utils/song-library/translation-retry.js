@@ -2,7 +2,7 @@
 import {randomUUID} from 'node:crypto';
 import {LibraryError,digest} from './store.js';
 import {requestBody,reservationMicros,translationRecipe} from './translation.js';
-import {budget,checkBudget} from './spending.js';
+import {budget,checkBudget,checkEmergencyBudget} from './spending.js';
 import {reusableTranslation} from './translation-reuse.js';
 const first=async(db,sql,args=[])=>(await db.query(sql,args)).rows[0]??null;
 export async function retryTranslation(database,{jobID,expectedAttempt,requestKey,actor,reason,dryRun=false}) {
@@ -28,6 +28,7 @@ export async function retryTranslation(database,{jobID,expectedAttempt,requestKe
     const user=await first(db,'SELECT * FROM library_users WHERE id=$1 AND NOT disabled',[job.user_id]);if(!user)throw new LibraryError('unauthorized',401);
     if(await first(db,"SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown') UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1",[job.user_id]))throw new LibraryError('user_busy',429);
     const generationRequest=requestBody(doc,job.target),amount=reservationMicros(generationRequest);
+    checkEmergencyBudget(settings,await budget(db),amount);
     if(!user.unlimited_generation){
       const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,count(*) AS monthly
         FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations

@@ -1,3 +1,4 @@
+import {withAppAuth} from './utils/app-auth/http.js';
 import {createRedisFromEnv} from './utils/redis-client.js';
 import {withDeadline} from './utils/fetch-json.js';
 import {waitUntil} from '@vercel/functions';
@@ -10,7 +11,7 @@ function getSupportedScripts() {
   return getSupportedProcessorLanguages();
 }
 
-export function createRomanizeHandler(dependencies = {}) {
+export function createRomanizeService(dependencies = {}) {
   const {
     redis = createRedisFromEnv(),
     detectLanguageFn = detectLanguage,
@@ -39,6 +40,11 @@ export function createRomanizeHandler(dependencies = {}) {
       return res.status(400).json({ error: "Missing 'text' parameter" });
     }
 
+    if(typeof text!=='string'||text.length>8192||Buffer.byteLength(JSON.stringify(req.body??{}))>32768||
+      (language!=null&&(typeof language!=='string'||language.length>32))||
+      (romanization_system!=null&&(typeof romanization_system!=='string'||romanization_system.length>64))||
+      !options||typeof options!=='object'||Array.isArray(options)||Object.keys(options).some(k=>!['tone_style','separator','case','include_metadata'].includes(k))||
+      Object.values(options).some(v=>typeof v==='string'&&v.length>32))return res.status(400).json({code:'invalid_request'});
     try {
       const detectedScript = language || await detectLanguageFn(text);
       const processor = getProcessorFn(detectedScript);
@@ -84,11 +90,14 @@ export function createRomanizeHandler(dependencies = {}) {
 
       return res.status(200).json(response);
     } catch (err) {
-      logger.error("Romanization API error:", err);
-      return res.status(500).json({ error: "Server error", details: err.message });
+      logger.error("romanization_unavailable");
+      return res.status(500).json({ error: "Server error" });
     }
   };
 }
 
+export function createRomanizeHandler(dependencies={}) {
+  return withAppAuth(createRomanizeService(dependencies),{...dependencies,route:'romanize'});
+}
 const handler = createRomanizeHandler();
 export default handler;

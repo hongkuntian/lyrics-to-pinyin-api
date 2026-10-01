@@ -1,3 +1,4 @@
+import {withAppAuth} from './utils/app-auth/http.js';
 import {createRedisFromEnv} from './utils/redis-client.js';
 import {detectLanguage,getDefaultRomanizationSystem} from './utils/language-detection.js';
 import {getProcessor} from './processors/index.js';
@@ -27,7 +28,7 @@ const remainingLifetimeMs=response=> {
   const created=Date.parse(response.metadata?.timestamp);
   return Math.max(0,responseLifetimeMs(response)-(Number.isFinite(created)?Math.max(0,Date.now()-created):0));
 };
-export function createMusicRomanizeHandler(dependencies={}) {
+export function createMusicRomanizeService(dependencies={}) {
   const {
     redis=createRedisFromEnv(),detectLanguageFn=detectLanguage,getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,
     getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,getCacheKeyFn=getCacheKey,
@@ -55,12 +56,13 @@ export function createMusicRomanizeHandler(dependencies={}) {
       return res.status(status).json(body);
     };
     res.setHeader('Content-Type','application/json');
+    if(Buffer.byteLength(JSON.stringify(req.body??{}))>32768)return res.status(400).json({code:'invalid_request'});
     if(req.method!=='POST') return send({status:405,body:{error:'Only POST allowed'}});
     const {artist,title,album,duration,catalog_id,storefront,account_storefront,isrc,language,romanization_system,music_platform,options={}}=req.body || {};
     if((account_storefront!=null&&(typeof account_storefront!=='string'||!/^[a-z]{2}$/.test(account_storefront)))||
       (isrc!=null&&(typeof isrc!=='string'||!/^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$/.test(isrc)))) return send({status:400,body:{error:'Invalid recording hints',code:'invalid_recording'}});
     if(typeof artist!=='string' || !artist.trim() || typeof title!=='string' || !title.trim()) return res.status(400).json({error:"Missing 'artist' or 'title' parameter"});
-    if((catalog_id!=null && (typeof catalog_id!=='string' || !/^\d{1,20}$/.test(catalog_id))) || (storefront!=null && (typeof storefront!=='string' || !/^[a-z]{2}$/.test(storefront))) || artist.length>1024 || title.length>500 || (album!=null && typeof album!=='string') || (duration!=null && (!Number.isFinite(duration) || duration<=0)) || (language!=null && typeof language!=='string') || (romanization_system!=null && typeof romanization_system!=='string') || (music_platform!=null && typeof music_platform!=='string') || !options || typeof options!=='object' || Array.isArray(options)) return res.status(400).json({error:'Invalid request fields'});
+    if((catalog_id!=null && (typeof catalog_id!=='string' || !/^\d{1,20}$/.test(catalog_id))) || (storefront!=null && (typeof storefront!=='string' || !/^[a-z]{2}$/.test(storefront))) || artist.length>1024 || title.length>500 || (album!=null && (typeof album!=='string'||album.length>1024)) || (duration!=null && (!Number.isFinite(duration) || duration<=0)) || (language!=null && typeof language!=='string') || (romanization_system!=null && typeof romanization_system!=='string') || (music_platform!=null && typeof music_platform!=='string') || !options || typeof options!=='object' || Array.isArray(options) || Object.keys(options).some(k=>!['tone_style','separator','case','refresh','include_metadata'].includes(k)) || Object.values(options).some(v=>typeof v==='string'&&v.length>32)) return res.status(400).json({error:'Invalid request fields'});
     try {
       const searchScript=language || await detectLanguageFn(`${artist} ${title}`);
       const searchSystem=romanization_system || getDefaultRomanizationSystemFn(searchScript);
@@ -237,5 +239,8 @@ export function createMusicRomanizeHandler(dependencies={}) {
       return send({status:500,body:{error:'Server error'}});
     }
   };
+}
+export function createMusicRomanizeHandler(dependencies={}) {
+  return withAppAuth(createMusicRomanizeService(dependencies),{...dependencies,route:'music'});
 }
 export default createMusicRomanizeHandler();

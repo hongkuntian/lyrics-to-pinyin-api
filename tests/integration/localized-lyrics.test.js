@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createMusicRomanizeHandler} from '../../api/music-romanize.js';
+import {createMusicRomanizeService as createMusicRomanizeHandler} from '../../api/music-romanize.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 import {resolveCatalogAliases} from '../../api/utils/catalog-aliases.js';
 const request={artist:'Eric Chou',title:'Unbreakable Love',duration:258.264,catalog_id:'1321295664'};

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createRomanizeHandler } from "../../api/romanize.js";
+import { createRomanizeService as createRomanizeHandler } from "../../api/romanize.js";
 import { createMockReq, createMockRes } from "../helpers/mock-http.js";
 
 test("returns 405 for non-POST requests", async () => {

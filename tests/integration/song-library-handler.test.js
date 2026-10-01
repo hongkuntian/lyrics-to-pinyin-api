@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {LibraryError} from '../../api/utils/song-library/store.js';
 import {digest} from '../../api/utils/song-library/store.js';
 import {libraryDB} from '../helpers/library-db.js';
-import {createSongLibraryHandler} from '../../api/song-library.js';
+import {createSongLibraryService as createSongLibraryHandler} from '../../api/song-library.js';
 const recording={catalog_id:'123',artist:'Test artist',title:'Original song',duration:15};
 const response={song:{id:'source-1',title:{original:'Original song'},artist:{original:'Test artist'},language:'zh',romanization_system:'pinyin'},
   lines:[{original:'一起唱',romanized:'yī qǐ chàng',timestamp:0}],metadata:{source:'test',selection_revision:'test'},quality:{synced:true,partial:false,instrumental:false}};
@@ -51,7 +51,7 @@ async function setup(t,overrides={}) {
   const handler=createSongLibraryHandler(options);
   const caller=target=>async(body,token='token-a')=> {
     const res={code:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
-    await target({method:'POST',headers:{authorization:`Bearer ${token}`},body},res);return res;
+    await target({method:'POST',lyraUser:await store.authenticate(token),headers:{authorization:`Bearer ${token}`},body},res);return res;
   };
   return {db,store,handler,call:caller(handler),pending,instance:changes=>caller(createSongLibraryHandler({...options,...changes}))};
 }
