@@ -15,5 +15,21 @@
         "https://music.163.com/song?id=189873"
       ]
     }
+  ],
+  "catalogRecordings": [
+    {
+      "catalogIDs": ["1696904627"],
+      "lyricsSha256": "5d105a9b1c07a4cdabfed76b79dd5e6dd55581a9258b86e7e1bb14903ebfbbd5",
+      "reviewedDate": "2026-10-01",
+      "reason": "The 297.627-second Cantonese recording on 新藝寶88優質音响系列 - BEYOND - 無悔這一生 was matched to the complete Mandarin transcription duplicated under LRCLIB 34016641, 34772165, 34119350 and other IDs. This fingerprint excludes production credits and rejects only this catalog recording; legitimate Mandarin releases remain eligible.",
+      "provenance": [
+        "https://music.apple.com/us/song/1696904627",
+        "https://itunes.apple.com/lookup?id=1696904627&country=us",
+        "https://www.qobuz.com/nz-en/album/88-beyond-beyond/p9t739230upka",
+        "https://lrclib.net/api/get/34016641",
+        "https://lrclib.net/api/get/34772165",
+        "https://lrclib.net/api/get/34119350"
+      ]
+    }
   ]
 }

@@ -21,6 +21,7 @@ import {lookupOfficialTranscription} from './utils/official-transcriptions.js';
 import {lookupListeningReviewedRecording} from './utils/listening-reviewed-recordings.js';
 import {analyzeLyricLanguage} from './utils/lyric-language.js';
 import {chooseLyricCandidate,timingQuality} from './utils/lyric-selection.js';
+import {isRejectedRecordingLyrics} from './utils/rejected-lyrics.js';
 export const RESPONSE_VERSION='2.5.0';
 export const SELECTION_REVISION=LYRIC_SELECTION_REVISION;
 const responseLifetimeMs=response=>response.quality?.partial===true || (response.quality?.synced===false && response.quality?.instrumental!==true) ? 300000:86400000;
@@ -35,7 +36,8 @@ export function createMusicRomanizeService(dependencies={}) {
     getCachedFn=getCached,setCachedFn=setCached,getMusicAPIFn=getMusicAPI,getAvailableAPIsFn=getAvailableAPIs,
     getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,reviewedTimeoutMs=providerTimeoutMs*2,hedgeDelayMs=350,untimedGraceMs=2500,cacheTimeoutMs=300,
     applyTimingCorrectionFn=applyTimingCorrection,resolveCatalogAliasesFn=resolveCatalogAliases,lookupReviewedRecordingFn=lookupReviewedRecording,lookupListeningReviewedRecordingFn=lookupListeningReviewedRecording,lookupOfficialTranscriptionFn=lookupOfficialTranscription,waitUntilFn=waitUntil,logger=console,
-    responseCache=new BoundedCache(),aliasCache=new BoundedCache({ttlMs:86400000}),analyzeLyricLanguageFn=analyzeLyricLanguage
+    responseCache=new BoundedCache(),aliasCache=new BoundedCache({ttlMs:86400000}),analyzeLyricLanguageFn=analyzeLyricLanguage,
+    rejectRecordingLyricsFn=isRejectedRecordingLyrics
   }=dependencies;
   const inflight=new Map(),canonicalInflight=new Map();
   const canonicalCache=new BoundedCache();
@@ -107,6 +109,7 @@ export function createMusicRomanizeService(dependencies={}) {
                 if(recordingScore(song,target)<0 || (duration!=null && song.duration!=null && Math.abs(duration-song.duration)>3)) throw new RecordingMismatchError();
                 matched=true;
                 let lyrics=cleanLyrics(await measure(`${label}_lyrics`,()=>api.getLyrics(song.id,{signal,song})),{duration:song.duration,title:song.title,artist:song.artist,catalogID:catalog_id});
+                if(rejectRecordingLyricsFn(lyrics?.lines??[],request)) throw new RecordingMismatchError('lyric_version_conflict');
                 const candidate=await applyTimingCorrectionFn({song,lyrics,api,target},request,{signal,deadline:providerDeadline});
                 lyrics=candidate.lyrics;
                 return hasUsableLyrics(lyrics,{duration:candidate.song.duration}) ? candidate:null;

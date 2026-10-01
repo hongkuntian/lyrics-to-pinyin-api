@@ -4,6 +4,9 @@ import {LibraryError} from '../../api/utils/song-library/store.js';
 import {digest} from '../../api/utils/song-library/store.js';
 import {libraryDB} from '../helpers/library-db.js';
 import {createSongLibraryService as createSongLibraryHandler} from '../../api/song-library.js';
+import {lyricsFingerprint} from '../../api/utils/rejected-lyrics.js';
+import {lyricSourceNeedsRefresh} from '../../api/utils/timing-corrections.js';
+import {requestKey} from '../../api/utils/song-library/document.js';
 const recording={catalog_id:'123',artist:'Test artist',title:'Original song',duration:15};
 const response={song:{id:'source-1',title:{original:'Original song'},artist:{original:'Test artist'},language:'zh',romanization_system:'pinyin'},
   lines:[{original:'一起唱',romanized:'yī qǐ chàng',timestamp:0}],metadata:{source:'test',selection_revision:'test'},quality:{synced:true,partial:false,instrumental:false}};
@@ -237,4 +240,19 @@ test('known bad cached timing yields to readable fallback and cannot masquerade 
  assert.equal(fallback.code,200);assert.equal(fallback.body.document.response.quality.synced,false);
  assert.deepEqual(fallback.body.document.response.lines,plain.lines);
  assert.notEqual(fallback.body.document.id,first.id);
+});
+test('wrong-version cached words refresh immediately and never survive as an outage fallback',async t=>{
+ const reviews=[{catalogIDs:[recording.catalog_id],lyricsSha256:lyricsFingerprint(response.lines.map(l=>({text:l.original})))}];
+ const needsRefresh=(value,request)=>lyricSourceNeedsRefresh(value,request,{recordingRejections:reviews});
+ const {call,instance,store}=await setup(t,{lyricSourceNeedsRefreshFn:()=>false});
+ const old=(await call({action:'lyrics',recording})).body.document;
+ const failed=await instance({lyricSourceNeedsRefreshFn:needsRefresh,loadLyrics:async()=>{throw new LibraryError('provider_timeout',504);}})({action:'lyrics',recording});
+ assert.equal(failed.code,504);
+ const corrected={...response,lines:[{original:'更正的测试文字',romanized:'corrected fixture',timestamp:null}],quality:{...response.quality,synced:false}};
+ const current=await instance({lyricSourceNeedsRefreshFn:needsRefresh,loadLyrics:async()=>corrected})({action:'lyrics',recording});
+ assert.equal(current.code,200);assert.notEqual(current.body.document.id,old.id);
+ assert.deepEqual(current.body.document.response.lines,corrected.lines);
+ assert.equal((await store.documentForRequest(requestKey(recording),'test')).id,current.body.document.id);
+ // Immutable historical evidence survives; it is no longer the served head.
+ assert.deepEqual((await store.document(old.id)).response.lines,response.lines);
 });

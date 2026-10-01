@@ -4,9 +4,9 @@ import {parseLRC} from '../utils/lrc.js';
 import {findRecording,findLyricsRecording,searchTitle} from '../utils/recording-match.js';
 import chinese from 'chinese-conv';
 import {cleanLyrics,hasUsableLyrics} from '../utils/lyric-quality.js';
-import {isRejectedLyrics} from '../utils/rejected-lyrics.js';
+import {isRejectedLyrics,isRejectedRecordingLyrics} from '../utils/rejected-lyrics.js';
 export class LRCAPI extends BaseMusicAPI {
-  constructor({rejectLyrics=isRejectedLyrics}={}) { super('LRCAPI',['zh','yue','en','ja','ko','ru']); this.baseURL='https://lrclib.net/api'; this.rejectLyrics=rejectLyrics; this.languageAgnosticDiscovery=true; }
+  constructor({rejectLyrics=isRejectedLyrics,rejectRecordingLyrics=isRejectedRecordingLyrics}={}) { super('LRCAPI',['zh','yue','en','ja','ko','ru']); this.baseURL='https://lrclib.net/api'; this.rejectLyrics=rejectLyrics; this.rejectRecordingLyrics=rejectRecordingLyrics; this.languageAgnosticDiscovery=true; }
   // Search accepts Unicode metadata independently of reading-aid coverage.
   // This is discovery capability, not a promise that a transcript exists.
   supportsLanguage(language) { return typeof language==='string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(language); }
@@ -15,7 +15,7 @@ export class LRCAPI extends BaseMusicAPI {
     let failure;
     const add=song=> {
       if(!song || song.id==null) return;
-      const lyricsData=this.lyricsFromRecord(song);
+      const lyricsData=this.lyricsFromRecord(song,request);
       records.set(song.id,{id:song.id,title:song.trackName || song.name,artist:song.artistName,album:song.albumName,duration:song.duration,source:'lrclib',instrumental:lyricsData?.instrumental===true,lyricsData});
     };
     const choose=()=>findLyricsRecording([...records.values()].filter(song=>hasUsableLyrics(song.lyricsData,{duration:song.duration})),request);
@@ -55,21 +55,23 @@ export class LRCAPI extends BaseMusicAPI {
     if(failure) throw failure;
     return null;
   }
-  lyricsFromRecord(record) {
+  lyricsFromRecord(record,request={}) {
     const make=raw=>cleanLyrics({lines:raw ? parseLRC(raw):[],source:'lrclib',songId:record.id,instrumental:record.instrumental===true},{duration:record.duration});
     let rejected=false;
     // A credit-only synced field must not hide a usable plain transcription.
     for(const raw of [record.syncedLyrics,record.plainLyrics]) {
       if(!raw) continue;
       if(this.rejectLyrics('lrclib',record.id,parseLRC(raw))) {rejected=true;continue;}
-      const lyrics=make(raw);if(lyrics?.lines?.length) return lyrics;
+      const lyrics=make(raw);
+      if(this.rejectRecordingLyrics(lyrics?.lines??[],request)) {rejected=true;continue;}
+      if(lyrics?.lines?.length) return lyrics;
     }
     return !rejected && record.instrumental===true ? make(''):null;
   }
   async getLyrics(id,context={}) {
     // Search results belong to the request, never mutable singleton state.
-    if(context.song?.lyricsData) return context.song.lyricsData;
-    return this.lyricsFromRecord(await fetchJSON(`${this.baseURL}/get/${id}`,context));
+    if(context.song?.lyricsData) return this.rejectRecordingLyrics(context.song.lyricsData.lines??[],context)?null:context.song.lyricsData;
+    return this.lyricsFromRecord(await fetchJSON(`${this.baseURL}/get/${id}`,context),context);
   }
   findBestMatch(songs,artist,title) {
     const normalized=songs.map(s=>({...s,title:s.trackName || s.name,artist:s.artistName,album:s.albumName}));
