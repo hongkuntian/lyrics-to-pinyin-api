@@ -1,5 +1,24 @@
 import chinese from 'chinese-conv';
+import {createRequire} from 'node:module';
 import {cleanLyrics} from './lyric-quality.js';
+const require=createRequire(import.meta.url);
+const {artists:reviewedArtists}=require('../data/lyric-performers.json');
+const escapePattern=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const artistNamePatterns=reviewedArtists.flatMap(artist=>artist.names).map(name=>new RegExp(
+  `(?<![\\p{L}\\p{N}])${name.normalize('NFKC').trim().split(/\s+/u).map(escapePattern).join('\\s+')}(?![\\p{L}\\p{N}])`,'giu'));
+const creditSeparator=/\s*(?:&|,|\/|、|\bfeat\.?\s+|\bft\.?\s+|\bfeaturing\s+|\bwith\s+)\s*/giu;
+function splitCredits(value) {
+  const text=value.normalize('NFKC');
+  // Reviewed full artist names are single identities, even when their names
+  // contain credit punctuation/words. This does not equate localized names.
+  const names=artistNamePatterns.flatMap(pattern=>[...text.matchAll(pattern)].map(match=>[match.index,match.index+match[0].length]));
+  const credits=[];let start=0;
+  for(const match of text.matchAll(creditSeparator)) {
+    if(names.some(([left,right])=>match.index>=left && match.index+match[0].length<=right)) continue;
+    credits.push(text.slice(start,match.index));start=match.index+match[0].length;
+  }
+  credits.push(text.slice(start));return credits;
+}
 export function normalizeRecordingText(value = '') {
   return chinese.sify(value).normalize('NFKC').toLowerCase().replace(/[\p{P}\p{Z}\s]/gu,'');
 }
@@ -16,7 +35,7 @@ export function normalizedAlbum(value) {
 export function recordingNames({title='',artist=''}) {
   const guests=[];
   const base=stripTitleDescription(title).replace(/\(\s*live\s*版?\s*\)/gi,'(Live)').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
-  const credits=[artist,...guests].flatMap(value=>value.normalize('NFKC').split(/\s*(?:&|,|\/|、|\bfeat\.?\s+|\bft\.?\s+|\bfeaturing\s+|\bwith\s+)\s*/i))
+  const credits=[artist,...guests].flatMap(splitCredits)
     .map(normalizeRecordingText).filter(Boolean).sort();
   return {title:normalizeRecordingText(base),credits:[...new Set(credits)]};
 }

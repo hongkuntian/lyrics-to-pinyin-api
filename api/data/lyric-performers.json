@@ -1,6 +1,17 @@
 {
   "artists": [
     {
+      "id": "your-woman-sleep-with-others",
+      "names": ["Your Woman Sleep with Others", "老王樂隊", "老王乐队"],
+      "members": [],
+      "provenance": [
+        "https://music.apple.com/us/artist/1289608973",
+        "https://music.apple.com/us/song/1597707697",
+        "https://music.apple.com/tw/song/1597707697"
+      ],
+      "note": "The English name is one band, not a with collaboration. Apple Music returns artist 1289608973 and ISRC TWAE31701126 for both localized names of Teens Edge. Credit parsing keeps each full name intact; recording aliases still require independent catalog evidence."
+    },
+    {
       "id": "top-debut-boy-group",
       "names": ["TOP Debut Boy Group", "TOP登陆少年组合", "TOP登陸少年組合"],
       "members": [

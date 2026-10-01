@@ -26,7 +26,8 @@
           "node_modules/kuroshiro/LICENSE",
           "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
           "THIRD_PARTY_NOTICES.md",
-          "api/data/reviewed-catalog-aliases.json"
+          "api/data/reviewed-catalog-aliases.json",
+          "api/data/lyric-performers.json"
         ]
       }
     },
@@ -41,7 +42,8 @@
           "node_modules/kuroshiro/LICENSE",
           "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
           "THIRD_PARTY_NOTICES.md",
-          "api/data/reviewed-catalog-aliases.json"
+          "api/data/reviewed-catalog-aliases.json",
+          "api/data/lyric-performers.json"
         ]
       }
     },

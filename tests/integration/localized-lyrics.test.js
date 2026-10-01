@@ -5,6 +5,31 @@ import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 import {resolveCatalogAliases} from '../../api/utils/catalog-aliases.js';
 const request={artist:'Eric Chou',title:'Unbreakable Love',duration:258.264,catalog_id:'1321295664'};
 const localized={artist:'周興哲',title:'永不失聯的愛',album:'如果雨之後',duration:258.264,catalog_id:'1321295664'};
+
+test('Teens Edge reaches timed Chinese lyrics and returns the original request proof',async()=>{
+ const request={catalog_id:'1597707697',storefront:'us',artist:'Your Woman Sleep with Others',title:'Teens Edge',album:'Stolen Childhood - Single',duration:347.058};
+ const en={kind:'song',trackId:1597707697,artistName:request.artist,trackName:request.title,collectionName:request.album,trackTimeMillis:347058};
+ const zh={...en,artistName:'老王樂隊',trackName:'我還年輕 我還年輕',collectionName:'吾十有五而志於學 - Single'};
+ const fetchFn=async url=>({ok:true,json:async()=>({results:[new URL(url).searchParams.get('country')==='us'?en:zh]})});
+ const queries=[];
+ const api={name:'Fixture',searchSong:async(artist,title)=>{
+  queries.push({artist,title});
+  return artist===zh.artistName&&title===zh.trackName?{id:10374984,artist,title,album:'吾十有五而志於學',duration:347}:null;
+ },getLyrics:async()=>({lines:[{text:'一起唱',timestamp:15},{text:'听这首歌',timestamp:20}]})};
+ const handler=createMusicRomanizeHandler({redis:null,getAvailableAPIsFn:()=>[api],lookupReviewedRecordingFn:async()=>null,
+  lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
+  resolveCatalogAliasesFn:(r,c)=>resolveCatalogAliases(r,{...c,fetchFn,appleCatalog:null}),logger:{info(){},error(){}}});
+ const res=createMockRes();await handler(createMockReq({body:request}),res);
+ assert.equal(res.statusCode,200);
+ assert.equal(res.body.quality.synced,true);
+ assert.equal(res.body.song.id,10374984);
+ assert.equal(res.body.metadata.catalog_resolution.canonical_recording_id,'apple:1597707697');
+ assert.equal(res.body.metadata.recording_match.method,'catalog_alias');
+ assert.equal(res.body.metadata.recording_match.artist,request.artist);
+ assert.equal(res.body.metadata.recording_match.title,request.title);
+ assert.equal(res.body.metadata.recording_match.duration,request.duration);
+ assert.ok(queries.some(q=>q.artist===zh.artistName&&q.title===zh.trackName));
+});
 async function run(api, body=request, deps={}) {
   const res=createMockRes();
   await createMusicRomanizeHandler({lookupOfficialTranscriptionFn:async()=>null,lookupReviewedRecordingFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[api],resolveCatalogAliasesFn:async()=>[localized],logger:{error(){},info(){}},...deps})(createMockReq({body}),res);
