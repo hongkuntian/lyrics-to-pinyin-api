@@ -58,3 +58,15 @@ test('Dick & Cowboy is one reviewed artist and missing English storefronts use e
   {duration:300},{catalog_id:'999'}])assert.deepEqual(await resolveCatalogAliases({...req,...change},context),[]);
  assert.deepEqual(await resolveCatalogAliases(req,{...context,fetchFn:async()=>({ok:true,json:async()=>({results:[{...anchor,artistName:'Different singer'}]})})}),[]);
 });
+test('already included artist relationships disambiguate unknown band names with no extra reads',async()=>{
+ const req={catalog_id:'123',artist:'Earth, Wind & Fire',title:'Song',album:'Album',duration:220};
+ const entities=[{id:'42',name:req.artist}],zhEntities=[{id:'42',name:'风火土乐团'}];let calls=0;
+ const appleCatalog={lookup:async(_,country)=>{calls++;return [{...req,artist:country==='us'?req.artist:'风火土乐团',storefront:country,
+  artist_ids:['42'],artist_entities:country==='us'?entities:zhEntities,isrc:'USABC2300001',provenance:'apple_music'}]}};
+ const context={appleCatalog,fetchFn:async()=>{throw new Error('Unexpected fallback read');}};
+ const aliases=await resolveCatalogAliases(req,context);
+ assert.ok(aliases.some(s=>s.artist==='风火土乐团'));
+ assert.ok(aliases.resolution.artist_entities.some(s=>s.name===req.artist));
+ assert.equal(calls,6);
+ assert.deepEqual(await resolveCatalogAliases({...req,artist:req.artist+' & Guest'},context),[]);
+});

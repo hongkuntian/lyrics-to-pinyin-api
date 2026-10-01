@@ -104,7 +104,7 @@ export function createMusicRomanizeService(dependencies={}) {
             try {
               return await withDeadline(async signal=> {
                 const label=api.name.replace(/[^a-zA-Z0-9_]/g,'');
-                const song=await measure(`${label}_search`,()=>api.searchSong(target.artist,target.title,{album:target.album,duration:target.duration,catalog_id:target.catalog_id || catalog_id,signal}));
+                const song=await measure(`${label}_search`,()=>api.searchSong(target.artist,target.title,{album:target.album,duration:target.duration,catalog_id:target.catalog_id || catalog_id,...(target.artist_entities?.length?{artist_entities:target.artist_entities}:{}),signal}));
                 if(!song) { diagnose(api.name,'not_found');return null; }
                 if(recordingScore(song,target)<0 || (duration!=null && song.duration!=null && Math.abs(duration-song.duration)>3)) throw new RecordingMismatchError();
                 matched=true;
@@ -137,7 +137,11 @@ export function createMusicRomanizeService(dependencies={}) {
         const better=chooseLyricCandidate;
         const aliases=await aliasTask,resolution=aliases.resolution;
         if(resolution || aliases.length) aliasCache.set(aliasKey,aliases);else diagnose('catalog','alias_evidence_missing');
-        const {searches:resolvedSearches,genres,...proof}=resolution??{};
+        const {searches:resolvedSearches,genres,artist_entities,...proof}=resolution??{};
+        // Only server-fetched catalog relationships may guide punctuation parsing.
+        // This reuses the existing bounded lookup; client display strings cannot
+        // supply artist entities or erase real guest credits.
+        if(artist_entities?.length)request.artist_entities=artist_entities;
         // Never join work by names or client ISRC. Only server-verified catalog
         // evidence establishes the shared recording, then each caller is rebound.
         const canonicalKey=resolution?.canonical_recording_id ? JSON.stringify({recording:resolution.canonical_recording_id,
@@ -194,7 +198,7 @@ export function createMusicRomanizeService(dependencies={}) {
           response.metadata.language_details=languageDetails;
           response.metadata.timing_quality=timingQuality(result);
           if(resolution) {
-            const {searches,genres,...proof}=resolution;
+            const {searches,genres,artist_entities,...proof}=resolution;
             response.metadata.catalog_resolution=proof;
           }
           response.metadata.lyric_structure=lyrics.lyricStructure;

@@ -172,3 +172,24 @@ test("accepts complete ensemble credits while retaining a bounded artist field",
   await handler(createMockReq({body: {artist: 'x'.repeat(1025), title: 'Song'}}), oversized);
   assert.equal(oversized.statusCode, 400);
 });
+
+test('provider discovery receives only server-verified artist entities and preserves extra guests',async()=>{
+ const base={artist:'Earth, Wind & Fire',title:'Song',album:'Album',duration:220,catalog_id:'123'};
+ const entities=[{id:'42',name:base.artist}];
+ for(const verified of [false,true])for(const guest of [false,true]) {
+  const request={...base,...(guest?{artist:base.artist+' & Guest'}:{})};let searches=0;
+  const aliases=[];
+  if(verified)Object.defineProperty(aliases,'resolution',{value:{version:'catalog-recording-1',method:'same_catalog_id',
+   searches:[request],artist_entities:entities,canonical_recording_id:'apple:123',canonical_context:{title:base.title,artist:base.artist},
+   requested:{catalog_id:'123',storefront:null},catalog_items:[{catalog_id:'123',storefront:'us',provenance:'apple_music'}]}});
+  const handler=createMusicRomanizeHandler({redis:null,logger:{info(){},error(){}},resolveCatalogAliasesFn:async()=>aliases,
+   lookupListeningReviewedRecordingFn:async()=>null,lookupReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
+   getAvailableAPIsFn:()=>[{name:'FixtureAPI',searchSong:async(_,__,context)=>{searches++;
+    assert.deepEqual(context.artist_entities,verified?entities:undefined);return {id:1,...base};},
+    getLyrics:async()=>({lines:[{text:'Fixture sunrise',timestamp:10},{text:'Fixture moonlight',timestamp:20}]})}],
+   detectLanguageFn:async()=> 'en',applyTimingCorrectionFn:async candidate=>candidate});
+  const res=createMockRes();await handler(createMockReq({body:{...request,artist_entities:[{id:'999',name:request.artist}]}}),res);
+  assert.equal(res.statusCode,guest?409:200);assert.equal(searches,1);
+  assert.equal(res.body.metadata?.catalog_resolution?.artist_entities,undefined);
+ }
+});

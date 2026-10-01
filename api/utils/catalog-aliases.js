@@ -23,12 +23,14 @@ async function mapBounded(values,work,{deadline,signal}={}) {
  return results;
 }
 const key=song=>JSON.stringify([normalizeRecordingText(song.artist),normalizeRecordingText(song.title),normalizedAlbum(song.album??'')]);
-const searchFields=song=>({catalog_id:song.catalog_id,title:song.title,artist:song.artist,album:song.album,duration:song.duration});
+const searchFields=song=>({catalog_id:song.catalog_id,title:song.title,artist:song.artist,album:song.album,duration:song.duration,
+ ...(song.artist_entities?.length?{artist_entities:song.artist_entities}:{})});
 function finish(request,songs,catalogID,method) {
  const priority=s=>{const index=CATALOG_TERRITORIES.indexOf(s.storefront);return index<0?99:index;};
  const ordered=[...songs].sort((a,b)=>priority(a)-priority(b)||key(a).localeCompare(key(b),'en'));
- const expected=recordingNames(request),artists=ordered.filter(s=>recordingNames(s).credits.length===expected.credits.length);
- const complete=ordered.filter(s=>recordingNames(s).credits.length===expected.credits.length);
+ const entities=[...new Map(ordered.flatMap(s=>s.artist_entities??[]).map(s=>[s.id+':'+s.name,s])).values()].slice(0,48);
+ const expected=recordingNames(request,entities),artists=ordered.filter(s=>recordingNames(s,entities).credits.length===expected.credits.length);
+ const complete=ordered.filter(s=>recordingNames(s,entities).credits.length===expected.credits.length);
  const candidates=[...complete,...complete.flatMap(s=>artists.map(a=>({...s,artist:a.artist})))];
  const seen=new Set(),searches=candidates.filter(s=>{const k=key(s);if(seen.has(k))return false;seen.add(k);return true;}).map(searchFields).slice(0,8);
  const canonical=ordered.find(s=>s.storefront==='us')??ordered[0];
@@ -37,7 +39,7 @@ function finish(request,songs,catalogID,method) {
   canonical_recording_id:'apple:'+ordered.map(s=>s.catalog_id).sort((a,b)=>BigInt(a)<BigInt(b)?-1:BigInt(a)>BigInt(b)?1:0)[0],canonical_context:{title:canonical.title,artist:canonical.artist},
   accepted_request:{catalog_id:request.catalog_id??catalogID,artist:request.artist,title:request.title,album:request.album??null,duration:request.duration},
   catalog_items:[...new Map(ordered.map(s=>[s.storefront+':'+s.catalog_id,{catalog_id:s.catalog_id,storefront:s.storefront,provenance:s.provenance}])).values()],
-  isrc:ordered.find(s=>s.isrc)?.isrc??null,genres:[...new Set(ordered.flatMap(s=>s.genres??[]))],searches};
+  isrc:ordered.find(s=>s.isrc)?.isrc??null,...(entities.length?{artist_entities:entities}:{}),genres:[...new Set(ordered.flatMap(s=>s.genres??[]))],searches};
  Object.defineProperty(aliases,'resolution',{value:resolution});return aliases;
 }
 export async function resolveCatalogAliases(request,context={}) {
@@ -70,15 +72,16 @@ export async function resolveCatalogAliases(request,context={}) {
   }catch{return [];}
  },budget);
  let songs=[...discovered,...results.flat()].filter(s=>s.catalog_id===catalogID&&Math.abs(s.duration-request.duration)<=0.5);
- const expected=recordingNames(request);
+ const entities=songs.flatMap(s=>s.artist_entities??[]);
+ const expected=recordingNames(request,entities);
  const titleMatches=songs.filter(s=>recordingNames(s).title===expected.title);
- const artists=songs.filter(s=>JSON.stringify(recordingNames(s).credits)===JSON.stringify(expected.credits));
+ const artists=songs.filter(s=>JSON.stringify(recordingNames(s,entities).credits)===JSON.stringify(expected.credits));
  if(!titleMatches.length||!artists.length){
   const review=reviewedAliases.find(entry=>entry.acceptedRequests.some(s=>signature(request,s)));
   const anchors=review?songs.filter(song=>review.anchors.some(anchor=>signature(song,anchor))):[];
   return anchors.length?finish(request,anchors,catalogID,'reviewed_alias'):[];
  }
- if(!titleMatches.some(s=>recordingScore({...s,artist:request.artist,title:request.title},request)>=0))return [];
+ if(!titleMatches.some(s=>recordingScore({...s,artist:request.artist,title:request.title},{...request,artist_entities:entities})>=0))return [];
  if(request.album&&!songs.some(s=>s.album&&normalizedAlbum(s.album)===normalizedAlbum(request.album)))return [];
  const anchor=songs.find(s=>s.isrc&&s.artist_ids?.length);
  if(request.isrc&&anchor?.isrc&&request.isrc!==anchor.isrc)return [];

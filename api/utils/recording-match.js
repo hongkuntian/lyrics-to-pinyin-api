@@ -7,11 +7,16 @@ const escapePattern=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const artistNamePatterns=reviewedArtists.flatMap(artist=>artist.names).map(name=>new RegExp(
   `(?<![\\p{L}\\p{N}])${name.normalize('NFKC').trim().split(/\s+/u).map(escapePattern).join('\\s+')}(?![\\p{L}\\p{N}])`,'giu'));
 const creditSeparator=/\s*(?:&|,|\/|、|\bfeat\.?\s+|\bft\.?\s+|\bfeaturing\s+|\bwith\s+)\s*/giu;
-function splitCredits(value) {
+export const artistEntityNames = entities => (Array.isArray(entities)?entities:[]).slice(0,48)
+  .filter(entity=>/^\d{1,20}$/.test(entity?.id??'') && typeof entity.name==='string' && entity.name.trim() && entity.name.length<=1024)
+  .map(entity=>entity.name);
+function splitCredits(value,entityNames=[]) {
   const text=value.normalize('NFKC');
   // Reviewed full artist names are single identities, even when their names
   // contain credit punctuation/words. This does not equate localized names.
-  const names=artistNamePatterns.flatMap(pattern=>[...text.matchAll(pattern)].map(match=>[match.index,match.index+match[0].length]));
+  const patterns=[...artistNamePatterns,...entityNames.map(name=>new RegExp(
+    `(?<![\\p{L}\\p{N}])${name.normalize('NFKC').trim().split(/\s+/u).map(escapePattern).join('\\s+')}(?![\\p{L}\\p{N}])`,'giu'))];
+  const names=patterns.flatMap(pattern=>[...text.matchAll(pattern)].map(match=>[match.index,match.index+match[0].length]));
   const credits=[];let start=0;
   for(const match of text.matchAll(creditSeparator)) {
     if(names.some(([left,right])=>match.index>=left && match.index+match[0].length<=right)) continue;
@@ -32,15 +37,17 @@ export function normalizedAlbum(value) {
 }
 // Keep every contributor. Only explicit credit syntax is interchangeable; a solo
 // recording, unnamed guest, remix or live suffix is never silently discarded.
-export function recordingNames({title='',artist=''}) {
+export function recordingNames({title='',artist='',artist_entities=[]},knownEntities=[]) {
   const guests=[];
   const base=stripTitleDescription(title).replace(/\(\s*live\s*版?\s*\)/gi,'(Live)').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
-  const credits=[artist,...guests].flatMap(splitCredits)
+  const entityNames=artistEntityNames([...artist_entities,...knownEntities]);
+  const credits=[artist,...guests].flatMap(value=>splitCredits(value,entityNames))
     .map(normalizeRecordingText).filter(Boolean).sort();
   return {title:normalizeRecordingText(base),credits:[...new Set(credits)]};
 }
 export function sameRecordingNames(a,b) {
-  const left=recordingNames(a),right=recordingNames(b);
+  const entities=[...(a.artist_entities??[]),...(b.artist_entities??[])];
+  const left=recordingNames(a,entities),right=recordingNames(b,entities);
   return left.title===right.title && JSON.stringify(left.credits)===JSON.stringify(right.credits);
 }
 export function searchTitle(value) {

@@ -37,7 +37,7 @@ export function createAppleCatalog({teamID,keyID,privateKey,fetchFn,now=Date.now
   const a=song.attributes,artists=song.relationships?.artists?.data??[];
   if(song.type!=='songs' || !/^\d{1,20}$/.test(song.id) || !a?.name || !a.artistName || !Number.isFinite(a.durationInMillis)) return null;
   return {catalog_id:song.id,title:a.name,artist:a.artistName,album:a.albumName,duration:a.durationInMillis/1000,storefront,
-   isrc:a.isrc??null,artist_ids:artists.filter(s=>s.type==='artists').map(s=>s.id),genres:a.genreNames??[],content_rating:a.contentRating??null,provenance:'apple_music'};
+   isrc:a.isrc??null,artist_ids:artists.filter(s=>s.type==='artists').map(s=>s.id),artist_entities:artists.filter(s=>s.type==='artists' && /^\d{1,20}$/.test(s.id) && typeof s.attributes?.name==='string' && s.attributes.name.trim()).slice(0,24).map(s=>({id:s.id,name:s.attributes.name})),genres:a.genreNames??[],content_rating:a.contentRating??null,provenance:'apple_music'};
  };
  const localizationCache=new BoundedCache({ttlMs:86400000});
  const languages=async(storefront,context)=>{
