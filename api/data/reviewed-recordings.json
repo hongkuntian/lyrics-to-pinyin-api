@@ -287,6 +287,66 @@
         "https://music.apple.com/cn/song/6763663750",
         "https://music.163.com/song?id=2643800682"
       ]
+    },
+    {
+      "id": "apple-6785801848-lrclib-37647540",
+      "reviewedDate": "2026-10-01",
+      "reason": "The Mandarin release uses a bilingual Apple title and a Chinese provider title. LRCLIB records with the exact Apple metadata contain the separate Cantonese transcript. Bind the independently corroborated Mandarin source to this exact catalog ID, fresh full metadata and complete lyric/timing fingerprint; retain provider timestamps unchanged.",
+      "acceptedRequests": [
+        {
+          "catalog_id": "6785801848",
+          "title": "甲乙丙丁Strangers",
+          "artist": "Jess Lee",
+          "album": "甲乙丙丁Strangers - Single",
+          "duration": 210.462
+        },
+        {
+          "catalog_id": "6785801848",
+          "title": "甲乙丙丁Strangers",
+          "artist": "李佳薇",
+          "album": "甲乙丙丁Strangers - Single",
+          "duration": 210.462
+        }
+      ],
+      "catalogAnchors": [
+        {
+          "storefront": "us",
+          "signature": {
+            "catalog_id": "6785801848",
+            "title": "甲乙丙丁Strangers",
+            "artist": "Jess Lee",
+            "album": "甲乙丙丁Strangers - Single",
+            "duration": 210.462
+          }
+        },
+        {
+          "storefront": "cn",
+          "signature": {
+            "catalog_id": "6785801848",
+            "title": "甲乙丙丁Strangers",
+            "artist": "李佳薇",
+            "album": "甲乙丙丁Strangers - Single",
+            "duration": 210.462
+          }
+        }
+      ],
+      "source": {
+        "provider": "lrclib",
+        "id": "37647540",
+        "title": "甲乙丙丁",
+        "artist": "李佳薇",
+        "album": "甲乙丙丁",
+        "duration": 210,
+        "lyricsFingerprint": "7a80bfb7296b75a5988e5b830eabbba14d68a4d21d06b872402c33b2a5f0762b"
+      },
+      "provenance": [
+        "https://music.apple.com/us/song/6785801848",
+        "https://music.apple.com/cn/song/6785801848",
+        "https://www.youtube.com/watch?v=YacpC7sUXMM",
+        "https://www.youtube.com/watch?v=MS9Tzsq-JfM",
+        "https://lrclib.net/api/get/37647540",
+        "https://music.163.com/song?id=3399839173"
+      ]
     }
   ]
 }

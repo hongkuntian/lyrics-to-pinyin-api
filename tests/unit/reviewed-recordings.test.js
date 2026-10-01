@@ -9,7 +9,7 @@ const {recordings:productionRecordings}=require('../../api/data/reviewed-recordi
 const clone=value=>JSON.parse(JSON.stringify(value));
 // Entirely synthetic text proves fetched lines/timing flow through unchanged.
 const rawLyrics='[00:00.00]词曲: Test Author\n[00:15.50]Fixture sunrise\n[00:30.25]Fixture moonlight';
-const recordings=productionRecordings.map(entry=>({...entry,source:{...entry.source,
+const recordings=productionRecordings.filter(entry=>(entry.source.provider??'netease')==='netease').map(entry=>({...entry,source:{...entry.source,
   ...(entry.source.lyricsFingerprint?{lyricsFingerprint:timingFingerprint({lines:[{text:'Fixture sunrise',timestamp:15.5},{text:'Fixture moonlight',timestamp:30.25}]})}:{})}}));
 const lookupReviewedRecording=(request,context)=>lookupReviewed(request,context,{reviews:recordings});
 function fixture(entry,mutate=()=>{},signal) {

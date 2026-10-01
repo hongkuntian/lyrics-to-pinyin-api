@@ -40,6 +40,17 @@ function verifiedSource(raw,expected) {
   if(raw.ar.some(a=>!numericID(String(a?.id)) || !present(a?.name))) return false;
   return JSON.stringify(pairs(raw.ar))===JSON.stringify(pairs(expected.artists));
 }
+function verifiedLrclibSource(raw,expected) {
+  // LRCLIB's metadata can be right while its transcript is the wrong version.
+  // This discovery exception therefore always pins the complete words/timeline.
+  return raw && String(raw.id)===expected.id && raw.instrumental!==true
+    && present(raw.trackName) && present(raw.artistName) && present(raw.albumName)
+    && normalizeRecordingText(raw.trackName)===normalizeRecordingText(expected.title)
+    && JSON.stringify(credits(raw.artistName))===JSON.stringify(credits(expected.artist))
+    && normalizedAlbum(raw.albumName)===normalizedAlbum(expected.album)
+    && closeDuration(raw.duration,expected.duration)
+    && /^[a-f0-9]{64}$/.test(expected.lyricsFingerprint??'');
+}
 function checkAbort(signal) {
   if(signal?.aborted) {const error=new Error('Lookup cancelled');error.name='AbortError';throw error;}
 }
@@ -50,6 +61,8 @@ export async function lookupReviewedRecording(request,context={}, {reviews=recor
   checkAbort(context.signal);
   const entry=reviews.find(item=>item.acceptedRequests.some(signature=>sameSignature(request,signature)));
   if(!entry) return null;
+  const sourceProvider=entry.source.provider??'netease';
+  if(!['netease','lrclib'].includes(sourceProvider)) return null;
   const controller=new AbortController(),cancel=()=>controller.abort();
   context.signal?.addEventListener('abort',cancel,{once:true});
   if(context.signal?.aborted) cancel();
@@ -73,34 +86,42 @@ export async function lookupReviewedRecording(request,context={}, {reviews=recor
           && closeDuration(song.trackTimeMillis/1000,request.duration));
       } catch(error) {if(error.name==='AbortError' || context.signal?.aborted) throw error;return false;}
     }));
-    const verified=Promise.all([anchors,get(`${provider}/song/detail?ids=${entry.source.id}`)])
+    const sourceRead=sourceProvider==='lrclib' ? get(`https://lrclib.net/api/get/${entry.source.id}`)
+      : get(`${provider}/song/detail?ids=${entry.source.id}`);
+    const verified=Promise.all([anchors,sourceRead])
       .then(([matches,detail])=>{
-        if(!matches.some(Boolean) || detail.code!==200 || !Array.isArray(detail.songs) || detail.songs.length!==1
-          || !verifiedSource(detail.songs[0],entry.source) || !closeDuration(detail.songs[0].dt/1000,request.duration)) {
+        const valid=sourceProvider==='lrclib' ? verifiedLrclibSource(detail,entry.source)
+          : detail.code===200 && Array.isArray(detail.songs) && detail.songs.length===1 && verifiedSource(detail.songs[0],entry.source);
+        if(!matches.some(Boolean) || !valid) {
           throw new Error('Reviewed recording metadata changed');
         }
-        return detail.songs[0];
+        const raw=sourceProvider==='lrclib' ? detail : detail.songs[0];
+        const song=sourceProvider==='lrclib'
+          ? {id:raw.id,title:raw.trackName,artist:raw.artistName,album:raw.albumName,duration:raw.duration}
+          : {id:raw.id,title:raw.name,artist:raw.ar.map(a=>a.name).join(' & '),album:raw.al.name,duration:raw.dt/1000};
+        if(!closeDuration(song.duration,request.duration)) throw new Error('Reviewed recording duration changed');
+        return {...song,source:sourceProvider};
       });
-    const [raw,response]=await Promise.all([verified,get(`${provider}/lyric?id=${entry.source.id}`)]);
+    const lyricRead=sourceProvider==='lrclib' ? sourceRead.then(raw=>({code:200,lrc:{lyric:raw.syncedLyrics}}))
+      : get(`${provider}/lyric?id=${entry.source.id}`);
+    const [song,response]=await Promise.all([verified,lyricRead]);
     if(response.code!==200 || !present(response.lrc?.lyric)) return null;
     // Explicit identity tags in the lyric body must not contradict the exact
     // provider record just verified above. Parse them before LRC strips tags.
     for(const tag of response.lrc.lyric.matchAll(/^\s*\[(ar|ti):([^\]\r\n]*)\]\s*$/gim)) {
       const value=tag[2].trim();
       if(!value) continue;
-      if(tag[1].toLowerCase()==='ti' && normalizeRecordingText(value)!==normalizeRecordingText(raw.name)) return null;
-      if(tag[1].toLowerCase()==='ar' && JSON.stringify(credits(value))!==JSON.stringify(credits(raw.ar.map(a=>a.name).join(' & ')))) return null;
+      if(tag[1].toLowerCase()==='ti' && normalizeRecordingText(value)!==normalizeRecordingText(song.title)) return null;
+      if(tag[1].toLowerCase()==='ar' && JSON.stringify(credits(value))!==JSON.stringify(credits(song.artist))) return null;
     }
-    const lyrics=cleanLyrics({lines:parseLRC(response.lrc.lyric),source:'netease',songId:raw.id},
-      {duration:raw.dt/1000,title:raw.name,artist:raw.ar.map(a=>a.name).join(' & '),catalogID:request.catalog_id});
+    const lyrics=cleanLyrics({lines:parseLRC(response.lrc.lyric),source:sourceProvider,songId:song.id},
+      {duration:song.duration,title:song.title,artist:song.artist,catalogID:request.catalog_id});
     if(entry.source.lyricsFingerprint && timingFingerprint(lyrics)!==entry.source.lyricsFingerprint) return null;
     // These reviewed recordings contain vocals. An empty/credit-only/instrumental
     // mutation must not turn a known vocal recording into an instrumental success.
     if(!lyrics?.lines.length || lyrics.instrumental) return null;
-    const song={id:raw.id,title:raw.name,artist:raw.ar.map(a=>a.name).join(' & '),album:raw.al.name,
-      duration:raw.dt/1000,source:'netease',lyricsData:lyrics};
-    return {song,lyrics,api:{name:'NeteaseAPI'},target:request,reviewedIdentity:{id:entry.id,
-      reviewedDate:entry.reviewedDate,catalogID:request.catalog_id,source:'netease',sourceID:entry.source.id,
+    return {song:{...song,lyricsData:lyrics},lyrics,api:{name:sourceProvider==='lrclib'?'LRCAPI':'NeteaseAPI'},target:request,reviewedIdentity:{id:entry.id,
+      reviewedDate:entry.reviewedDate,catalogID:request.catalog_id,source:sourceProvider,sourceID:entry.source.id,
       metadataSha256:createHash('sha256').update(JSON.stringify(entry.source)).digest('hex'),provenance:entry.provenance}};
   } catch(error) {
     if(error.name==='AbortError' || context.signal?.aborted) {checkAbort(context.signal);throw error;}

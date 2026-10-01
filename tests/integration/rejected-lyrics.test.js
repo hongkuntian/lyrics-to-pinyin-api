@@ -4,6 +4,9 @@ import {LRCAPI} from '../../api/music-apis/lrclib.js';
 import {lyricsFingerprint,isRejectedLyrics,isRejectedRecordingLyrics} from '../../api/utils/rejected-lyrics.js';
 import {createMusicRomanizeService as createMusicRomanizeHandler} from '../../api/music-romanize.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
+import {lookupReviewedRecording} from '../../api/utils/reviewed-recordings.js';
+import {timingFingerprint} from '../../api/utils/timing-corrections.js';
+import {createRequire} from 'node:module';
 
 const request={artist:'Jacky Cheung',title:'我等到花兒也謝了',album:'真愛 新曲+真正精選',duration:278.507,catalog_id:'1440912488'};
 // Original fixture words, with the metadata of the mislabeled public record.
@@ -68,5 +71,47 @@ test('every provider rejects a known wrong language version and preserves legiti
     if(available)assert.equal(result.body.song.id,888888);
     const legitimate=createMockRes();await handler(createMockReq({body:{...request,catalog_id:'456'}}),legitimate);
     assert.equal(legitimate.statusCode,200);assert.equal(legitimate.body.song.id,999999);
+  }
+});
+
+test('the Mandarin Strangers report resolves its Chinese-title reviewed source instead of exact-metadata wrong copies',async()=>{
+  const require=createRequire(import.meta.url);
+  const entry=require('../../api/data/reviewed-recordings.json').recordings.find(r=>r.id==='apple-6785801848-lrclib-37647540');
+  const correct=[{text:'Correct Mandarin fixture',timestamp:17.51},{text:'Final Mandarin fixture',timestamp:187.72}];
+  const review={...entry,source:{...entry.source,lyricsFingerprint:timingFingerprint({lines:correct})}};
+  const recording={...entry.acceptedRequests[0],duration:210};
+  const wrong=[{text:'Separate Cantonese fixture',timestamp:8}];
+  const rejectRecordingLyricsFn=(lines,request)=>isRejectedRecordingLyrics(lines,request,
+    [{catalogIDs:[recording.catalog_id],lyricsSha256:lyricsFingerprint(wrong)}]);
+  for(const available of [true,false]) {
+    let searches=0;
+    const fetchFn=async url=>{
+      const u=new URL(url);let body;
+      if(u.hostname==='itunes.apple.com') {
+        const anchor=entry.catalogAnchors.find(a=>a.storefront===u.searchParams.get('country')).signature;
+        body={results:[{kind:'song',trackId:Number(anchor.catalog_id),trackName:anchor.title,
+          artistName:anchor.artist,collectionName:anchor.album,trackTimeMillis:anchor.duration*1000}]};
+      } else {
+        if(!available)throw new Error('Provider unavailable');
+        body={id:Number(entry.source.id),trackName:entry.source.title,artistName:entry.source.artist,
+          albumName:entry.source.album,duration:entry.source.duration,
+          syncedLyrics:'[00:17.51]Correct Mandarin fixture\n[03:07.72]Final Mandarin fixture'};
+      }
+      return {ok:true,json:async()=>body};
+    };
+    const duplicates={name:'LRCAPI',searchSong:async()=>{searches++;return {...recording,id:38566061};},
+      getLyrics:async()=>({lines:wrong})};
+    const handler=createMusicRomanizeHandler({redis:null,getAvailableAPIsFn:()=>[duplicates],
+      resolveCatalogAliasesFn:async()=>[],lookupListeningReviewedRecordingFn:async()=>null,
+      lookupOfficialTranscriptionFn:async()=>null,
+      lookupReviewedRecordingFn:(request,context)=>lookupReviewedRecording(request,{...context,fetchFn},{reviews:[review]}),
+      rejectRecordingLyricsFn,getProcessorFn:()=>({romanize:async text=>({romanized:text})}),logger:{error(){}}});
+    const res=createMockRes();await handler(createMockReq({body:recording}),res);
+    assert.equal(res.statusCode,available?200:409);
+    if(available) {
+      assert.equal(searches,0);assert.equal(res.body.song.id,37647540);
+      assert.deepEqual(res.body.lines.map(l=>({text:l.original,timestamp:l.timestamp})),correct);
+      assert.equal(res.body.metadata.reviewed_recording.catalogID,recording.catalog_id);
+    }
   }
 });
