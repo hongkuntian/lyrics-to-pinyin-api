@@ -39,7 +39,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       const input=req.body;
       if(!input||Array.isArray(input)||typeof input!=='object'||Buffer.byteLength(JSON.stringify(input))>8192||
         !Object.hasOwn(actions,input.action)||Object.keys(input).some(k=>k!=='action'&&!actions[input.action].includes(k))) throw new LibraryError('invalid_request',400);
-      const db=getStore(),user=req.lyraUser;if(!user)throw new LibraryError('unauthorized',401);
+      const db=getStore(),user=req.lyricaUser;if(!user)throw new LibraryError('unauthorized',401);
       const policy=languagePolicy??environmentLanguagePolicy();
       if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
       if(input.action==='pronunciation') {

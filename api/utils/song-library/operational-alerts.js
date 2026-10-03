@@ -15,8 +15,8 @@ export function emailConfiguration(env) {
 export function alertEmail(codes,config) {
   const messages=[...new Set(codes)].filter(code=>Object.hasOwn(catalog,code)).map(code=>catalog[code]);
   if(!messages.length)throw new Error('empty_alert_digest');
-  return {from:config.from,to:[config.to],subject:'Lyra needs your attention',text:
-    'Lyra found the following operational issues. Your spending limits have not changed.\n\n'+
+  return {from:config.from,to:[config.to],subject:'Lyrica needs your attention',text:
+    'Lyrica found the following operational issues. Your spending limits have not changed.\n\n'+
     messages.map(m=>`${m.title}\n${m.detail}\n${DASHBOARD}${m.path}`).join('\n\n')+
     '\n\nThis digest is limited to once per UTC day and five times per UTC month. Unchanged incidents do not send again. Check the dashboard for current state.'};
 }

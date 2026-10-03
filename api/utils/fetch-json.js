@@ -10,7 +10,7 @@ function retryAfterMilliseconds(response) {
   return Number.isFinite(milliseconds) && milliseconds>=0 && milliseconds<=1000 ? milliseconds:null;
 }
 export async function fetchJSON(url, {signal, fetchFn=fetch,headers={}}={}) {
-  const init={signal,headers:{'User-Agent':'Lyra/2.3.0',...headers}};
+  const init={signal,headers:{'User-Agent':'Lyrica/2.3.0',...headers}};
   let response=await fetchFn(url,init);
   const retryMs=!response.ok && [502,503,504].includes(response.status) ? 150
     :!response.ok && response.status===429 ? retryAfterMilliseconds(response):null;

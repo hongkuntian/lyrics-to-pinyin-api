@@ -4,9 +4,9 @@ Japanese and Korean have text-derived beta reading profiles. These are separate 
 
 | Profile | Source | Notation | Script | Engine |
 | --- | --- | --- | --- | --- |
-| ja-hepburn | Japanese | Hepburn romaji | Latin | Kuromoji 0.1.2 / Kuroshiro 1.2.0, Lyra rules 1 |
+| ja-hepburn | Japanese | Hepburn romaji | Latin | Kuromoji 0.1.2 / Kuroshiro 1.2.0, Lyrica rules 1 |
 | ja-kana | Japanese | Hiragana reading | Hiragana | Same Japanese analysis |
-| ko-revised | Korean | Revised Romanization | Latin | Koroman 1.0.16, Lyra rules 1 |
+| ko-revised | Korean | Revised Romanization | Latin | Koroman 1.0.16, Lyrica rules 1 |
 
 Japanese analysis preserves multi-character readings and particle pronunciation, combines auxiliary endings, and handles volitional long vowels separately from ordinary vowel sequences. Kana retains lexical spelling, including particles は/へ/を. Korean uses pronunciation rules for liaison and assimilation; its native reading field retains Hangul orthography. Revised Romanization is not a phonetic transcript and does not encode every spoken distinction. Neither engine sees audio. Ambiguous kanji, names, artistic readings and stylized spellings remain limitations. Unknown readings remain original text with an explicit unresolved status. Mixed Latin text, punctuation and graphemes remain intact.
 

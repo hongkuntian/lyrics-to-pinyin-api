@@ -73,7 +73,7 @@ function publicDuration(html,source) {
 }
 async function boundedText(url,{fetchFn=fetch,signal}) {
   if(signal.aborted) throw new Error('Cancelled');
-  const response=await fetchFn(url,{signal,redirect:'error',size:maxBytes,headers:{'User-Agent':'Lyra/2.3.0'}});
+  const response=await fetchFn(url,{signal,redirect:'error',size:maxBytes,headers:{'User-Agent':'Lyrica/2.3.0'}});
   if(!response.ok || (response.url && response.url!==url) || Number(response.headers?.get?.('content-length'))>maxBytes) throw new Error('Source unavailable');
   const text=await response.text();
   if(signal.aborted || Buffer.byteLength(text)>maxBytes) throw new Error('Source unavailable');

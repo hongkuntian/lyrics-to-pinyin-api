@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { createMusicRomanizeService as createMusicRomanizeHandler } from "../../api/music-romanize.js";
 import { createMockReq, createMockRes } from "../helpers/mock-http.js";
 
-function assertLyraCompatibility(payload) {
-  // Mirrors decode-critical fields in Lyra/Lyra/LyricsResponse.swift.
+function assertLyricaCompatibility(payload) {
+  // Mirrors decode-critical fields in Lyrica/LyricsResponse.swift.
   assert.equal(typeof payload.song.title.original, "string");
   assert.equal(typeof payload.song.title.romanized, "string");
   assert.equal(typeof payload.song.artist.original, "string");
@@ -21,9 +21,9 @@ function assertLyraCompatibility(payload) {
   assert.ok(payload.song.duration === null || typeof payload.song.duration === "number");
 }
 
-test("music endpoint response stays compatible with Lyra decode model", async () => {
+test("music endpoint response stays compatible with Lyrica decode model", async () => {
   const api = {
-    name: "LyraCompatAPI",
+    name: "LyricaCompatAPI",
     async searchSong() {
       return { id: 12345, title: "稻香", artist: "周杰伦" };
     },
@@ -56,5 +56,5 @@ test("music endpoint response stays compatible with Lyra decode model", async ()
   await handler(req, res);
 
   assert.equal(res.statusCode, 200);
-  assertLyraCompatibility(res.body);
+  assertLyricaCompatibility(res.body);
 });

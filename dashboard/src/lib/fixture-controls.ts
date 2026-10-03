@@ -13,9 +13,9 @@ export type FixtureControls = {
   expires: number;
 };
 const globalState = globalThis as typeof globalThis & {
-  lyraFixtureControls?: Map<string, FixtureControls>;
+  lyricaFixtureControls?: Map<string, FixtureControls>;
 };
-const states = (globalState.lyraFixtureControls ??= new Map());
+const states = (globalState.lyricaFixtureControls ??= new Map());
 export function fixtureControls(sessionID?: string): FixtureControls {
   for (const [id, value] of states)
     if (value.expires < Date.now()) states.delete(id);

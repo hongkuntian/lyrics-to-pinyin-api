@@ -165,7 +165,7 @@ export default async function OverviewPage() {
           ) : (
             <Empty
               title="No translation requests yet"
-              detail="New requests from Lyra will appear here."
+              detail="New requests from Lyrica will appear here."
             />
           )}
         </CardContent>

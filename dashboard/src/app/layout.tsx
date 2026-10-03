@@ -6,8 +6,8 @@ import "./globals.css";
 const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 export const metadata: Metadata = {
-  title: { default: "Lyra · Overview", template: "Lyra · %s" },
-  description: "Private Lyra translation workspace",
+  title: { default: "Lyrica · Overview", template: "Lyrica · %s" },
+  description: "Private Lyrica translation workspace",
   robots: { index: false, follow: false },
 };
 export default function RootLayout({
