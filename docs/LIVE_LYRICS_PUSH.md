@@ -1,0 +1,13 @@
+# Live Lyrics push experiment
+
+`POST /api/live-lyrics` relays fresh ActivityKit content from an App Attest authenticated Lyra session. It supports the Debug app `com.hongkuntian.musicromanization`; the push topic is fixed on the server. This tests APNs delivery while Lyra owns playback. It cannot observe an external Apple Music pause, seek, or song change after Lyra is suspended.
+
+Provision `LYRA_APNS_TEAM_ID`, `LYRA_APNS_KEY_ID`, and sensitive `LYRA_APNS_PRIVATE_KEY` in production Vercel server environment variables. The private key must be a P-256 APNs key. The iOS provisioning profile must include Push Notifications and production App Attest; its `aps-environment` determines the sandbox or production APNs endpoint. Never put the private key in the app or repository. Apply migration `022-live-lyrics-push.sql` through `migrateLibrary` before deployment (the production migration build hook supports this).
+
+The app sends `{activityID, token, environment, reason, state}`. `state` is the default Swift Codable ContentState: `observedAt` is seconds since 2001, not an ISO string. Requests older than eight seconds are rejected. APNs expiry is zero and stale-date is the observation time plus eight seconds. Visible cue/page changes use priority 10; four-second freshness heartbeats use priority 5. Apple may delay or throttle delivery, so acceptance by APNs is not proof of a rendered card update.
+
+The independent user quota is 120 requests per minute and includes failed attempts. A per-activity receipt serializes pushes; sequence numbers and integer Unix timestamps must advance. A same-second change returns 429 with Retry-After 1 so the app coalesces the latest observation. On transport failure the app uses its local update path. Invalid tokens await rotation; stale observations never renew the card.
+
+The database retains only owner, activity ID, token digest, last sequence/timestamp and a 30-minute expiry. It does not retain lyrics or raw push tokens. The request state and token exist only during relay execution. Expired receipts and rate windows older than a day are removed during relay requests. Diagnostics contain delivery events and sequence numbers without the private key, tokens, lyrics, or account credentials.
+
+Verify sustained physical-phone playback in unlocked Notification Center without a debugger, plus pause, seek and track transitions. Compare system pixels against observations; `push-accepted` and ActivityKit `contentUpdates` alone do not establish rendering or exact lyric timing. Keep the experiment off by default until that evidence supports enabling it.

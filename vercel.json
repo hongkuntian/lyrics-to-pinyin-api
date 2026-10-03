@@ -54,6 +54,10 @@
     {
       "src": "api/app-auth.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/live-lyrics.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -76,6 +80,10 @@
     {
       "src": "/api/app-auth",
       "dest": "/api/app-auth.js"
+    },
+    {
+      "src": "/api/live-lyrics",
+      "dest": "/api/live-lyrics.js"
     }
   ],
   "crons": [
