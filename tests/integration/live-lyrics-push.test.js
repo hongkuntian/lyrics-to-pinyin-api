@@ -6,6 +6,26 @@ import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 import {createLiveLyricsHandler} from '../../api/live-lyrics.js';
 import {validatePush,LiveLyricsPushRelay} from '../../api/utils/live-lyrics/relay.js';
 import {LibraryError} from '../../api/utils/song-library/store.js';
+import {readFile} from 'node:fs/promises';
+
+test('the restricted production role can relay after migration without gaining account or schema privileges',async()=>{
+  const {db}=await libraryDB();
+  const migration=await readFile(new URL('../../db/023-live-lyrics-runtime.sql',import.meta.url),'utf8');
+  try {
+    await db.exec('CREATE ROLE lyra_runtime_v1 NOSUPERUSER NOCREATEDB NOCREATEROLE');
+    await db.exec('SET ROLE lyra_runtime_v1');
+    const relay=new LiveLyricsPushRelay(db,{send:async()=>{},now:()=>pushTime});
+    await assert.rejects(()=>relay.update('reader-a',validatePush(pushBody(),pushTime)),{code:'42501'});
+    await db.exec('RESET ROLE');
+    await db.exec(migration);
+    await db.exec(migration); // The grant is safe to repeat during operator recovery.
+    await db.exec('SET ROLE lyra_runtime_v1');
+    assert.deepEqual(await relay.update('reader-a',validatePush(pushBody(),pushTime)),
+      {state:'accepted',sequence:1,timestamp:pushTime/1000});
+    await assert.rejects(()=>db.query("UPDATE library_users SET disabled=true WHERE id='reader-a'"),{code:'42501'});
+    assert.equal((await db.query("SELECT has_schema_privilege(current_user,'public','CREATE') AS allowed")).rows[0].allowed,false);
+  }finally{await db.exec('RESET ROLE');await db.close();}
+});
 
 test('relay serializes accepted updates, ignores older sequences, and retains no lyrics or raw tokens',async()=>{
   const {db}=await libraryDB();let time=pushTime;const sent=[];

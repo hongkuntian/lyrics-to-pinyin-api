@@ -32,6 +32,7 @@ export async function libraryDB(path) {
     await db.exec(await readFile(new URL('../../db/021-app-auth.sql',import.meta.url),'utf8'));
   if(!(await db.query("SELECT to_regclass('live_lyrics_push_receipts') AS name")).rows[0].name)
     await db.exec(await readFile(new URL('../../db/022-live-lyrics-push.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../../db/023-live-lyrics-runtime.sql',import.meta.url),'utf8'));
   const store=new SongLibraryStore({query:(...args)=>db.query(...args),transaction:fn=>db.transaction(fn)});
   await store.configure({enabled:true,dailyMicros:1_000_000,monthlyMicros:5_000_000});
   await store.createUser('reader-a','token-a');

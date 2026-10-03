@@ -85,7 +85,7 @@ in `~/.config/lyra/credentials/backend-admin/{migration,runtime}.json` with mode
 0600 inside a 0700 directory. MusicKit credentials stay in the separate private
 Apple Music credential directory. Never commit these files or print their values.
 
-Apply migration 021 with the owner connection before deploying. Production builds
+Apply the latest migration with the owner connection before deploying. Live Lyrics push requires migrations 022 and 023, including the restricted runtime grants for its two tables. Production builds
 verify the latest migration receipt; they do not migrate with elevated runtime
 permissions. Deploy the updated server and install the updated app together.
 
