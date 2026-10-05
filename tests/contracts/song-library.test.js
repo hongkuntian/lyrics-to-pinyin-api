@@ -18,7 +18,7 @@ test('song library document, job, translation, status, report and error follow t
     waitUntilFn:task=>pending.push(task)});
   async function call(body) {
     const res={setHeader(){},status(code){this.code=code;return this;},json(value){this.body=value;}};
-    await handler({method:'POST',lyraUser:await store.authenticate('token-a'),headers:{authorization:'Bearer token-a'},body},res);
+    await handler({method:'POST',lyricaUser:await store.authenticate('token-a'),headers:{authorization:'Bearer token-a'},body},res);
     assert.deepEqual(validateSchema(schema,res.body),[]);return res.body;
   }
   const {document}=await call({action:'lyrics',recording:{catalog_id:'123',artist:'Test artist',title:'Original test song',duration:12}});

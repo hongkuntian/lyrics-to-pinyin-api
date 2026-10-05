@@ -70,7 +70,7 @@ test('lyrics, cached translation and job status remain compatible with API v1 cl
     loadLyrics:async()=>source,waitUntilFn:task=>pending.push(task),generateFn:async doc=>({actualMicros:1000,response:{},
       content:parseTranslation(JSON.stringify({translations:{L0001:'Sing together.',L0002:'I say: stay.',L0003:'Sing it again.',L0004:'Sing together once more.'},sourceNotes:[]}),doc)})});
   async function call(body) {
-    const res=createMockRes();await handler({method:'POST',lyraUser:await store.authenticate('token-a'),headers:{authorization:'Bearer token-a'},body},res);return res;
+    const res=createMockRes();await handler({method:'POST',lyricaUser:await store.authenticate('token-a'),headers:{authorization:'Bearer token-a'},body},res);return res;
   }
   const loaded=await call({action:'lyrics',recording});assert.equal(loaded.statusCode,200);
   const wire=loaded.body.document,canonical=await store.document(wire.id);

@@ -1,6 +1,6 @@
 # Lyrics selection revision: 2026-09-08
 
-The additive API 2.3.0 field `metadata.selection_revision` is `lyrics-selection-2026-09-08-durable`. It also participates in server cache keys and is checked on Redis reads. Old payloads are not stamped with the new revision. Lyra only persists this revision; displaying an older server response during rollout does not renew its cache eligibility.
+The additive API 2.3.0 field `metadata.selection_revision` is `lyrics-selection-2026-09-08-durable`. It also participates in server cache keys and is checked on Redis reads. Old payloads are not stamped with the new revision. Lyrica only persists this revision; displaying an older server response during rollout does not renew its cache eligibility.
 
 ## Identity and discovery
 

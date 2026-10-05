@@ -8,7 +8,7 @@ const hash=value=>createHash('sha256').update(value).digest('hex');
 export const targets=['en','fr','es','zh-Hans'];
 export function documentFor(item) {
   const occurrences=item.lines.map((text,index)=>({sourceID:`L${String(index+1).padStart(4,'0')}`,sourceText:text,lyricText:text,speakerID:null,startsTurn:false,sourcePrefix:''}));
-  return {id:hash(item.id),sourceHash:hash(item.lines.join('\n')),response:{song:{title:{original:item.title},artist:{original:'Lyra evaluation corpus'},language:item.language}},structure:{version:'source-speakers-1',speakers:[],occurrences}};
+  return {id:hash(item.id),sourceHash:hash(item.lines.join('\n')),response:{song:{title:{original:item.title},artist:{original:'Lyrica evaluation corpus'},language:item.language}},structure:{version:'source-speakers-1',speakers:[],occurrences}};
 }
 export function selectionForCase(item,doc) {
   const occurrence=doc.structure.occurrences[item.selection.line];

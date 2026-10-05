@@ -1,7 +1,7 @@
-# Lyra private beta API security
+# Lyrica private beta API security
 
 This is a hard cutover. Every app API call requires a session issued to an
-attested Lyra installation with valid beta access. Older app builds, raw beta
+attested Lyrica installation with valid beta access. Older app builds, raw beta
 credentials and anonymous scripts cannot use the business endpoints. Saved
 content and the bundled practice song continue to work offline.
 

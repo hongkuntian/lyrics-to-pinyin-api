@@ -11,7 +11,7 @@ import {createMockRes} from '../helpers/mock-http.js';
 import {randomUUID} from 'node:crypto';
 import {reserveExplanation,claimExplanation} from '../../api/utils/song-library/study-store.js';
 import {configureEmergencyBudget,disableUser,revokeSessions,revokeKey} from '../../api/utils/app-auth/admin.js';
-const policy={audience:'test',environment:'production',prefix:'9ESZX68J8U',bundles:['com.test.Lyra']};
+const policy={audience:'test',environment:'production',prefix:'9ESZX68J8U',bundles:['com.test.Lyrica']};
 const keyID=Buffer.alloc(32,1).toString('base64'),bundleID=policy.bundles[0];
 async function fixture(t){const f=await libraryDB();t.after(()=>f.db.close());return {...f,auth:new AppAuthStore(f.store.db,{policy,
  attestFn:()=>({publicKey:'fixture',receipt:Buffer.from('fixture')}),assertionFn:({assertion})=>Number(assertion.toString())})};}

@@ -19,7 +19,7 @@ export function withAppAuth(service,{authStore,libraryStore,route,logger=console
       const auth=authStore??new AppAuthStore(database()),user=await auth.authenticate(token);
       const library=libraryStore??new SongLibraryStore(auth.db);await library.rateLimit(user.id);
       if(body.options?.refresh===true||body.options?.refresh==='true'||body.refresh===true||body.refresh==='true')await auth.limit(user.id,true);
-      req.lyraUser=user;return await service(req,res);
+      req.lyricaUser=user;return await service(req,res);
     }catch(error){return authError(res,error,logger);}
   };
 }

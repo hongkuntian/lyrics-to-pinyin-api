@@ -1,4 +1,4 @@
-# Lyra dashboard
+# Lyrica dashboard
 
 Private, read-only translation operations on Next.js, TypeScript and Neon.
 

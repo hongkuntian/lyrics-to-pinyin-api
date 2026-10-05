@@ -164,7 +164,7 @@ This repo uses a gated, hermetic-first test model.
 
 - JSON schemas are in `contracts/`
 - Contract tests are in `tests/contracts/`
-- Lyra compatibility test verifies decode-critical response fields used by the app model
+- Lyrica compatibility test verifies decode-critical response fields used by the app model
 
 ## CI
 

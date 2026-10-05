@@ -42,7 +42,7 @@ export default async function SongsPage({
               detail={
                 q
                   ? "Try a different song title or artist."
-                  : "Saved lyrics will appear after they are opened in Lyra."
+                  : "Saved lyrics will appear after they are opened in Lyrica."
               }
             />
           )}

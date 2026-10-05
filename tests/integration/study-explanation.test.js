@@ -8,7 +8,7 @@ async function fixture(t,overrides={}) {
  const handler=createSongLibraryHandler({store,selectionRevision:'test',apiKey:'test',loadLyrics:async()=>source.response,
  generateFn:async()=>({content:{lines:[{sourceID:'L0001',text:'Turn today into a song.',lyricText:'Turn today into a song.',speakerID:null,startsTurn:false}],sourceNotes:[]},actualMicros:1000,response:{id:'translation'}}),
  explainFn:async()=>{calls++;return {content,actualMicros:2000,response:{id:'explanation'}};},waitUntilFn:p=>pending.push(p),logger:{error(){}},...overrides});
- const call=async(body,token='token-a')=>{const res={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};await handler({method:'POST',lyraUser:await store.authenticate(token),headers:{authorization:`Bearer ${token}`},body},res);return res;};
+ const call=async(body,token='token-a')=>{const res={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};await handler({method:'POST',lyricaUser:await store.authenticate(token),headers:{authorization:`Bearer ${token}`},body},res);return res;};
  const doc=(await call({action:'lyrics',recording:{catalog_id:'123',artist:'Test artist',title:'Original test song',duration:12}})).body.document;
  await call({action:'translate',documentID:doc.id,sourceHash:doc.sourceHash});await Promise.all(pending);
  const translation=(await call({action:'translate',documentID:doc.id,sourceHash:doc.sourceHash})).body.translation;

@@ -21,7 +21,7 @@ test('cancellation prevents a queued retry',async()=>{
 test('short Retry-After is honored once and sends a descriptive user agent',async()=>{
  let calls=0;
  const result=await fetchJSON('https://fixture.invalid',{fetchFn:async(_,init)=>{
-  assert.equal(init.headers['User-Agent'],'Lyra/2.3.0');calls++;
+  assert.equal(init.headers['User-Agent'],'Lyrica/2.3.0');calls++;
   return calls===1 ? {ok:false,status:429,headers:{get:()=> '0'}}:{ok:true,json:async()=>({ok:true})};
  }});
  assert.deepEqual(result,{ok:true});assert.equal(calls,2);

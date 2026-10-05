@@ -38,7 +38,7 @@ export function Shell({
             <AudioLines size={24} />
           </span>
           <span>
-            Lyra<span className="brand-sub">CONTROL ROOM</span>
+            Lyrica<span className="brand-sub">CONTROL ROOM</span>
           </span>
         </Link>
         <p className="nav-label">WORKSPACE</p>
@@ -94,7 +94,7 @@ export function Shell({
           {children}
         </main>
         <footer className="workspace-footer">
-          Lyra · Translation operations
+          Lyrica · Translation operations
           <span>Budget periods reset at 00:00 UTC</span>
         </footer>
       </div>

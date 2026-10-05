@@ -5,6 +5,8 @@ test("budget overview, filtered songs, pagination and repeated lyric occurrences
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await expect(page).toHaveTitle("Lyrica · Overview");
+  await expect(page.locator(".brand")).toContainText("Lyrica");
   await expect(
     page.getByRole("heading", { name: "Overview", exact: true }),
   ).toBeVisible();
@@ -23,7 +25,7 @@ test("budget overview, filtered songs, pagination and repeated lyric occurrences
     .fill("夜航");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await page
-    .getByRole("link", { name: "夜航练习 Lyra test ensemble", exact: true })
+    .getByRole("link", { name: "夜航练习 Lyrica test ensemble", exact: true })
     .click();
   await expect(page.getByText("把微光装进口袋", { exact: true })).toHaveCount(
     2,

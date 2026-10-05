@@ -6,7 +6,7 @@ export const fixtureSongs: Song[] = Array.from({ length: 24 }, (_, i) => ({
   id: (i + 1).toString(16).padStart(64, "0"),
   title:
     i === 0 ? "夜航练习" : `Practice song ${String(i + 1).padStart(2, "0")}`,
-  artist: "Lyra test ensemble",
+  artist: "Lyrica test ensemble",
   language: "zh",
   line_count: 4,
   source_hash: "f".repeat(64),
