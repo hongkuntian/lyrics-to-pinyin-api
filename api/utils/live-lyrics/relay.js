@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {LibraryError} from '../song-library/store.js';
+import {cleanupExpiredPushState} from './maintenance.js';
 
 const fail=()=>{throw new LibraryError('invalid_request',400);};
 const limits={recordingID:128,title:256,artist:256,lineID:96,original:800,pronunciation:500,translation:400,nextOriginal:256};
@@ -28,19 +29,19 @@ export function validatePush(body,now=Date.now()) {
 }
 
 export class LiveLyricsPushRelay {
-  constructor(db,{send,now=Date.now}={}){this.db=db;this.send=send;this.now=now;}
+  constructor(db,{send,now=Date.now,logger=console}={}){this.db=db;this.send=send;this.now=now;this.logger=logger;}
   async update(userID,input) {
     // Failed delivery attempts also consume the independent push quota.
     const count=(await this.db.query(`INSERT INTO live_lyrics_push_rate_windows(user_id,window_start,count)
       VALUES($1,date_trunc('minute',now()),1) ON CONFLICT(user_id,window_start)
       DO UPDATE SET count=live_lyrics_push_rate_windows.count+1 RETURNING count`,[userID])).rows[0].count;
     if(count>120)throw new LibraryError('push_rate_limited',429);
-    return this.db.transaction(async db=>{
+    const result=await this.db.transaction(async db=>{
       await db.query("SET LOCAL lock_timeout='5s'");
-      await db.query(`DELETE FROM live_lyrics_push_receipts WHERE expires_at<now()`);
-      await db.query(`DELETE FROM live_lyrics_push_rate_windows WHERE window_start<now()-interval '1 day'`);
       await db.query(`INSERT INTO live_lyrics_push_receipts(activity_id,user_id,token_digest,expires_at)
-        VALUES($1,$2,$3,now()+interval '30 minutes') ON CONFLICT(activity_id) DO NOTHING`,[input.activityID,userID,input.tokenDigest]);
+        VALUES($1,$2,$3,now()+interval '30 minutes') ON CONFLICT(activity_id) DO UPDATE
+        SET user_id=EXCLUDED.user_id,token_digest=EXCLUDED.token_digest,sequence=0,push_timestamp=0,expires_at=EXCLUDED.expires_at
+        WHERE live_lyrics_push_receipts.expires_at<now()`,[input.activityID,userID,input.tokenDigest]);
       const previous=(await db.query('SELECT * FROM live_lyrics_push_receipts WHERE activity_id=$1 FOR UPDATE',[input.activityID])).rows[0];
       if(previous.user_id!==userID)throw new LibraryError('push_session_conflict',403);
       if(input.state.sequence<=previous.sequence)return {state:'accepted',sequence:previous.sequence,timestamp:Number(previous.push_timestamp)};
@@ -56,5 +57,9 @@ export class LiveLyricsPushRelay {
         [input.activityID,input.state.sequence,timestamp,input.tokenDigest]);
       return {state:'accepted',sequence:input.state.sequence,timestamp};
     });
+    // Send and commit fresh state before bounded, best-effort housekeeping.
+    const cleanup=await cleanupExpiredPushState(this.db,{now:this.now});
+    if(cleanup.state==='failed')this.logger.warn({event:'live_lyrics_cleanup_failed'});
+    return result;
   }
 }
