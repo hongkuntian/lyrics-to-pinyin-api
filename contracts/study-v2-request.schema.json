@@ -12,6 +12,8 @@
     "explanationLanguage"
   ],
   "properties": {
+    "allowGeneration": {"const": true},
+    "readOnly": {"const": true},
     "action": {
       "const": "explain"
     },

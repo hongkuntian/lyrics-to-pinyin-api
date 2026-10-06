@@ -17,7 +17,7 @@ import {reserveExplanation,claimExplanation,finishExplanation,publicExplanation}
 import {annotationFor,pronunciationKey,enabledProfiles} from './utils/pronunciation-aids.js';
 
 export const config={maxDuration:300};
-const actions={capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
+const actions={capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeService()) {
   return async (recording,{refresh=false}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
@@ -40,6 +40,9 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       if(!input||Array.isArray(input)||typeof input!=='object'||Buffer.byteLength(JSON.stringify(input))>8192||
         !Object.hasOwn(actions,input.action)||Object.keys(input).some(k=>k!=='action'&&!actions[input.action].includes(k))) throw new LibraryError('invalid_request',400);
       const db=getStore(),user=req.lyricaUser;if(!user)throw new LibraryError('unauthorized',401);
+      if(input.allowGeneration!==undefined&&input.allowGeneration!==true&&input.allowGeneration!=='true')throw new LibraryError('invalid_request',400);
+      if(input.readOnly!==undefined&&input.readOnly!==true)throw new LibraryError('invalid_request',400);
+      if(input.readOnly&&input.allowGeneration)throw new LibraryError('invalid_request',400);
       const policy=languagePolicy??environmentLanguagePolicy();
       if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
       if(input.action==='pronunciation') {
@@ -103,7 +106,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         if(!apiKey)throw new LibraryError('generation_not_configured',503);
         requireDirection(policy,'translation',doc.response.song.language,target);
         const body=requestBody(doc,target);
-        const result=await db.reserve({userID:user.id,documentID:doc.id,target,recipe:translationRecipe(target),reservedMicros:reservationMicros(body),generationRequest:body});
+        const result=await db.reserve({userID:user.id,documentID:doc.id,target,recipe:translationRecipe(target),reservedMicros:reservationMicros(body),generationRequest:body,allowGeneration:!!input.allowGeneration});
         if(result.kind==='ready')return send(200,{state:'ready',translation:publicTranslation(result.translation,doc)});
         if(result.job.state==='queued')waitUntilFn(execute(db,result.job.id,doc).catch(()=>logger.error('translation_worker_storage_failure',{jobID:result.job.id})));
         if(result.kind==='unknown'||result.kind==='failed')return send(409,{state:result.kind,job:result.job,code:result.job.errorCode??'review_required'});
@@ -112,8 +115,8 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       if(input.action==='explain') {
         const v2=input.contractVersion===2;
         if((input.contractVersion!==undefined&&input.contractVersion!==1&&!v2)||(v2&&typeof input.explanationLanguage!=='string'))throw new LibraryError('invalid_request',400);
-        const allowed=v2?['action','documentID','sourceHash','contractVersion','studyText','selection','explanationLanguage','contextTranslation']:
-          ['action','documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion'];
+        const allowed=(v2?['action','documentID','sourceHash','contractVersion','studyText','selection','explanationLanguage','contextTranslation']:
+          ['action','documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion']).concat(['allowGeneration','readOnly']);
         if(Object.keys(input).some(k=>!allowed.includes(k))||typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string')throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
         if(doc.sourceHash!==input.sourceHash)throw new LibraryError('source_changed');
@@ -138,6 +141,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         const selection=v2?selectionV2(doc,input,saved):selectionFor(doc,input);
         const key=explanationKey(doc,saved,selection,language),recipe=explanationRecipe(selection,language);
         const prior=(await db.db.query('SELECT * FROM study_explanations WHERE cache_key=$1',[key])).rows[0];
+        if(input.readOnly)return send(200,prior?.state==='ready'?{state:'ready',explanation:publicExplanation(prior)}:{state:'missing'});
         let row=prior;
         if(!row) {
           requireDirection(policy,'explanation',selection.studyText?.layer==='translation'?saved.target:doc.response.song.language,language);
@@ -145,7 +149,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
           if(!apiKey)throw new LibraryError('generation_not_configured',503);
           const body=explanationBody(doc,saved,selection,language);
           row=(await reserveExplanation(db.db,{key,doc,translation:saved,selection,recipe,userID:user.id,explanationLanguage:language,
-            generationRequest:body,amount:reservationMicros(body)})).row;
+            generationRequest:body,amount:reservationMicros(body),allowGeneration:!!input.allowGeneration})).row;
         }
         if(row.state==='ready')return send(200,{state:'ready',explanation:publicExplanation(row)});
         if(['failed','unknown'].includes(row.state))throw new LibraryError(row.error_code??'review_required');

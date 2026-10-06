@@ -23,6 +23,16 @@ test('explanations coalesce, settle once and are reused by another reader',async
  assert.equal(cached.body.explanation.translationID,f.request.translationID);assert.equal(f.calls(),1);
  assert.equal(Number((await f.store.budget()).daily),3000);assert.equal(Number((await f.store.budget()).review_daily),0);
 });
+test('read-only explanation lookup never admits provider work and reuses completed content',async t=>{
+ const f=await fixture(t);
+ const before=Number((await f.store.budget()).daily);
+ const missing=await f.call({...f.request,readOnly:true});
+ assert.equal(missing.code,200);assert.equal(missing.body.state,'missing');assert.equal(f.calls(),0);
+ assert.equal(Number((await f.store.budget()).daily),before);
+ await f.call(f.request);await Promise.all(f.pending);
+ assert.equal((await f.call({...f.request,readOnly:true},'token-b')).body.explanation.meaning,content.meaning);
+ assert.equal(f.calls(),1);
+});
 test('authorization, stale revisions and invalid selections issue no explanation request',async t=>{
  const f=await fixture(t);
  assert.equal((await f.call(f.request,'bad-token')).code,401);

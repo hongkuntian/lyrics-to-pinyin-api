@@ -36,6 +36,8 @@ export async function libraryDB(path) {
   if(!(await db.query("SELECT to_regclass('live_lyrics_push_rate_windows_expiry') AS name")).rows[0].name)
     await db.exec(await readFile(new URL('../../db/024-live-lyrics-cleanup.sql',import.meta.url),'utf8'));
   const store=new SongLibraryStore({query:(...args)=>db.query(...args),transaction:fn=>db.transaction(fn)});
+  if(!(await db.query("SELECT to_regclass('membership_settings') AS name")).rows[0].name)
+    await db.exec(await readFile(new URL('../../db/025-memberships.sql',import.meta.url),'utf8'));
   await store.configure({enabled:true,dailyMicros:1_000_000,monthlyMicros:5_000_000});
   await store.createUser('reader-a','token-a');
   await store.createUser('reader-b','token-b');

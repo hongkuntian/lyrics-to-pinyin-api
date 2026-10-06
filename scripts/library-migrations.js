@@ -2,6 +2,8 @@ import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 
 export const migrationNames=['001-song-library.sql','002-dashboard-views.sql','003-correction-foundation.sql','004-correction-dashboard.sql','005-correction-batches.sql','006-batch-dashboard.sql','007-correction-publication.sql','008-publication-dashboard.sql','009-study-explanations.sql','010-dashboard-controls.sql','011-operational-alerts.sql','012-multilingual-content.sql','013-pronunciation-aids.sql','014-lyric-source-refresh.sql','015-gpt6-luna.sql','016-personal-unlimited-access.sql','017-translation-reuse.sql','018-translation-attempts.sql','019-translation-reuse-dashboard.sql','020-catalog-recording-bindings.sql','021-app-auth.sql','022-live-lyrics-push.sql','023-live-lyrics-runtime.sql','024-live-lyrics-cleanup.sql'];
+// Additive account and paid-feature policy; deployment starts with public access disabled.
+migrationNames.push('025-memberships.sql');
 export async function migrateLibrary(database) {
   return database.transaction(async db=> {
     await db.query("SET LOCAL lock_timeout='5s'");

@@ -1,0 +1,21 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Lyrica membership snapshot v1",
+  "type":"object",
+  "required":["version","account","tier","expiresAt","isBeta","generationUnlimited","allowances","starter","preview","capabilities","products"],
+  "properties":{
+    "version":{"const":1},
+    "account":{"type":"object","required":["id","kind","appAccountToken"],"properties":{"id":{"type":"string"},"kind":{"enum":["guest","apple","beta"]},"appAccountToken":{"anyOf":[{"type":"string"},{"type":"null"}]}}},
+    "tier":{"enum":["free","plus","pro"]},
+    "expiresAt":{"anyOf":[{"type":"string"},{"type":"null"}]},
+    "isBeta":{"type":"boolean"},"generationUnlimited":{"type":"boolean"},
+    "allowances":{"type":"object","required":["translation","study"],"properties":{
+      "translation":{"type":"object","required":["limit","used","remaining","resetsAt"],"properties":{"limit":{"type":"integer","minimum":0},"used":{"type":"integer","minimum":0},"remaining":{"type":"integer","minimum":0},"resetsAt":{"anyOf":[{"type":"string"},{"type":"null"}]}}},
+      "study":{"type":"object","required":["limit","used","remaining","resetsAt"],"properties":{"limit":{"type":"integer","minimum":0},"used":{"type":"integer","minimum":0},"remaining":{"type":"integer","minimum":0},"resetsAt":{"anyOf":[{"type":"string"},{"type":"null"}]}}}
+    }},
+    "starter":{"type":"object","required":["claimed","eligible"],"properties":{"claimed":{"type":"boolean"},"eligible":{"type":"boolean"}}},
+    "preview":{"type":"object","required":["available","expiresAt"],"properties":{"available":{"type":"boolean"},"expiresAt":{"anyOf":[{"type":"string"},{"type":"null"}]}}},
+    "capabilities":{"type":"object","required":["purchases","liveLyrics","widgets","carPlay"],"properties":{"purchases":{"type":"boolean"},"liveLyrics":{"type":"boolean"},"widgets":{"type":"boolean"},"carPlay":{"type":"boolean"}}},
+    "products":{"type":"array","items":{"type":"object","required":["id","tier","period"],"properties":{"id":{"type":"string"},"tier":{"enum":["plus","pro"]},"period":{"enum":["month","year"]}}}}
+  }
+}

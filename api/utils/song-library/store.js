@@ -4,6 +4,7 @@ import {currentTranslationSQL,publishRevision,revisions} from './revisions.js';
 import {budget,checkBudget,checkEmergencyBudget,configureReviews,reserveReview,claimReviewOperation,finishReviewOperation,releaseReviewOperation} from './spending.js';
 import {translationIdentity} from './translation-identity.js';
 import {reusableTranslation,jobForDocument} from './translation-reuse.js';
+import {reserveMemberUsage,settleMemberUsage} from '../membership/store.js';
 
 export class LibraryError extends Error {
   constructor(code,status=409) { super(code);this.code=code;this.status=status; }
@@ -43,7 +44,7 @@ export class SongLibraryStore {
   }
   async authenticate(token) {
     if(typeof token!=='string') return null;
-    return first(this.db,'SELECT u.id FROM library_tokens t JOIN library_users u ON u.id=t.user_id WHERE t.digest=$1 AND NOT t.revoked AND NOT u.disabled',[digest(token)]);
+    return first(this.db,'SELECT u.id FROM library_tokens t JOIN library_users u ON u.id=t.user_id WHERE t.digest=$1 AND NOT t.revoked AND NOT u.disabled AND (t.expires_at IS NULL OR t.expires_at>now())',[digest(token)]);
   }
   async rateLimit(userID) {
     const row=await first(this.db,`INSERT INTO library_rate_windows(user_id,window_start,count)
@@ -156,7 +157,7 @@ export class SongLibraryStore {
   claimReviewOperation(id) { return claimReviewOperation(this.db,id); }
   finishReviewOperation(id,args) { return finishReviewOperation(this.db,id,args); }
   releaseReviewOperation(id) { return releaseReviewOperation(this.db,id); }
-  async reserve({userID,documentID,target,recipe,reservedMicros,generationRequest=null}) {
+  async reserve({userID,documentID,target,recipe,reservedMicros,generationRequest=null,allowGeneration=false}) {
     if(canonicalTarget(target)!==target||typeof recipe!=='string'||!recipe||!Number.isSafeInteger(reservedMicros)||reservedMicros<=0) throw new LibraryError('invalid_generation',400);
     return this.db.transaction(async db=> {
       // All admission decisions use the same locked row: cached, coalesced, quota and spend checks
@@ -164,7 +165,7 @@ export class SongLibraryStore {
       const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
       if(!settings) throw new LibraryError('store_unavailable',503);
       if(await first(db,'SELECT 1 FROM lyric_documents WHERE id=$1 AND superseded_by IS NOT NULL',[documentID])) throw new LibraryError('source_revision_superseded');
-      const user=await first(db,'SELECT id,unlimited_generation FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
+      const user=await first(db,'SELECT id,unlimited_generation,access_kind FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
       if(!user) throw new LibraryError('unauthorized',401);
       const doc=document(await first(db,'SELECT * FROM lyric_documents WHERE id=$1 AND superseded_by IS NULL',[documentID]));
       if(!doc)throw new LibraryError('document_not_found',404);
@@ -175,6 +176,7 @@ export class SongLibraryStore {
         UNION ALL SELECT j.* FROM translation_generation_keys k JOIN translation_jobs j ON j.id=k.job_id
         WHERE k.identity=$3 AND k.target=$2 LIMIT 1`,[documentID,target,identity]);
       if(prior) return {kind:prior.state==='queued'||prior.state==='running'?'pending':prior.state,job:await jobForDocument(db,prior,documentID)};
+      if(user.access_kind!=='beta'&&!allowGeneration)throw new LibraryError('generation_required');
       if(!settings.enabled) throw new LibraryError('generation_disabled',503);
       const active=await first(db,"SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown') UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1",[userID]);
       if(active) throw new LibraryError('user_busy',429);
@@ -182,11 +184,13 @@ export class SongLibraryStore {
       if(!user.unlimited_generation) {
         const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,
           count(*) AS monthly FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations UNION ALL SELECT j.user_id,r.created_at FROM translation_retry_requests r JOIN translation_jobs j ON j.id=r.job_id) attempts WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
-        if(Number(counts.daily)>=settings.user_daily || Number(counts.monthly)>=settings.user_monthly) throw new LibraryError('generation_allowance_exhausted',429);
+        if(user.access_kind==='beta'&&(Number(counts.daily)>=settings.user_daily || Number(counts.monthly)>=settings.user_monthly)) throw new LibraryError('generation_allowance_exhausted',429);
         checkBudget(settings,await budget(db),reservedMicros);
       }
+      const id=randomUUID();
+      await reserveMemberUsage(db,userID,id,'translation');
       const row=await first(db,`INSERT INTO translation_jobs(id,document_id,target,recipe,user_id,state,reserved_micros,accounted_micros,generation_request)
-        VALUES($1,$2,$3,$4,$5,'queued',$6,$6,$7) RETURNING *`,[randomUUID(),documentID,target,recipe,userID,reservedMicros,generationRequest?JSON.stringify(generationRequest):null]);
+        VALUES($1,$2,$3,$4,$5,'queued',$6,$6,$7) RETURNING *`,[id,documentID,target,recipe,userID,reservedMicros,generationRequest?JSON.stringify(generationRequest):null]);
       if(identity)await db.query('INSERT INTO translation_generation_keys(identity,target,job_id) VALUES($1,$2,$3) ON CONFLICT(identity,target) DO NOTHING',[identity,target,row.id]);
       return {kind:'created',job:publicJob(row)};
     });
@@ -221,6 +225,7 @@ export class SongLibraryStore {
       }
       if(state==='ready') await db.query(`INSERT INTO song_translations(id,document_id,target,recipe,content) VALUES($1,$2,$3,$4,$5)`,[id,job.document_id,job.target,job.recipe,JSON.stringify(content)]);
       await db.query(`UPDATE translation_jobs SET state=$2,accounted_micros=$3,error_code=$4,provider_response=$5,finished_at=now(),cost_final=$6 WHERE id=$1`,[id,state,charged,errorCode,JSON.stringify(response),actualMicros!==null]);
+      await settleMemberUsage(db,id,state==='ready');
     });
   }
   async job(id) {
@@ -229,6 +234,7 @@ export class SongLibraryStore {
     // A crashed worker is visible as unknown after its execution window. Its reservation remains.
     await this.db.query("UPDATE translation_jobs SET state='unknown',error_code='worker_interrupted' WHERE id=$1 AND state='running' AND started_at<now()-interval '6 minutes'",[jobID]);
     const row=await first(this.db,'SELECT * FROM translation_jobs WHERE id=$1',[jobID]);
+    if(row?.state==='unknown')await settleMemberUsage(this.db,jobID,false);
     return row && {...publicJob(row),id,documentID:alias?.document_id??row.document_id};
   }
   async usage() { return first(this.db,`SELECT coalesce(sum(accounted_micros),0) AS accounted_micros,

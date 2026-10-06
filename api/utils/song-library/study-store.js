@@ -1,20 +1,22 @@
 import {randomUUID} from 'node:crypto';
 import {LibraryError} from './store.js';
 import {budget,checkBudget,checkEmergencyBudget,finishReviewOperation} from './spending.js';
+import {reserveMemberUsage,settleMemberUsage} from '../membership/store.js';
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??null;
 export const publicExplanation=row=>({id:row.id,documentID:row.document_id,translationID:row.revision_id,sourceID:row.source_id,
   lower:row.lower_offset,upper:row.upper_offset,recipe:row.recipe,...row.content,
   ...(row.contract_version===2?{contractVersion:2,explanationLanguage:row.explanation_language,studyText:row.study_text,
     selection:{offsetUnit:'grapheme',ranges:[{lower:row.lower_offset,upper:row.upper_offset}],textHash:row.selection_text_hash}}:{})});
-export async function reserveExplanation(database,{key,doc,translation,selection,recipe,userID,amount,explanationLanguage='en',generationRequest=null}) {
+export async function reserveExplanation(database,{key,doc,translation,selection,recipe,userID,amount,explanationLanguage='en',generationRequest=null,allowGeneration=false}) {
   return database.transaction(async db=>{
     const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
     if(await first(db,'SELECT 1 FROM lyric_documents WHERE id=$1 AND superseded_by IS NOT NULL',[doc.id]))throw new LibraryError('source_revision_superseded');
     const prior=await first(db,'SELECT * FROM study_explanations WHERE cache_key=$1',[key]);
     if(prior)return {created:false,row:prior};
     if(!settings?.enabled)throw new LibraryError('generation_disabled',503);
-    const user=await first(db,'SELECT id,unlimited_generation FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
+    const user=await first(db,'SELECT id,unlimited_generation,access_kind FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
     if(!user)throw new LibraryError('unauthorized',401);
+    if(user.access_kind!=='beta'&&!allowGeneration)throw new LibraryError('generation_required');
     if(translation) {
       const head=await first(db,`SELECT h.revision_id FROM translation_heads h JOIN song_translations t ON t.id=h.translation_id
         JOIN translation_document_bindings b ON b.translation_id=t.id WHERE b.document_id=$1 AND t.target=$2 FOR UPDATE OF t`,[doc.id,translation.target??'en']);
@@ -28,10 +30,11 @@ export async function reserveExplanation(database,{key,doc,translation,selection
       const counts=await first(db,`SELECT count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') AS daily,count(*) AS monthly
         FROM (SELECT user_id,created_at FROM translation_jobs UNION ALL SELECT user_id,created_at FROM study_explanations UNION ALL SELECT j.user_id,r.created_at FROM translation_retry_requests r JOIN translation_jobs j ON j.id=r.job_id) attempts
         WHERE user_id=$1 AND created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`,[userID]);
-      if(Number(counts.daily)>=settings.user_daily||Number(counts.monthly)>=settings.user_monthly)throw new LibraryError('generation_allowance_exhausted',429);
+      if(user.access_kind==='beta'&&(Number(counts.daily)>=settings.user_daily||Number(counts.monthly)>=settings.user_monthly))throw new LibraryError('generation_allowance_exhausted',429);
       checkBudget(settings,await budget(db),amount);
     }
     const id=randomUUID();
+    await reserveMemberUsage(db,userID,id,'study');
     const row=await first(db,`INSERT INTO study_explanations(id,cache_key,document_id,revision_id,source_id,lower_offset,upper_offset,recipe,user_id,state,contract_version,explanation_language,study_text,selection_text_hash,generation_request)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'queued',$10,$11,$12,$13,$14) RETURNING *`,[id,key,doc.id,translation?.id??null,selection.sourceID,selection.lower,selection.upper,recipe,userID,selection.studyText?2:1,explanationLanguage,selection.studyText?JSON.stringify(selection.studyText):null,selection.textHash??null,generationRequest?JSON.stringify(generationRequest):null]);
     await db.query(`INSERT INTO library_spend_operations(id,operation_key,kind,explanation_id,state,reserved_micros,accounted_micros)
@@ -51,6 +54,9 @@ export async function finishExplanation(database,id,{content=null,actualMicros=n
   // Settlement remains durable even if the later content write is interrupted.
   // Re-entering cannot issue another paid provider request.
   await finishReviewOperation(database,id,{actualMicros,providerID:response?.id??null,errorCode});
-  await database.query(`UPDATE study_explanations SET state=$2,content=$3,error_code=$4 WHERE id=$1 AND state='running'`,
-    [id,content?'ready':actualMicros===null?'unknown':'failed',content?JSON.stringify(content):null,errorCode]);
+  await database.transaction(async db=>{
+    const row=await first(db,`UPDATE study_explanations SET state=$2,content=$3,error_code=$4 WHERE id=$1 AND state='running' RETURNING state`,
+      [id,content?'ready':actualMicros===null?'unknown':'failed',content?JSON.stringify(content):null,errorCode]);
+    if(row)await settleMemberUsage(db,id,row.state==='ready');
+  });
 }

@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {LibraryError} from '../song-library/store.js';
 import {cleanupExpiredPushState} from './maintenance.js';
+import {admitMemberRelay} from '../membership/store.js';
 
 const fail=()=>{throw new LibraryError('invalid_request',400);};
 const limits={recordingID:128,title:256,artist:256,lineID:96,original:800,pronunciation:500,translation:400,nextOriginal:256};
@@ -36,6 +37,7 @@ export class LiveLyricsPushRelay {
       VALUES($1,date_trunc('minute',now()),1) ON CONFLICT(user_id,window_start)
       DO UPDATE SET count=live_lyrics_push_rate_windows.count+1 RETURNING count`,[userID])).rows[0].count;
     if(count>120)throw new LibraryError('push_rate_limited',429);
+    await admitMemberRelay(this.db,userID,input);
     const result=await this.db.transaction(async db=>{
       await db.query("SET LOCAL lock_timeout='5s'");
       await db.query(`INSERT INTO live_lyrics_push_receipts(activity_id,user_id,token_digest,expires_at)

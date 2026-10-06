@@ -58,6 +58,28 @@
     {
       "src": "api/live-lyrics.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/account.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/membership.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "api/data/apple-pki/*.cer"
+        ]
+      }
+    },
+    {
+      "src": "api/store-notifications.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "api/data/apple-pki/*.cer"
+        ]
+      }
     }
   ],
   "routes": [
@@ -84,6 +106,18 @@
     {
       "src": "/api/live-lyrics",
       "dest": "/api/live-lyrics.js"
+    },
+    {
+      "src": "/api/account",
+      "dest": "/api/account.js"
+    },
+    {
+      "src": "/api/membership",
+      "dest": "/api/membership.js"
+    },
+    {
+      "src": "/api/store-notifications",
+      "dest": "/api/store-notifications.js"
     }
   ],
   "crons": [

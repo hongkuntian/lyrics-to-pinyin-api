@@ -19,6 +19,8 @@ test('the restricted production role can relay after migration without gaining a
     await db.exec('RESET ROLE');
     await db.exec(migration);
     await db.exec(migration); // The grant is safe to repeat during operator recovery.
+    const memberships=await readFile(new URL('../../db/025-memberships.sql',import.meta.url),'utf8');
+    await db.exec(memberships.slice(memberships.indexOf('DO $$ BEGIN'),memberships.lastIndexOf('COMMIT;')));
     await db.exec('SET ROLE lyra_runtime_v1');
     assert.deepEqual(await relay.update('reader-a',validatePush(pushBody(),pushTime)),
       {state:'accepted',sequence:1,timestamp:pushTime/1000});

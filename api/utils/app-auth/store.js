@@ -17,7 +17,7 @@ export class AppAuthStore {
   constructor(db,{policy,attestFn=attest,assertionFn=assertion}={}) {this.db=db;this.policy=policy??authPolicy();this.attestFn=attestFn;this.assertionFn=assertionFn;}
   async credential(token,db=this.db) {
     const row=await first(db,`SELECT u.id,t.digest FROM library_tokens t JOIN library_users u ON u.id=t.user_id
-      WHERE t.digest=$1 AND NOT t.revoked AND NOT u.disabled`,[digest(token)]);
+      WHERE t.digest=$1 AND NOT t.revoked AND NOT u.disabled AND (t.expires_at IS NULL OR t.expires_at>now())`,[digest(token)]);
     if(!row)fail();return row;
   }
   async limit(userID,refresh=false) {
@@ -85,10 +85,11 @@ export class AppAuthStore {
     });
   }
   async authenticate(token) {
-    const row=await first(this.db,`SELECT u.id FROM app_auth_sessions s JOIN app_attest_keys k ON k.key_id=s.key_id
+    const row=await first(this.db,`SELECT u.id,k.key_id AS "keyID",t.digest AS "credentialDigest" FROM app_auth_sessions s JOIN app_attest_keys k ON k.key_id=s.key_id
       JOIN library_tokens t ON t.digest=s.credential_digest JOIN library_users u ON u.id=k.user_id
       WHERE s.digest=$1 AND s.audience=$2 AND k.audience=$2 AND k.environment=$3 AND k.bundle_id=ANY($4::text[])
-      AND t.user_id=u.id AND NOT s.revoked AND NOT k.revoked AND NOT t.revoked AND NOT u.disabled AND s.expires_at>now()`,
+      AND t.user_id=u.id AND NOT s.revoked AND NOT k.revoked AND NOT t.revoked AND NOT u.disabled AND s.expires_at>now()
+      AND (t.expires_at IS NULL OR t.expires_at>now())`,
       [digest(token),this.policy.audience,this.policy.environment,this.policy.bundles]);
     if(!row)fail('session_expired');return row;
   }
