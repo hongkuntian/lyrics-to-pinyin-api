@@ -54,7 +54,7 @@ export class LiveLyricsPushRelay {
       if(this.now()/1000-input.observed>=8)throw new LibraryError('push_observation_expired',409);
       const payload={aps:{timestamp,event:'update','content-state':input.state,'stale-date':Math.floor(input.observed+8)}};
       if(Buffer.byteLength(JSON.stringify(payload))>4096)throw new LibraryError('invalid_request',400);
-      await this.send({environment:input.environment,token:input.token,payload,priority:input.reason==='heartbeat'?5:10});
+      await this.send({bundleID:input.bundleID,environment:input.environment,token:input.token,payload,priority:input.reason==='heartbeat'?5:10});
       await db.query(`UPDATE live_lyrics_push_receipts SET sequence=$2,push_timestamp=$3,token_digest=$4,expires_at=now()+interval '30 minutes' WHERE activity_id=$1`,
         [input.activityID,input.state.sequence,timestamp,input.tokenDigest]);
       return {state:'accepted',sequence:input.state.sequence,timestamp};

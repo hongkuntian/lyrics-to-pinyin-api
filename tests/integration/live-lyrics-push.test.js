@@ -82,3 +82,21 @@ test('endpoint requires authenticated app sessions and returns actionable retry 
   const res=createMockRes();await handler(createMockReq({body:pushBody(),headers:{authorization:'Bearer lyra_s_fixture'}}),res);
   assert.equal(res.statusCode,429);assert.equal(res.headers['Retry-After'],'1');assert.equal(res.headers['Cache-Control'],'private, no-store');
 });
+
+test('relay chooses its APNs topic from the attested session and rejects body overrides',async()=>{
+  const {db}=await libraryDB();let time=pushTime;
+  try {
+    for(const bundleID of ['com.hongkuntian.musicromanization','com.hongkuntian.Lyra']) {
+      const sent=[];
+      const handler=createLiveLyricsHandler({authStore:{db,authenticate:async()=>({id:'reader-a',bundleID})},
+        relay:new LiveLyricsPushRelay(db,{send:async input=>sent.push(input),now:()=>time}),now:()=>time});
+      const body=pushBody(1,time);body.activityID=bundleID.replaceAll('.','-');
+      const headers={authorization:'Bearer lyra_s_fixture'};
+      const res=createMockRes();await handler(createMockReq({body,headers}),res);
+      assert.equal(res.statusCode,200);assert.equal(sent.length,1);assert.equal(sent[0].bundleID,bundleID);
+      const spoof=createMockRes();await handler(createMockReq({body:{...body,bundleID:'com.unrelated.app'},headers}),spoof);
+      assert.equal(spoof.statusCode,400);assert.equal(sent.length,1);
+      time+=1000;
+    }
+  }finally{await db.close();}
+});

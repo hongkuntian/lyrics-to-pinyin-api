@@ -25,17 +25,20 @@ test('push validation preserves default Swift Codable dates and rejects stale or
   assert.throws(()=>validatePush(valid,pushTime+8000),{code:'push_observation_expired'});
 });
 test('HTTP/2 delivery chooses the correct environment, topic, priority and zero expiry',async()=>{
-  for(const environment of ['development','production']) {
+  for(const environment of ['development','production']) for(const bundleID of ['com.hongkuntian.musicromanization','com.hongkuntian.Lyra']) {
     let host,headers,body,closed=false;
     const stream=new EventEmitter();stream.setEncoding=()=>{};stream.close=()=>{};
     stream.end=value=>{body=JSON.parse(value);queueMicrotask(()=>{stream.emit('response',{':status':200});stream.emit('end');});};
     const session=new EventEmitter();session.request=value=>{headers=value;return stream;};session.close=()=>{closed=true;};session.destroy=()=>{};
-    const input={environment,token:'ab'.repeat(32),jwt:'fixture-jwt',priority:5,payload:{aps:{event:'update'}}};
+    const input={bundleID,environment,token:'ab'.repeat(32),jwt:'fixture-jwt',priority:5,payload:{aps:{event:'update'}}};
     assert.deepEqual(await sendAPNs(input,value=>{host=value;return session;}),{status:200,reason:undefined});
     assert.equal(host,environment==='development'?'https://api.sandbox.push.apple.com':'https://api.push.apple.com');
-    assert.equal(headers['apns-topic'],'com.hongkuntian.musicromanization.push-type.liveactivity');
+    assert.equal(headers['apns-topic'],bundleID+'.push-type.liveactivity');
     assert.equal(headers['apns-push-type'],'liveactivity');assert.equal(headers['apns-priority'],'5');assert.equal(headers['apns-expiration'],'0');
     assert.deepEqual(body,input.payload);assert.equal(closed,true);
+  }
+  for(const bundleID of [undefined,'com.unrelated.app','com.hongkuntian.Lyra\r\ninjected']) {
+    assert.throws(()=>sendAPNs({bundleID},()=>{throw Error('unexpected transport');}),{code:'app_access_revoked'});
   }
 });
 test('APNs errors are bounded and invalid activity tokens are distinguished from credentials',async()=>{

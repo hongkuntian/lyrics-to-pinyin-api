@@ -39,6 +39,8 @@ Public reads never authorize new provider work. Translation `allowGeneration=tru
 
 Live Lyrics needs active Plus/Pro or a claimed preview. A preview is once per Apple account, bound to one activity and recording, and ends at 10 minutes or 200 admitted relay requests. Defaults cap new starters and previews at 100/day each. The operational relay ceiling is 1,000,000 requests/month across public users; failures still count admitted infrastructure work. These are bounded operational safeguards, not advertised paid-user minute quotas. Beta access preserves its existing policy.
 
+The relay derives its APNs topic from the session's App Attest bundle identity. Both `com.hongkuntian.Lyra` and the existing `com.hongkuntian.musicromanization` development bundle use their own Live Activity topic; request bodies cannot override it. The APNs environment still follows the signed app's provisioning environment.
+
 ## Operator setup
 
 Use owner-only JSON configuration files containing the existing migration connection URL. Provisioning creates a separate random credential and encryption key, stores them with mode 0600, and applies migrations transactionally:

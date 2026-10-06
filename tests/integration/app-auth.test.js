@@ -25,6 +25,7 @@ async function mint(auth,token,counter){const {challenge}=await auth.challenge(t
 test('enrollment ACK cannot authorize requests; session needs fresh possession proof',async t=>{
  const {auth,db}=await fixture(t);const session=await enroll(auth);
  assert.equal((await auth.authenticate(session.token)).id,'reader-a');
+ assert.equal((await auth.authenticate(session.token)).bundleID,bundleID);
  assert.equal((await db.query('SELECT digest FROM app_auth_sessions')).rows[0].digest.includes(session.token),false);
  await assert.rejects(auth.authenticate('token-a'),{code:'session_expired'});
  await assert.rejects(auth.register('token-b',{keyID,bundleID,challenge:'ignored',attestation:'ignored'}),{code:'app_access_revoked'});

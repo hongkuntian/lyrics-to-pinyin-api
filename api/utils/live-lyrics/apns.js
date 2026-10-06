@@ -2,7 +2,7 @@ import {createPrivateKey,sign} from 'node:crypto';
 import {connect} from 'node:http2';
 import {LibraryError} from '../song-library/store.js';
 
-const TOPIC='com.hongkuntian.musicromanization.push-type.liveactivity';
+const BUNDLES=new Set(['com.hongkuntian.musicromanization','com.hongkuntian.Lyra']);
 const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
 export function providerToken({teamID,keyID,privateKey},now=Date.now()) {
   const key=createPrivateKey(privateKey.replace(/\\n/g,'\n'));
@@ -19,7 +19,8 @@ export function apnsConfiguration(env=process.env) {
 }
 
 // One bounded HTTP/2 request. Neither tokens nor payloads are logged or persisted.
-export function sendAPNs({environment,token,payload,priority,jwt},transport=connect) {
+export function sendAPNs({bundleID,environment,token,payload,priority,jwt},transport=connect) {
+  if(!BUNDLES.has(bundleID))throw new LibraryError('app_access_revoked',403);
   return new Promise((resolve,reject)=>{
     const host=environment==='development'?'https://api.sandbox.push.apple.com':'https://api.push.apple.com';
     const session=transport(host);let request,finished=false;
@@ -31,7 +32,7 @@ export function sendAPNs({environment,token,payload,priority,jwt},transport=conn
     session.on('error',finish);
     try {
       request=session.request({':method':'POST',':path':`/3/device/${token}`,
-        authorization:`bearer ${jwt}`,'apns-topic':TOPIC,'apns-push-type':'liveactivity',
+        authorization:`bearer ${jwt}`,'apns-topic':`${bundleID}.push-type.liveactivity`,'apns-push-type':'liveactivity',
         'apns-priority':String(priority),'apns-expiration':'0','content-type':'application/json'});
       let status,body='';
       request.on('response',headers=>{status=headers[':status'];});
