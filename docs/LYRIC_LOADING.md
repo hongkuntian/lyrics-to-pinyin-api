@@ -15,20 +15,22 @@ The corpus covers Mandarin, Cantonese, Japanese, Korean, Russian, English, Frenc
 
 ## October 7, 2026 comparison
 
-Three trials per recording on the same host, baseline `724c6d9` versus the changes accompanying this document:
+Three trials per recording on the same host, baseline `724c6d9` versus API candidate `bee243f`:
 
 | Local stage | Before median | After median | Before p90 | After p90 |
 | --- | ---: | ---: | ---: | ---: |
-| Fresh provider acquisition | 553 ms | 568 ms | 834 ms | 1,439 ms |
-| First library save after verified provider acquisition | 554 ms | 11 ms | 629 ms | 15 ms |
-| Library revisit | 1.6 ms | 1.5 ms | 3.9 ms | 1.9 ms |
+| Fresh provider acquisition | 553 ms | 587 ms | 834 ms | 2,237 ms |
+| First library save after verified provider acquisition | 554 ms | 16 ms | 629 ms | 52 ms |
+| Library revisit | 1.6 ms | 1.9 ms | 3.9 ms | 6.0 ms |
 
 The first-save stage previously forced another provider lookup. It now reuses verified current-policy cache content; explicit reloads and existing stale documents still refresh. This stage measures the avoided duplicate work, not the total uncached end-to-end request. Provider latency still depends on upstream availability. Handler caches reset between recordings/trials; process-level catalog and tokenizer caches may be warm. These measurements exclude app authentication, HTTP transport, production PostgreSQL and visible presentation, which need separate app measurements.
 
-The baseline returned the separate English version for all three Japanese `1679278167` trials, despite matching duration. The corrected lookup returned Japanese source for all three. A reviewed exact-recording constraint rejects English and romanized substitutes for that Japanese single while retaining the separate English single `1688334537`. The Japanese provider median increased from 559 ms to 2,684 ms while seeking the correct source; this is intentional. All 30 corrected acquisitions returned a language matching the corpus expectation and timed rows; this is source/metadata evidence, not a listening review of each timestamp.
+The baseline returned the separate English version for all three Japanese `1679278167` trials, despite matching duration. The corrected lookup returned Japanese source for all three. A reviewed exact-recording constraint rejects English and romanized substitutes for that Japanese single while retaining the separate English single `1688334537`. The Japanese provider median increased from 559 ms to 2,708 ms while seeking the correct source; this is intentional. All 30 corrected acquisitions returned a language matching the corpus expectation and timed rows; this is source/metadata evidence, not a listening review of each timestamp.
 
 Refresh requests now share the ordinary response-cache identity while retaining their own acquisition work. Memory caches and Redis commit by acquisition start so an older slow response cannot overwrite a later successful refresh. The Redis comparison is atomic and was exercised with one temporary 30-second key, writing a newer result followed by an older result and reading back the newer one. Acquisition timestamps use host wall clocks; severe clock skew between server instances remains a limitation of their ordering. Durable song-library lookup leases continue to fence document publication.
 
 `Server-Timing` on song-library replies separates document read/bind, source lookup, document save and total handler work. These headers contain durations only. The per-request library cache header distinguishes an existing document from an acquisition.
 
 Relevant hermetic regressions cover first acquisition versus explicit/stale refresh, duplicate requests, refresh ordering, known wrong-version cache invalidation, and Redis command timeout/auth propagation. Run `npm test` before delivery.
+
+The delivery checkpoint passed all 639 tests: 369 unit, 259 integration and 11 contracts, with no failures or skips.
