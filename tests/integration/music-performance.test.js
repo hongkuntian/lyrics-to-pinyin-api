@@ -21,6 +21,54 @@ test('repeat and simultaneous requests reuse verified results without provider w
  assert.match(cached.headers['Server-Timing'],/total;dur=/);
  assert.notEqual(first.headers['X-Request-ID'],cached.headers['X-Request-ID']);
 });
+test('explicit refresh replaces the ordinary cache without creating a separate response identity',async()=>{
+ let calls=0;
+ const handler=make([api({searchSong:async()=>{calls++;return song;}})]);
+ await invoke(handler,{options:{tone_style:'marks'}});
+ await invoke(handler,{options:{tone_style:'marks',refresh:true}});
+ const revisit=await invoke(handler,{options:{refresh:false,tone_style:'marks'}});
+ assert.equal(calls,2);assert.equal(revisit.headers['X-Lyrics-Cache'],'MEMORY');
+});
+test('explicit refresh does not join an older ordinary lookup',async()=>{
+ let calls=0;const releases=[];
+ const handler=make([api({searchSong:async()=>{calls++;await new Promise(r=>releases.push(r));return song;}})]);
+ const ordinary=invoke(handler),refresh=invoke(handler,{options:{refresh:true}});
+ while(releases.length<2)await new Promise(r=>setImmediate(r));
+ releases.forEach(r=>r());
+ const results=await Promise.all([ordinary,refresh]);
+ assert.equal(calls,2);assert.ok(results.every(r=>r.statusCode===200));
+});
+test('an older lookup finishing last cannot overwrite a completed refresh',async()=>{
+ let calls=0;const releases=[];
+ const handler=make([api({searchSong:async()=>{const id=++calls;await new Promise(r=>releases.push(r));return {...song,id};}})]);
+ const ordinary=invoke(handler);
+ while(releases.length<1)await new Promise(r=>setImmediate(r));
+ const refresh=invoke(handler,{options:{refresh:true}});
+ while(releases.length<2)await new Promise(r=>setImmediate(r));
+ releases[1]();const fresh=await refresh;
+ releases[0]();const old=await ordinary;
+ assert.equal(old.body.song.id,1);assert.equal(fresh.body.song.id,2);
+ assert.equal((await invoke(handler)).body.song.id,2);
+});
+test('canonical coalescing rechecks recording-specific source rejection for each reader',async()=>{
+ let release;const titles=[];
+ const handler=make([api({searchSong:async(artist,title,{album,duration})=>{
+   titles.push(title);if(title==='Idol')await new Promise(r=>release=r);
+   return {id:title==='Idol'?1:2,artist,title,album,duration};
+ },getLyrics:async id=>({lines:[{text:id===1?'English words for the English recording':'学校へ行こう',timestamp:0}]})})],{
+   resolveCatalogAliasesFn:async request=>{
+     const aliases=[];aliases.resolution={canonical_recording_id:'shared-catalog-evidence',searches:[request]};return aliases;
+   }
+ });
+ const fields={artist:'YOASOBI',duration:213.234,language:'ja'};
+ const english=invoke(handler,{...fields,title:'Idol',album:'Idol - Single',catalog_id:'1688334537'});
+ while(!release)await new Promise(r=>setImmediate(r));
+ const japanese=invoke(handler,{...fields,title:'アイドル',album:'アイドル - Single',catalog_id:'1679278167'});
+ await new Promise(r=>setImmediate(r));release();
+ const [first,second]=await Promise.all([english,japanese]);
+ assert.equal(first.statusCode,200);assert.equal(second.statusCode,200);
+ assert.equal(second.body.lines[0].original,'学校へ行こう');assert.deepEqual(titles,['Idol','アイドル']);
+});
 test('a stalled primary is aborted when hedged verified timed backup wins',async()=>{
  let aborted=false;
  const primary=api({searchSong:(_,__,{signal})=>new Promise(()=>signal.addEventListener('abort',()=>{aborted=true;}))});

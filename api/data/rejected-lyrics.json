@@ -18,6 +18,13 @@
   ],
   "catalogRecordings": [
     {
+      "catalogIDs": ["1679278167"],
+      "requiredScripts": ["Hiragana", "Katakana"],
+      "reviewedDate": "2026-10-07",
+      "reason": "The Japanese single アイドル (213.234 seconds) localized to Idol and selected separate English-version transcripts from LRCLIB 3694127 and 25105202. The distinct English single is Apple 1688334537 at the same duration. This exact Japanese recording must retain kana in its original source; English-version and romanized transcriptions are not original lyrics. This constraint does not infer sung language from arbitrary Japanese titles or reject the legitimate English single.",
+      "provenance": ["https://music.apple.com/jp/song/1679278167", "https://music.apple.com/jp/song/1688334537", "https://lrclib.net/api/get/3694127", "https://lrclib.net/api/get/25105202"]
+    },
+    {
       "catalogIDs": [
         "1696904627"
       ],

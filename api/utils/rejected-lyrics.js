@@ -22,5 +22,12 @@ export function isRejectedLyrics(provider,id,lines,records=recordings) {
 // words/timing. Provider metadata still validates through the ordinary matcher.
 export function isRejectedRecordingLyrics(lines,request={},records=catalogRecordings) {
   const matches=records.filter(record=>record.catalogIDs.includes(request.catalog_id));
-  return matches.length>0 && matches.some(record=>record.lyricsSha256===lyricsFingerprint(lines));
+  return matches.length>0 && matches.some(record=> {
+    if(record.requiredScripts) {
+      // Reviewed recording-specific source evidence, never a title-script guess.
+      const text=lines.map(line=>line.text??'').join('\n');
+      return !record.requiredScripts.some(script=>new RegExp(`\\p{Script=${script}}`,'u').test(text));
+    }
+    return record.lyricsSha256===lyricsFingerprint(lines);
+  });
 }

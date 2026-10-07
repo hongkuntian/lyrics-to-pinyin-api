@@ -183,7 +183,7 @@ test('pronunciation annotations persist independently, reject stale sources and 
 test('stale plain documents upgrade with an immutable revision and fence old generation',async t=>{
   let calls=0;
   const plain={...response,lines:response.lines.map(l=>({...l,timestamp:null})),quality:{...response.quality,synced:false}};
-  const {call,db,store}=await setup(t,{loadLyrics:async(_,options)=>{assert.equal(options.refresh,true);return ++calls===1?plain:response;}});
+  const {call,db,store}=await setup(t,{loadLyrics:async(_,options)=>{assert.equal(options.refresh,calls>0);return ++calls===1?plain:response;}});
   const old=(await call({action:'lyrics',recording})).body.document;
   await db.query("UPDATE lyric_requests SET checked_at=now()-interval '6 minutes'");
   const current=(await call({action:'lyrics',recording})).body.document;
@@ -191,6 +191,18 @@ test('stale plain documents upgrade with an immutable revision and fence old gen
   assert.equal((await store.document(old.id)).response.quality.synced,false);
   assert.equal((await call({action:'translate',documentID:old.id,sourceHash:old.sourceHash})).body.code,'source_revision_superseded');
   assert.equal(calls,2);
+});
+test('first library acquisition reuses verified provider caches; stale and explicit loads refresh',async t=>{
+  const refreshes=[];
+  const {call,db}=await setup(t,{loadLyrics:async(_,options)=>{refreshes.push(options.refresh);return response;}});
+  const first=await call({action:'lyrics',recording});
+  assert.equal(first.code,200);
+  assert.match(first.headers['Server-Timing'],/lyrics_lookup;dur=/);
+  assert.equal((await call({action:'lyrics',recording})).headers['X-Lyrics-Cache'],'LIBRARY');
+  await call({action:'lyrics',recording,refresh:true});
+  await db.query("UPDATE lyric_requests SET checked_at=now()-interval '25 hours'");
+  await call({action:'lyrics',recording});
+  assert.deepEqual(refreshes,[false,true,true]);
 });
 test('explicit reload bypasses fresh head and failed refresh preserves the stored source',async t=>{
   let calls=0;

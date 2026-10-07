@@ -59,6 +59,27 @@ export async function setCached(redis, key, data, ttl = null) {
   }
 }
 
+// Refresh and ordinary acquisitions share one content key. Commit by acquisition
+// start, so a slow older lookup cannot replace a newer successful refresh.
+// The comparison is atomic across instances and even after a caller times out.
+export async function setLyricsCached(redis, key, data, ttl) {
+  if (cacheUnavailable(redis)) return;
+  const script = `
+    local previous = redis.call('GET', KEYS[1])
+    if previous then
+      local ok, value = pcall(cjson.decode, previous)
+      if ok and value.metadata and tonumber(value.metadata.acquisition_started_at or 0) > tonumber(ARGV[2]) then
+        return 0
+      end
+    end
+    redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[3])
+    return 1
+  `;
+  try {
+    await redis.eval(script, [key], [JSON.stringify(data), data.metadata.acquisition_started_at, Math.max(1, Math.floor(ttl))]);
+  } catch (error) { suspendCache(redis, error); }
+}
+
 // Cache management utilities
 export async function clearCache(redis, pattern = 'romanize:*') {
   try {

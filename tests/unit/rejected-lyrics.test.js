@@ -5,6 +5,15 @@ import {lyricSourceNeedsRefresh} from '../../api/utils/timing-corrections.js';
 
 const lines=[{text:'這是測試文字',timestamp:10},{text:'我們一起練習',timestamp:20}];
 const records=[{provider:'lrclib',id:'123',lyricsSha256:lyricsFingerprint(lines)}];
+test('reviewed Japanese recording rejects English-version and romanized substitutes but not its English single',()=>{
+  for(const text of ['An original English test lyric.','kimi no koe ga kikoeru']) {
+    assert.equal(isRejectedRecordingLyrics([{text}],{catalog_id:'1679278167'}),true);
+    assert.equal(isRejectedRecordingLyrics([{text}],{catalog_id:'1688334537'}),false);
+    assert.equal(lyricSourceNeedsRefresh({lines:[{original:text}]},{catalog_id:'1679278167'}),true);
+  }
+  assert.equal(isRejectedRecordingLyrics([{text:'君の声が聞こえる'}],{catalog_id:'1679278167'}),false);
+  assert.equal(isRejectedRecordingLyrics([{text:'歌の名前は日本語',timestamp:0}],{catalog_id:'another'}),false);
+});
 test('reviewed rejection binds the provider, record ID, and lyric content',()=>{
   assert.equal(isRejectedLyrics('lrclib',123,lines,records),true);
   assert.equal(isRejectedLyrics('netease',123,lines,records),false);

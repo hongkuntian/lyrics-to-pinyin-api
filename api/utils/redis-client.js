@@ -8,6 +8,7 @@ export function createRedisFromEnv(env=process.env, Client=Redis) {
   const client=()=>new Client({url,token,retry:false,signal:AbortSignal.timeout(300)});
   return {
     get:key=>client().get(key),
+    eval:(script,keys,args)=>client().eval(script,keys,args),
     set:(key,value)=>client().set(key,value),
     setex:(key,ttl,value)=>client().setex(key,ttl,value)
   };

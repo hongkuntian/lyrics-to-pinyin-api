@@ -1,0 +1,95 @@
+{
+  "capturedAt": "2026-10-07",
+  "recordings": [
+    {
+      "artist": "Hebe Tien",
+      "title": "A Little Happiness (From \"Our Times\")",
+      "album": "A Little Happiness (From \"Our Times\") - Single",
+      "duration": 265.522,
+      "catalog_id": "1017697311",
+      "storefront": "us",
+      "expectedLanguage": "zh"
+    },
+    {
+      "artist": "Zhao Chuan",
+      "title": "我是一隻小小鳥",
+      "album": "當我們年輕的時候 / 新歌+經典現場錄音專輯",
+      "duration": 305.65,
+      "catalog_id": "1889827218",
+      "storefront": "us",
+      "expectedLanguage": "zh"
+    },
+    {
+      "artist": "Jay Chou & Ashin Chen",
+      "title": "说好不哭",
+      "album": "说好不哭 - Single",
+      "duration": 222.333,
+      "catalog_id": "1480230401",
+      "storefront": "us",
+      "expectedLanguage": "zh"
+    },
+    {
+      "catalog_id": "1722083721",
+      "title": "海闊天空",
+      "artist": "Beyond",
+      "album": "樂與怒",
+      "duration": 324.84,
+      "storefront": "hk",
+      "expectedLanguage": "yue"
+    },
+    {
+      "catalog_id": "1679278167",
+      "title": "アイドル",
+      "artist": "YOASOBI",
+      "album": "アイドル - Single",
+      "duration": 213.234,
+      "storefront": "jp",
+      "expectedLanguage": "ja"
+    },
+    {
+      "catalog_id": "1333011553",
+      "title": "Группа крови",
+      "artist": "Kino",
+      "album": "Группа крови",
+      "duration": 284.003,
+      "storefront": "us",
+      "expectedLanguage": "ru"
+    },
+    {
+      "catalog_id": "1544494392",
+      "title": "Hello",
+      "artist": "Adele",
+      "album": "25",
+      "duration": 295.502,
+      "storefront": "us",
+      "expectedLanguage": "en"
+    },
+    {
+      "catalog_id": "1440856007",
+      "title": "Papaoutai",
+      "artist": "Stromae",
+      "album": "Racine carrée",
+      "duration": 232.143,
+      "storefront": "fr",
+      "expectedLanguage": "fr"
+    },
+    {
+      "catalog_id": "1447401620",
+      "title": "Despacito",
+      "artist": "Luis Fonsi & Daddy Yankee",
+      "album": "VIDA",
+      "duration": 229.387,
+      "storefront": "es",
+      "expectedLanguage": "es"
+    },
+    {
+      "catalog_id": "1488300930",
+      "title": "Blueming",
+      "artist": "IU",
+      "album": "Love Poem - EP",
+      "duration": 217.053,
+      "storefront": "us",
+      "expectedLanguage": "ko"
+    }
+  ]
+}

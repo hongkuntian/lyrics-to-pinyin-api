@@ -1,5 +1,6 @@
 import {withAppAuth} from './utils/app-auth/http.js';
 import {waitUntil} from '@vercel/functions';
+import {performance} from 'node:perf_hooks';
 import {createMusicRomanizeService,SELECTION_REVISION} from './music-romanize.js';
 import {SongLibraryStore,LibraryError} from './utils/song-library/store.js';
 import {database} from './utils/song-library/database.js';
@@ -32,8 +33,15 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
   const getStore=()=>store??new SongLibraryStore(database());
   const execute=(db,id,doc)=>executeTranslationJob(db,id,{apiKey,generateFn,doc});
   return async(req,res)=> {
+    const started=performance.now(),timings=[];
+    let lyricCache;
+    const measure=async(name,work)=>{const start=performance.now();try{return await work();}finally{timings.push(`${name};dur=${(performance.now()-start).toFixed(1)}`);}};
     res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','private, no-store');
-    const send=(status,body)=>res.status(status).json({version:1,...body});
+    const send=(status,body)=>{
+      res.setHeader('Server-Timing',[...timings,`total;dur=${(performance.now()-started).toFixed(1)}`].join(', '));
+      if(lyricCache)res.setHeader('X-Lyrics-Cache',lyricCache);
+      return res.status(status).json({version:1,...body});
+    };
     if(req.method!=='POST') {res.setHeader('Allow','POST');return send(405,{code:'method_not_allowed'});}
     try {
       const input=req.body;
@@ -65,20 +73,25 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       if(input.action==='lyrics') {
         if(input.refresh!==undefined && input.refresh!==true && input.refresh!=='true') throw new LibraryError('invalid_request',400);
         const recording=recordingRequest(input.recording),key=requestKey(recording),explicit=Boolean(input.refresh);
-        let doc=await db.documentForRequest(key,selectionRevision);
-        if(!doc && !explicit && db.bindRecordingHead) doc=await db.bindRecordingHead(recording,key,selectionRevision);
+        let doc=await measure('document_read',()=>db.documentForRequest(key,selectionRevision));
+        if(!doc && !explicit && db.bindRecordingHead) doc=await measure('recording_bind',()=>db.bindRecordingHead(recording,key,selectionRevision));
+        lyricCache='LIBRARY';
         const stale=value=>!value || lyricSourceNeedsRefreshFn(value.response,recording)
           || Date.now()-new Date(value.checkedAt??0).getTime()>((value.response.quality.synced && !value.response.quality.partial)?86400000:300000);
         if(explicit || stale(doc)) {
+          lyricCache='MISS';
           const owner=await db.claimLookup(key,selectionRevision);
           if(!owner) {res.setHeader('Retry-After','2');return send(202,{state:'loading_lyrics'});}
           try {
             doc=await db.documentForRequest(key,selectionRevision);
             if(explicit || stale(doc)) {
-              const candidate=makeDocument(recording,await loadLyrics(recording,{refresh:true}),selectionRevision);
+              // First acquisition may reuse the current selection policy's
+              // already-verified provider cache. Existing stale documents and
+              // explicit reloads still demand a new source check.
+              const candidate=makeDocument(recording,await measure('lyrics_lookup',()=>loadLyrics(recording,{refresh:explicit||Boolean(doc)})),selectionRevision);
               // Provider outages or regressions cannot erase a complete timed source.
               const keep=doc?.response.quality.synced && !candidate.response.quality.synced && !lyricSourceNeedsRefreshFn(doc.response,recording);
-              doc=await db.saveDocument(keep?{...doc,requestKey:key}:candidate,{replaceID:doc?.id,lookupOwner:owner});
+              doc=await measure('document_save',()=>db.saveDocument(keep?{...doc,requestKey:key}:candidate,{replaceID:doc?.id,lookupOwner:owner}));
             }
           } catch(error) {
             if(!doc || explicit || lyricSourceNeedsRefreshFn(doc.response,recording)) throw error;
