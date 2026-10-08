@@ -49,10 +49,27 @@ node --env-file=/private/provider.env scripts/evaluate-content-quality.mjs run \
   --approved-plan-sha256 <independently-reviewed-plan-hash> --live yes
 ```
 
+Use `--corpus evaluation/content-quality/confirmation-cases.json` for the focused
+post-review confirmation. Repeated identical text within a row requires the
+explicit zero-based `textOccurrence`; ambiguous selections fail before planning.
+
 Plans freeze complete bodies, source inputs, generator hashes and request order.
 The exclusive start marker prevents resending an interrupted run. Results retain
 provider IDs, raw output, usage, elapsed time and actual/conservative accounting.
 Production credentials and complete commercial lyrics stay outside Git.
+
+The nonspending snapshot can be refreshed explicitly using the existing private
+owner database configuration. It uses a read-only transaction and exports at most
+20 current translations and 40 completed explanations, without user identities:
+
+```sh
+node scripts/audit-content-quality.mjs \
+  --database-config-file ~/.config/lyra/credentials/backend-admin/migration.json \
+  --output /private/evidence/production-snapshot.json
+```
+
+Refreshing a snapshot changes the experiment inputs. Reuse a retained snapshot to
+reproduce an earlier review; create a new plan for a new live snapshot.
 
 When the key is Vercel Sensitive, copy the reviewed plan to the temporary,
 untracked `evaluation/content-quality/private-plan.json` and use the established
@@ -70,8 +87,12 @@ project setting. Capture `content_quality_chunk` log records, group by record,
 verify every index/count, decode base64 and retain each JSON. Do not automatically
 retry a failed/restarted build: its provider costs may be unknown. Do not promote
 an evaluation deployment. Remove the temporary private plan after evidence review.
+The deployment's streaming CLI output can end before the result chunks arrive.
+After completion, retrieve the full retained log with `vercel inspect <url>
+--logs`; missing chunks are an evidence-recovery problem, not permission to resend.
 
-Saved Study cache recipes and public fields are preserved. Already-admitted old
+Validated grounding is adopted only for new English v2 Study jobs. Saved Study
+cache recipes and public fields are preserved. Already-admitted old
 requests continue through the old parser. Source quotes remain exact; the new
 internal evidence is validated then projected away from the public DTO. Existing
 good content is reused without an automatic regeneration or replacement.

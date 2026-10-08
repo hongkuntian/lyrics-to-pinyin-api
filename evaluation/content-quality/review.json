@@ -1,0 +1,121 @@
+{
+  "version": "content-quality-review-1",
+  "reviewer": "Root, unblinded AI assessment; no independent bilingual certification",
+  "snapshotSHA256": "dd5543a0323ca9b6e25de1b3446931b03983b23b1ff0f967aa7e0fac1a268675",
+  "firstRun": {
+    "planHash": "e8bdb80790ecfd3e56c70ba216aa10b38ee8dc1a11c2e8d4efef0eb8e6321a5b",
+    "structure": "28/28 passed complete-field, exact-sourceQuote and (candidate) field-evidence identity checks. This is not semantic validation.",
+    "writing": "Generally readable; grounded negation repeat one failed the requested English language.",
+    "comparisons": [
+      {
+        "caseID": "unclear-cantonese",
+        "control": "Qualified speculative repair and grammar of an unconfirmed replacement.",
+        "candidate": "Meaning and context retain the unresolved wording; grammar omitted.",
+        "decision": "Supported no-repair improvement; control explicitly qualified its guess, so not a silent definite mistranslation."
+      },
+      {
+        "caseID": "negation-stress",
+        "control": "Both controls preserve denial despite deliberately contradictory translation.",
+        "candidate": "Both preserve denial and flag the translation conflict; repeat one uses Chinese explanatory prose.",
+        "decision": "Baseline already semantically correct. One candidate language regression; not eligible for adoption without confirmation."
+      },
+      {
+        "caseID": "component-label",
+        "control": "Both separate the component label from the contextual whole-phrase implication.",
+        "candidate": "Both retain that distinction and qualify the stranger implication.",
+        "decision": "No demonstrated semantic gain over this baseline."
+      },
+      {
+        "caseID": "mother-stress",
+        "control": "Uses maternal context instead of the deliberately corrupted lover translation.",
+        "candidate": "Uses maternal context and explicitly rejects the corrupt translation.",
+        "decision": "Both semantically adequate; stress corruption is not a production defect."
+      },
+      {
+        "caseID": "changed-refrain",
+        "control": "Keeps the selected addressee distinct from earlier self-reference.",
+        "candidate": "Keeps the selected addressee and qualifies identity.",
+        "decision": "Both adequate; exact addressee remains unresolved."
+      },
+      {
+        "caseID": "not-love",
+        "control": "Preserves qualified classification and limited affection.",
+        "candidate": "Preserves qualified classification and parallels the hate clause.",
+        "decision": "Both adequate; no stronger love/absence claim introduced."
+      },
+      {
+        "caseID": "heart-return",
+        "control": "Explains the first repeated character as still, matching the actual prepared selection.",
+        "candidate": "Also explains that first character as still.",
+        "decision": "Fixture selected occurrence zero instead of the intended occurrence one. Exclude this pair from return-sense conclusions; corrected in confirmation."
+      },
+      {
+        "caseID": "translated-choice",
+        "control": "Recognizes an English supplied subject and omitted Chinese subject.",
+        "candidate": "Recognizes supplied subject; shared domestic-routine inference is qualified.",
+        "decision": "Both adequate; actual membership of the English plural stays open."
+      },
+      {
+        "caseID": "fresh-proxy",
+        "control": "Representation modifies agreement; staying remains embedded.",
+        "candidate": "Representation modifies commitment; contextual agency is qualified.",
+        "decision": "Both adequate. Embedded actor is not uniquely explicit in the first clause."
+      },
+      {
+        "caseID": "fresh-dialect",
+        "control": "Preserves possibility versus a definite commitment.",
+        "candidate": "Preserves possibility versus definite commitment.",
+        "decision": "Both adequate; neither asserts a definite refusal to wait."
+      },
+      {
+        "caseID": "fresh-unclear",
+        "control": "Hypothetically substitutes familiar wording, teaches its adverb grammar, and proposes an unsupported time reading despite the fragment being a quoted nominal object.",
+        "candidate": "Retains paper-fragment identity and the following explicit inability to understand; grammar omitted.",
+        "decision": "Fresh source-grounded improvement. A qualified correction still does not support teaching its invented syntax."
+      }
+    ]
+  },
+  "confirmation": {
+    "corpus": "confirmation-cases.json",
+    "predeclaredAfterFirstReview": true,
+    "question": "Does explicit English instruction remove the observed language failure while preserving no-repair gains, correctly testing the second repeated token and generalizing to a new unresolved fragment?",
+    "planHash": "2438fe27ccb0e1650983e5e44678ad843e7dd7b42a2f6b97660e87cbc594c60e",
+    "structure": "16/16 passed complete-field and exact-quote checks; 8/8 candidate responses passed internal field-evidence identity checks.",
+    "language": "8/8 revised candidate responses were English; no guarantee of general language compliance.",
+    "writing": "Readable, usually longer than baseline.",
+    "comparisons": [
+      {
+        "caseID": "unclear-cantonese",
+        "decision": "Both candidate repeats keep unresolved source wording and omit speculative corrected-word grammar; both controls still propose and teach a qualified replacement."
+      },
+      {
+        "caseID": "negation-stress",
+        "decision": "All preserve the denial. Both revised candidate repeats are English and identify the deliberate translation contradiction."
+      },
+      {
+        "caseID": "heart-return",
+        "decision": "With the final character selected at grapheme range [6,7), baseline still explains the earlier still/yet sense. Candidate explains return/give back and the surrounding entrusted-heart metaphor, distinguishing both repeated occurrences."
+      },
+      {
+        "caseID": "translated-choice",
+        "decision": "Both recognize translator-supplied plural subject; candidate qualifies possible shared-meal inference."
+      },
+      {
+        "caseID": "fresh-dialect",
+        "decision": "Both preserve possibility versus definite commitment and leave the eventual decision open."
+      },
+      {
+        "caseID": "fresh-unresolved-name",
+        "decision": "Both retain the explicit name/mark/error uncertainty. Baseline gives supported object-role grammar; candidate leaves grammar empty. No semantic gain established on this new fragment."
+      }
+    ],
+    "adoption": "Enable validated grounding for new English v2 Study jobs. Keep old admitted requests, legacy Study, other explanation languages and saved good content unchanged. No translation-model/prompt replacement or automatic regeneration."
+  },
+  "accounting": {
+    "authorizedMicros": 5000000,
+    "uncertainPriorHeldMicros": 147399,
+    "completed44RequestsUsageMicros": 54008,
+    "totalConservativeAccountedMicros": 201407,
+    "limit": "Token usage estimate plus conservative holds; not an invoice."
+  }
+}

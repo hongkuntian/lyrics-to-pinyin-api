@@ -8,14 +8,14 @@ import {parseTranslation} from '../../api/utils/song-library/translation.js';
 import {ReviewQueue,runReviewQueue} from '../../api/utils/song-library/review-queue.js';
 import {REVIEW_POLICY,VERIFICATION_RESERVATION} from '../../api/utils/song-library/review-assessment.js';
 import {createReviewReportsHandler} from '../../api/review-reports.js';
-async function fixture(t,{report=true,second=false}={}) {
+async function fixture(t,{report=true,second=false,sourceNotes=[]}={}) {
   const f=await libraryDB();t.after(()=>f.db.close());const db={query:(...a)=>f.db.query(...a),transaction:fn=>f.db.transaction(fn)};
   await f.store.configureReviews({enabled:true,dailyMicros:250_000,monthlyMicros:1_000_000,maxDaily:5});
   const ids=[];
   for(const doc of second?[source,{...source,id:'doc-two',requestKey:'request-two',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}}]:[source]) {
     await f.store.saveDocument(doc);
     const j=await f.store.reserve({userID:'reader-a',documentID:doc.id,target:'en',recipe:'fixture',reservedMicros:30_000});
-    await f.store.claim(j.job.id);await f.store.complete(j.job.id,parseTranslation(JSON.stringify({translations:{L0001:'Make a song of today.'},sourceNotes:[]}),doc),1000,{id:'test'});
+    await f.store.claim(j.job.id);await f.store.complete(j.job.id,parseTranslation(JSON.stringify({translations:{L0001:'Make a song of today.'},sourceNotes}),doc),1000,{id:'test'});
     ids.push(j.job.id);
     if(report)await f.store.report({userID:'reader-a',documentID:doc.id,translationID:j.job.id,category:'translation',sourceID:'L0001',detail:'Check the meaning.'});
   }
@@ -194,6 +194,17 @@ test('comparison ties, missing evidence and uncertainty retain the existing tran
     assert.equal((await f.store.translation(source.id,'en')).id,f.ids[0]);assert.equal(Number((await f.store.budget()).held),0);
     assert.equal(f.provider.submits,2);assert.notEqual((await f.db.query('SELECT disposition FROM correction_review_outcomes')).rows[0].disposition,'published');
   }
+});
+test('a preferred line replacement with an unreviewed retained note settles once and preserves the current revision',async t=> {
+  const note={sourceID:'L0001',sourceQuote:source.structure.occurrences[0].sourceText,kind:'ambiguous_reading',explanation:'The current wording chooses one possible rendering.'};
+  const f=await fixture(t,{sourceNotes:[note]});await comparing(f);await comparison(f);
+  assert.equal((await f.run()).state,'review_completed');
+  const retained=await f.store.translation(source.id,'en');
+  assert.equal(retained.id,f.ids[0]);assert.deepEqual(retained.sourceNotes,[note]);
+  const outcome=(await f.db.query('SELECT disposition,reason FROM correction_review_outcomes')).rows[0];
+  assert.deepEqual(outcome,{disposition:'deferred',reason:'source_note_requires_review'});
+  assert.equal(Number((await f.store.budget()).held),0);assert.equal(f.provider.submits,2);
+  await f.run();assert.equal(f.provider.submits,2);assert.equal((await f.store.revisions(source.id,'en')).length,1);
 });
 test('publication pause reconciles comparison costs and resumes from saved results without another model call',async t=> {
   const f=await fixture(t);await comparing(f);await comparison(f);

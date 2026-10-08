@@ -38,7 +38,7 @@ export function selectionV2(doc,input,translation=null) {
   return {sourceID:ref.occurrenceID,lower,upper,text,textHash:range.textHash,studyText:{layer:ref.layer,revisionID:ref.revisionID,occurrenceID:ref.occurrenceID,...(ref.layer==='translation'?{target:translation.target}:{})}};
 }
 
-export function explanationBody(doc,translation,selection,language='en',{model=MODEL,grounded=false}={}) {
+export function explanationBody(doc,translation,selection,language='en',{model=MODEL,grounded=Boolean(selection.studyText)&&canonicalTarget(language)==='en'}={}) {
   language=canonicalTarget(language);
   const policy=modelPolicy(model);
   if(!policy)throw new LibraryError('generation_configuration_unavailable');
@@ -47,7 +47,7 @@ export function explanationBody(doc,translation,selection,language='en',{model=M
     input:[{role:'user',content:JSON.stringify({title:doc.response.song.title.original,artist:doc.response.song.artist.original,sourceLanguage:doc.response.song.language,sourceDocument:doc.structure,acceptedTranslation:translation,selection})}],
     text:{format:{type:'json_schema',name:'study_explanation',strict:true,schema:object(Object.fromEntries(['meaning','context','grammar','uncertainty','sourceQuote'].map(k=>[k,{type:'string'}])))}}};
   if(grounded) {
-    body.instructions+=' '+groundingInstructions;
+    body.instructions+=' '+groundingInstructions+` Write meaning, context, grammar and uncertainty in ${TARGETS[language].name}, even when the source and evidence quotes use another language. Only sourceQuote and exact source quotations retain their original language.`;
     body.text.format.name=GROUNDING_FORMAT;
     body.text.format.schema.properties.evidence=evidenceSchema;
     body.text.format.schema.required.push('evidence');

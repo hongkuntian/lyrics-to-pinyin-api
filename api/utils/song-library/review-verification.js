@@ -59,5 +59,9 @@ export function comparisonDecision(value,assessment,context) {
   if(!value.sourceSufficient||!value.noRegressions||!value.materialImprovement)return 'comparison_checks_failed';
   const required=new Set(assessment.changes.map(c=>c.sourceID)),evidence=new Set(value.evidence.map(e=>e.sourceID));
   if(required.size!==evidence.size||[...required].some(id=>!evidence.has(id)))return 'incomplete_comparison_evidence';
+  // The current correction contract edits lyric lines only. It cannot revise
+  // uncertainty notes, and the anonymous comparison does not assess those notes.
+  // A line-level win therefore cannot establish that a retained note still fits.
+  if(assessment.candidate.sourceNotes.some(note=>required.has(note.sourceID)))return 'source_note_requires_review';
   return 'publish';
 }

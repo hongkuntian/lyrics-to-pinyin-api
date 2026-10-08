@@ -29,7 +29,15 @@ export function caseInput(spec,snapshot) {
  const occurrence=spec.sourceID?doc.structure.occurrences.find(o=>o.sourceID===spec.sourceID):doc.structure.occurrences[spec.line];
  const layer=spec.layer??'original';
  const row=layer==='original'?occurrence.lyricText:translation.lines.find(l=>l.sourceID===occurrence.sourceID).lyricText;
- const index=row.indexOf(spec.text);if(index<0)throw new Error('selection_missing');
+ const matches=[];let cursor=0;
+ while(spec.text&&cursor<=row.length) {
+  const index=row.indexOf(spec.text,cursor);if(index<0)break;
+  matches.push(index);cursor=index+spec.text.length;
+ }
+ if(matches.length>1&&spec.textOccurrence===undefined)throw new Error('selection_ambiguous');
+ const which=spec.textOccurrence??0;
+ if(!Number.isSafeInteger(which)||which<0||which>=matches.length)throw new Error('selection_missing');
+ const index=matches[which];
  const selection={sourceID:occurrence.sourceID,lower:count(row.slice(0,index)),upper:count(row.slice(0,index))+count(spec.text),text:spec.text,
   studyText:{layer,revisionID:layer==='original'?doc.id:translation.id,occurrenceID:occurrence.sourceID,...(layer==='translation'?{target:translation.target}:{})}};
  return {doc,translation,selection};
@@ -93,7 +101,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
  for(let i=0;i<args.length;i+=2)options[args[i]]=args[i+1];
  if(command==='prepare') {
   const snapshot=JSON.parse(await fs.readFile(options['--snapshot'],'utf8'));
-  const corpus=JSON.parse(await fs.readFile(new URL('../evaluation/content-quality/cases.json',import.meta.url),'utf8'));
+  const corpus=JSON.parse(await fs.readFile(options['--corpus']??new URL('../evaluation/content-quality/cases.json',import.meta.url),'utf8'));
   console.log(JSON.stringify(await prepare({snapshot,corpus,directory:options['--directory'],budgetMicros:Number(options['--budget-micros']),previousAccountedMicros:Number(options['--previous-accounted-micros']??0)})));
  } else if(command==='run'&&options['--live']==='yes') {
   await run({directory:options['--directory'],approvedHash:options['--approved-plan-sha256'],apiKey:process.env.OPENAI_API_KEY});

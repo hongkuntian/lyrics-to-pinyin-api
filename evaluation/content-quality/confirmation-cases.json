@@ -1,0 +1,89 @@
+{
+  "version": "content-quality-confirmation-1",
+  "hypothesis": "Confirm explicit English instructions, correct repeated-token selection, retained no-repair gains, and a new unresolved fragment after reviewing the first experiment. Same model; all outputs reviewed separately for structure, language, naturalness and fidelity.",
+  "cases": [
+    {
+      "id": "unclear-cantonese",
+      "phase": "diagnostic",
+      "title": "真的愛妳",
+      "sourceID": "L0019",
+      "text": "紿終",
+      "checks": [
+        "Do not silently teach 始終 as the selected word.",
+        "Explain the unresolved spelling and leave unsupported grammar empty."
+      ]
+    },
+    {
+      "id": "negation-stress",
+      "phase": "diagnostic",
+      "title": "領悟",
+      "sourceID": "L0002",
+      "text": "没有",
+      "replaceTranslation": "But I did cry.",
+      "checks": [
+        "Source denial must override the contradictory supplied translation.",
+        "The denial refers to the previous crying clause."
+      ]
+    },
+    {
+      "id": "heart-return",
+      "phase": "fresh",
+      "title": "甲乙丙丁",
+      "sourceID": "L0008",
+      "text": "還",
+      "textOccurrence": 1,
+      "checks": [
+        "Here 還 is returning/giving back, distinguished from earlier 還沒 still-not.",
+        "Keep the heart metaphor and adjacent safekeeping statement."
+      ]
+    },
+    {
+      "id": "translated-choice",
+      "phase": "fresh",
+      "title": "甲乙丙丁",
+      "sourceID": "L0007",
+      "layer": "translation",
+      "text": "We",
+      "checks": [
+        "Explain the English pronoun as a translator choice; original omits its subject.",
+        "Do not say the original explicitly supplies a shared we."
+      ]
+    },
+    {
+      "id": "fresh-dialect",
+      "phase": "fresh",
+      "language": "yue",
+      "lines": [
+        "甲：你話過會同我等到天光。",
+        "乙：我話可以等，唔係一定會等。",
+        "甲：咁我唔會代你應承佢。"
+      ],
+      "speakers": {
+        "甲": "A",
+        "乙": "B"
+      },
+      "line": 1,
+      "text": "唔係一定會等",
+      "checks": [
+        "B distinguishes possibility from a definite commitment.",
+        "Do not describe the line as promising to wait or definitely refusing to wait."
+      ]
+    },
+    {
+      "id": "fresh-unresolved-name",
+      "phase": "fresh",
+      "language": "zh",
+      "lines": [
+        "他只寫下「罙岇」，沒有解釋。",
+        "我不知道這是名字、記號，還是寫錯的字。",
+        "你別替我決定它的意思。"
+      ],
+      "line": 0,
+      "text": "罙岇",
+      "checks": [
+        "Do not decide that the fragment is a name or a transcription error.",
+        "Preserve the stated uncertainty instead of inventing a dictionary compound or repairing the source."
+      ]
+    }
+  ]
+}

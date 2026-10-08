@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {explanationBody,parseGroundedExplanation,generateExplanation} from '../../api/utils/song-library/study-explanation.js';
 import {generate,requestBody,parseTranslation} from '../../api/utils/song-library/translation.js';
 import {publicTranslation} from '../../api/utils/song-library/public-content.js';
+import {explanationRecipe} from '../../api/utils/song-library/study-explanation.js';
 const occurrence={sourceID:'L0001',sourceText:'甲：我沒有說你走了',lyricText:'我沒有說你走了',speakerID:'S1',startsTurn:true,sourcePrefix:'甲：'};
 const doc={id:'doc',sourceHash:'source',response:{song:{language:'zh',title:{original:'test'},artist:{original:'test'}}},structure:{version:'lyric-annotations-3',speakers:[{id:'S1',displayName:'A',sourceLabel:'甲'}],occurrences:[occurrence]}};
 const translation={id:'revision',lines:[{sourceID:'L0001',lyricText:'I did not say you left.'}]};
@@ -15,6 +16,7 @@ test('grounded Study retains whole-song turns, selected layer, model and output 
  const body=explanationBody(doc,translation,selection,'en',{grounded:true});
  assert.equal(body.model,'gpt-6-luna');assert.equal(body.max_output_tokens,4096);assert.match(body.instructions,/fallible aid/);assert.match(body.instructions,/Never silently repair/);
  assert.deepEqual(JSON.parse(body.input[0].content).sourceDocument,doc.structure);
+ assert.match(body.instructions,/Write meaning, context, grammar and uncertainty in English/);
  assert.deepEqual(parseGroundedExplanation(JSON.stringify(answer),doc,translation,selection),content);
 });
 test('evidence must quote exact real rows, cover claims and retain occurrence identity',()=>{
@@ -51,4 +53,10 @@ test('normalized public lyrics preserve valid raw-row uncertainty with an exact 
  assert.deepEqual(projected.sourceNotes,[{...note,sourceQuote:occurrence.lyricText}]);
  assert.equal(original.sourceNotes[0].sourceQuote,occurrence.sourceText);
  assert.equal(projected.lines[0].startsTurn,false);
+});
+test('new English v2 jobs use validated grounding without invalidating saved recipes or changing untested languages',()=>{
+ assert.equal(explanationBody(doc,translation,selection).text.format.name,'study_explanation_grounded_1');
+ assert.equal(explanationBody(doc,translation,selection,'fr').text.format.name,'study_explanation');
+ assert.equal(explanationBody(doc,translation,{sourceID:'L0001',text:'沒有'}).text.format.name,'study_explanation');
+ assert.equal(explanationRecipe(selection,'en'),'study-text-1');
 });

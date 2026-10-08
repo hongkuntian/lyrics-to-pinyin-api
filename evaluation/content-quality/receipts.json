@@ -1,0 +1,87 @@
+{
+  "version": "content-quality-receipts-1",
+  "privateEvidenceRoot": "/Users/hongkuntian/.codex/lyra-workflow/evidence/content-quality-20261007",
+  "snapshotSHA256": "dd5543a0323ca9b6e25de1b3446931b03983b23b1ff0f967aa7e0fac1a268675",
+  "runs": [
+    {
+      "directory": "study-paired04",
+      "planHash": "e8bdb80790ecfd3e56c70ba216aa10b38ee8dc1a11c2e8d4efef0eb8e6321a5b",
+      "maxReservedMicros": 142050,
+      "previousAccountedMicros": 147399,
+      "accountedMicros": 181561,
+      "sourceHashes": {
+        "scripts/evaluate-content-quality.mjs": "205ad21aaaa4bebc2a1ea3c75e97f480763981aa092f0688c6968c5b71fc5a58",
+        "api/utils/song-library/study-explanation.js": "30b8812f5bbc4fcf4a98c01d6d62b965fb934fffd7b0a0c03b60c6c24689769c",
+        "api/utils/song-library/study-grounding.js": "66ba3fc237b9fc5396ccb008e6e1c23f3818c40ae40cc88c7e4c1022cab19100",
+        "api/utils/song-library/translation.js": "2b475cd7653d24e23e15798325306a63db8932934d22affc0abff0f44f9f9aaf",
+        "api/utils/song-library/model-policy.js": "a99e0de6ae6b97af65cb1f7fedc764e14491c2c02a1546db05c549cc1d43758f"
+      },
+      "files": {
+        "plan.json": "26d523842d816bdfb265ace94ca02bad918c56e510c88f784b0f6cf249b07bcf",
+        "summary.json": "93531cf57002d4547726f89a769fca6d6381693ac918413a0be818d86c3d715f",
+        "unclear-cantonese-1-control.json": "c1c0d4913caf0a9f152a9ff9c92434b5d80c05d27e97e877123d572ddf2c1c32",
+        "unclear-cantonese-1-grounded.json": "33c07010d8df4cbe277f0e712a38bd28cee621d6b2e2f47530d09d455f5c742f",
+        "unclear-cantonese-2-grounded.json": "8621ec20ff7bdc6d61e3412cb935b27d32f2e65abb7d3a9fc616a090a265f8ed",
+        "unclear-cantonese-2-control.json": "5c81d9fd6a13c75a3b7b161742358024a1e8ed3474f353adcb13d9f9b05ce435",
+        "negation-stress-1-control.json": "40ca8b50de8068cc82f48a97fba884ed2a9428f0240e6c2c1149ba7c1c356b9e",
+        "negation-stress-1-grounded.json": "d2a53757184856118c522f852f1663af2e64d3e4984f71536422c5b21d2b1f0a",
+        "negation-stress-2-grounded.json": "54989d117dca4ebd2af12013c3a50b49a8d28d5461373b80fbbc7d37c56b27ae",
+        "negation-stress-2-control.json": "b7d41ec0efb02d1cd60c5a7267e84195aeaf4a36b42faad3af6ec5be57ba270b",
+        "component-label-1-control.json": "d30d8da2314dd32b3b80cf81ed98f320bf3b37894f8c78f926c058c146c798db",
+        "component-label-1-grounded.json": "4fa545551b429616d182969faeb3dc93c728ffd5c1151455a1cb08b606a4b677",
+        "component-label-2-grounded.json": "b24fe2f3e6f15937a179f790a6f1027b261d83bdcfed165725a99f950f45d7ad",
+        "component-label-2-control.json": "2646f7b7af5714e7aa1b8da42d3d1981425878ba5a05db4a8637c4a30468c063",
+        "mother-stress-1-control.json": "e57823dc9391548efa0a3fd2e47077dbbe18e3d4d0d5e4af412c6f2376b1f552",
+        "mother-stress-1-grounded.json": "ae6ed75cee9c600102c35aaeb2c068e088064a49a69f2836633b6e1a61b4b597",
+        "changed-refrain-1-control.json": "05e719a242356d3ef7d6095ac0fce44d766e6fd9e3c8cb2a252aac1db67ea57e",
+        "changed-refrain-1-grounded.json": "5347922e50b371eab5bb01e752e80fea855ca24ec45b272a31a283de515d02c4",
+        "not-love-1-control.json": "54510a77dea6702f6601d9f2c864a4780606a04d62f65e47864f4cdbaeb576f7",
+        "not-love-1-grounded.json": "c3bf9b8d50a0f96a2d25f746df855fe17c25f391fe76463ec28e4ebbc8094655",
+        "heart-return-1-control.json": "94f18732791a1fbcca76a577b2f44568fb07ef1fd5469374cc18529cd2bc607c",
+        "heart-return-1-grounded.json": "a95efa7bc37df4f8ba9bb4970bcf714eb8d1f40c4778b09cc7ca141f60a26ddd",
+        "translated-choice-1-control.json": "a2b4f9911537987827cdeea09f78cba51e6c4e59bee43c5e304c27d26a0e68ca",
+        "translated-choice-1-grounded.json": "faf0e4de90a7e422c768d09bf9bd95760ddca8da2824685b0aca7c705adb3870",
+        "fresh-proxy-1-control.json": "ceea54d7f565be6afc2b3bb8a3a38ad5acb5bbed9dd8d85332ea163bfee803b6",
+        "fresh-proxy-1-grounded.json": "cb56a58096d98abc0208302dd3ae5cc53912e93ec66605883fcb31c0c7719978",
+        "fresh-dialect-1-control.json": "5544532d658b914b7c415b8f24bf47bd6eeea69d88f04ae9324fb87ea2fee677",
+        "fresh-dialect-1-grounded.json": "7006d406725c7ae0731b1e1bb67c1c45cb16aa61eefd4bf51c0ea356fe1ce5f9",
+        "fresh-unclear-1-control.json": "d365e1c55bb7df019820501e74744272ea19656f8749097c110359206f6a7364",
+        "fresh-unclear-1-grounded.json": "3c52e4da10964beba73c2d20f573fb2aad7ba7feb97445bcc725f5d141c9ad1a"
+      }
+    },
+    {
+      "directory": "study-confirmation05",
+      "planHash": "2438fe27ccb0e1650983e5e44678ad843e7dd7b42a2f6b97660e87cbc594c60e",
+      "maxReservedMicros": 80959,
+      "previousAccountedMicros": 181561,
+      "accountedMicros": 201407,
+      "sourceHashes": {
+        "scripts/evaluate-content-quality.mjs": "a71b37d810eb49bc37b6e212c5c612877f5a013447658f44f0ba106e44b9730e",
+        "api/utils/song-library/study-explanation.js": "4a0b0f207ab3e8fd42bb52e4ba023e7dff33a67ff4df38107d58942d72bba7ba",
+        "api/utils/song-library/study-grounding.js": "66ba3fc237b9fc5396ccb008e6e1c23f3818c40ae40cc88c7e4c1022cab19100",
+        "api/utils/song-library/translation.js": "2b475cd7653d24e23e15798325306a63db8932934d22affc0abff0f44f9f9aaf",
+        "api/utils/song-library/model-policy.js": "a99e0de6ae6b97af65cb1f7fedc764e14491c2c02a1546db05c549cc1d43758f"
+      },
+      "files": {
+        "plan.json": "d42b94d993c4aefc89f4cc5ec2afb126dddecdb3b19f5700fbfce6ef77e3b77a",
+        "summary.json": "951aec0967c32e27a6ed4274794f9e131f97c70af4bc616d33ae6484fd9b450d",
+        "unclear-cantonese-1-control.json": "684ac6b876ffbc76d0e7e63bb8aa9fc01fd22d01873a30fc7096819f50eb97ce",
+        "unclear-cantonese-1-grounded.json": "e84d359bf6c6fbeedc6e6b217bc05fd0ace4fa3944069d0f8e3322b8710c3cc2",
+        "unclear-cantonese-2-grounded.json": "b01f09d9cb9653e365bcad2bd8359b8ff2748a02b2e0c29aeab80ada80ec0421",
+        "unclear-cantonese-2-control.json": "396a037d6e9347264fcafc1cdc995b39b06f4d7f172b8d2eb7b4532edd94b456",
+        "negation-stress-1-control.json": "e723bdef38a22843c826c397099b2a248d54e13c86e697d43b5d0f477ef29054",
+        "negation-stress-1-grounded.json": "fcd68efa62d58a781080184018600614781de6668656d060056c4696aba42df5",
+        "negation-stress-2-grounded.json": "1de70a838a801067fb20968c59486384797a1e176a3e528ce868345a40883bde",
+        "negation-stress-2-control.json": "c045966fce8cd54d0bd32275dfbcb7e33be4263d517a9636699a1bce22c595d4",
+        "heart-return-1-control.json": "d5a4a984e25974f58a6c304b38be58eb486c137a64a34f8d2d9f294e7cc6cb58",
+        "heart-return-1-grounded.json": "4fffa97c64ce489fd231650a10932721685c622ef936eaea0a914535062e5b9a",
+        "translated-choice-1-control.json": "924ea707b51f31dcafe8ef8ef1373095a40bb144b467d26d6b64bb1b51a67def",
+        "translated-choice-1-grounded.json": "983e46d728cc4f9d0544c9b86bb8097b548f927156a5e91b9df92368f13fb970",
+        "fresh-dialect-1-control.json": "057c4fd055fed3595c835a1d37bc08396e487640dff438289cfb80a12b57dcdb",
+        "fresh-dialect-1-grounded.json": "8c693db36f7b1adbbe808d65a3fab998bbf5ccf105f1dfb3536637abfbc22f5b",
+        "fresh-unresolved-name-1-control.json": "5891d82b1676c06cd200011245219ac1e25245504e6683d0a6d660a4721e1c4c",
+        "fresh-unresolved-name-1-grounded.json": "b16a6d518097ee9f4cdbea00ee646c1a1da5b6560c781ffa193303b5b909a4e4"
+      }
+    }
+  ]
+}

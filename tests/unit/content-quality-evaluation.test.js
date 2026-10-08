@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {prepare,run} from '../../scripts/evaluate-content-quality.mjs';
+import {caseInput,prepare,run} from '../../scripts/evaluate-content-quality.mjs';
 import {evaluateContentInBuild} from '../../scripts/content-quality-build.mjs';
 const corpus={hypothesis:'test',cases:[{id:'original',phase:'fresh',language:'zh',lines:['我沒有說你離開。','這封信仍留在桌上。'],line:0,text:'沒有',checks:['Preserve negated speech.']}]};
 async function fixture(t) {const directory=await fs.mkdtemp(path.join(os.tmpdir(),'content-quality-'));t.after(()=>fs.rm(directory,{recursive:true,force:true}));return directory;}
@@ -39,4 +39,11 @@ test('build evaluation is opt-in, production-only and requires a reviewed plan h
 test('prior uncertain attempts remain inside the same authorized budget',async t=>{
  const directory=await fixture(t);
  await assert.rejects(prepare({directory,corpus,snapshot:{rows:[]},budgetMicros:5_000_000,previousAccountedMicros:5_000_000}),/budget_exceeded/);
+});
+test('repeated wording requires an explicit occurrence and binds its exact grapheme range',()=>{
+ const spec={id:'return',language:'zh',lines:['我的心你還沒還。'],line:0,text:'還'};
+ assert.throws(()=>caseInput(spec,{rows:[]}),/selection_ambiguous/);
+ const selected=caseInput({...spec,textOccurrence:1},{rows:[]}).selection;
+ assert.equal(selected.lower,6);assert.equal(selected.upper,7);
+ assert.throws(()=>caseInput({...spec,textOccurrence:2},{rows:[]}),/selection_missing/);
 });

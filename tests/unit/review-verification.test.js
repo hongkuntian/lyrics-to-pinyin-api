@@ -44,3 +44,10 @@ test('only a grounded material improvement without regression can pass publicati
     {...good,sourceSufficient:false},{...good,noRegressions:false},{...good,materialImprovement:false},{...good,evidence:[]}])
     assert.notEqual(comparisonDecision(v,a,c),'publish');
 });
+test('a line-only correction cannot publish over a retained note about the changed occurrence',()=> {
+  const note={sourceID:'L0001',sourceQuote:source.structure.occurrences[0].sourceText,kind:'ambiguous_reading',explanation:'The current rendering chooses one of two possible readings.'};
+  const annotated={...content,sourceNotes:[note]};
+  const assessed=parseAssessment(JSON.stringify({decision:'correct',summary:'Clearer wording.',changes:a.changes}),source,annotated);
+  const context=comparisonContext(source,annotated,assessed,'A');
+  assert.equal(comparisonDecision(good,assessed,context),'source_note_requires_review');
+});
