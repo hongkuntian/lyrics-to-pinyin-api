@@ -31,5 +31,12 @@ export function publicTranslation(translation,doc) {
     const speaker=doc.structure.speakers.find(s=>s.id===line.speakerID);
     return {...line,startsTurn:vocalTextOnly?false:line.startsTurn,
       text:!vocalTextOnly && line.startsTurn?`${speaker.displayName}: ${line.lyricText}`:line.lyricText};
-  }),sourceNotes:value.sourceNotes.filter(note=>!vocalTextOnly || occurrences.get(note.sourceID)?.lyricText.includes(note.sourceQuote))};
+  }),sourceNotes:value.sourceNotes.flatMap(note=> {
+    if(!vocalTextOnly)return [note];
+    const occurrence=occurrences.get(note.sourceID);
+    // Canonical evidence quotes the raw source row. API v1 exposes vocal text;
+    // project an exact raw-row quote through the same source-owned mapping.
+    if(occurrence && note.sourceQuote===occurrence.sourceText)return [{...note,sourceQuote:occurrence.lyricText}];
+    return occurrence?.lyricText.includes(note.sourceQuote)?[note]:[];
+  })};
 }

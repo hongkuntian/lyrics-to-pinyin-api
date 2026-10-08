@@ -1,6 +1,7 @@
 // Build-only administration: no HTTP endpoint and no exported credentials.
 import {open} from 'node:fs/promises';
 import {runEvaluation} from './evaluate-multilingual.js';
+import {evaluateContentInBuild} from './content-quality-build.mjs';
 import {pathToFileURL} from 'node:url';
 import {environmentLanguagePolicy} from '../api/utils/song-library/languages.js';
 import {database} from '../api/utils/song-library/database.js';
@@ -33,6 +34,7 @@ export async function verifyBuildSchema({env=process.env,open=database,migrate=m
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
   try {
     await verifyBuildSchema();
+    await evaluateContentInBuild();
     if(process.env.LYRA_MULTILINGUAL_EVALUATE_ON_BUILD==='1') {
       if(process.env.VERCEL!=='1'||process.env.VERCEL_ENV!=='production')throw new Error('evaluation_requires_production_build');
       // Vercel's legacy multi-function builder can invoke this hook repeatedly.

@@ -103,7 +103,11 @@ export async function generate(doc,{apiKey,fetchFn=fetch,target='en',generationR
     if(parts.some(p=>p.type==='refusal')) throw new LibraryError('provider_refused',422);
     const outputs=parts.filter(p=>p.type==='output_text');
     if(outputs.length!==1) throw new LibraryError('invalid_provider_response',502);
-    return {content:parseTranslation(outputs[0].text,doc),actualMicros,response};
+    const content=parseTranslation(outputs[0].text,doc);
+    // Saved content remains readable, but newly generated uncertainty must never
+    // be silently dropped and presented as a fully supported translation.
+    if(content.rejectedNotes.length)throw new LibraryError('invalid_source_evidence',502);
+    return {content,actualMicros,response};
   } catch(error) {
     const failure=error instanceof LibraryError?error:new LibraryError('provider_unavailable',502);
     failure.actualMicros=actualMicros;failure.providerResponse=response;throw failure;
