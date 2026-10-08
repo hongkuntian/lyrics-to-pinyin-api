@@ -33,6 +33,49 @@ test('read-only explanation lookup never admits provider work and reuses complet
  assert.equal((await f.call({...f.request,readOnly:true},'token-b')).body.explanation.meaning,content.meaning);
  assert.equal(f.calls(),1);
 });
+test('resume-only lookup cannot reserve work, and read-only lookup distinguishes a pending explanation',async t=>{
+ const f=await fixture(t);
+ const before=Number((await f.store.budget()).daily);
+ assert.equal((await f.call({...f.request,resumeOnly:true})).body.state,'missing');
+ assert.equal(f.calls(),0);assert.equal(Number((await f.store.budget()).daily),before);
+ // A paused worker has been admitted but not dispatched.
+ await f.db.query('UPDATE library_settings SET enabled=false');
+ const {reserveExplanation}=await import('../../api/utils/song-library/study-store.js');
+ const {selectionFor,explanationKey,explanationRecipe}=await import('../../api/utils/song-library/study-explanation.js');
+ const doc=await f.store.document(f.request.documentID),translation=await f.store.translation(doc.id,'en');
+ const selection=selectionFor(doc,f.request),key=explanationKey(doc,translation,selection,'en');
+ await f.db.query('UPDATE library_settings SET enabled=true');
+ await reserveExplanation(f.store.db,{key,doc,translation,selection,recipe:explanationRecipe(selection,'en'),userID:'reader-a',amount:100000});
+ const read=await f.call({...f.request,readOnly:true});
+ assert.equal(read.body.state,'preparing');assert.equal(read.body.phase,'queued');assert.equal(f.calls(),0);
+ await Promise.all([f.call({...f.request,resumeOnly:true}),f.call({...f.request,resumeOnly:true})]);
+ await Promise.all(f.pending);assert.equal(f.calls(),1);
+ assert.equal((await f.call({...f.request,resumeOnly:true})).body.state,'ready');
+ assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM study_explanations')).rows[0].n),1);
+});
+test('interrupted Study stops waiting, restores membership allowance and never regenerates the same passage',async t=>{
+ let release;const barrier=new Promise(resolve=>release=resolve);
+ const f=await fixture(t,{explainFn:async()=>{await barrier;return {content,actualMicros:2000,response:{id:'late'}};}});
+ await f.db.query("UPDATE library_users SET access_kind='apple' WHERE id='reader-a'");
+ const {MembershipStore}=await import('../../api/utils/membership/store.js');
+ const membership=new MembershipStore(f.store.db);await membership.claimStarter('reader-a');
+ await f.call({...f.request,allowGeneration:true});
+ // Wait for the actual atomic claim, then simulate the expired server execution window.
+ for(let i=0;i<20;i++) {
+  if((await f.db.query('SELECT state FROM study_explanations')).rows[0]?.state==='running')break;
+  await new Promise(resolve=>setImmediate(resolve));
+ }
+ await f.db.query("UPDATE library_spend_operations SET submitted_at=now()-interval '7 minutes' WHERE kind='study_explanation'");
+ assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,9);
+ const result=await f.call({...f.request,readOnly:true});
+ assert.equal(result.body.state,'unknown');assert.equal(result.body.code,'worker_interrupted');
+ assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,10);
+ assert.equal((await f.call({...f.request,resumeOnly:true})).body.state,'unknown');
+ assert.ok(Number((await f.store.budget()).held)>0);
+ release();await Promise.all(f.pending);
+ assert.equal((await f.call({...f.request,readOnly:true})).body.state,'unknown');
+ assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,10);
+});
 test('authorization, stale revisions and invalid selections issue no explanation request',async t=>{
  const f=await fixture(t);
  assert.equal((await f.call(f.request,'bad-token')).code,401);

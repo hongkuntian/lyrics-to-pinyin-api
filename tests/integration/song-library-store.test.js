@@ -41,7 +41,7 @@ test('monthly budget also stops new work when daily allowance remains',async t=>
   const {store}=await fixture(t);await store.configure({enabled:true,dailyMicros:1_000_000,monthlyMicros:25_000});
   await assert.rejects(store.reserve(reservation),{code:'budget_exhausted'});
 });
-test('per-user active limits survive token rotation',async t=> {
+test('active limits survive token rotation while terminal uncertainty permits other content',async t=> {
   const {store}=await fixture(t);await store.saveDocument({...source,id:'doc-two',requestKey:'request-two',response:{...source.response,song:{...source.response.song,title:{original:'A different song'}}}});
   const job=await store.reserve(reservation);
   await assert.rejects(store.reserve({...reservation,documentID:'doc-two'}),{code:'user_busy'});
@@ -49,8 +49,10 @@ test('per-user active limits survive token rotation',async t=> {
   await store.createUser('reader-a','rotated-token');
   assert.equal((await store.authenticate('rotated-token')).id,'reader-a');
   assert.equal(await store.authenticate('token-a'),null);
-  await assert.rejects(store.reserve({...reservation,documentID:'doc-two'}),{code:'user_busy'});
-  assert.equal(Number((await store.usage()).accounted_micros),30_000);
+  const same=await store.reserve(reservation);assert.equal(same.kind,'unknown');assert.equal(same.job.id,job.job.id);
+  const next=await store.reserve({...reservation,documentID:'doc-two'});assert.equal(next.kind,'created');
+  assert.equal(Number((await store.usage()).accounted_micros),60_000);
+  await assert.rejects(store.reserve({...reservation,documentID:'doc-two',target:'fr'}),{code:'user_busy'});
 });
 test('per-user daily and monthly attempt allowances include completed work',async t=> {
   const {store,db}=await fixture(t);

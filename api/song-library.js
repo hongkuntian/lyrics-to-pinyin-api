@@ -13,12 +13,12 @@ import {publicDocument,publicTranslation} from './utils/song-library/public-cont
 
 import {canonicalTarget,environmentLanguagePolicy,requireDirection,capabilities} from './utils/song-library/languages.js';
 import {selectionV2,explanationRecipe,selectionFor,explanationBody,explanationKey,generateExplanation} from './utils/song-library/study-explanation.js';
-import {reserveExplanation,claimExplanation,finishExplanation,publicExplanation} from './utils/song-library/study-store.js';
+import {reserveExplanation,claimExplanation,finishExplanation,publicExplanation,existingExplanation} from './utils/song-library/study-store.js';
 
 import {annotationFor,pronunciationKey,enabledProfiles} from './utils/pronunciation-aids.js';
 
 export const config={maxDuration:300};
-const actions={capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
+const actions={capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeService()) {
   return async (recording,{refresh=false}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
@@ -50,7 +50,8 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       const db=getStore(),user=req.lyricaUser;if(!user)throw new LibraryError('unauthorized',401);
       if(input.allowGeneration!==undefined&&input.allowGeneration!==true&&input.allowGeneration!=='true')throw new LibraryError('invalid_request',400);
       if(input.readOnly!==undefined&&input.readOnly!==true)throw new LibraryError('invalid_request',400);
-      if(input.readOnly&&input.allowGeneration)throw new LibraryError('invalid_request',400);
+      if(input.resumeOnly!==undefined&&input.resumeOnly!==true&&input.resumeOnly!=='true')throw new LibraryError('invalid_request',400);
+      if(input.allowGeneration&&(input.readOnly||input.resumeOnly)||input.readOnly&&input.resumeOnly)throw new LibraryError('invalid_request',400);
       const policy=languagePolicy??environmentLanguagePolicy();
       if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
       if(input.action==='pronunciation') {
@@ -110,11 +111,26 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         if(input.action==='current') {
           if(input.revisionID!==undefined&&(typeof input.revisionID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(input.revisionID)))
             throw new LibraryError('invalid_request',400);
-          if(!saved)return send(200,{state:'missing',target,documentID:doc.id,sourceHash:doc.sourceHash});
+          if(!saved) {
+            const job=await db.existingTranslationJob(doc,target);
+            return send(200,job?{state:job.state,job}:{state:'missing',target,documentID:doc.id,sourceHash:doc.sourceHash});
+          }
           if(saved.id===input.revisionID)return send(200,{state:'unchanged',revisionID:saved.id,target,documentID:doc.id,sourceHash:doc.sourceHash});
           return send(200,{state:'ready',translation:publicTranslation(saved,doc)});
         }
         if(saved)return send(200,{state:'ready',translation:publicTranslation(saved,doc)});
+        const existing=await db.existingTranslationJob(doc,target);
+        if(existing) {
+          if(existing.state==='queued') {
+            if(!apiKey)throw new LibraryError('generation_not_configured',503);
+            waitUntilFn(execute(db,existing.id,doc).catch(()=>logger.error('translation_worker_storage_failure',{jobID:existing.id})));
+          }
+          if(['failed','unknown'].includes(existing.state))return send(409,{state:existing.state,job:existing,code:existing.errorCode??'review_required'});
+          res.setHeader('Retry-After','3');return send(202,{state:'preparing',job:existing});
+        }
+        // Recover an ambiguous response without ever creating a new allowance
+        // reservation. A missing request needs a fresh, explicit Generate tap.
+        if(input.resumeOnly)return send(200,{state:'missing'});
         if(!await db.isCurrentDocument(doc.id,selectionRevision))throw new LibraryError('source_revision_superseded');
         if(!apiKey)throw new LibraryError('generation_not_configured',503);
         requireDirection(policy,'translation',doc.response.song.language,target);
@@ -129,7 +145,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         const v2=input.contractVersion===2;
         if((input.contractVersion!==undefined&&input.contractVersion!==1&&!v2)||(v2&&typeof input.explanationLanguage!=='string'))throw new LibraryError('invalid_request',400);
         const allowed=(v2?['action','documentID','sourceHash','contractVersion','studyText','selection','explanationLanguage','contextTranslation']:
-          ['action','documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion']).concat(['allowGeneration','readOnly']);
+          ['action','documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion']).concat(['allowGeneration','readOnly','resumeOnly']);
         if(Object.keys(input).some(k=>!allowed.includes(k))||typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string')throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
         if(doc.sourceHash!==input.sourceHash)throw new LibraryError('source_changed');
@@ -153,8 +169,11 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         }
         const selection=v2?selectionV2(doc,input,saved):selectionFor(doc,input);
         const key=explanationKey(doc,saved,selection,language),recipe=explanationRecipe(selection,language);
-        const prior=(await db.db.query('SELECT * FROM study_explanations WHERE cache_key=$1',[key])).rows[0];
-        if(input.readOnly)return send(200,prior?.state==='ready'?{state:'ready',explanation:publicExplanation(prior)}:{state:'missing'});
+        const prior=await existingExplanation(db.db,key);
+        if(prior?.state==='ready')return send(200,{state:'ready',explanation:publicExplanation(prior)});
+        if(['failed','unknown'].includes(prior?.state))return send(409,{state:prior.state,code:prior.error_code??'review_required'});
+        if(input.readOnly)return send(200,prior?{state:'preparing',phase:prior.state}:{state:'missing'});
+        if(input.resumeOnly&&!prior)return send(200,{state:'missing'});
         let row=prior;
         if(!row) {
           requireDirection(policy,'explanation',selection.studyText?.layer==='translation'?saved.target:doc.response.song.language,language);
@@ -166,13 +185,14 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         }
         if(row.state==='ready')return send(200,{state:'ready',explanation:publicExplanation(row)});
         if(['failed','unknown'].includes(row.state))throw new LibraryError(row.error_code??'review_required');
+        if(row.state==='queued'&&!apiKey)throw new LibraryError('generation_not_configured',503);
         if(row.state==='queued')waitUntilFn((async()=>{
           if(!await claimExplanation(db.db,row.id))return;
           try { const result=await explainFn(doc,saved,selection,{apiKey,explanationLanguage:row.explanation_language,
             generationRequest:row.generation_request??explanationBody(doc,saved,selection,'en',{model:LEGACY_MODEL})});await finishExplanation(db.db,row.id,result); }
           catch(error) { await finishExplanation(db.db,row.id,{actualMicros:error.actualMicros??null,response:error.providerResponse??null,errorCode:error.code??'worker_interrupted'}); }
         })().catch(()=>logger.error('study_worker_storage_failure',{jobID:row.id})));
-        res.setHeader('Retry-After','3');return send(202,{state:'preparing'});
+        res.setHeader('Retry-After','3');return send(202,{state:'preparing',phase:row.state});
       }
       if(input.action==='status') {
         if(typeof input.jobID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(input.jobID))throw new LibraryError('invalid_request',400);

@@ -7,6 +7,20 @@ export const publicExplanation=row=>({id:row.id,documentID:row.document_id,trans
   lower:row.lower_offset,upper:row.upper_offset,recipe:row.recipe,...row.content,
   ...(row.contract_version===2?{contractVersion:2,explanationLanguage:row.explanation_language,studyText:row.study_text,
     selection:{offsetUnit:'grapheme',ranges:[{lower:row.lower_offset,upper:row.upper_offset}],textHash:row.selection_text_hash}}:{})});
+export async function existingExplanation(database,key) {
+  return database.transaction(async db=>{
+    // The worker has five minutes. After six, never submit its provider work
+    // again; retain its money reservation but return the unusable allowance.
+    const interrupted=await first(db,`UPDATE study_explanations e SET state='unknown',error_code='worker_interrupted'
+      FROM library_spend_operations o WHERE e.cache_key=$1 AND e.state='running'
+      AND o.id=e.id AND o.submitted_at<now()-interval '6 minutes' RETURNING e.id`,[key]);
+    if(interrupted) {
+      await db.query("UPDATE library_spend_operations SET state='unknown',error_code='worker_interrupted' WHERE id=$1 AND state='submitted'",[interrupted.id]);
+      await settleMemberUsage(db,interrupted.id,false);
+    }
+    return first(db,'SELECT * FROM study_explanations WHERE cache_key=$1',[key]);
+  });
+}
 export async function reserveExplanation(database,{key,doc,translation,selection,recipe,userID,amount,explanationLanguage='en',generationRequest=null,allowGeneration=false}) {
   return database.transaction(async db=>{
     const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
@@ -22,8 +36,8 @@ export async function reserveExplanation(database,{key,doc,translation,selection
         JOIN translation_document_bindings b ON b.translation_id=t.id WHERE b.document_id=$1 AND t.target=$2 FOR UPDATE OF t`,[doc.id,translation.target??'en']);
       if(head?.revision_id!==translation.id)throw new LibraryError('translation_revision_superseded');
     }
-    const active=await first(db,`SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown')
-      UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1`,[userID]);
+    const active=await first(db,`SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running')
+      UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running') LIMIT 1`,[userID]);
     if(active)throw new LibraryError('user_busy',429);
     checkEmergencyBudget(settings,await budget(db),amount);
     if(!user.unlimited_generation) {

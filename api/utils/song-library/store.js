@@ -148,6 +148,14 @@ export class SongLibraryStore {
     const row=await reusableTranslation(this.db,doc,target);
     return row && {...row.content,id:row.id,recipe:row.recipe,target:row.target,documentID:row.document_id,sourceHash:row.source_hash,notesLanguage:row.target};
   }
+  async existingTranslationJob(doc,target) {
+    const prior=await first(this.db,`SELECT j.* FROM translation_jobs j WHERE j.document_id=$1 AND j.target=$2
+      UNION ALL SELECT j.* FROM translation_generation_keys k JOIN translation_jobs j ON j.id=k.job_id
+      WHERE k.identity=$3 AND k.target=$2 LIMIT 1`,[doc.id,target,translationIdentity(doc)]);
+    if(!prior)return null;
+    const job=await jobForDocument(this.db,prior,doc.id);
+    return this.job(job.id);
+  }
   publishRevision(args) { return publishRevision(this.db,args); }
   rollbackRevision(args) { return publishRevision(this.db,args,{rollback:true}); }
   revisions(documentID,target) { return revisions(this.db,documentID,target); }
@@ -178,7 +186,9 @@ export class SongLibraryStore {
       if(prior) return {kind:prior.state==='queued'||prior.state==='running'?'pending':prior.state,job:await jobForDocument(db,prior,documentID)};
       if(user.access_kind!=='beta'&&!allowGeneration)throw new LibraryError('generation_required');
       if(!settings.enabled) throw new LibraryError('generation_disabled',503);
-      const active=await first(db,"SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown') UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1",[userID]);
+      // An uncertain completed attempt retains its spending reservation and can
+      // never redispatch, but must not block unrelated learning forever.
+      const active=await first(db,"SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running') UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running') LIMIT 1",[userID]);
       if(active) throw new LibraryError('user_busy',429);
       checkEmergencyBudget(settings,await budget(db),reservedMicros);
       if(!user.unlimited_generation) {

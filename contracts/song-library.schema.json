@@ -785,7 +785,8 @@
         },
         "state": {
           "const": "preparing"
-        }
+        },
+        "phase": { "enum": ["queued", "running"] }
       },
       "additionalProperties": false
     },

@@ -58,6 +58,29 @@ async function setup(t,overrides={}) {
   };
   return {db,store,handler,call:caller(handler),pending,instance:changes=>caller(createSongLibraryHandler({...options,...changes}))};
 }
+test('lost translation admission can be discovered and resumed without a second reservation',async t=>{
+ let release;const barrier=new Promise(resolve=>release=resolve);let generations=0;
+ const {call,pending,store}=await setup(t,{generateFn:async()=>{generations++;await barrier;return fakeGeneration();}});
+ const doc=(await call({action:'lyrics',recording})).body.document;
+ const request={action:'translate',documentID:doc.id,sourceHash:doc.sourceHash};
+ assert.equal((await call({...request,resumeOnly:true})).body.state,'missing');
+ assert.equal(Number((await store.usage()).jobs),0);
+ const started=await call({...request,allowGeneration:true});
+ const found=await call({...request,action:'current'});
+ assert.equal(found.body.job.id,started.body.job.id);assert.ok(['queued','running'].includes(found.body.state));
+ const resumed=await call({...request,resumeOnly:true});assert.equal(resumed.body.job.id,started.body.job.id);
+ assert.equal(Number((await store.usage()).jobs),1);
+ release();await Promise.all(pending);
+ assert.equal((await call({...request,resumeOnly:true})).body.state,'ready');assert.equal(generations,1);
+});
+test('resume-only rejects generation permission and malformed flags before provider work',async t=>{
+ const {call,store}=await setup(t);
+ const doc=(await call({action:'lyrics',recording})).body.document;
+ for(const patch of [{resumeOnly:false},{resumeOnly:'false'},{resumeOnly:true,allowGeneration:true}]) {
+  assert.equal((await call({action:'translate',documentID:doc.id,sourceHash:doc.sourceHash,...patch})).code,400);
+ }
+ assert.equal(Number((await store.usage()).jobs),0);
+});
 test('fetch, translate, poll and reuse across users calls each provider only once',async t=> {
   let lyrics=0,generations=0;
   const {call,pending,store}=await setup(t,{loadLyrics:async()=>{lyrics++;return response;},generateFn:async()=>{generations++;return fakeGeneration();}});
