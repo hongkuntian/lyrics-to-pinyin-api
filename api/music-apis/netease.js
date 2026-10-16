@@ -14,23 +14,40 @@ export class NeteaseAPI extends BaseMusicAPI {
       try { return findRecording(songs,request); }
       catch(error) { if(error.code!=='recording_mismatch') throw error;lastMismatch=error; }
       const expected=recordingNames(request);
+      const spotify=context.recordingProvider==='spotify';
+      const expectedCredits=spotify ? (request.creditedArtistNames??[]).map(normalizeRecordingText).sort():expected.credits;
       // Resolve authoritative artist aliases only for plausible recordings.
       // The profile promises are shared between the shallow and deeper pages.
-      const plausible=context.recordingProvider==='spotify'?[]:songs.filter(song=>recordingNames(song).title===expected.title && Number.isFinite(song.duration) && Number.isFinite(request.duration) && recordingScore({...song,title,artist},request)>=0).slice(0,3);
+      const plausible=songs.filter(song=>recordingNames(song).title===expected.title && Number.isFinite(song.duration) && Number.isFinite(request.duration)
+        && recordingScore({...song,title,artist,...(spotify?{creditedArtistNames:request.creditedArtistNames}:{})},request)>=0).slice(0,3);
       for(const song of plausible) {
         const performers=records.get(song.id).raw.artists || [];
-        if(!performers.length || performers.length>3 || performers.length!==expected.credits.length) continue;
+        if(!performers.length || performers.length>3 || performers.length!==expectedCredits.length) continue;
         const aliases=await Promise.all(performers.map(async performer=>{
-          const direct=[performer.name].filter(name=>expected.credits.includes(normalizeRecordingText(name)));
+          const direct=[performer.name].filter(name=>expectedCredits.includes(normalizeRecordingText(name)));
           if(direct.length) return direct[0];
           if(!/^\d{1,20}$/.test(String(performer.id))) return null;
           const id=String(performer.id);
           if(!profiles.has(id)) profiles.set(id,this.namesForArtist(id,context));
           const names=await profiles.get(id);
-          const matching=names.filter(name=>expected.credits.includes(normalizeRecordingText(name)));
+          const matching=names.filter(name=>expectedCredits.includes(normalizeRecordingText(name)));
           return new Set(matching.map(normalizeRecordingText)).size===1 ? matching[0]:null;
         }));
-        if(aliases.every(Boolean) && new Set(aliases.map(normalizeRecordingText)).size===expected.credits.length) song.artist=aliases.join(' & ');
+        if(aliases.every(Boolean) && JSON.stringify(aliases.map(normalizeRecordingText).sort())===JSON.stringify(expectedCredits)) {
+          // Spotify keeps complete artist entities and independent display
+          // labels. Only this provider's ID-verified profile names may supply
+          // equivalent credits; request strings never backfill source labels.
+          if(spotify) {
+            song.creditedArtistNames=aliases;
+            if(recordingScore(song,request)>=0 && performers.every(p=>/^\d{1,20}$/.test(String(p.id)) && typeof p.name==='string' && p.name.trim())) {
+              // Share only contributor-name equivalence for this request. The
+              // other provider must independently validate its own recording
+              // and lyrics; no text, timing or Apple catalog evidence is shared.
+              context.onVerifiedArtistCredits?.({names:performers.map(p=>p.name),aliases:[...aliases]});
+            }
+          }
+          else song.artist=aliases.join(' & ');
+        }
       }
       try { return findRecording(songs,request); }
       catch(error) { if(error.code!=='recording_mismatch') throw error;lastMismatch=error; }

@@ -1,0 +1,134 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {NeteaseAPI} from '../../api/music-apis/netease.js';
+import {LRCAPI} from '../../api/music-apis/lrclib.js';
+import {createMusicRomanizeService,SELECTION_REVISION} from '../../api/music-romanize.js';
+import {lyricLoader,createSongLibraryHandler} from '../../api/song-library.js';
+import {libraryDB} from '../helpers/library-db.js';
+import {makeDocument} from '../../api/utils/song-library/document.js';
+import {publicDocument} from '../../api/utils/song-library/public-content.js';
+import {spotifySearchRequest,verifySpotifyBinding,sourceCapsule} from '../../api/utils/song-library/spotify-recording.js';
+import {createMockReq,createMockRes} from '../helpers/mock-http.js';
+
+// Request ID is synthetic. Provider IDs/names/aliases were observed live;
+// performed words are original test fixtures.
+const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',market:'US',metadata:{origin:'spotify',
+  title:'因為愛情',artists:['Eason Chan','Faye Wong'],album:'Stranger Under My Skin',duration_ms:216893}};
+const raw={id:64317,name:'因为爱情',artists:[{id:2116,name:'陈奕迅'},{id:9621,name:'王菲'}],
+  album:{name:'Stranger Under My Skin'},duration:218277};
+const profiles={2116:{id:2116,name:'陈奕迅',alias:['Eason Chan']},9621:{id:9621,name:'王菲',alias:['Faye Wong','Shirley Wong']}};
+function fixture({song=raw,songs=[song],changeProfile=p=>p,lyricForID=()=> '[00:12]一起听这首歌\n[00:18]慢慢唱给你听'}={}) {
+  const calls=[];
+  const fetchFn=async url=>{
+    const u=new URL(url);calls.push(u);
+    if(u.pathname==='/artist/detail')return new Response(JSON.stringify({code:200,data:{artist:changeProfile(structuredClone(profiles[u.searchParams.get('id')]))}}));
+    if(u.pathname==='/lyric')return new Response(JSON.stringify({code:200,lrc:{lyric:lyricForID(u.searchParams.get('id'))}}));
+    return new Response(JSON.stringify({code:200,result:{songs}}));
+  };
+  const api=new NeteaseAPI(),search=api.searchSong.bind(api),lyrics=api.getLyrics.bind(api);
+  api.searchSong=(a,t,c)=>search(a,t,{...c,fetchFn});
+  api.getLyrics=(id,c)=>lyrics(id,{...c,fetchFn});
+  return {api,calls};
+}
+
+test('Spotify English contributor names resolve only through each independent provider artist ID',async()=>{
+  const {api,calls}=fixture(),target=spotifySearchRequest(recording),{artist,title,...context}=target;
+  const song=await api.searchSong(artist,title,context);
+  assert.equal(song.id,raw.id);
+  assert.equal(song.artist,'陈奕迅 & 王菲');
+  assert.deepEqual(song.creditedArtistNames,recording.metadata.artists);
+  assert.equal(calls.filter(u=>u.pathname==='/artist/detail').length,2);
+  await api.searchSong(artist,title,context);
+  assert.equal(calls.filter(u=>u.pathname==='/artist/detail').length,2);
+});
+
+test('provider localization cannot drop or invent a contributor or accept wrong metadata',async()=>{
+  for(const options of [
+    {changeProfile:p=>({...p,id:999})},
+    {changeProfile:p=>({...p,alias:['Other Artist']})},
+    {changeProfile:p=>({...p,alias:['Eason Chan','Faye Wong']})},
+    {song:{...raw,artists:[raw.artists[0]]}},
+    {song:{...raw,artists:[...raw.artists,{id:999,name:'Guest'}]}},
+    {song:{...raw,duration:240000}},
+    {song:{...raw,name:raw.name+' (Live)'}},
+    {song:{...raw,album:{name:'Stranger Under My Skin (Live)'}}}
+  ]) {
+    const {api}=fixture(options),{artist,title,...context}=spotifySearchRequest(recording);
+    await assert.rejects(()=>api.searchSong(artist,title,context),{code:'recording_mismatch'});
+  }
+  for(const artists of [['Eason Chan'],['Eason Chan','Faye Wong','Guest'],['Eason Chan','Eason Chan']]) {
+    const {api}=fixture(),{artist,title,...context}=spotifySearchRequest({...recording,metadata:{...recording.metadata,artists}});
+    await assert.rejects(()=>api.searchSong(artist,title,context),{code:'recording_mismatch'});
+  }
+});
+
+test('localized Spotify acquisition remains independent through fallback, durable document and wire binding',async()=>{
+  const {api}=fixture();
+  const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}},
+    resolveCatalogAliasesFn:()=>assert.fail('No Apple catalog lookup'),lookupReviewedRecordingFn:()=>assert.fail('No Apple reviewed recording')});
+  const res=createMockRes();await service(createMockReq({body:{recording}}),res);
+  assert.equal(res.statusCode,200);
+  assert.equal(res.body.quality.synced,true);
+  assert.equal(res.body.song.artist.original,'陈奕迅 & 王菲');
+  assert.equal(res.body.metadata.catalog_resolution,undefined);
+  assert.equal(res.body.metadata.recording_match,undefined);
+  assert.equal(res.body.recordingBinding.match.spotifyCatalogVerified,false);
+  const response=await lyricLoader(service)(recording),doc=makeDocument(recording,response,SELECTION_REVISION);
+  const wire=publicDocument(doc,recording);
+  assert.equal(wire.recordingBinding.documentID,doc.id);
+  assert.equal(wire.sourceCapsule,undefined);
+  assert.equal(doc.modelContext.artist,'陈奕迅 & 王菲');
+  assert.deepEqual(doc.requestEvidence.candidate.creditedArtistNames,recording.metadata.artists);
+  verifySpotifyBinding(wire.recordingBinding,recording,sourceCapsule(wire.response),SELECTION_REVISION,wire.response,{durable:true});
+});
+
+test('ambiguous NetEase timing can discover native artist names but only LRCLIB supplies the accepted text and timing',async()=>{
+  const {api:netease}=fixture({songs:[raw,{...raw,id:2716607408}],
+    lyricForID:id=>`[00:${id==='64317'?'12':'14'}]一起听这首歌\n[00:18]慢慢唱给你听`});
+  const lrcRecord={id:35270900,trackName:'因为爱情',artistName:'陈奕迅、王菲',albumName:raw.album.name,duration:217,
+    syncedLyrics:'[00:15]这是另一个来源\n[00:24]保留自己的时间'};
+  const lrc=new LRCAPI(),search=lrc.searchSong.bind(lrc),queries=[];
+  lrc.searchSong=(artist,title,context)=>{
+    assert.equal(context.onVerifiedArtistCredits,undefined);
+    queries.push(context.creditedArtistNames);
+    return search(artist,title,{...context,fetchFn:async url=>new Response(JSON.stringify(
+      new URL(url).pathname==='/api/get'?lrcRecord:[lrcRecord]))});
+  };
+  const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[netease,lrc],hedgeDelayMs:0,logger:{info(){},error(){}},
+    resolveCatalogAliasesFn:()=>assert.fail('No Apple catalog lookup')});
+  const res=createMockRes();await service(createMockReq({body:{recording}}),res);
+  assert.equal(res.statusCode,200);
+  assert.equal(res.body.metadata.source,'LRCAPI');
+  assert.equal(res.body.song.id,35270900);
+  assert.equal(res.body.song.artist.original,lrcRecord.artistName);
+  assert.deepEqual(res.body.lines.map(l=>[l.original,l.timestamp]),[['这是另一个来源',15],['保留自己的时间',24]]);
+  assert.deepEqual(queries,[['Eason Chan','Faye Wong'],['陈奕迅','王菲']]);
+  const doc=makeDocument(recording,res.body,SELECTION_REVISION);
+  assert.equal(doc.modelContext.artist,lrcRecord.artistName);
+  assert.equal(doc.sourceCapsule.provider,'lrclib');
+  assert.deepEqual(doc.requestEvidence.candidate.creditedArtistNames,recording.metadata.artists);
+  const hit=createMockRes();await service(createMockReq({body:{recording}}),hit);
+  assert.equal(hit.statusCode,200);assert.equal(queries.length,2);
+});
+
+test('authenticated library route stores and reopens localized Spotify lyrics under the original request',async t=>{
+  const {db,store}=await libraryDB();t.after(()=>db.close());
+  const {api}=fixture();
+  const acquisition=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}}});
+  const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(acquisition),
+    authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
+  const call=async(body)=>{
+    const res=createMockRes();await handler(createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res);return res;
+  };
+  const first=await call({action:'lyrics',recording,refresh:true});
+  assert.equal(first.statusCode,200);assert.equal(first.body.state,'ready');
+  assert.equal(first.body.document.response.quality.synced,true);
+  assert.equal(first.body.document.response.song.artist.original,'陈奕迅 & 王菲');
+  const reopened=await call({action:'lyrics',recording});
+  assert.equal(reopened.statusCode,200);assert.equal(reopened.body.document.id,first.body.document.id);
+  assert.equal(reopened.body.document.recordingBinding.documentID,first.body.document.id);
+  assert.equal(reopened.body.document.recordingBinding.requestHash,first.body.document.recordingBinding.requestHash);
+  const wrong=await call({action:'lyrics',recording:{...recording,metadata:{...recording.metadata,artists:['Eason Chan','Guest']}}});
+  assert.equal(wrong.statusCode,409);assert.equal(wrong.body.code,'recording_mismatch');
+  assert.equal(Number((await store.usage()).jobs),0);
+});

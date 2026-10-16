@@ -10,6 +10,8 @@ Metadata equivalence requires a numeric catalog ID, the same nonempty normalized
 
 LRCLIB's spaced `Singer + Guest` delimiter can normalize to `Singer & Guest` only when the complete title and requested contributor set already match after that formatting change. Existing complete stage names and unspaced plus signs stay intact. This adapter does not change Spotify's structured credit matching, duration limits, version checks, or ambiguity rejection. For mixed catalog labels such as a Chinese title with English artist names, discovery tries a complete, server-verified localization with that title before the canonical international query; the same catalog, album, duration, contributor and query-budget checks still apply.
 
+Spotify's independent provider path can resolve contributor names through NetEase's artist-ID profiles. Every requested complete credit must map to exactly one profile name or alias, preserving multiplicity and all recording/version/duration checks. Provider display labels remain unchanged. If NetEase has ambiguous lyric timelines, one bounded native-name retry lets another independent provider validate its own complete recording and supply its own lyrics/timing. Only verified contributor-name equivalence is shared; Apple catalog aliases, lyric text and timestamps are not transferred. The original Spotify request hash, independent source context and response binding remain separate.
+
 Duplicated lyrics can normalize script, punctuation and production credits only when all remaining line timestamps agree exactly. Conflicting timelines remain ambiguous. A response containing timestamps proves structural timing availability, not acoustic alignment.
 
 Spotify uses complete credited artist names and its own request-bound identity.

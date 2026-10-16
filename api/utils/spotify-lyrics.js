@@ -36,7 +36,11 @@ export function createSpotifyLyricsService(dependencies={}) {
     }catch{return false;}
   };
   return async(req,res)=>{
-    const reply=(status,body)=>res.status(status).json(body);
+    const started=Date.now();
+    const reply=(status,body)=>{
+      logger.info?.('spotify_lyrics_request',{status,reason:body.reason??body.code??'matched',duration_ms:Date.now()-started});
+      return res.status(status).json(body);
+    };
     try {
       const body=req.body,options=body?.options??{};
       if(!body||typeof body!=='object'||Array.isArray(body)||Buffer.byteLength(JSON.stringify(body))>8192
@@ -60,27 +64,49 @@ export function createSpotifyLyricsService(dependencies={}) {
         const apis=getAvailableAPIsFn(script).filter(api=>independentProvider(api.name));
         if(!apis.length)return {status:404,body:{code:'lyrics_absent'}};
         let mismatch=null,timedOut=false,unavailable=false;
-        const lookup=async(api,parentSignal)=>{
+        const deadline=Date.now()+16000,localizations=[];
+        const onVerifiedArtistCredits=credits=>{
+          if(!Array.isArray(credits?.names)||!Array.isArray(credits.aliases)||credits.names.length!==target.creditedArtistNames.length
+            ||credits.aliases.length!==credits.names.length||credits.names.length>3
+            ||[...credits.names,...credits.aliases].some(n=>typeof n!=='string'||!n.trim()||n.length>1024)
+            ||recordingScore({...target,creditedArtistNames:credits.aliases},target)<0)return;
+          const key=JSON.stringify(credits.names);
+          if(!localizations.some(v=>v.key===key)&&localizations.length<1)localizations.push({...credits,key});
+        };
+        const lookup=async(api,parentSignal,localization=null)=>{
           try {
             return await withDeadline(async signal=>{
-              const {artist,title,...context}=target;
-              const song=await api.searchSong(artist,title,{...context,signal});
+              const searchTarget=localization?{...target,artist:localization.names.join(' & '),creditedArtistNames:localization.names}:target;
+              const {artist,title,...context}=searchTarget;
+              let song=await api.searchSong(artist,title,{...context,signal,...(independentProvider(api.name)==='netease'?{onVerifiedArtistCredits}:{})});
               if(!song)return null;
+              if(recordingScore(song,searchTarget)<0)findRecording([song],searchTarget);
+              // The source's complete native credits matched independently.
+              // Retain its display labels; equivalent credit names come only
+              // from the other provider's ID-verified artist profiles.
+              if(localization)song={...song,creditedArtistNames:localization.aliases};
               if(recordingScore(song,target)<0)findRecording([song],target);
               const raw=await api.getLyrics(song.id,{signal,song});
               const lyrics=cleanLyrics(raw,{duration:song.duration,title:song.title,artist:song.artist});
               if(rejectRecordingLyricsFn(lyrics?.lines??[],target))throw new RecordingMismatchError('version_conflict');
               return hasUsableLyrics(lyrics,{duration:song.duration})?{song,lyrics,api,target}:null;
-            },providerTimeoutMs,parentSignal);
+            },Math.max(1,Math.min(providerTimeoutMs,deadline-Date.now())),parentSignal);
           }catch(error){
             if(parentSignal?.aborted)return null;
+            logger.info?.('spotify_lyrics_lookup',{provider:independentProvider(api.name),reason:error.reason??error.code??'provider_unavailable'});
             if(error.code==='recording_mismatch')mismatch=error.reason;
             else if(error.code==='provider_timeout'||error.name==='AbortError')timedOut=true;
             else {unavailable=true;logger.info?.('spotify_lyrics_provider_failure',{provider:independentProvider(api.name)});}
             return null;
           }
         };
-        const selected=await hedgedLookup(apis,lookup,{delayMs:hedgeDelayMs,untimedGraceMs});
+        let selected=await hedgedLookup(apis,lookup,{delayMs:hedgeDelayMs,untimedGraceMs});
+        if(!selected&&localizations.length&&Date.now()<deadline) {
+          // One bounded native-name retry. Ambiguous NetEase timelines remain
+          // rejected; LRCLIB/Kugou must supply their own verified recording.
+          selected=await hedgedLookup(apis.filter(api=>independentProvider(api.name)!=='netease'),
+            (api,signal)=>lookup(api,signal,localizations[0]),{delayMs:hedgeDelayMs,untimedGraceMs});
+        }
         if(!selected)return timedOut?{status:504,body:{code:'provider_timeout'}}:unavailable?{status:502,body:{code:'provider_unavailable'}}
           :mismatch?{status:409,body:{code:'recording_mismatch',reason:mismatch}}:{status:404,body:{code:'lyrics_absent'}};
         const {song,lyrics,api}=selected,languageDetails=analyzeLyricLanguageFn(lyrics.lines.map(l=>l.text??''),{genres:[],verified:false});
