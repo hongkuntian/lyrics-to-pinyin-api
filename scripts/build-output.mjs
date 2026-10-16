@@ -10,11 +10,15 @@ import {promisify} from 'node:util';
 const require=createRequire(import.meta.url),u=require('@vercel/build-utils'),{build}=require('@vercel/node');
 const execute=promisify(execFile),root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export const manifest=JSON.parse(await fs.readFile(new URL('./vercel-functions.json',import.meta.url),'utf8'));
+// Runtime bundles need dependency/module identity, never package lifecycle hooks.
+// The outer explicit static carrier owns the one and only packaging invocation.
+export function isolatedBuilderPackage(packageJSON){return {...packageJSON,scripts:{}};}
 export async function packageFunctions({workPath=root,output=path.join(workPath,'.vercel/output'),preflight=true}={}){
  if(process.versions.node.split('.')[0]!=='24')throw new Error('node24_required');
  if(preflight)await execute(process.execPath,[path.join(workPath,'scripts/vercel-library-build.js')],{cwd:workPath});
  await fs.mkdir(path.join(workPath,'.vercel'),{recursive:true});
  const stage=await fs.mkdtemp(path.join(workPath,'.vercel','build-stage-'));
+ try{
  await fs.cp(path.join(workPath,'node_modules'),path.join(stage,'node_modules'),{recursive:true});
  await fs.rm(output,{recursive:true,force:true});await fs.mkdir(path.join(output,'functions'),{recursive:true});
  const sourceRefs=await u.glob('**',{cwd:workPath,ignore:['.git/**','.vercel/**','node_modules/**','artifacts/**']});
@@ -23,8 +27,7 @@ export async function packageFunctions({workPath=root,output=path.join(workPath,
  for(const [name,file] of Object.entries(sourceRefs))input[name]=new u.FileBlob({data:await fs.readFile(file.fsPath)});
  // The builder must not rediscover/run this package's build hooks once per entry.
  const packageJSON=JSON.parse(await fs.readFile(path.join(workPath,'package.json'),'utf8'));
- const scripts={...packageJSON.scripts};delete scripts['vercel-build'];delete scripts.build;
- input['package.json']=new u.FileBlob({data:JSON.stringify({...packageJSON,scripts})});
+ input['package.json']=new u.FileBlob({data:JSON.stringify(isolatedBuilderPackage(packageJSON))});
  const selected={functions:Object.fromEntries(manifest.entries.map(({entry,...config})=>[entry,config]))},inventory=[];
  for(const {entry,includeFiles,...options} of manifest.entries){
   const built=await build({files:input,entrypoint:entry,workPath:stage,config:{nodeVersion:'24.x',projectSettings:{installCommand:'',buildCommand:''},includeFiles},meta:{},considerBuildCommand:true});
@@ -49,7 +52,7 @@ export async function packageFunctions({workPath=root,output=path.join(workPath,
  await fs.writeFile(path.join(output,'config.json'),JSON.stringify(config,null,2)+'\n');
  const receipt={node:process.version,builder:require('@vercel/node/package.json').version,mode:'non-development meta:{}',preflightRuns:preflight?1:0,functionCount:inventory.length,publicRoutes:manifest.routes,privateConsumers:inventory.filter(x=>x.experimentalTriggers),terminal404:true,crons:config.crons,functions:inventory,deployed:false};
  await fs.writeFile(path.join(output,'packaging-receipt.json'),JSON.stringify(receipt,null,2)+'\n');
- await fs.rm(stage,{recursive:true,force:true});
  return receipt;
+ }finally{await fs.rm(stage,{recursive:true,force:true});}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){try{const receipt=await packageFunctions();console.log(JSON.stringify({functionCount:receipt.functionCount,publicRoutes:receipt.publicRoutes.length,privateConsumers:receipt.privateConsumers.length,node:receipt.node,builder:receipt.builder}));}catch(error){console.error('Explicit function packaging failed:',error.message);process.exitCode=1;}}

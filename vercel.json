@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "buildCommand": "node scripts/build-output.mjs",
-  "outputDirectory": ".vercel/output",
-  "crons": [
+  "builds": [
     {
-      "path": "/api/review-reports",
-      "schedule": "0 8 * * *"
+      "src": "package.json",
+      "use": "@vercel/static-build@21.0.2"
     }
-  ]
+  ],
+  "buildCommand": "node scripts/build-output.mjs",
+  "outputDirectory": ".vercel/output"
 }

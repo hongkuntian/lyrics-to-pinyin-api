@@ -22,8 +22,7 @@
     "test:music": "node tests/music-tests.js",
     "build": "node scripts/build-output.mjs",
     "start": "node scripts/dev-server.js",
-    "deploy": "vercel --prod",
-    "vercel-build": "node scripts/build-output.mjs"
+    "deploy": "vercel --prod"
   },
   "dependencies": {
     "@apple/app-store-server-library": "3.1.0",
