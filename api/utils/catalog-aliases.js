@@ -1,6 +1,6 @@
 import {createRequire} from 'node:module';
 import {fetchJSON,withDeadline} from './fetch-json.js';
-import {recordingScore,recordingNames,normalizeRecordingText,normalizedAlbum} from './recording-match.js';
+import {recordingScore,recordingNames,sameRecordingNames,normalizeRecordingText,normalizedAlbum} from './recording-match.js';
 import {configuredAppleCatalog,sameCatalogRecording,CATALOG_RESOLUTION_VERSION} from './apple-catalog.js';
 const require=createRequire(import.meta.url);
 const {recordings:reviewedAliases}=require('../data/reviewed-catalog-aliases.json');
@@ -31,7 +31,13 @@ function finish(request,songs,catalogID,method) {
  const entities=[...new Map(ordered.flatMap(s=>s.artist_entities??[]).map(s=>[s.id+':'+s.name,s])).values()].slice(0,48);
  const expected=recordingNames(request,entities),artists=ordered.filter(s=>recordingNames(s,entities).credits.length===expected.credits.length);
  const complete=ordered.filter(s=>recordingNames(s,entities).credits.length===expected.credits.length);
- const candidates=[...complete,...complete.flatMap(s=>artists.map(a=>({...s,artist:a.artist})))];
+ // Mixed MusicKit labels (native title, international artist) may not occur as
+ // a complete catalog localization. Try the verified title's complete locale
+ // first so a slow international query cannot consume the recovery deadline.
+ // Keep canonical queries and the same bounded set of trusted candidates.
+ const localized=!ordered.some(s=>sameRecordingNames(s,request))
+  ? complete.find(s=>recordingNames(s,entities).title===expected.title):null;
+ const candidates=[...(localized?[localized]:[]),...complete,...complete.flatMap(s=>artists.map(a=>({...s,artist:a.artist})))];
  const seen=new Set(),searches=candidates.filter(s=>{const k=key(s);if(seen.has(k))return false;seen.add(k);return true;}).map(searchFields).slice(0,8);
  const canonical=ordered.find(s=>s.storefront==='us')??ordered[0];
  const aliases=searches.filter(song=>key(song)!==key(request));

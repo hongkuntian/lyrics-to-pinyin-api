@@ -8,6 +8,8 @@ NetEase tries 30 results, then a bounded 100-result fallback when no usable veri
 
 Metadata equivalence requires a numeric catalog ID, the same nonempty normalized album, and duration within 0.5 seconds. It handles a reversed two-word solo artist name, an explicitly known artist prefixed to a title, a single ASCII-letter typo in a long Latin title (preserving all other diacritics and numbers), or a narrow Chinese stage-name form. It does not discard featured performers or recording versions. Responses preserve the provider's original labels and carry a proof bound to the original request.
 
+LRCLIB's spaced `Singer + Guest` delimiter can normalize to `Singer & Guest` only when the complete title and requested contributor set already match after that formatting change. Existing complete stage names and unspaced plus signs stay intact. This adapter does not change Spotify's structured credit matching, duration limits, version checks, or ambiguity rejection. For mixed catalog labels such as a Chinese title with English artist names, discovery tries a complete, server-verified localization with that title before the canonical international query; the same catalog, album, duration, contributor and query-budget checks still apply.
+
 Duplicated lyrics can normalize script, punctuation and production credits only when all remaining line timestamps agree exactly. Conflicting timelines remain ambiguous. A response containing timestamps proves structural timing availability, not acoustic alignment.
 
 ## Usable lyrics and instrumentals
