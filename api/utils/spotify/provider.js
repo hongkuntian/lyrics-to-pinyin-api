@@ -16,7 +16,7 @@ export function createSpotifyProvider({fetchFn=fetch,now=Date.now,clientID}={}){
   let body;try{body=await response.json();}catch{throw error('spotify_unavailable',503);}
   const quota=body.error?.reason==='QUOTA_EXCEEDED'||body.error?.message==='QUOTA_EXCEEDED'||body.error==='QUOTA_EXCEEDED';
   if(quota)throw error('spotify_quota_exceeded',429,{notBefore:now()+300000});
-  if(response.status===429){const value=response.headers.get('retry-after'),seconds=Number(value),date=Date.parse(value);throw error('spotify_rate_limited',429,{notBefore:now()+(Number.isFinite(seconds)?Math.max(1,seconds)*1000:Math.max(1000,date-now()))});}
+  if(response.status===429){const value=response.headers.get('retry-after'),seconds=Number(value),date=Date.parse(value);throw error('spotify_rate_limited',429,{notBefore:now()+(Number.isFinite(seconds)?Math.max(1,seconds)*1000:Number.isFinite(date)?Math.max(1000,date-now()):30000)});}
   if(!response.ok){throw error(quota?'spotify_quota_exceeded':response.status===401?'spotify_unauthorized':response.status===403?'spotify_access_denied':'spotify_unavailable',response.status,{notBefore:quota?now()+300000:undefined});}
   return {status:200,body,requestStartedAt,responseReceivedAt};
  }};

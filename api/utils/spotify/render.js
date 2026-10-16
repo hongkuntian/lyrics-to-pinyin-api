@@ -1,11 +1,11 @@
 import {LibraryError} from '../song-library/store.js';
-import {requestFingerprint,recordingFingerprint} from './observation.js';
-import {sha} from './vault.js';
+import {verifySpotifyBinding,sourceCapsule} from '../song-library/spotify-recording.js';
 const swift=ms=>ms/1000-978307200;
 const bytes=v=>Buffer.byteLength(JSON.stringify(v));
 export function validateDocument(doc,recording){
- const b=doc?.recordingBinding,hex=v=>/^[a-f0-9]{64}$/.test(v??'');
- if(!b||b.version!==2||b.provider!=='spotify'||b.itemID!==recording.item_id||b.requestHash!==requestFingerprint(recording)||b.recordingKey!==recordingFingerprint(recording)||b.documentID!==doc.id||b.recordingKey!==doc.recordingKey||b.selectionRevision!==doc.selectionRevision||b.sourceHash!==doc.sourceHash||['sourceHash','textRevision','timingRevision','readingRevision'].some(k=>!hex(b[k])||b[k]!==doc[k])||b.match?.method!=='request_metadata_match'||b.match?.policy!=='spotify-request-match-1'||b.match?.spotifyCatalogVerified!==false||b.match?.acousticVerified!==false||b.source?.metadataOrigin!=='independent_lyric_source'||!['netease','lrclib','kugou'].includes(b.source?.provider)||String(doc.response?.song?.id)!==b.source.itemID||doc.id!==sha(JSON.stringify(['spotify-document-2',b.recordingKey,b.sourceHash,b.selectionRevision])))throw new LibraryError('recording_mismatch',409);
+ if(!doc?.response||!doc.selectionRevision||doc.response.metadata?.selection_revision!==doc.selectionRevision)throw new LibraryError('recording_mismatch',409);
+ const b=verifySpotifyBinding(doc.recordingBinding,recording,sourceCapsule(doc.response),doc.selectionRevision,doc.response,{durable:true});
+ if(b.documentID!==doc.id||b.recordingKey!==doc.recordingKey||['sourceHash','textRevision','timingRevision','readingRevision'].some(k=>b[k]!==doc[k]))throw new LibraryError('recording_mismatch',409);
  return b;
 }
 export function validateRecipe(r){
@@ -19,7 +19,7 @@ export function validateRecipe(r){
 function segments(value,max=700){const result=[];let part='';for(const {segment} of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(value)){if(bytes(part+segment)>max&&part){result.push(part);part='';}part+=segment;}if(part||!result.length)result.push(part);return result;}
 export function renderState({observation:o,document,consumer:c,now}){
  const fresh=o?.confirmedAt!=null&&now-o.confirmedAt<8000&&now>=o.confirmedAt;
- const state={recordingID:o?.recording?.item_id??'',title:o?.recording?.metadata.title??'Lyrica',artist:o?.recording?.metadata.artists.join(' & ')??'',lineID:'',original:'',pronunciation:'',translation:'',nextOriginal:'',rubyReadings:[],pronunciationAbove:c.recipe.pronunciationAbove,centered:c.recipe.alignment==='centered',artwork:null,progress:0,part:0,parts:1,phase:fresh?(o?.phase??'waiting'):'unavailable',playing:fresh&&Boolean(o?.playing),observedAt:swift(o?.confirmedAt??now-8000),sequence:c.sequence+1,provider:'spotify',activityGeneration:c.generation,confirmedAt:swift(o?.confirmedAt??now-8000),validUntil:swift((o?.confirmedAt??now-8000)+8000),statusReason:fresh?(o?.reason??''):'updatesDelayed'};
+ const state={recordingID:o?.recording?.item_id??'',title:o?.recording?.metadata.title??'Lyrica',artist:o?.recording?.metadata.artists.join(' & ')??'',lineID:'',original:'',pronunciation:'',translation:'',nextOriginal:'',rubyReadings:[],pronunciationAbove:c.recipe.pronunciationAbove,centered:c.recipe.alignment==='centered',artwork:null,progress:0,part:0,parts:1,phase:fresh?(o?.phase??'waiting'):'unavailable',playing:fresh&&Boolean(o?.playing),observedAt:swift(o?.confirmedAt??now-8000),sequence:c.sequence+1,provider:'spotify',observedDeviceName:typeof o?.deviceName==='string'&&bytes(segments(o.deviceName,256)[0])<=256?segments(o.deviceName,256)[0]:null,activityGeneration:c.generation,confirmedAt:swift(o?.confirmedAt??now-8000),validUntil:swift((o?.confirmedAt??now-8000)+8000),statusReason:fresh?(o?.reason??''):'updatesDelayed'};
  if(!fresh||!o.recording||!document)return state;
  let b;try{b=validateDocument(document,o.recording);}catch{return {...state,phase:'unavailable',statusReason:'recordingMismatch'};}
  Object.assign(state,...['recordingKey','sourceHash','textRevision','timingRevision','readingRevision'].map(k=>({[k]:b[k]})));
@@ -49,6 +49,7 @@ export function immutablePush({state,consumer,now,event='update'}){
  if(event==='end')payload.aps['dismissal-date']=timestamp;
  const fits=()=>bytes(attributes)+bytes(payload.aps['content-state'])<=3900&&bytes(payload)<=3900;
  for(const key of ['artwork','nextOriginal','translation','rubyReadings','pronunciation']){if(fits())break;payload.aps['content-state'][key]=key==='artwork'?null:key==='rubyReadings'?[]:'';}
+ if(!fits()){Object.assign(payload.aps['content-state'],{original:'',pronunciation:'',translation:'',nextOriginal:'',rubyReadings:[],phase:'unavailable',playing:false,statusReason:'lyricSegmentTooLarge'});}
  if(!fits())throw new LibraryError('spotify_payload_too_large',500);
  return {payload,timestamp,sequence:state.sequence,tokenVersion:consumer.tokenVersion,generation:consumer.generation,confirmedAt:(state.confirmedAt+978307200)*1000,expiresAt:(state.validUntil+978307200)*1000,priority:event==='end'?10:consumer.frequentPushesEnabled?10:5};
 }

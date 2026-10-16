@@ -25,3 +25,8 @@ test('explicit packaging lists exactly nine legacy routes plus gateway and two p
  for(const entry of manifest.entries.filter(x=>x.experimentalTriggers))assert(!manifest.routes.some(r=>r.dest===entry.entry.replace(/\.js$/,'')));
  assert.equal(manifest.entries.find(x=>x.entry==='api/song-library.js').maxDuration,300);assert.equal(manifest.entries.find(x=>x.entry==='api/live-lyrics.js').maxDuration,15);
 });
+test('arm requires persisted actual activity creation time, rejecting missing/future/expired values',()=>{
+ const now=Date.now(),base={version:1,action:'live.arm',connectionID:'c',connectionEpoch:'e',armID:randomUUID(),installationID:randomUUID(),sessionID:randomUUID(),activityID:'activity',activityGeneration:1,token:'ab'.repeat(32),tokenVersion:1,frequentPushesEnabled:false,recipe:{},recording:{}};
+ for(const activityCreatedAtMS of [undefined,now+2001,now-28500000,1.5])assert.throws(()=>validateSpotifyInput({...base,activityCreatedAtMS},now));
+ assert.doesNotThrow(()=>validateSpotifyInput({...base,activityCreatedAtMS:now-10000},now));
+});

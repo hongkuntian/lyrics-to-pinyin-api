@@ -38,3 +38,47 @@ test('immutable publication keeps real timestamps/freshness, no lyric survives s
  assert.equal(renderState({observation,consumer,now:time+8001,document:null}).statusReason,'updatesDelayed');
  assert.throws(()=>immutablePush({state,consumer:{...consumer,lastTimestamp:Math.floor(time/1000)},now:time+100}),/publication_coalesced/);
 });
+import {createSpotifyProvider} from '../../api/utils/spotify/provider.js';
+import {documentFor,recording,recipe} from '../helpers/spotify.js';
+import {validateDocument} from '../../api/utils/spotify/render.js';
+test('actual recording helper rejects wrong source/revisions/document/request and preserves own timing correction',()=>{
+ const doc=documentFor(),valid=validateDocument(doc,recording);assert.equal(valid.documentID,doc.id);
+ for(const mutate of [d=>d.response.lines[0].original='poisoned',d=>d.response.metadata.source='KugouAPI',d=>d.timingRevision='a'.repeat(64),d=>d.id='b'.repeat(64),d=>d.recordingBinding.requestHash='c'.repeat(64),d=>d.response.metadata.selection_revision='other']){const changed=structuredClone(doc);mutate(changed);assert.throws(()=>validateDocument(changed,recording));}
+ const observation={confirmedAt:time,recording,requestHash:requestFingerprint(recording),positionMS:21000,playing:false,phase:'loading'};
+ const correction={recordingKey:doc.recordingKey,sourceHash:doc.sourceHash,timingRevision:doc.timingRevision,correctionRevision:'explicit-1',offsetSeconds:2};
+ const consumer={generation:1,sequence:0,recipe:{...recipe,timingCorrection:correction},validatedCorrection:true};
+ assert.equal(renderState({observation,document:doc,consumer,now:time}).original,'Fixture original');
+ assert.equal(renderState({observation,document:doc,consumer:{...consumer,recipe:{...consumer.recipe,timingCorrection:{...correction,timingRevision:'different'}}},now:time}).original,'Next original');
+});
+test('PKCE refresh sends only server public client ID, validates returned scopes and retains omitted refresh secret',async()=>{
+ let request;const adapter=createSpotifyProvider({clientID:'a'.repeat(32),now:()=>time,fetchFn:async(url,options)=>{request={url,options};return {ok:true,json:async()=>({access_token:'fixture-access',expires_in:3600,scope:'app-remote-control user-read-playback-state'})};}});
+ const result=await adapter.refresh('fixture-refresh');assert.equal(result.refreshToken,'fixture-refresh');assert.equal(result.expiresAtMS,time+3600000);
+ assert.deepEqual(Object.fromEntries(request.options.body),{grant_type:'refresh_token',refresh_token:'fixture-refresh',client_id:'a'.repeat(32)});assert.equal(request.options.headers.Authorization,undefined);
+ const bad=createSpotifyProvider({clientID:'a'.repeat(32),fetchFn:async()=>({ok:true,json:async()=>({access_token:'fixture',expires_in:3600,scope:'app-remote-control'})})});await assert.rejects(bad.refresh('fixture'),{code:'spotify_scope_required'});
+});
+test('provider account quota circuit differs from short-term Retry-After and never treats provider change time as sample age',async()=>{
+ for(const [body,header,code,delay] of [[{error:{reason:'QUOTA_EXCEEDED'}},'2','spotify_quota_exceeded',300000],[{error:{message:'rolling rate'}},'17','spotify_rate_limited',17000]]){
+  const adapter=createSpotifyProvider({now:()=>time,fetchFn:async()=>({status:429,ok:false,headers:{get:()=>header},json:async()=>body})});await assert.rejects(adapter.playback('fixture'),e=>e.code===code&&e.notBefore===time+delay);
+ }
+});
+test('forward seek creates a new playback occurrence while normal equal-timestamp progress stays in its occurrence',()=>{
+ const sample=progress=>({status:200,body:playback(progress),requestStartedAt:time,responseReceivedAt:time+100});
+ const first=observePlayback(sample(10000),null,1),normal=observePlayback({...sample(12000),requestStartedAt:time+2000,responseReceivedAt:time+2100},first,2),seek=observePlayback({...sample(100000),requestStartedAt:time+4000,responseReceivedAt:time+4100},normal,3);
+ assert.equal(first.playbackOccurrence,normal.playbackOccurrence);assert.notEqual(normal.playbackOccurrence,seek.playbackOccurrence);
+});
+import {QueueClient,parseRawCallback} from '@vercel/queue';
+import {callbackOptions} from '../../api/utils/spotify/queue.js';
+import {createConsumer} from '../../api/utils/spotify/consumer.js';
+test('pinned Queue Node adapter parses opaque messages; consumer exhausts durable work with bounded retry',async()=>{
+ const message={version:1,kind:'tick',connectionID:'c',connectionEpoch:'e',outboxID:'o',ordinal:1,dueAtMS:time};
+ const parsed=parseRawCallback(message,{'ce-type':'com.vercel.queue.v2beta','ce-source':'/queues/spotify-background','ce-id':'fixture','ce-vqsmessageid':'fixture','ce-vqsqueuename':'spotify-background','ce-vqsconsumergroup':'fixture-group','ce-vqsreceipthandle':'fixture-receipt','content-type':'application/json'});
+ assert.deepEqual(parsed.parsedPayload,message);assert.equal(typeof new QueueClient({region:'iad1'}).handleNodeCallback(async()=>{}),'function');
+ let exhausted=0;const consume=createConsumer('tick',{client:{handleNodeCallback:(handler,options)=>{assert.equal(options.visibilityTimeoutSeconds,30);return handler;}},runtimeFactory:()=>({tick:async()=>{throw new Error('persistent failure');},exhaust:async()=>exhausted++})});
+ await assert.rejects(consume(message,{deliveryCount:1}),/persistent failure/);await consume(message,{deliveryCount:120});assert.equal(exhausted,1);
+ for(const deliveryCount of [1,2,120]){const retry=callbackOptions.retry(new Error(),{deliveryCount,messageId:'fixture'});assert(retry.afterSeconds>=2&&retry.afterSeconds<=300);}
+});
+test('payload sizing never truncates a performed grapheme or exceeds either 4KB boundary',()=>{
+ const consumer={sessionID:'00000000-0000-4000-8000-000000000001',generation:1,sequence:0,lastTimestamp:0,recipe};
+ const state=renderState({observation:{confirmedAt:time,recording,phase:'loading',deviceName:'声'.repeat(200)},consumer,now:time});state.original='a'+'\u0301'.repeat(3000);state.phase='lyrics';
+ const publication=immutablePush({state,consumer,now:time});assert.equal(publication.payload.aps['content-state'].original,'');assert.equal(publication.payload.aps['content-state'].statusReason,'lyricSegmentTooLarge');assert(Buffer.byteLength(JSON.stringify(publication.payload))<=4096);assert(Buffer.byteLength(JSON.stringify(state.observedDeviceName))<=256);
+});

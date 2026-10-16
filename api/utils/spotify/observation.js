@@ -1,9 +1,7 @@
 import {randomUUID} from 'node:crypto';
-import {sha} from './vault.js';
-// Mirrors the frozen scalar tuple only; the authoritative parser is the shared
-// Song Library V2 parser. No request metadata is promoted into source context.
-export function requestFingerprint(r){const m=r.metadata;return sha(JSON.stringify(['spotify-request-2',r.item_id,r.requested_item_id??null,r.market??null,m.title,m.artists,m.album??null,m.duration_ms,m.isrc??null,m.explicit??null]));}
-export const recordingFingerprint=r=>sha(JSON.stringify(['spotify-recording-2',r.item_id]));
+import {spotifyRequestHash,spotifyRecordingKey} from '../song-library/spotify-recording.js';
+export const requestFingerprint=spotifyRequestHash;
+export const recordingFingerprint=spotifyRecordingKey;
 const name=x=>typeof x==='string'&&x.trim()&&[...x].length<=500&&!/[\u0000-\u001f\u007f-\u009f\ud800-\udfff]/u.test(x);
 export function observedRecording(item){
  if(!item||item.type!=='track'||item.is_local||!/^[A-Za-z0-9]{22}$/.test(item.id??'')||!name(item.name)||!Array.isArray(item.artists)||!item.artists.length||item.artists.length>32||item.artists.some(a=>!name(a.name))||!Number.isSafeInteger(item.duration_ms)||item.duration_ms<1||item.duration_ms>7200000)return null;
@@ -22,6 +20,7 @@ export function observePlayback(sample,previous,ordinal){
  const recording=observedRecording(body.item);
  if(!recording||body.currently_playing_type&&body.currently_playing_type!=='track')return {...base,confirmedAt:responseReceivedAt,reason:'unsupportedItem'};
  if(!Number.isSafeInteger(body.progress_ms)||body.progress_ms<0||body.progress_ms>recording.metadata.duration_ms||typeof body.is_playing!=='boolean')return {...base,reason:'missingProgress'};
- const changed=!previous?.recording||requestFingerprint(previous.recording)!==requestFingerprint(recording)||previous.deviceID!==base.deviceID||body.progress_ms<(previous.positionMS??0)-1000;
+ const expected=(previous?.positionMS??body.progress_ms)+(previous?.playing?Math.max(0,responseReceivedAt-previous.confirmedAt):0);
+ const changed=Math.abs(body.progress_ms-expected)>3000||!previous?.recording||requestFingerprint(previous.recording)!==requestFingerprint(recording)||previous.deviceID!==base.deviceID||body.progress_ms<(previous.positionMS??0)-1000;
  return {...base,confirmedAt:responseReceivedAt,recording,requestHash:requestFingerprint(recording),positionMS:body.progress_ms,playing:body.is_playing,phase:'loading',playbackOccurrence:changed?randomUUID():base.playbackOccurrence};
 }

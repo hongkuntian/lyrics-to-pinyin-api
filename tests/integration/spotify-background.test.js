@@ -83,3 +83,58 @@ test('indefinitely refreshed pause samples do not reset inactivity grace; provid
  assert.equal((await f.store.read(credential.connectionID)).observation.confirmedAt,confirmed);assert.equal(Object.values((await f.store.read(credential.connectionID)).consumers)[0].snapshot.state.statusReason,'updatesDelayed');
  f.advance(110000);f.provider.playback=async()=>({status:200,body:playback(10000,false),requestStartedAt:f.now,responseReceivedAt:f.now});await f.service.tick(f.next());assert(f.next('cleanup'));
 });
+test('unknown APNs outcome reuses immutable bytes and timestamp; superseded recipe cannot be restamped',async t=>{
+ const f=await fixture(t),{credential}=await f.enroll(),armed=await f.arm(credential);let once=true;const accepted=[];
+ f.restart({send:async request=>{accepted.push(structuredClone(request));if(once){once=false;throw new LibraryError('push_unavailable',503);}}});
+ const predecessor=f.next();await assert.rejects(f.service.tick(predecessor),{code:'push_unavailable'});f.advance(1000);await f.restart().tick(predecessor);
+ assert.deepEqual(accepted[1].payload,accepted[0].payload);assert.equal(f.polls,2);
+ await f.service.live(user,{...credential,sessionID:armed.session.sessionID,recipe:{...recipe,alignment:'centered'}},'live.preferences');
+ assert.equal((await f.store.read(credential.connectionID)).consumers[armed.session.sessionID].recipeRevision,2);
+});
+test('uncertain refresh death resumes persisted returned stage without second provider rotation',async t=>{
+ const f=await fixture(t),enrollmentID=randomUUID();let once=true;
+ f.restart({crash:async point=>{if(point==='refreshStaged'&&once){once=false;crash();}}});
+ await assert.rejects(f.service.enrollment(user,{enrollmentID,refreshToken:'fixture-refresh'}),/crash/);
+ f.advance(10001);const reply=await f.restart({crash:async()=>{}}).status(user,{enrollmentID});assert.equal(reply.status,'connected');assert.equal(f.refreshes,1);
+});
+test('two remote-refresh uncertainties suspend/reconnect rather than looping forever',async t=>{
+ const f=await fixture(t),enrollmentID=randomUUID();f.provider.refresh=async()=>{throw new LibraryError('spotify_refresh_uncertain',503);};
+ for(let i=0;i<2;i++)await assert.rejects(f.service.enrollment(user,{enrollmentID,refreshToken:'fixture-refresh'}),{code:'spotify_refresh_uncertain'});
+ assert.equal((await f.service.status(user,{enrollmentID})).status,'reconnectRequired');
+});
+test('follow lifetime uses actual creation across offline delay and active-key rotation reencrypts without OAuth refresh',async t=>{
+ const f=await fixture(t),{credential}=await f.enroll(),created=f.now-60000,arm=await f.arm(credential,{activityCreatedAtMS:created});assert.equal(arm.session.expiresAtMS,created+28500000);
+ const {createVault}=await import('../../api/utils/spotify/vault.js');
+ f.restart({config:{...f.options.config,vault:createVault({active:'two',keys:{one:Buffer.alloc(32,1).toString('base64'),two:Buffer.alloc(32,2).toString('base64')}})}});
+ const updated=await f.service.access(user,credential);assert.equal(updated.credential.credentialVersion,2);assert.equal(f.refreshes,1);
+ const current=await f.store.read(credential.connectionID);assert.equal(current.refresh.keyID,'two');assert.equal(current.consumers[arm.session.sessionID].token.keyID,'two');
+});
+test('new enrollment cannot race a completed owner/key move even if authentication happened earlier',async t=>{
+ const f=await fixture(t);await f.db.query("INSERT INTO library_users(id) VALUES('new-owner')");await f.db.query("UPDATE app_attest_keys SET user_id='new-owner' WHERE key_id=$1",[user.keyID]);
+ await assert.rejects(f.enroll(),{code:'app_access_revoked'});assert.equal(f.refreshes,0);assert.equal((await f.db.query('SELECT count(*) AS n FROM spotify_connections')).rows[0].n,0);
+});
+test('entitlement removal after committed observation suppresses update and drains a durable terminal executor before ACK',async t=>{
+ const f=await fixture(t),{credential}=await f.enroll();await f.arm(credential);let removed=false;
+ f.restart({eligible:async()=>{},admit:async()=>{if(removed)throw new LibraryError('plus_required',403);},crash:async point=>{if(point==='tickCommitted')removed=true;}});
+ await f.service.tick(f.next());assert.equal(f.sends.length,0);assert(f.next('cleanup'));assert.equal((await f.store.pending(credential.connectionID)).length,0);
+ assert.equal(Object.values((await f.store.read(credential.connectionID)).consumers)[0].status,'ended');
+});
+test('real Song Library 202 lookup contention keeps an acquisition retry executor and never admits AI work',async t=>{
+ const {libraryDB}=await import('../helpers/library-db.js'),{createSongLibraryService}=await import('../../api/song-library.js'),{createAcquirer}=await import('../../api/utils/spotify/runtime.js'),{requestKey}=await import('../../api/utils/song-library/document.js');
+ const library=await libraryDB();t.after(()=>library.db.close());const f=await fixture(t),{credential}=await f.enroll();await f.arm(credential);await f.service.tick(f.next());
+ const owner=await library.store.claimLookup(requestKey(recording),'fixture-selection');let loads=0;
+ const acquirer=createAcquirer(createSongLibraryService({store:library.store,selectionRevision:'fixture-selection',apiKey:null,loadLyrics:async()=>{loads++;throw Error('must not run provider during contention');}}));
+ f.restart({acquire:acquirer});const original=f.next('acquire');await f.service.acquireMessage(original);assert.equal(loads,0);assert.notEqual(f.next('acquire').outboxID,original.outboxID);
+ assert.equal((await library.db.query('SELECT count(*) AS n FROM translation_jobs')).rows[0].n,0);await library.store.releaseLookup(requestKey(recording),'fixture-selection',owner);
+});
+test('absent/mismatched acquisition leaves explicit unavailable status while later observations still execute',async t=>{
+ const f=await fixture(t),{credential}=await f.enroll(),arm=await f.arm(credential);await f.service.tick(f.next());f.restart({acquire:async()=>({status:404,code:'lyrics_absent'})});await f.service.acquireMessage(f.next('acquire'));f.advance(2000);await f.service.tick(f.next());
+ const snapshot=(await f.store.read(credential.connectionID)).consumers[arm.session.sessionID].snapshot;assert.equal(snapshot.state.phase,'unavailable');assert.equal(snapshot.state.statusReason,'lyrics_absent');assert(f.next().ordinal>=2);
+});
+test('preview/production and configured Client ID cannot use or mutate each other\'s persisted grants',async t=>{
+ const f=await fixture(t),{credential}=await f.enroll();await f.arm(credential);const before=await f.store.read(credential.connectionID),polls=f.polls;
+ for(const config of [{...f.options.config,environment:'production'},{...f.options.config,clientID:'b'.repeat(32)}]){
+  f.restart({config});await assert.rejects(f.service.access(user,credential),{code:'spotify_environment_mismatch'});await assert.rejects(f.service.tick(f.next()),{code:'spotify_environment_mismatch'});
+ }
+ assert.equal(f.polls,polls);assert.deepEqual(await f.store.read(credential.connectionID),before);
+});

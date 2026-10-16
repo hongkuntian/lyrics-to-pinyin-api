@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {libraryDB} from '../helpers/library-db.js';
+import {recording,documentFor,recipe} from '../helpers/spotify.js';
+import {makeDocument} from '../../api/utils/song-library/document.js';
+import {publicDocument,publicTranslation} from '../../api/utils/song-library/public-content.js';
+import {parseTranslation} from '../../api/utils/song-library/translation.js';
+import {createSpotifyRuntime} from '../../api/utils/spotify/runtime.js';
+import {SpotifyStore} from '../../api/utils/spotify/store.js';
+import {contentFingerprint} from '../../api/utils/spotify/vault.js';
+test('render references resolve only owner-ready current revision with exact public DTO fingerprint and bound correction',async t=>{
+ const f=await libraryDB();t.after(()=>f.db.close());const source=documentFor(),response=structuredClone(source.response);response.recordingBinding={...source.recordingBinding,documentID:null};const doc=makeDocument(recording,response,'fixture-selection'),lease=await f.store.claimLookup(doc.requestKey,doc.selectionRevision);
+ await f.store.saveDocument(doc,{lookupOwner:lease});await f.store.releaseLookup(doc.requestKey,doc.selectionRevision,lease);
+ const admitted=await f.store.reserve({userID:'reader-a',documentID:doc.id,target:'en',recipe:'fixture',reservedMicros:30000});await f.store.claim(admitted.job.id);await f.store.complete(admitted.job.id,parseTranslation(JSON.stringify({translations:{L0001:'First translated line.',L0002:'Second translated line.'},sourceNotes:[]}),doc),1000,{});
+ const current=await f.store.translation(doc.id,'en'),dto=publicTranslation(current,doc),fingerprint=contentFingerprint(dto);assert.equal(contentFingerprint({...dto,contentFingerprint:fingerprint}),fingerprint);
+ const runtime=createSpotifyRuntime({store:new SpotifyStore(f.store.db),config:{},provider:{},enqueue:async()=>{},send:async()=>{},acquire:async()=>{},admit:async()=>{}});
+ const readyTranslation={documentID:doc.id,sourceHash:doc.sourceHash,translationID:current.id,recipeVersion:current.recipe,textRevision:doc.textRevision,target:'en',contentFingerprint:fingerprint};
+ const timingCorrection={recordingKey:doc.recordingKey,sourceHash:doc.sourceHash,timingRevision:doc.timingRevision,correctionRevision:'explicit-1',offsetSeconds:2};
+ const wanted={...recipe,showTranslation:true,translationTarget:'en',readyTranslation,timingCorrection};
+ const valid=await runtime.resolveRecipe({ownerID:'reader-a'},wanted,publicDocument(doc,recording));assert(valid.validatedTranslation);assert.equal(valid.validatedTranslation.lines[0].translation,'First translated line.');assert.equal(valid.validatedCorrection,true);
+ assert.equal((await runtime.resolveRecipe({ownerID:'reader-b'},wanted,publicDocument(doc,recording))).validatedTranslation,null);
+ assert.equal((await runtime.resolveRecipe({ownerID:'reader-a'},{...wanted,readyTranslation:{...readyTranslation,contentFingerprint:'a'.repeat(64)}},publicDocument(doc,recording))).validatedTranslation,null);
+ assert.equal((await runtime.resolveRecipe({ownerID:'reader-a'},{...wanted,timingCorrection:{...timingCorrection,timingRevision:'wrong'}},publicDocument(doc,recording))).validatedCorrection,false);
+ assert.equal((await f.db.query('SELECT count(*) AS n FROM translation_jobs')).rows[0].n,1);assert.equal(Number((await f.store.usage()).accounted_micros),1000);
+});

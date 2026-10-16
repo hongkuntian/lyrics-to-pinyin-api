@@ -13,6 +13,7 @@ export const manifest=JSON.parse(await fs.readFile(new URL('./vercel-functions.j
 export async function packageFunctions({workPath=root,output=path.join(workPath,'.vercel/output'),preflight=true}={}){
  if(process.versions.node.split('.')[0]!=='24')throw new Error('node24_required');
  if(preflight)await execute(process.execPath,[path.join(workPath,'scripts/vercel-library-build.js')],{cwd:workPath});
+ await fs.mkdir(path.join(workPath,'.vercel'),{recursive:true});
  const stage=await fs.mkdtemp(path.join(workPath,'.vercel','build-stage-'));
  await fs.cp(path.join(workPath,'node_modules'),path.join(stage,'node_modules'),{recursive:true});
  await fs.rm(output,{recursive:true,force:true});await fs.mkdir(path.join(output,'functions'),{recursive:true});
@@ -46,7 +47,7 @@ export async function packageFunctions({workPath=root,output=path.join(workPath,
  }
  const config={version:3,routes:[...manifest.routes,{src:'/.*',status:404}],crons:manifest.crons};
  await fs.writeFile(path.join(output,'config.json'),JSON.stringify(config,null,2)+'\n');
- const receipt={node:process.version,builder:require('@vercel/node/package.json').version,mode:'non-development meta:{}',functionCount:inventory.length,publicRoutes:manifest.routes,privateConsumers:inventory.filter(x=>x.experimentalTriggers),terminal404:true,crons:config.crons,functions:inventory,deployed:false};
+ const receipt={node:process.version,builder:require('@vercel/node/package.json').version,mode:'non-development meta:{}',preflightRuns:preflight?1:0,functionCount:inventory.length,publicRoutes:manifest.routes,privateConsumers:inventory.filter(x=>x.experimentalTriggers),terminal404:true,crons:config.crons,functions:inventory,deployed:false};
  await fs.writeFile(path.join(output,'packaging-receipt.json'),JSON.stringify(receipt,null,2)+'\n');
  await fs.rm(stage,{recursive:true,force:true});
  return receipt;

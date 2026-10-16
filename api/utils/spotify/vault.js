@@ -1,5 +1,6 @@
 import {createCipheriv,createDecipheriv,randomBytes,createHash} from 'node:crypto';
 import {LibraryError} from '../song-library/store.js';
+import {spotifyHash} from '../song-library/spotify-recording.js';
 export const sha=value=>createHash('sha256').update(value).digest('hex');
 export function createVault(input) {
  const config=input===undefined?(()=>{try{return JSON.parse(process.env.LYRA_SPOTIFY_VAULT_KEYRING);}catch{}})():input;
@@ -20,4 +21,5 @@ export function spotifyConfiguration(env=process.env){
 }
 export const vaultContext=c=>({ownerID:c.ownerID,keyID:c.keyID,connectionID:c.id,epoch:c.epoch,clientID:c.clientID,environment:c.environment});
 
-export function contentFingerprint(value){const canonical=v=>v===null||typeof v!=='object'?JSON.stringify(v):Array.isArray(v)?'['+v.map(canonical).join(',')+']':'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';return sha(canonical(value));}
+// Public reference DTOs may expose the digest itself as an additive field.
+export function contentFingerprint(value){const {contentFingerprint:ignored,...dto}=value;return spotifyHash(dto);}
