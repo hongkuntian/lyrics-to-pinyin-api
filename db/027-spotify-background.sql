@@ -38,6 +38,9 @@ CREATE TABLE spotify_provider_circuits (
  updated_at timestamptz NOT NULL DEFAULT now()
 );
 DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='lyra_runtime_v1') THEN
+  GRANT SELECT,INSERT,UPDATE,DELETE ON spotify_connections,spotify_outbox,spotify_snapshot_capabilities,spotify_provider_circuits TO lyra_runtime_v1;
+ END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='lyra_account_v1') THEN
   GRANT SELECT,INSERT,UPDATE,DELETE ON spotify_connections,spotify_outbox,spotify_snapshot_capabilities TO lyra_account_v1;
  END IF;
