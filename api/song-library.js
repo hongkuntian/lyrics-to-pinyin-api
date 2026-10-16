@@ -7,6 +7,7 @@ import {SongLibraryStore,LibraryError} from './utils/song-library/store.js';
 import {database} from './utils/song-library/database.js';
 import {makeDocument,recordingRequest,requestKey} from './utils/song-library/document.js';
 import {lyricSourceNeedsRefresh} from './utils/timing-corrections.js';
+import {hasEmbeddedLyricCredits} from './utils/lyric-annotations.js';
 import {LEGACY_MODEL} from './utils/song-library/model-policy.js';
 import {generate,requestBody,reservationMicros,translationRecipe} from './utils/song-library/translation.js';
 import {executeTranslationJob} from './utils/song-library/translation-worker.js';
@@ -132,7 +133,9 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         // Recover an ambiguous response without ever creating a new allowance
         // reservation. A missing request needs a fresh, explicit Generate tap.
         if(input.resumeOnly)return send(200,{state:'missing'});
-        if(!await db.isCurrentDocument(doc.id,selectionRevision))throw new LibraryError('source_revision_superseded');
+        // Old immutable sources remain readable, but must refresh before any
+        // new model input can include their embedded production credits.
+        if(hasEmbeddedLyricCredits(doc.response)||!await db.isCurrentDocument(doc.id,selectionRevision))throw new LibraryError('source_revision_superseded');
         if(!apiKey)throw new LibraryError('generation_not_configured',503);
         requireDirection(policy,'translation',doc.response.song.language,target);
         const body=requestBody(doc,target);
@@ -178,7 +181,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         let row=prior;
         if(!row) {
           requireDirection(policy,'explanation',selection.studyText?.layer==='translation'?saved.target:doc.response.song.language,language);
-          if(!await db.isCurrentDocument(doc.id,selectionRevision))throw new LibraryError('source_revision_superseded');
+          if(hasEmbeddedLyricCredits(doc.response)||!await db.isCurrentDocument(doc.id,selectionRevision))throw new LibraryError('source_revision_superseded');
           if(!apiKey)throw new LibraryError('generation_not_configured',503);
           const body=explanationBody(doc,saved,selection,language);
           row=(await reserveExplanation(db.db,{key,doc,translation:saved,selection,recipe,userID:user.id,explanationLanguage:language,
