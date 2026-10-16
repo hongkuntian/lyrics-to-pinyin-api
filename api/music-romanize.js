@@ -114,6 +114,11 @@ export function createMusicRomanizeService(dependencies={}) {
         const deadline=Math.min(Date.now()+16000,scope?.deadlineAtMS??Infinity);
         let publishCandidate=async()=>{};
         const diagnose=(provider,reason)=>logger.info?.('lyrics_lookup',{requestID,provider,reason});
+        const recordFailure=(api,error)=>{
+          if(error.code==='recording_mismatch'){mismatch=true;diagnose(api.name,error.reason??'recording_mismatch');}
+          else if(error.code==='provider_timeout'||error.name==='AbortError'){timedOut=true;diagnose(api.name,'provider_timeout');}
+          else{unavailable=true;logger.error('Lyrics provider failed',api.name,error.message);}
+        };
         let verifiedContext=options.refresh===true?null:await measure('verified_context_read',()=>contexts.read(request));
         const {storefront:routeStorefront,account_storefront:routeAccount,...routeRequest}=JSON.parse(contextSignature(request)),routeKey=JSON.stringify(routeRequest);
         if(speculativeDiscovery&&!verifiedContext&&!verifiedRouting.get(routeKey)&&!preferred&&!hasReviewedCatalogSource(request)&&!hasOfficialCatalogSource(request)&&!hasListeningCatalogSource(request)&&(catalog_id||(album&&duration))&&!/[&,/、]|\b(?:feat|featuring|with)\b/iu.test(artist+' '+title))speculation=startSpeculativeDiscovery(apis[0],request,{deadline,timeoutMs:providerTimeoutMs,signal:scope?.signal,measure});
@@ -127,7 +132,12 @@ export function createMusicRomanizeService(dependencies={}) {
           const lookup=async(api,parentSignal)=> {
             // A cancelled pre-proof original attempt already spent this source
             // query. Never repeat it later in a localized search sequence.
-            if(speculation?.discarded&&!speculation.result?.song&&target===request&&api===speculation.api)return null;
+            if(speculation?.discarded&&!speculation.result?.song&&target===request&&api===speculation.api){
+              // The original target is now admitted: consume its completed
+              // failure once without confusing an outage with provider absence.
+              if(speculation.result?.error&&!speculation.result.cancelled)recordFailure(api,speculation.result.error);
+              return null;
+            }
             const remaining=deadline-Date.now();
             if(remaining<=0) { timedOut=true; return null; }
             const probe=speculation&&!speculation.used&&(!speculation.discarded||speculation.result?.song)&&api===speculation.api&&target===request?speculation:null;
@@ -156,9 +166,7 @@ export function createMusicRomanizeService(dependencies={}) {
               },Math.max(1,providerDeadline-Date.now()),parentSignal);
             } catch(error) {
               if(parentSignal?.aborted) return null;
-              if(error.code==='recording_mismatch') { mismatch=true;diagnose(api.name,error.reason??'recording_mismatch'); }
-              else if(error.code==='provider_timeout' || error.name==='AbortError') { timedOut=true;diagnose(api.name,'provider_timeout'); }
-              else { unavailable=true;logger.error('Lyrics provider failed',api.name,error.message); }
+              recordFailure(api,error);
               return null;
             }
           };

@@ -113,3 +113,9 @@ test('last canonical reader cancellation aborts held source work without a fallb
  const f=fixture();let aborted=0;f.api.getLyrics=async(_,context)=>{f.stats.lyrics++;return new Promise((resolve,reject)=>context.signal.addEventListener('abort',()=>{aborted++;reject(Object.assign(new Error('cancel'),{name:'AbortError'}));},{once:true}));};
  const res=streamResponse(),work=f.call(f.make(),{...request,options:{delivery:'progressive-v1'}},res);await until(()=>f.stats.lyrics===1);res.emit('close');await work;assert.equal(aborted,1);assert.equal(f.stats.search,1);assert.equal(f.stats.lyrics,1);
 });
+for(const progressive of [false,true])for(const failure of ['timeout','outage','discarded'])test(`later admitted original retains ${failure} classification without repeating its probe (${progressive?'progressive':'legacy'})`,async()=>{
+ const queries=[];const f=fixture({speculativeDiscovery:true,providerTimeoutMs:10,resolveCatalogAliasesFn:async r=>{await wait(failure==='timeout'?20:1);const aliases=[],p=proof(r);p.searches=[{...p.searches[0],title:'Alias Song'},p.searches[0]];Object.defineProperty(aliases,'resolution',{value:p});return aliases;}});
+ f.api.searchSong=async(_,title,context)=>{queries.push(title);if(title!=='Song')return null;if(failure==='outage')throw new Error('offline');return new Promise((resolve,reject)=>context.signal.addEventListener('abort',()=>reject(Object.assign(new Error('cancelled'),{name:'AbortError'})),{once:true}));};
+ const res=progressive?streamResponse():createMockRes();await f.call(f.make(),{...request,...(progressive?{options:{delivery:'progressive-v1'}}:{})},res);
+ assert.equal(queries.filter(q=>q==='Song').length,1);assert.equal(res.statusCode,failure==='timeout'?504:failure==='outage'?502:404);if(progressive)assert.equal(res.chunks.length,0);
+});
