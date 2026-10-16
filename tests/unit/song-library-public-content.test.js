@@ -40,7 +40,10 @@ test('the first normalized document revision keeps the same v1 view after a clea
 test('older saved documents retain the original API v1 speaker-prefix convention',()=>{
   const legacy={structure:{version:'source-speakers-1',speakers:[{id:'S1',displayName:'Lo'}],
     occurrences:[{sourceID:'L0001',sourceText:'卢：一起唱',lyricText:'一起唱',sourcePrefix:'卢：',speakerID:'S1',startsTurn:true}]}};
-  assert.equal(publicDocument(legacy),legacy);
+  const wire=publicDocument(legacy);
+  assert.deepEqual(wire.structure,legacy.structure);
+  assert.deepEqual(wire.response.lyric_structure,legacy.structure);
+  assert.equal(legacy.response,undefined);
   for(const text of ['Sing together.','Lo: Sing together.']) {
     const saved={lines:[{sourceID:'L0001',lyricText:'Sing together.',text,speakerID:'S1',startsTurn:true}],sourceNotes:[]};
     assert.equal(publicTranslation(saved,legacy).lines[0].text,'Lo: Sing together.');

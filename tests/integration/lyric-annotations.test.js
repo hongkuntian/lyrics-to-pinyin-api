@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {createMusicRomanizeService as createMusicRomanizeHandler} from '../../api/music-romanize.js';
 import {cleanLyrics} from '../../api/utils/lyric-quality.js';
 import {makeDocument} from '../../api/utils/song-library/document.js';
+import {publicDocument} from '../../api/utils/song-library/public-content.js';
 import {parseTranslation,requestBody} from '../../api/utils/song-library/translation.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 import {libraryDB} from '../helpers/library-db.js';
@@ -30,6 +31,7 @@ test('normal and reviewed paths normalize before pinyin and preserve source turn
       ['一起唱这首歌',6],['我说：别走',11],['再唱一遍',20],['一起唱这首歌',23]]);
     assert.ok(result.lines.every(l=>!l.romanized.includes('Jeremy')&&!l.romanized.includes('Arrangement')));
     const doc=makeDocument(recording,result,result.metadata.selection_revision);
+    assert.deepEqual(result.lyric_structure,publicDocument(doc).structure);
     assert.deepEqual(doc.structure.occurrences.map(o=>o.sourceIndex),[1,3,4,5]);
     assert.equal(doc.structure.sourceRows.length,6);
     const translated=parseTranslation(JSON.stringify({translations:{L0001:'Sing this song together.',L0002:'I say: stay.',L0003:'Sing it again.',L0004:'Sing this song together.'},sourceNotes:[]}),doc);

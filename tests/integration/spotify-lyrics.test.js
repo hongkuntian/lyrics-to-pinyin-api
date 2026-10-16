@@ -27,6 +27,7 @@ test('both envelopes use one V2 fingerprint and independent fallback capsule wit
   assert.equal(body.recordingBinding.requestHash,requestKey(recording));assert.equal(body.recordingBinding.documentID,null);assert.equal(body.library,undefined);
   assert.equal(body.recordingBinding.synchronizationEligible,true);assert.equal(body.recordingBinding.source.provider,'lrclib');assert.equal(body.recordingBinding.source.itemID,'source-42');
   assert.equal(body.metadata.catalog_resolution,undefined);assert.equal(body.metadata.recording_match,undefined);
+  assert.match(response.headers['X-Request-ID'],/^[a-f0-9-]{36}$/);assert.match(response.headers['Server-Timing'],/LRCAPI_search;dur=/);assert.match(response.headers['Server-Timing'],/LRCAPI_lyrics;dur=/);assert.match(response.headers['Server-Timing'],/LRCAPI_validation;dur=/);assert.match(response.headers['Server-Timing'],/format;dur=/);
   assert.equal(queries[0].artist,'Band & Name & Guest');assert.deepEqual(queries[0].context.creditedArtistNames,recording.metadata.artists);
   assert.equal(queries[0].context.duration,240.001);assert.equal(queries[0].context.catalog_id,undefined);
   const loaded=await lyricLoader(service)(recording),doc=makeDocument(recording,loaded,SELECTION_REVISION);

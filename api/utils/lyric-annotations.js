@@ -6,6 +6,23 @@ export const LYRIC_NORMALIZATION_VERSION='lyric-annotations-3';
 export const LYRIC_SELECTION_REVISION='lyrics-selection-2026-09-30-storefront-1';
 export const reviewedSpeakerLabels=catalogID=>roster.reviewedRecordings[catalogID]??{};
 
+// Raw and durable public DTOs share the same visible occurrence identity.
+// Canonical source rows, hidden turns and provenance remain in metadata.
+export function publicLyricStructure(structure) {
+  if(!['lyric-annotations-1','lyric-annotations-2',LYRIC_NORMALIZATION_VERSION].includes(structure?.version))return null;
+  return {version:'source-speakers-1',speakers:structure.speakers,
+    occurrences:structure.occurrences.map(o=>({sourceID:o.sourceID,sourceText:o.lyricText,
+      lyricText:o.lyricText,speakerID:o.speakerID,startsTurn:false,sourcePrefix:''}))};
+}
+export function publicRawLyrics(response) {
+  if(response?.metadata?.lyric_structure?.version===LYRIC_NORMALIZATION_VERSION&&!validLyricStructure(response.metadata.lyric_structure,response.lines??[]))return response;
+  const structure=publicLyricStructure(response?.metadata?.lyric_structure);
+  // Preserve response object identity: verified provider evidence is held in a
+  // server-only WeakMap and must survive this additive wire projection.
+  if(structure)response.lyric_structure=structure;
+  return response;
+}
+
 // Normalize labels for comparison only. Never rewrite the sung words.
 const labelKey=text=>chinese.sify(text).normalize('NFKC').toLowerCase().replace(/\s+/gu,'');
 // Each row is one role with equivalent names. Bilingual labels must consume the

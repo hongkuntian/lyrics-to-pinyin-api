@@ -1,5 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {waitUntil} from '@vercel/functions';
+import {publicRawLyrics} from './lyric-annotations.js';
 
 const normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,normalize(value[k])])):value;
 const rawResult=body=>body?.song?body:body?.document?.response;
@@ -26,7 +27,7 @@ export function withLyricsDelivery(handler,{library=false,timeoutMs=16000,cleanu
     children.add(promise);promise.then(()=>children.delete(promise),()=>children.delete(promise));return promise;
    },publish:(response,diagnostics={})=>{
     if(flight.done||controller.signal.aborted)return;
-    const snapshot=structuredClone(response);delete snapshot.library;
+    const snapshot=publicRawLyrics(structuredClone(response));delete snapshot.library;
     flight.latest={version:1,event:'readable',acquisitionID:id,sequence:++flight.sequence,deadlineAtMS,response:snapshot,...diagnostics};
     for(const reader of flight.readers)reader.publish(flight.latest);
    }};
@@ -58,6 +59,7 @@ export function withLyricsDelivery(handler,{library=false,timeoutMs=16000,cleanu
   if(flight.latest)write(flight.latest);
   try {
    const result=await Promise.race([flight.promise,disconnected]);if(!result||closed)return;
+   if(result.body?.song)result.body=publicRawLyrics(result.body);
    if(!progressive){for(const [k,v]of Object.entries(result.headers))res.setHeader(k,v);if(joined&&Object.hasOwn(result.headers,'X-Lyrics-Cache'))res.setHeader('X-Lyrics-Cache','COALESCED');return res.status(result.status).json(result.body);}
    const success=result.status===200&&!result.body?.refreshError&&(library?result.body?.document:result.body?.song);
    if(!success&&!started){for(const[k,v]of Object.entries(result.headers))res.setHeader(k,v);return res.status(result.status).json(result.body);}

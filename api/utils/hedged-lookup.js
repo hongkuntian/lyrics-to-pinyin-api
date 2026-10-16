@@ -19,6 +19,13 @@ export function hedgedLookup(apis, lookup, {delayMs=350, untimedGraceMs=350,sign
         controllers.delete(controller); active--;
         if(finished) return;
         const complete=result&&!result.lyrics.partial&&timingQuality(result).usable;
+        if(complete) {
+          // Selection is independent of asynchronous presentation. A known
+          // complete timed result cannot lose to another formatter or grace.
+          finish(chooseLyricCandidate(untimed,result));
+          if(onCandidate)try{await onCandidate(result);}catch{}
+          return;
+        }
         const continued=result&&!complete;
         if(result) {
           if(!complete) {
@@ -29,7 +36,6 @@ export function hedgedLookup(apis, lookup, {delayMs=350, untimedGraceMs=350,sign
             launch();
           }
           if(onCandidate) {try{await onCandidate(result);}catch{finish(untimed);return;}if(finished)return;}
-          if(complete) { finish(chooseLyricCandidate(untimed,result)); return; }
         }
         if(!continued)launch();
         if(active===0 && next>=apis.length) finish(untimed);

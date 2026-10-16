@@ -1,0 +1,617 @@
+{
+  "provenance": {
+    "generator": "scripts/generate-lyric-delivery-fixture.mjs",
+    "productionHandlers": [
+      "createMusicRomanizeService",
+      "createSongLibraryService",
+      "SongLibraryStore"
+    ],
+    "injectedProviders": true,
+    "networkCalls": false,
+    "paidGeneration": false
+  },
+  "request": {
+    "id": "1835909383",
+    "catalogID": "1835909383",
+    "storefront": "us",
+    "artist": "TOP登陆少年组合",
+    "title": "流星雨",
+    "album": "流星雨",
+    "duration": 271.291
+  },
+  "raw": {
+    "song": {
+      "title": {
+        "original": "流星雨",
+        "romanized": "流星雨"
+      },
+      "artist": {
+        "original": "TOP登陆少年组合",
+        "romanized": "TOP登陆少年组合"
+      },
+      "id": 2734065329,
+      "language": "zh",
+      "romanization_system": "none",
+      "album": "流星雨",
+      "duration": 271.291
+    },
+    "lines": [
+      {
+        "original": "一起唱这首歌",
+        "romanized": "一起唱这首歌",
+        "timestamp": null
+      },
+      {
+        "original": "我说：别走",
+        "romanized": "我说：别走",
+        "timestamp": null
+      },
+      {
+        "original": "再唱一遍",
+        "romanized": "再唱一遍",
+        "timestamp": null
+      },
+      {
+        "original": "一起唱这首歌",
+        "romanized": "一起唱这首歌",
+        "timestamp": null
+      }
+    ],
+    "quality": {
+      "synced": false,
+      "instrumental": false,
+      "partial": false
+    },
+    "metadata": {
+      "timestamp": "2026-10-16T21:45:21.662Z",
+      "version": "2.5.0",
+      "source": "NeteaseAPI",
+      "acquisition_started_at": 1792187121644,
+      "language_details": {
+        "version": 1,
+        "primary": "zh",
+        "languages": [
+          "zh"
+        ],
+        "scripts": [
+          "Hani"
+        ],
+        "mixed": false,
+        "confidence": "script_only",
+        "pronunciation_language": null,
+        "pronunciation_basis": "script_only",
+        "lines": [
+          {
+            "sourceID": "L0001",
+            "language": "zh",
+            "confidence": "script_only"
+          },
+          {
+            "sourceID": "L0002",
+            "language": "zh",
+            "confidence": "script_only"
+          },
+          {
+            "sourceID": "L0003",
+            "language": "zh",
+            "confidence": "script_only"
+          },
+          {
+            "sourceID": "L0004",
+            "language": "zh",
+            "confidence": "script_only"
+          }
+        ]
+      },
+      "timing_quality": {
+        "usable": false,
+        "coverage": 0,
+        "alignment": "provider"
+      },
+      "lyric_structure": {
+        "version": "lyric-annotations-3",
+        "sourceRows": [
+          {
+            "text": "合：",
+            "timestamp": null
+          },
+          {
+            "text": "一起唱这首歌",
+            "timestamp": null
+          },
+          {
+            "text": "张极Jeremy：",
+            "timestamp": null
+          },
+          {
+            "text": "我说：别走",
+            "timestamp": null
+          },
+          {
+            "text": "张泽禹Zack/左航LEFT：再唱一遍",
+            "timestamp": null
+          },
+          {
+            "text": "一起唱这首歌",
+            "timestamp": null
+          }
+        ],
+        "annotations": [
+          {
+            "sourceIndex": 0,
+            "kind": "performer_cue",
+            "speakerID": "S1",
+            "sourceLabel": "合"
+          },
+          {
+            "sourceIndex": 2,
+            "kind": "performer_cue",
+            "speakerID": "S2",
+            "sourceLabel": "张极Jeremy"
+          },
+          {
+            "sourceIndex": 4,
+            "kind": "performer_cue",
+            "speakerID": "S3",
+            "sourceLabel": "张泽禹Zack/左航LEFT"
+          }
+        ],
+        "speakers": [
+          {
+            "id": "S1",
+            "sourceLabel": "合",
+            "displayName": "All"
+          },
+          {
+            "id": "S2",
+            "sourceLabel": "张极Jeremy",
+            "displayName": "张极"
+          },
+          {
+            "id": "S3",
+            "sourceLabel": "张泽禹Zack/左航LEFT",
+            "displayName": "张泽禹 / 左航"
+          }
+        ],
+        "occurrences": [
+          {
+            "sourceID": "L0001",
+            "sourceIndex": 1,
+            "sourceText": "一起唱这首歌",
+            "lyricText": "一起唱这首歌",
+            "sourcePrefix": "",
+            "speakerID": "S1",
+            "startsTurn": true
+          },
+          {
+            "sourceID": "L0002",
+            "sourceIndex": 3,
+            "sourceText": "我说：别走",
+            "lyricText": "我说：别走",
+            "sourcePrefix": "",
+            "speakerID": "S2",
+            "startsTurn": true
+          },
+          {
+            "sourceID": "L0003",
+            "sourceIndex": 4,
+            "sourceText": "张泽禹Zack/左航LEFT：再唱一遍",
+            "lyricText": "再唱一遍",
+            "sourcePrefix": "张泽禹Zack/左航LEFT：",
+            "speakerID": "S3",
+            "startsTurn": true
+          },
+          {
+            "sourceID": "L0004",
+            "sourceIndex": 5,
+            "sourceText": "一起唱这首歌",
+            "lyricText": "一起唱这首歌",
+            "sourcePrefix": "",
+            "speakerID": "S3",
+            "startsTurn": false
+          }
+        ]
+      },
+      "selection_revision": "lyrics-selection-2026-09-30-storefront-1"
+    },
+    "song_details": {
+      "catalog_id": "1835909383",
+      "source_id": "2734065329",
+      "source": "NeteaseAPI",
+      "credits": [
+        {
+          "role": "编曲Arrangement",
+          "contributors": [
+            "Example"
+          ],
+          "source": "unknown",
+          "original": "编曲Arrangement：Example"
+        }
+      ]
+    },
+    "lyric_structure": {
+      "version": "source-speakers-1",
+      "speakers": [
+        {
+          "id": "S1",
+          "sourceLabel": "合",
+          "displayName": "All"
+        },
+        {
+          "id": "S2",
+          "sourceLabel": "张极Jeremy",
+          "displayName": "张极"
+        },
+        {
+          "id": "S3",
+          "sourceLabel": "张泽禹Zack/左航LEFT",
+          "displayName": "张泽禹 / 左航"
+        }
+      ],
+      "occurrences": [
+        {
+          "sourceID": "L0001",
+          "sourceText": "一起唱这首歌",
+          "lyricText": "一起唱这首歌",
+          "speakerID": "S1",
+          "startsTurn": false,
+          "sourcePrefix": ""
+        },
+        {
+          "sourceID": "L0002",
+          "sourceText": "我说：别走",
+          "lyricText": "我说：别走",
+          "speakerID": "S2",
+          "startsTurn": false,
+          "sourcePrefix": ""
+        },
+        {
+          "sourceID": "L0003",
+          "sourceText": "再唱一遍",
+          "lyricText": "再唱一遍",
+          "speakerID": "S3",
+          "startsTurn": false,
+          "sourcePrefix": ""
+        },
+        {
+          "sourceID": "L0004",
+          "sourceText": "一起唱这首歌",
+          "lyricText": "一起唱这首歌",
+          "speakerID": "S3",
+          "startsTurn": false,
+          "sourcePrefix": ""
+        }
+      ]
+    }
+  },
+  "document": {
+    "id": "8f75e4efd278112ac3c55a50ccb4b53bd31ba66661836948dd1ae57f3422d095",
+    "recordingKey": "969d901e0adb501e2585b9d4b11144453f38f61588ceb30170d2ad25b55330ef",
+    "sourceHash": "ebe661394f9bfb00d49276bdd5b726b617ade70640324a153cc52cf4d51ef5fc",
+    "canonicalRecordingID": null,
+    "textRevision": null,
+    "timingRevision": null,
+    "readingRevision": null,
+    "selectionRevision": "lyrics-selection-2026-09-30-storefront-1",
+    "checkedAt": "2026-10-16T21:45:21.663Z",
+    "response": {
+      "song": {
+        "id": 2734065329,
+        "album": "流星雨",
+        "title": {
+          "original": "流星雨",
+          "romanized": "流星雨"
+        },
+        "artist": {
+          "original": "TOP登陆少年组合",
+          "romanized": "TOP登陆少年组合"
+        },
+        "duration": 271.291,
+        "language": "zh",
+        "romanization_system": "none"
+      },
+      "lines": [
+        {
+          "original": "一起唱这首歌",
+          "romanized": "一起唱这首歌",
+          "timestamp": 6
+        },
+        {
+          "original": "我说：别走",
+          "romanized": "我说：别走",
+          "timestamp": 11
+        },
+        {
+          "original": "再唱一遍",
+          "romanized": "再唱一遍",
+          "timestamp": 20
+        },
+        {
+          "original": "一起唱这首歌",
+          "romanized": "一起唱这首歌",
+          "timestamp": 23
+        }
+      ],
+      "quality": {
+        "synced": true,
+        "partial": false,
+        "instrumental": false
+      },
+      "metadata": {
+        "source": "KugouAPI",
+        "version": "2.5.0",
+        "timestamp": "2026-10-16T21:45:21.662Z",
+        "timing_quality": {
+          "usable": true,
+          "coverage": 1,
+          "alignment": "provider"
+        },
+        "lyric_structure": {
+          "version": "lyric-annotations-3",
+          "speakers": [
+            {
+              "id": "S1",
+              "displayName": "All",
+              "sourceLabel": "合"
+            },
+            {
+              "id": "S2",
+              "displayName": "张极",
+              "sourceLabel": "张极Jeremy"
+            },
+            {
+              "id": "S3",
+              "displayName": "张泽禹 / 左航",
+              "sourceLabel": "张泽禹Zack/左航LEFT"
+            }
+          ],
+          "sourceRows": [
+            {
+              "text": "合：",
+              "timestamp": 5
+            },
+            {
+              "text": "一起唱这首歌",
+              "timestamp": 6
+            },
+            {
+              "text": "张极Jeremy：",
+              "timestamp": 10
+            },
+            {
+              "text": "我说：别走",
+              "timestamp": 11
+            },
+            {
+              "text": "张泽禹Zack/左航LEFT：再唱一遍",
+              "timestamp": 20
+            },
+            {
+              "text": "一起唱这首歌",
+              "timestamp": 23
+            }
+          ],
+          "annotations": [
+            {
+              "kind": "performer_cue",
+              "speakerID": "S1",
+              "sourceIndex": 0,
+              "sourceLabel": "合"
+            },
+            {
+              "kind": "performer_cue",
+              "speakerID": "S2",
+              "sourceIndex": 2,
+              "sourceLabel": "张极Jeremy"
+            },
+            {
+              "kind": "performer_cue",
+              "speakerID": "S3",
+              "sourceIndex": 4,
+              "sourceLabel": "张泽禹Zack/左航LEFT"
+            }
+          ],
+          "occurrences": [
+            {
+              "sourceID": "L0001",
+              "lyricText": "一起唱这首歌",
+              "speakerID": "S1",
+              "sourceText": "一起唱这首歌",
+              "startsTurn": true,
+              "sourceIndex": 1,
+              "sourcePrefix": ""
+            },
+            {
+              "sourceID": "L0002",
+              "lyricText": "我说：别走",
+              "speakerID": "S2",
+              "sourceText": "我说：别走",
+              "startsTurn": true,
+              "sourceIndex": 3,
+              "sourcePrefix": ""
+            },
+            {
+              "sourceID": "L0003",
+              "lyricText": "再唱一遍",
+              "speakerID": "S3",
+              "sourceText": "张泽禹Zack/左航LEFT：再唱一遍",
+              "startsTurn": true,
+              "sourceIndex": 4,
+              "sourcePrefix": "张泽禹Zack/左航LEFT："
+            },
+            {
+              "sourceID": "L0004",
+              "lyricText": "一起唱这首歌",
+              "speakerID": "S3",
+              "sourceText": "一起唱这首歌",
+              "startsTurn": false,
+              "sourceIndex": 5,
+              "sourcePrefix": ""
+            }
+          ]
+        },
+        "language_details": {
+          "lines": [
+            {
+              "language": "zh",
+              "sourceID": "L0001",
+              "confidence": "script_only"
+            },
+            {
+              "language": "zh",
+              "sourceID": "L0002",
+              "confidence": "script_only"
+            },
+            {
+              "language": "zh",
+              "sourceID": "L0003",
+              "confidence": "script_only"
+            },
+            {
+              "language": "zh",
+              "sourceID": "L0004",
+              "confidence": "script_only"
+            }
+          ],
+          "mixed": false,
+          "primary": "zh",
+          "scripts": [
+            "Hani"
+          ],
+          "version": 1,
+          "languages": [
+            "zh"
+          ],
+          "confidence": "script_only",
+          "pronunciation_basis": "script_only",
+          "pronunciation_language": null
+        },
+        "selection_revision": "lyrics-selection-2026-09-30-storefront-1",
+        "acquisition_started_at": 1792187121644
+      },
+      "song_details": {
+        "source": "KugouAPI",
+        "credits": [
+          {
+            "role": "编曲Arrangement",
+            "source": "unknown",
+            "original": "编曲Arrangement：Example",
+            "contributors": [
+              "Example"
+            ]
+          }
+        ],
+        "source_id": "2734065329",
+        "catalog_id": "1835909383"
+      },
+      "lyric_structure": {
+        "version": "source-speakers-1",
+        "speakers": [
+          {
+            "id": "S1",
+            "displayName": "All",
+            "sourceLabel": "合"
+          },
+          {
+            "id": "S2",
+            "displayName": "张极",
+            "sourceLabel": "张极Jeremy"
+          },
+          {
+            "id": "S3",
+            "displayName": "张泽禹 / 左航",
+            "sourceLabel": "张泽禹Zack/左航LEFT"
+          }
+        ],
+        "occurrences": [
+          {
+            "sourceID": "L0001",
+            "sourceText": "一起唱这首歌",
+            "lyricText": "一起唱这首歌",
+            "speakerID": "S1",
+            "startsTurn": false,
+            "sourcePrefix": ""
+          },
+          {
+            "sourceID": "L0002",
+            "sourceText": "我说：别走",
+            "lyricText": "我说：别走",
+            "speakerID": "S2",
+            "startsTurn": false,
+            "sourcePrefix": ""
+          },
+          {
+            "sourceID": "L0003",
+            "sourceText": "再唱一遍",
+            "lyricText": "再唱一遍",
+            "speakerID": "S3",
+            "startsTurn": false,
+            "sourcePrefix": ""
+          },
+          {
+            "sourceID": "L0004",
+            "sourceText": "一起唱这首歌",
+            "lyricText": "一起唱这首歌",
+            "speakerID": "S3",
+            "startsTurn": false,
+            "sourcePrefix": ""
+          }
+        ]
+      }
+    },
+    "structure": {
+      "version": "source-speakers-1",
+      "speakers": [
+        {
+          "id": "S1",
+          "displayName": "All",
+          "sourceLabel": "合"
+        },
+        {
+          "id": "S2",
+          "displayName": "张极",
+          "sourceLabel": "张极Jeremy"
+        },
+        {
+          "id": "S3",
+          "displayName": "张泽禹 / 左航",
+          "sourceLabel": "张泽禹Zack/左航LEFT"
+        }
+      ],
+      "occurrences": [
+        {
+          "sourceID": "L0001",
+          "sourceText": "一起唱这首歌",
+          "lyricText": "一起唱这首歌",
+          "speakerID": "S1",
+          "startsTurn": false,
+          "sourcePrefix": ""
+        },
+        {
+          "sourceID": "L0002",
+          "sourceText": "我说：别走",
+          "lyricText": "我说：别走",
+          "speakerID": "S2",
+          "startsTurn": false,
+          "sourcePrefix": ""
+        },
+        {
+          "sourceID": "L0003",
+          "sourceText": "再唱一遍",
+          "lyricText": "再唱一遍",
+          "speakerID": "S3",
+          "startsTurn": false,
+          "sourcePrefix": ""
+        },
+        {
+          "sourceID": "L0004",
+          "sourceText": "一起唱这首歌",
+          "lyricText": "一起唱这首歌",
+          "speakerID": "S3",
+          "startsTurn": false,
+          "sourcePrefix": ""
+        }
+      ]
+    }
+  }
+}

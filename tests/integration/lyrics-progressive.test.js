@@ -4,6 +4,7 @@ import {createMusicRomanizeService,SELECTION_REVISION} from '../../api/music-rom
 import {createSongLibraryService,lyricLoader} from '../../api/song-library.js';
 import {libraryDB} from '../helpers/library-db.js';
 import {LibraryError} from '../../api/utils/song-library/store.js';
+import {makeDocument} from '../../api/utils/song-library/document.js';
 import {streamResponse,frames} from '../helpers/stream-http.js';
 import {createMockRes} from '../helpers/mock-http.js';
 const song={id:'source-1',title:'Original song',artist:'Test artist',duration:240};
@@ -90,4 +91,22 @@ test('admissible stale library text is readable before a failed refresh without 
  const res=streamResponse();await handler({...request,body:{...request.body,delivery:'progressive-v1'}},res);
  assert.deepEqual(frames(res).map(f=>f.event),['readable','refresh_failed']);assert.equal(frames(res).at(-1).code,'provider_timeout');assert.equal(frames(res)[0].response.library,undefined);
  assert.equal(Number((await db.query('SELECT count(*) FROM lyric_documents')).rows[0].count),1);assert.equal(Number((await store.usage()).jobs),0);
+});
+for(const progressive of [false,true])for(const release of ['plain-first','grace-first'])test(`timing selection does not depend on formatting completion: ${progressive?'progressive':'legacy'} ${release}`,async()=>{
+ const plain=deferred(),timed=deferred();let formats=0;
+ const provider=(name,text,timestamp)=>({name,searchSong:async()=>song,getLyrics:async()=>({lines:[{text,timestamp}]})});
+ const handler=createMusicRomanizeService({redis:null,logger:{info(){},error(){}},untimedGraceMs:5,getAvailableAPIsFn:()=>[provider('Plain','普通歌词',null),provider('Timed','同步歌词',12)],resolveCatalogAliasesFn:async()=>[],lookupListeningReviewedRecordingFn:async()=>null,lookupReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,detectLanguageFn:async()=> 'zh',getProcessorFn:()=>({romanize:async text=>{formats++;await(text==='普通歌词'?plain:timed).promise;return {romanized:text};}})});
+ const res=progressive?streamResponse():createMockRes(),work=handler({method:'POST',body:{...recording,options:progressive?{delivery:'progressive-v1'}:{}}},res);
+ await until(()=>formats===2);
+ if(release==='plain-first')plain.resolve();else await new Promise(r=>setTimeout(r,10));
+ plain.resolve();timed.resolve();await work;
+ const response=progressive?frames(res).at(-1).response:res.body;assert.equal(response.metadata.source,'Timed');assert.equal(response.quality.synced,true);
+});
+test('legacy stored duet structure accompanies cached raw reading and final document',async t=>{
+ const {db,store}=await libraryDB();t.after(()=>db.close());
+ const raw={song:{id:'legacy',title:{original:song.title},artist:{original:song.artist},language:'zh',duration:240},lines:[{original:'A: 一起唱',romanized:'A: 一起唱',timestamp:12},{original:'B: 向前走',romanized:'B: 向前走',timestamp:30}],metadata:{selection_revision:SELECTION_REVISION},quality:{synced:true,partial:false,instrumental:false}};
+ const legacy=makeDocument(recording,raw,SELECTION_REVISION,{A:'Singer A',B:'Singer B'});await store.saveDocument(legacy);
+ const handler=createSongLibraryService({store,selectionRevision:SELECTION_REVISION,loadLyrics:async()=>assert.fail('fresh cache must not search')});
+ const res=streamResponse();await handler({method:'POST',lyricaUser:{id:'reader-a'},body:{action:'lyrics',recording,delivery:'progressive-v1'}},res);
+ const all=frames(res);assert.deepEqual(all[0].response.lyric_structure,all.at(-1).document.structure);assert.equal(all[0].response.lyric_structure.speakers.length,2);assert.equal(all[0].response.metadata.lyric_structure,undefined);
 });

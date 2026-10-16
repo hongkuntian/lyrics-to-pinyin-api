@@ -1,5 +1,5 @@
 import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,sourceCapsule,spotifyHash} from './spotify-recording.js';
-import {LYRIC_NORMALIZATION_VERSION} from '../lyric-annotations.js';
+import {LYRIC_NORMALIZATION_VERSION,publicLyricStructure,publicRawLyrics} from '../lyric-annotations.js';
 import {digest,LibraryError} from './store.js';
 import {isRejectedRecordingLyrics} from '../rejected-lyrics.js';
 
@@ -33,10 +33,9 @@ export function publicDocument(doc,request=null) {
       catalog_resolution:{...doc.response.metadata.catalog_resolution,requested:{catalog_id:request.catalog_id,storefront:request.storefront??null},
         accepted_request:{catalog_id:request.catalog_id,artist:request.artist,title:request.title,album:request.album??null,duration:request.duration}}}}};
   }
-  if(!normalized(doc)) return doc;
-  return {...doc,structure:{version:'source-speakers-1',speakers:doc.structure.speakers,
-    occurrences:doc.structure.occurrences.map(o=>({sourceID:o.sourceID,sourceText:o.lyricText,
-      lyricText:o.lyricText,speakerID:o.speakerID,startsTurn:false,sourcePrefix:''}))}};
+  if(!normalized(doc)) return doc.structure.version==='source-speakers-1'
+    ?{...doc,response:{...doc.response,lyric_structure:doc.structure}}:doc;
+  return {...doc,response:publicRawLyrics({...doc.response}),structure:publicLyricStructure(doc.structure)};
 }
 
 export function publicTranslation(translation,doc) {
