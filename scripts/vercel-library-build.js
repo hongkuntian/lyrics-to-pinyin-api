@@ -9,6 +9,17 @@ import {migrateLibrary,migrationNames} from './library-migrations.js';
 import {migrateSourceContent} from './migrate-source-content.js';
 import {repairTranslationReuse} from './repair-translation-reuse.js';
 
+export function buildFailureCode(error) {
+  const allowed=new Set(['migration_changed','library_schema_migration_required','invalid_language_policy',
+    'library_not_configured','migration_requires_production_build','ETIMEDOUT','ENOTFOUND','ECONNREFUSED','ECONNRESET']);
+  if(allowed.has(error?.code))return error.code;
+  if(allowed.has(error?.message))return error.message;
+  // PostgreSQL SQLSTATE is safe diagnostic classification; never emit its
+  // message/detail, a connection string or arbitrary exception properties.
+  if(typeof error?.code==='string'&&/^[0-9]{2}[A-Z0-9]{3}$/.test(error.code))return error.code;
+  return 'build_preflight_failed';
+}
+
 export async function verifyBuildSchema({env=process.env,open=database,migrate=migrateLibrary,migrateSources=migrateSourceContent,repairTranslations=repairTranslationReuse,log=console.log}={}) {
   const requested=env.LYRA_LIBRARY_MIGRATE_ON_BUILD==='1';
   const production=env.VERCEL==='1'&&env.VERCEL_ENV==='production';
@@ -43,5 +54,5 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
       if(claim){await claim.close();await runEvaluation();}
     }
   }
-  catch {console.error('Library build verification failed. Inspect the schema or evaluation receipt before promotion.');process.exitCode=1;}
+  catch(error) {console.error(JSON.stringify({event:'library_build_failed',code:buildFailureCode(error)}));process.exitCode=1;}
 }

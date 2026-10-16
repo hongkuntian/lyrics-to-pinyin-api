@@ -1,8 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {verifyBuildSchema} from '../../scripts/vercel-library-build.js';
+import {verifyBuildSchema,buildFailureCode} from '../../scripts/vercel-library-build.js';
 import {migrationNames} from '../../scripts/library-migrations.js';
 const production={VERCEL:'1',VERCEL_ENV:'production'};
+test('build failure classification reports schema codes without credential-bearing exception details',()=>{
+ assert.equal(buildFailureCode(Object.assign(new Error('secret database connection URL'),{code:'42501',detail:'never-log-secret'})),'42501');
+ assert.equal(buildFailureCode(new Error('migration_changed')),'migration_changed');
+ assert.equal(buildFailureCode(Object.assign(new Error('secret'),{code:'arbitrary-secret-value'})),'build_preflight_failed');
+});
 test('local and preview builds never access the production database',async()=>{
  for(const env of [{},{VERCEL:'1',VERCEL_ENV:'preview'}])await verifyBuildSchema({env,open:()=>assert.fail('database access')});
  await assert.rejects(verifyBuildSchema({env:{LYRA_LIBRARY_MIGRATE_ON_BUILD:'1'},open:()=>assert.fail('database access')}),/migration_requires_production_build/);
