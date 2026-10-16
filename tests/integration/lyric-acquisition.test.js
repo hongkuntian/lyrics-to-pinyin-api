@@ -16,7 +16,7 @@ function proof(r){return {version:'catalog-recording-1',method:'same_catalog_id'
 function fixture(extra={}){
  const values=new Map(),pending=[],stats={catalog:0,search:0,id:0,lyrics:0,active:0,peak:0};let now=1000;
  const count=async(kind,work)=>{stats[kind]++;stats.active++;stats.peak=Math.max(stats.peak,stats.active);try{return await work();}finally{stats.active--;}};
- const api={name:'LRCAPI',searchSong:async()=>count('search',async()=>({...song})),getLyrics:async()=>{stats.lyrics++;return structuredClone(words);},getRecording:async()=>count('id',async()=>({song:{...song},lyrics:structuredClone(words)}))};
+ const api={name:'LRCAPI',searchSong:async()=>count('search',async()=>({...song})),getLyrics:async()=>count('lyrics',async()=>structuredClone(words)),getRecording:async()=>count('id',async()=>({song:{...song},lyrics:structuredClone(words)}))};
  const deps={redis:{},getCachedFn:async(_,key)=>values.get(key)??null,setCachedFn:async(_,key,value)=>values.set(key,structuredClone(value)),waitUntilFn:p=>pending.push(p),logger:{info(){},error(){}},contextNow:()=>now,contextTTLms:1000,speculativeDiscovery:false,getAvailableAPIsFn:()=>[api],detectLanguageFn:async()=> 'zh',getProcessorFn:()=>({romanize:async text=>({romanized:text})}),lookupListeningReviewedRecordingFn:async()=>null,lookupReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,resolveCatalogAliasesFn:async r=>{stats.catalog++;const aliases=[];Object.defineProperty(aliases,'resolution',{value:proof(r)});return aliases;},...extra};
  const drain=async()=>{let n=0;while(n<pending.length){const end=pending.length;await Promise.all(pending.slice(n,end));n=end;}};
  const call=async(handler,body={...request},res=createMockRes())=>{await handler({method:'POST',body},res);await drain();return res;};
@@ -79,7 +79,7 @@ test('expired speculative discovery cannot obtain a new provider deadline after 
 test('policy-equivalent storefront aliases share one owned source and retain each caller proof after first cancellation',async()=>{
  const format=gate();let formatting=false,sourceAborted=false;const f=fixture({getProcessorFn:()=>({romanize:async text=>{formatting=true;await format.promise;return {romanized:text};}})});
  f.api.searchSong=async(_,__,context)=>{f.stats.search++;context.signal.addEventListener('abort',()=>sourceAborted=true);return {...song};};const service=f.make(),a=streamResponse(),b=streamResponse();const one=f.call(service,{...request,options:{delivery:'progressive-v1'}},a);await until(()=>formatting);
- const two=f.call(service,{...request,storefront:'ca',options:{delivery:'progressive-v1'}},b);await until(()=>f.stats.catalog===2);await tick();a.emit('close');assert.equal(sourceAborted,false);format.resolve();await Promise.all([one,two]);assert.equal(f.stats.search,1);assert.equal(frames(b).at(-1).response.metadata.catalog_resolution.requested.storefront,'ca');
+ const two=f.call(service,{...request,storefront:'ca',options:{delivery:'progressive-v1'}},b);await until(()=>f.stats.catalog===2);await tick();a.emit('close');assert.equal(sourceAborted,false);format.resolve();await Promise.all([one,two]);assert.equal(f.stats.search,1);assert.equal(frames(b).at(-1).response.metadata.catalog_resolution.requested.storefront,'ca');assert.equal(frames(b).at(-1).response.metadata.recording_match,undefined);
 });
 test('different catalog policies, normalization entities and localized metadata remain independent owners',async()=>{
  for(const variant of ['catalog','entities','genres','searches','localized']){
@@ -89,7 +89,7 @@ test('different catalog policies, normalization entities and localized metadata 
 });
 test('cold simultaneous aliases may each probe before proof, but the joined source never repeats either original query',async()=>{
  const firstCatalog=gate(),secondCatalog=gate(),lyrics=gate();const f=fixture({speculativeDiscovery:true,resolveCatalogAliasesFn:async r=>{f.stats.catalog++;await(r.storefront==='us'?firstCatalog:secondCatalog).promise;const aliases=[];Object.defineProperty(aliases,'resolution',{value:proof(r)});return aliases;}});
- f.api.getLyrics=async()=>{await lyrics.promise;return structuredClone(words);};const service=f.make(),a=f.call(service),b=f.call(service,{...request,storefront:'ca'});await until(()=>f.stats.search===2);firstCatalog.resolve();await until(()=>f.stats.active===0);secondCatalog.resolve();await tick();lyrics.resolve();const result=await Promise.all([a,b]);assert.ok(result.every(r=>r.statusCode===200));assert.equal(f.stats.search,2);assert.ok(f.stats.peak<=2);
+ f.api.getLyrics=async()=>f.count('lyrics',async()=>{await lyrics.promise;return structuredClone(words);});const service=f.make(),a=f.call(service),b=f.call(service,{...request,storefront:'ca'});await until(()=>f.stats.search===2);firstCatalog.resolve();await until(()=>f.stats.lyrics===1);secondCatalog.resolve();await tick();lyrics.resolve();const result=await Promise.all([a,b]);assert.ok(result.every(r=>r.statusCode===200));assert.equal(f.stats.search,2);assert.ok(f.stats.peak<=2);
 });
 test('admitted metadata with empty words retains lyrics_absent diagnostic',async()=>{
  const f=fixture();f.api.getLyrics=async()=>({lines:[]});const res=await f.call(f.make());assert.equal(res.statusCode,404);assert.equal(res.body.code,'lyrics_absent');

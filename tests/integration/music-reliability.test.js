@@ -22,13 +22,14 @@ test('deadlines return 504; outages return 502',async()=> {
   assert.equal((await run([api({searchSong:async()=>{throw new Error('offline');}})])).statusCode,502);
 });
 test('cache keys separate source, version, album, duration and title/artist boundaries',async()=> {
-  const keys=[];
-  const deps={redis:{},getCachedFn:async(_,key)=>{keys.push(key);return null;},setCachedFn:async()=>{}};
+  const keys=[],contextKeys=[];
+  const deps={redis:{},getCachedFn:async(_,key)=>{(key.startsWith('lyrics:verified-context:')?contextKeys:keys).push(key);return null;},setCachedFn:async()=>{}};
   await run([api()],{},deps);
   await run([api({name:'Backup'})],{},deps);
   await run([api()],{album:'Album'},deps);
   await run([api()],{duration:270},deps);
   assert.equal(new Set(keys).size,4);
+  assert.equal(new Set(contextKeys).size,3); // Discovery context omits source presentation options.
 });
 test('request validation rejects invalid fields without invoking providers',async()=> {
   for(const body of [{artist:{}},{title:[]},{duration:-1},{duration:'269'},{album:8}]) assert.equal((await run([api()],body)).statusCode,400);

@@ -79,8 +79,10 @@ Run `node scripts/benchmark-lyric-delivery.mjs --acquisition` for the maintained
 controlled replay. It retains cold 0/800 ms catalog, warm new-instance context,
 expired context, explicit refresh, eligible alias sharing and first-reader
 cancellation cases. The replay records first-readable/final event times, catalog,
-search/source-ID/lyric call counts, source concurrency and final source/request
-identity. Its owner-sharing cases deliberately disable optional speculation to
+search/source-ID/lyric call counts, discovery/source-ID concurrency and final source/request
+identity. The replay concurrency counter excludes lyric-read lifetimes; it does
+not measure comprehensive provider-network concurrency. Integration fixtures
+separately retain lyric-read lifetimes when asserting the source hedge cap. Its owner-sharing cases deliberately disable optional speculation to
 isolate owner savings. Integration tests separately cover simultaneous cold
 aliases with speculation enabled and delayed catalog admission.
 
