@@ -19,7 +19,7 @@ export function caseInput(spec,snapshot) {
   doc=makeDocument({catalog_id:'1',title:spec.id,artist:'Original evaluation text',duration:30},response,'evaluation',spec.speakers??{});
  } else {
   const row=snapshot.rows.find(r=>r.response.song.title.original===spec.title);if(!row)throw new Error('source_missing');
-  doc={id:row.document_id,sourceHash:row.source_hash,response:row.response,structure:row.structure};
+  doc={id:row.document_id,sourceHash:row.source_hash,response:row.response,structure:row.structure,...(row.source_capsule?{sourceCapsule:row.source_capsule,modelContext:row.model_context}:{})};
   translation={id:row.id,target:row.target,...structuredClone(row.content)};
   if(spec.replaceTranslation) {
    translation.id='controlled-stress-'+translation.id;

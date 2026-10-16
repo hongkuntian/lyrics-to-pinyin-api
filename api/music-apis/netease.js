@@ -16,7 +16,7 @@ export class NeteaseAPI extends BaseMusicAPI {
       const expected=recordingNames(request);
       // Resolve authoritative artist aliases only for plausible recordings.
       // The profile promises are shared between the shallow and deeper pages.
-      const plausible=songs.filter(song=>recordingNames(song).title===expected.title && Number.isFinite(song.duration) && Number.isFinite(request.duration) && recordingScore({...song,title,artist},request)>=0).slice(0,3);
+      const plausible=context.recordingProvider==='spotify'?[]:songs.filter(song=>recordingNames(song).title===expected.title && Number.isFinite(song.duration) && Number.isFinite(request.duration) && recordingScore({...song,title,artist},request)>=0).slice(0,3);
       for(const song of plausible) {
         const performers=records.get(song.id).raw.artists || [];
         if(!performers.length || performers.length>3 || performers.length!==expected.credits.length) continue;
@@ -52,7 +52,7 @@ export class NeteaseAPI extends BaseMusicAPI {
     for(const limit of [30,100]) {
       const data=await fetchJSON(`${this.baseURL}/search?limit=${limit}&keywords=${encodeURIComponent(chinese.sify(`${artist} ${searchTitle(title)}`))}`,context);
       if(data.code!==200) throw new Error('NetEase search unavailable');
-      for(const raw of data.result?.songs || []) if(!records.has(raw.id)) records.set(raw.id,{raw,song:{id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease'}});
+      for(const raw of data.result?.songs || []) if(!records.has(raw.id)) records.set(raw.id,{raw,song:{id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease',...(context.recordingProvider==='spotify'?{creditedArtistNames:raw.artists?.map(x=>x.name),...(raw.isrc?{isrc:raw.isrc}:{}),...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{})}:{})}});
       const song=await select();if(song) return song;
       if(context.signal?.aborted) throw Object.assign(new Error('Lookup cancelled'),{name:'AbortError'});
     }

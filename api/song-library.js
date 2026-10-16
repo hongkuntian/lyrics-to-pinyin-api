@@ -1,3 +1,4 @@
+import {isSpotifyRecording} from './utils/song-library/spotify-recording.js';
 import {withAppAuth} from './utils/app-auth/http.js';
 import {waitUntil} from '@vercel/functions';
 import {performance} from 'node:perf_hooks';
@@ -22,7 +23,7 @@ const actions={capabilities:[],pronunciation:['documentID','sourceHash','profile
 export function lyricLoader(handler=createMusicRomanizeService()) {
   return async (recording,{refresh=false}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
-    await handler({method:'POST',body:{...recording,options:{tone_style:'marks',separator:' ',case:'lower',...(refresh?{refresh:true}:{})}}},result);
+    await handler({method:'POST',body:{...(isSpotifyRecording(recording)?{recording}:recording),options:{tone_style:'marks',separator:' ',case:'lower',...(refresh?{refresh:true}:{})}}},result);
     if(result.code!==200) throw new LibraryError(result.body?.code??'lyrics_unavailable',result.code);
     return result.body;
   };
@@ -75,7 +76,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         if(input.refresh!==undefined && input.refresh!==true && input.refresh!=='true') throw new LibraryError('invalid_request',400);
         const recording=recordingRequest(input.recording),key=requestKey(recording),explicit=Boolean(input.refresh);
         let doc=await measure('document_read',()=>db.documentForRequest(key,selectionRevision));
-        if(!doc && !explicit && db.bindRecordingHead) doc=await measure('recording_bind',()=>db.bindRecordingHead(recording,key,selectionRevision));
+        if(!doc && !explicit && !isSpotifyRecording(recording) && db.bindRecordingHead) doc=await measure('recording_bind',()=>db.bindRecordingHead(recording,key,selectionRevision));
         lyricCache='LIBRARY';
         const stale=value=>!value || lyricSourceNeedsRefreshFn(value.response,recording)
           || Date.now()-new Date(value.checkedAt??0).getTime()>((value.response.quality.synced && !value.response.quality.partial)?86400000:300000);

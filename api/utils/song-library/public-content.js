@@ -1,5 +1,6 @@
+import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,sourceCapsule} from './spotify-recording.js';
 import {LYRIC_NORMALIZATION_VERSION} from '../lyric-annotations.js';
-import {digest} from './store.js';
+import {digest,LibraryError} from './store.js';
 
 const normalizedVersions=new Set(['lyric-annotations-1','lyric-annotations-2',LYRIC_NORMALIZATION_VERSION]);
 const normalized=doc=>normalizedVersions.has(doc.structure.version);
@@ -8,6 +9,19 @@ const normalized=doc=>normalizedVersions.has(doc.structure.version);
 // prefix. Keep that wire contract while canonical documents retain raw rows,
 // performer turns and clean-to-source indices for translation and provenance.
 export function publicDocument(doc,request=null) {
+  if(doc.sourceCapsule||isSpotifyRecording(request)) {
+    if(!isSpotifyRecording(request)||!doc.sourceCapsule||!doc.requestEvidence)throw new LibraryError('recording_mismatch');
+    const h=spotifyHashes(request,doc.sourceCapsule,doc.selectionRevision),e=doc.requestEvidence;
+    const binding=spotifyBinding(request,doc.sourceCapsule,doc.selectionRevision,doc.response,{durable:true});
+    if(doc.canonicalRecordingID!=null||canonicalJSON(e.source)!==canonicalJSON(binding.source)||canonicalJSON(e.match)!==canonicalJSON(binding.match)
+      ||e.requestHash!==h.requestHash||doc.requestKey!==h.requestHash||e.sourceHash!==h.sourceHash||doc.sourceHash!==h.sourceHash
+      ||doc.id!==h.documentID||doc.recordingKey!==h.recordingKey||doc.textRevision!==h.textRevision||doc.timingRevision!==h.timingRevision||doc.readingRevision!==h.readingRevision
+      ||canonicalJSON(doc.requestRecording)!==canonicalJSON(request)||canonicalJSON(doc.sourceCapsule)!==canonicalJSON(sourceCapsule(doc.response))
+      ||canonicalJSON(doc.structure)!==canonicalJSON(doc.sourceCapsule.structure))throw new LibraryError('recording_mismatch');
+    const {sourceCapsule:source,modelContext,requestRecording,requestEvidence,requestKey,...value}=doc;
+    doc={...value,recordingBinding:binding};
+  }
+
   if(request && doc.canonicalRecordingID) {
     // The wire binding describes the caller's original item; immutable text and
     // document references retain their identity across verified catalog aliases.

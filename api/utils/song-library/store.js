@@ -1,3 +1,4 @@
+import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,modelContextFromSource,sourceCapsule} from './spotify-recording.js';
 import {canonicalTarget} from './languages.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {currentTranslationSQL,publishRevision,revisions} from './revisions.js';
@@ -13,6 +14,8 @@ export const digest=value=>createHash('sha256').update(typeof value==='string'?v
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0] ?? null;
 const document=row=>row && ({id:row.id,recordingKey:row.recording_key,sourceHash:row.source_hash,
   canonicalRecordingID:row.canonical_recording_id??null,textRevision:row.text_revision??null,timingRevision:row.timing_revision??null,readingRevision:row.reading_revision??null,
+  ...(row.source_capsule?{sourceCapsule:row.source_capsule,modelContext:row.model_context,
+    ...(row.request_recording?{requestRecording:row.request_recording,requestEvidence:row.request_evidence,requestKey:row.request_key}:{})}:{}),
   selectionRevision:row.selection_revision,checkedAt:row.checked_at??null,response:{...row.response,...(row.song_details?{song_details:row.song_details}:{}),...(row.provider_translation?{provider_translation:row.provider_translation}:{})},structure:row.structure});
 const publicJob=row=>({id:row.id,state:row.state,documentID:row.document_id,target:row.target,errorCode:row.error_code});
 
@@ -53,6 +56,20 @@ export class SongLibraryStore {
     if(row.count>60) throw new LibraryError('rate_limited',429);
   }
   async saveDocument(value,{replaceID=null,lookupOwner=null}={}) {
+    const spotify=Boolean(value.sourceCapsule);
+    if(spotify) {
+      if(!lookupOwner)throw new LibraryError('lookup_superseded');
+      const r=value.requestRecording,s=value.sourceCapsule;
+      if(!isSpotifyRecording(r))throw new LibraryError('invalid_recording',400);
+      const h=spotifyHashes(r,s,value.selectionRevision),binding=spotifyBinding(r,s,value.selectionRevision,value.response,{durable:true});
+      if(value.requestKey!==h.requestHash||value.id!==h.documentID||value.sourceHash!==h.sourceHash||value.recordingKey!==h.recordingKey
+        ||value.textRevision!==h.textRevision||value.timingRevision!==h.timingRevision||value.readingRevision!==h.readingRevision
+        ||value.requestEvidence?.requestHash!==h.requestHash||value.requestEvidence?.sourceHash!==h.sourceHash
+        ||value.canonicalRecordingID!=null||canonicalJSON(value.structure)!==canonicalJSON(s.structure)
+        ||canonicalJSON(value.sourceCapsule)!==canonicalJSON(sourceCapsule(value.response))
+        ||canonicalJSON(value.requestEvidence.source)!==canonicalJSON(binding.source)||canonicalJSON(value.requestEvidence.match)!==canonicalJSON(binding.match)
+        ||canonicalJSON(value.modelContext)!==canonicalJSON(modelContextFromSource(s)))throw new LibraryError('recording_mismatch');
+    }
     return this.db.transaction(async db=> {
       if(lookupOwner) {
         const lease=await first(db,`SELECT owner FROM lyric_lookups WHERE request_key=$1 AND selection_revision=$2
@@ -62,6 +79,10 @@ export class SongLibraryStore {
       const {song_details,provider_translation,...lyricResponse}=value.response;
       await db.query(`INSERT INTO lyric_documents(id,recording_key,source_hash,selection_revision,response,structure,translation_identity)
         VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO NOTHING`,[value.id,value.recordingKey,value.sourceHash,value.selectionRevision,JSON.stringify(lyricResponse),JSON.stringify(value.structure),translationIdentity(value)]);
+      if(spotify) {
+        await db.query(`UPDATE lyric_documents SET source_capsule=$2,model_context=$3,text_revision=$4,timing_revision=$5,reading_revision=$6
+          WHERE id=$1 AND source_capsule IS NULL`,[value.id,JSON.stringify(value.sourceCapsule),JSON.stringify(value.modelContext),value.textRevision,value.timingRevision,value.readingRevision]);
+      }
       if(value.canonicalRecordingID) {
         await db.query(`UPDATE lyric_documents SET canonical_recording_id=$2,text_revision=$3,timing_revision=$4,reading_revision=$5 WHERE id=$1 AND canonical_recording_id IS NULL`,
           [value.id,value.canonicalRecordingID,value.textRevision,value.timingRevision,value.readingRevision]);
@@ -86,19 +107,27 @@ export class SongLibraryStore {
         WHERE request_key=$1 AND selection_revision=$2 AND document_id=$4 AND EXISTS
           (SELECT 1 FROM lyric_lookups WHERE request_key=$1 AND selection_revision=$2 AND owner=$5 AND expires_at>now())`,
         [value.requestKey,value.selectionRevision,value.id,replaceID,lookupOwner]);
-      if(replaceID && lookupOwner && replaceID!==value.id) await db.query(`UPDATE lyric_requests SET document_id=$3,checked_at=now()
+      if(!spotify && replaceID && lookupOwner && replaceID!==value.id) await db.query(`UPDATE lyric_requests SET document_id=$3,checked_at=now()
         WHERE selection_revision=$2 AND document_id=$4 AND EXISTS
           (SELECT 1 FROM lyric_requests WHERE request_key=$1 AND selection_revision=$2 AND document_id=$3)`,
         [value.requestKey,value.selectionRevision,value.id,replaceID]);
+      if(spotify) {
+        // Only the locked, unexpired lease may publish evidence for this exact
+        // requestHash + selectionRevision and its actually associated source.
+        await db.query(`UPDATE lyric_requests SET request_recording=$4,request_evidence=$5,checked_at=now()
+          WHERE request_key=$1 AND selection_revision=$2 AND document_id=$3 AND EXISTS
+            (SELECT 1 FROM lyric_lookups WHERE request_key=$1 AND selection_revision=$2 AND owner=$6 AND expires_at>now())`,
+          [value.requestKey,value.selectionRevision,value.id,JSON.stringify(value.requestRecording),JSON.stringify(value.requestEvidence),lookupOwner]);
+      }
       // Equivalent aliases must move together, otherwise an old alias could
       // continue admitting paid work for a superseded source document.
       // A refresh may advance the head only while its lease and previous head match.
-      return document(await first(db,`SELECT d.*,r.checked_at,r.selection_revision AS selection_revision,x.song_details,x.provider_translation FROM lyric_requests r JOIN lyric_documents d ON d.id=r.document_id LEFT JOIN lyric_document_extras x ON x.document_id=d.id
+      return document(await first(db,`SELECT d.*,r.checked_at,r.selection_revision AS selection_revision,r.request_key,r.request_recording,r.request_evidence,x.song_details,x.provider_translation FROM lyric_requests r JOIN lyric_documents d ON d.id=r.document_id LEFT JOIN lyric_document_extras x ON x.document_id=d.id
         WHERE r.request_key=$1 AND r.selection_revision=$2`,[value.requestKey,value.selectionRevision]));
     });
   }
   async documentForRequest(key,revision) {
-    return document(await first(this.db,`SELECT d.*,r.checked_at,r.selection_revision AS selection_revision,x.song_details,x.provider_translation FROM lyric_requests r JOIN lyric_documents d ON d.id=r.document_id LEFT JOIN lyric_document_extras x ON x.document_id=d.id
+    return document(await first(this.db,`SELECT d.*,r.checked_at,r.selection_revision AS selection_revision,r.request_key,r.request_recording,r.request_evidence,x.song_details,x.provider_translation FROM lyric_requests r JOIN lyric_documents d ON d.id=r.document_id LEFT JOIN lyric_document_extras x ON x.document_id=d.id
       WHERE r.request_key=$1 AND r.selection_revision=$2`,[key,revision]));
   }
   // Old immutable references remain readable. Admission checks separately reject
@@ -113,7 +142,7 @@ export class SongLibraryStore {
     return document(row);
   }
   async bindRecordingHead(request,key,revision) {
-    if(!request.storefront)return null;
+    if(isSpotifyRecording(request)||!request.storefront)return null;
     return this.db.transaction(async db=>{
       const row=await first(db,`SELECT d.*,h.checked_at,h.selection_revision,x.song_details,x.provider_translation,b.evidence
         FROM catalog_recording_bindings b JOIN recording_lyric_heads h ON h.canonical_recording_id=b.canonical_recording_id

@@ -16,7 +16,9 @@ export class LRCAPI extends BaseMusicAPI {
     const add=song=> {
       if(!song || song.id==null) return;
       const lyricsData=this.lyricsFromRecord(song,request);
-      records.set(song.id,{id:song.id,title:song.trackName || song.name,artist:song.artistName,album:song.albumName,duration:song.duration,source:'lrclib',instrumental:lyricsData?.instrumental===true,lyricsData});
+      records.set(song.id,{id:song.id,title:song.trackName || song.name,artist:song.artistName,album:song.albumName,duration:song.duration,source:'lrclib',instrumental:lyricsData?.instrumental===true,lyricsData,...(context.recordingProvider==='spotify'?{
+        ...(song.creditedArtistNames!==undefined?{creditedArtistNames:song.creditedArtistNames}:{}),
+        ...(song.isrc?{isrc:song.isrc}:{}),...(typeof song.explicit==='boolean'?{explicit:song.explicit}:{})}:{})});
     };
     const choose=()=>findLyricsRecording([...records.values()].filter(song=>hasUsableLyrics(song.lyricsData,{duration:song.duration})),request);
     const attempt=()=> {

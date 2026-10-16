@@ -46,6 +46,8 @@ export function recordingNames({title='',artist='',artist_entities=[]},knownEnti
   return {title:normalizeRecordingText(base),credits:[...new Set(credits)]};
 }
 export function sameRecordingNames(a,b) {
+  if(b.recordingProvider==='spotify')return sameSpotifyRecordingNames(a,b);
+  if(a.recordingProvider==='spotify')return sameSpotifyRecordingNames(b,a);
   const entities=[...(a.artist_entities??[]),...(b.artist_entities??[])];
   const left=recordingNames(a,entities),right=recordingNames(b,entities);
   return left.title===right.title && JSON.stringify(left.credits)===JSON.stringify(right.credits);
@@ -150,6 +152,7 @@ function equivalentLyrics(a,b) {
   return left!==null && left===canonical(b);
 }
 export function recordingScore(song, request) {
+  if(request.recordingProvider==='spotify')return spotifyRecordingScore(song,request);
   const strict=sameRecordingNames(song,request);
   if (!strict && !metadataEquivalence(song,request)) return -1;
   if (request.album && song.album && JSON.stringify(version(`${request.title} ${request.album}`)) !== JSON.stringify(version(`${song.title} ${song.album}`))) return -1;
@@ -170,6 +173,7 @@ export function findRecording(songs, request) {
   if (!songs.length) return null;
   const ranked = songs.map(song=>({song,score:recordingScore(song,request)})).filter(x=>x.score>=0).sort((a,b)=>b.score-a.score);
   if (!ranked.length) {
+    if(request.recordingProvider==='spotify')throw new RecordingMismatchError(spotifyMismatchReason(songs,request));
     const bareTitle=title=>normalizeRecordingText(stripTitleDescription(title).replace(/\(\s*(?:live|remastered?|重制版|重製版)\s*\)/giu,''));
     const versionConflict=songs.some(song=>bareTitle(song.title)===bareTitle(request.title)
       && normalizeRecordingText(song.title)!==normalizeRecordingText(request.title)
@@ -209,4 +213,94 @@ export function findLyricsRecording(songs, request) {
   });
   try { return findRecording(candidates,request) || best; }
   catch(error) { if(error.code==='recording_mismatch') return best; throw error; }
+}
+
+
+// Opt-in adapter for Spotify: complete catalog names are indivisible credits.
+// The search-only joined string is never used as the request credit identity.
+function creditSegmentations(value,knownNames) {
+  if(typeof value!=='string'||!value.trim())return [];
+  const text=value.normalize('NFKC').trim(),known=new Set(knownNames.map(normalizeRecordingText));
+  const separators=[...text.matchAll(creditSeparator)].map(m=>({left:m.index,right:m.index+m[0].length}));
+  const memo=new Map();
+  const visit=start=>{
+    if(memo.has(start))return memo.get(start);
+    const found=[];
+    for(const cut of [...separators.filter(s=>s.left>=start),{left:text.length,right:text.length}]) {
+      const token=normalizeRecordingText(text.slice(start,cut.left));
+      if(!token||!known.has(token))continue;
+      const tails=cut.right===text.length?[[]]:visit(cut.right);
+      for(const tail of tails) {
+        const result=[token,...tail];
+        if(!found.some(old=>JSON.stringify(old)===JSON.stringify(result)))found.push(result);
+        if(found.length>=2)break;
+      }
+      if(found.length>=2)break;
+    }
+    memo.set(start,found);return found;
+  };
+  return visit(0);
+}
+function spotifyTitle(value='') {
+  const guests=[];
+  const base=stripTitleDescription(value).replace(/\(\s*live\s*版?\s*\)/gi,'(Live)').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
+  return {title:normalizeRecordingText(base),guests};
+}
+const structuredNames=song=>Array.isArray(song.creditedArtistNames)&&song.creditedArtistNames.length>0
+  &&song.creditedArtistNames.every(n=>typeof n==='string'&&n.trim())?song.creditedArtistNames:null;
+export function sameSpotifyRecordingNames(song,request) {
+  const requested=structuredNames(request);if(!requested||typeof song.title!=='string'||typeof request.title!=='string')return false;
+  // An explicitly supplied invalid source array cannot fall back to flat text.
+  if(song.creditedArtistNames!==undefined&&!structuredNames(song))return false;
+  const source=structuredNames(song),left=spotifyTitle(song.title),right=spotifyTitle(request.title);
+  if(left.title!==right.title)return false;
+  const known=[...requested,...(source??[])];
+  // Protect complete known names before interpreting feature separators. New
+  // printed guests remain material even if omitted from a catalog artist list.
+  for(const guest of [...left.guests,...right.guests]) {
+    if(!creditSegmentations(guest,known).length)known.push(...splitCredits(guest,known).filter(n=>n.trim()));
+  }
+  const withGuests=(names,guests)=>{
+    const credits=names.map(normalizeRecordingText);
+    for(const raw of guests) {
+      const parsed=creditSegmentations(raw,known);if(parsed.length!==1)return null;
+      const counts=new Map();
+      for(const name of parsed[0]) {
+        counts.set(name,(counts.get(name)??0)+1);
+        if(credits.filter(n=>n===name).length<counts.get(name))credits.push(name);
+      }
+    }
+    return credits.sort();
+  };
+  const parsed=source?[source.map(normalizeRecordingText)]:creditSegmentations(song.artist,known);
+  if(parsed.length!==1)return false;
+  const a=withGuests(parsed[0],left.guests),b=withGuests(requested,right.guests);
+  return a!==null&&b!==null&&JSON.stringify(a)===JSON.stringify(b);
+}
+const spotifyVersionMarkers=[
+  /\blive\b|演唱会|现场/iu,/\bremaster(?:ed)?\b|重制/iu,/\bdemo\b|概念版|小样/iu,
+  /\bremix\b|混音/iu,/\binstrumental\b|纯音乐|器乐/iu,/\bkaraoke\b|伴奏/iu,
+  /\bacoustic\b|不插电/iu,/\ba[ -]?cap(?:p)?ella\b|清唱/iu,/\bradio\s+edit\b/iu,
+  /\bedit\b|剪辑版/iu,/\bclean\b/iu,/\bexplicit\b/iu,/\bcover\b|翻唱/iu,/\breprise\b/iu
+];
+const spotifyVersions=song=>spotifyVersionMarkers.map(re=>re.test(chinese.sify(`${song.title??''} ${song.album??''}`).normalize('NFKC')));
+function spotifyFailure(song,request) {
+  if(JSON.stringify(spotifyVersions(song))!==JSON.stringify(spotifyVersions(request)))return 'version_conflict';
+  if(song.isrc&&request.isrc&&song.isrc!==request.isrc)return 'isrc_conflict';
+  if(typeof song.explicit==='boolean'&&typeof request.explicit==='boolean'&&song.explicit!==request.explicit)return 'metadata_conflict';
+  if(!Number.isFinite(song.duration)||song.duration<=0||!Number.isFinite(request.duration)||Math.abs(song.duration-request.duration)>3)return 'duration_conflict';
+  if(!sameSpotifyRecordingNames(song,request))return 'metadata_conflict';
+  return null;
+}
+function spotifyMismatchReason(songs,request) {
+  const reasons=songs.map(song=>spotifyFailure(song,request));
+  return ['isrc_conflict','version_conflict','duration_conflict','metadata_conflict'].find(reason=>reasons.includes(reason))??'metadata_conflict';
+}
+function spotifyRecordingScore(song,request) {
+  if(spotifyFailure(song,request))return -1;
+  let score=3-Math.abs(request.duration-song.duration)/10;
+  if(request.album&&song.album&&normalizedAlbum(request.album)===normalizedAlbum(song.album)) {
+    score+=normalizeRecordingText(unwrappedAlbum(request.album))===normalizeRecordingText(unwrappedAlbum(song.album))?3:2.5;
+  }
+  return score;
 }

@@ -693,6 +693,9 @@
           }
         }
       }
+    },
+    "recordingBinding": {
+      "$ref": "spotify-recording-binding.schema.json"
     }
   }
 }

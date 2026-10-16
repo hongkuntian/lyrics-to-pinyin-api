@@ -1,7 +1,7 @@
 import {translationIdentity,legacySourceCandidates} from '../api/utils/song-library/translation-identity.js';
 import {bindTranslation,contentFitsSource} from '../api/utils/song-library/translation-reuse.js';
 
-const document=row=>({id:row.id,recordingKey:row.recording_key,sourceHash:row.source_hash,response:row.response,structure:row.structure});
+const document=row=>({id:row.id,recordingKey:row.recording_key,sourceHash:row.source_hash,response:row.response,structure:row.structure,...(row.source_capsule?{sourceCapsule:row.source_capsule,modelContext:row.model_context}:{})});
 export async function repairTranslationReuse(database,{dryRun=false}={}) {
   return database.transaction(async db=>{
     if(!dryRun){await db.query('SELECT pg_advisory_xact_lock(71309,3)');await db.query('SELECT id FROM library_settings WHERE id=1 FOR UPDATE');}
@@ -21,6 +21,7 @@ export async function repairTranslationReuse(database,{dryRun=false}={}) {
         visited.add(replacement.id);replacement=byID.get(replacement.superseded_by);
       }
       if(!replacement||replacement.superseded_by||old.recording_key!==replacement.recording_key){deferred.push({translationID:item.translation_id,reason:'recording_or_replacement_changed'});continue;}
+      if(old.source_capsule||replacement.source_capsule){deferred.push({translationID:item.translation_id,reason:'spotify_source_revalidation_required'});continue;}
       const next=document(replacement);
       if(!translationIdentity(next)){deferred.push({translationID:item.translation_id,reason:'source_context_unavailable'});continue;}
       const archived=(await db.query('SELECT source_hash,response,structure FROM lyric_source_archives WHERE document_id=$1',[old.id])).rows[0];

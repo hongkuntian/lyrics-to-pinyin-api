@@ -1,0 +1,14 @@
+{
+  "normalized": {
+    "catalog_id": "123",
+    "artist": "Artist",
+    "title": "Title",
+    "album": null,
+    "duration": 240,
+    "storefront": null
+  },
+  "requestKeyCanonical": "{\"catalog_id\":\"123\",\"artist\":\"Artist\",\"title\":\"Title\",\"album\":null,\"duration\":240,\"storefront\":null}",
+  "requestKey": "bdaba34af78107e842fa070fdae9c58a6f59d4cc470b50c4468d87491eb6d54e",
+  "recordingKey": "b2c278e3f1bf9c9986d859cc964d3bd90f5ca5af46bcbb4747688688af9ff9f3",
+  "hintExclusionPass": true
+}

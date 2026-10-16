@@ -1,3 +1,5 @@
+import {canonicalJSON} from './spotify-recording.js';
+import {modelNames,hasIndependentContext} from './model-context.js';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const prompt=require('./prompt.json'),multilingualPrompt=require('./multilingual-prompt.json'),lexicon=require('./lexicon.json');
@@ -19,7 +21,7 @@ export function requestBody(doc,target='en',{legacy=false,model=legacy?LEGACY_MO
   const ids=doc.structure.occurrences.map(o=>o.sourceID),text=doc.structure.occurrences.map(o=>o.sourceText).join('\n');
   const terms=lexicon.terms.filter(t=>[t.term,...t.variants].some(v=>text.includes(v)));
   const sourceIDs=new Set(terms.flatMap(t=>t.meanings.flatMap(m=>m.sources)));
-  const data={title:doc.response.song.title.original,artist:doc.response.song.artist.original,
+  const data={...modelNames(doc),
     sourceLanguageLabel:doc.response.song.language,sourceDocument:{version:doc.structure.version,
       speakers:doc.structure.speakers,occurrences:doc.structure.occurrences},verifiedBackground:[],
     lexicalContext:{terms,sources:lexicon.sources.filter(s=>sourceIDs.has(s.id))}};
@@ -90,6 +92,7 @@ export function parseTranslation(text,doc) {
 export async function generate(doc,{apiKey,fetchFn=fetch,target='en',generationRequest=null}={}) {
   if(!apiKey) throw new LibraryError('generation_not_configured',503);
   const body=generationRequest??requestBody(doc,target);let response=null,actualMicros=null;
+  if(hasIndependentContext(doc)&&canonicalJSON(body)!==canonicalJSON(requestBody(doc,target,{model:body.model,legacy:body.max_output_tokens===16384})))throw new LibraryError('source_context_unavailable');
   try {
     const result=await fetchFn('https://api.openai.com/v1/responses',{method:'POST',
       headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(270_000)});

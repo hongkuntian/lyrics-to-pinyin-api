@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Spotify recording binding v2",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 2
+    },
+    "provider": {
+      "const": "spotify"
+    },
+    "itemID": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]{22}$"
+    },
+    "requestedItemID": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9]{22}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "market": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "recordingKey": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "requestHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "documentID": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "enum": [
+            "netease",
+            "lrclib",
+            "kugou"
+          ]
+        },
+        "itemID": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "metadataOrigin": {
+          "const": "independent_lyric_source"
+        },
+        "contextHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "provider",
+        "itemID",
+        "metadataOrigin",
+        "contextHash"
+      ],
+      "additionalProperties": false
+    },
+    "sourceHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "textRevision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "timingRevision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "readingRevision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "selectionRevision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "match": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "const": "request_metadata_match"
+        },
+        "policy": {
+          "const": "spotify-request-match-1"
+        },
+        "spotifyCatalogVerified": {
+          "const": false
+        },
+        "acousticVerified": {
+          "const": false
+        }
+      },
+      "required": [
+        "method",
+        "policy",
+        "spotifyCatalogVerified",
+        "acousticVerified"
+      ],
+      "additionalProperties": false
+    },
+    "synchronizationEligible": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "version",
+    "provider",
+    "itemID",
+    "requestedItemID",
+    "market",
+    "recordingKey",
+    "requestHash",
+    "documentID",
+    "source",
+    "sourceHash",
+    "textRevision",
+    "timingRevision",
+    "readingRevision",
+    "selectionRevision",
+    "match",
+    "synchronizationEligible"
+  ],
+  "additionalProperties": false
+}

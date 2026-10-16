@@ -15,6 +15,9 @@ export async function migrateSourceContent(database) {
       AND coalesce(structure->>'version','')<>$1 ORDER BY id FOR UPDATE`,[LYRIC_NORMALIZATION_VERSION]);
     let migrated=0;
     for(const old of rows) {
+      // V2 source hashes and request mappings require fresh per-fingerprint
+      // validation; the historical Apple bulk-normalization is not a V2 alias.
+      if(old.source_capsule)continue;
       if(!Array.isArray(old.response.lines)||!old.response.lines.length) continue;
       const busy=await db.query(`SELECT 1 FROM translation_jobs WHERE document_id=$1 AND state IN ('queued','running')
         UNION ALL SELECT 1 FROM study_explanations WHERE document_id=$1 AND state IN ('queued','running') LIMIT 1`,[old.id]);

@@ -1,8 +1,10 @@
+import {isSpotifyRecording,spotifyRecording,spotifyRequestHash,sourceCapsule,spotifyHashes,spotifyBinding,verifySpotifyBinding,modelContextFromSource,spotifyMatchEvidence} from './spotify-recording.js';
 import {digest,LibraryError} from './store.js';
 import {reviewedSpeakerLabels,validLyricStructure} from '../lyric-annotations.js';
 
 // Source metadata carried forward from the reviewed corpus, not guessed from arbitrary colons.
 export function recordingRequest(value) {
+  if(value && (Object.hasOwn(value,'version')||Object.hasOwn(value,'provider')))return spotifyRecording(value);
   const keys=['catalog_id','artist','title','album','duration','storefront','account_storefront','isrc'];
   if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!keys.includes(k))||
     typeof value.catalog_id!=='string'||!/^\d{1,20}$/.test(value.catalog_id)||
@@ -15,14 +17,26 @@ export function recordingRequest(value) {
   return {catalog_id:value.catalog_id,artist:value.artist.trim(),title:value.title.trim(),album:value.album??null,
     duration:value.duration,storefront:value.storefront??null,...(value.account_storefront?{account_storefront:value.account_storefront}:{}),...(value.isrc?{isrc:value.isrc}:{})};
 }
-export const requestKey=request=>{const {account_storefront,isrc,...identity}=recordingRequest(request);return digest(identity);};
-export function makeDocument(request,response,selectionRevision,labels=reviewedSpeakerLabels(request.catalog_id)) {
+export const requestKey=request=>{if(isSpotifyRecording(request))return spotifyRequestHash(request);const {account_storefront,isrc,...identity}=recordingRequest(request);return digest(identity);};
+export function makeDocument(request,response,selectionRevision,labels=isSpotifyRecording(request)?{}:reviewedSpeakerLabels(request.catalog_id)) {
   request=recordingRequest(request);
   if(!response?.song||!Array.isArray(response.lines)||!response.metadata||!response.quality) throw new LibraryError('invalid_source',502);
   if(response.quality.partial || !response.lines.length || response.quality.instrumental) throw new LibraryError('source_incomplete',422);
   if(response.lines.length>250 || Buffer.byteLength(JSON.stringify(response))>160_000) throw new LibraryError('source_too_large',422);
   if(response.lines.some(l=>typeof l.original!=='string'||!l.original.trim()||/[\r\n]/.test(l.original)||l.original.length>2000||typeof l.romanized!=='string'||
     (l.timestamp!=null&&(!Number.isFinite(l.timestamp)||l.timestamp<0)))) throw new LibraryError('invalid_source',502);
+  if(isSpotifyRecording(request)) {
+    const source=sourceCapsule(response);
+    verifySpotifyBinding(response.recordingBinding,request,source,selectionRevision,response);
+    const {recordingBinding,...independentResponse}=response;
+    const hashes=spotifyHashes(request,source,selectionRevision);
+    return {id:hashes.documentID,recordingKey:hashes.recordingKey,sourceHash:hashes.sourceHash,requestKey:hashes.requestHash,selectionRevision,
+      response:independentResponse,structure:source.structure,canonicalRecordingID:null,textRevision:hashes.textRevision,
+      timingRevision:hashes.timingRevision,readingRevision:hashes.readingRevision,sourceCapsule:source,modelContext:modelContextFromSource(source),
+      requestRecording:request,requestEvidence:{requestHash:hashes.requestHash,sourceHash:hashes.sourceHash,source:recordingBinding.source,match:recordingBinding.match,
+        candidate:spotifyMatchEvidence(response)??{id:source.itemID,...(source.title?{title:source.title}:{}),...(source.artist?{artist:source.artist}:{}),...(source.album?{album:source.album}:{}),duration:response.song.duration??null}},
+      recordingBinding:spotifyBinding(request,source,selectionRevision,response,{durable:true})};
+  }
   const normalized=response.metadata.lyric_structure;
   if(normalized && !validLyricStructure(normalized,response.lines)) throw new LibraryError('invalid_source_structure',502);
   const speakers=normalized?.speakers??Object.entries(labels).map(([sourceLabel,displayName],i)=>({id:`S${i+1}`,sourceLabel,displayName}));

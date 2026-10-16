@@ -103,7 +103,9 @@ export class KugouAPI extends BaseMusicAPI {
         || !Number.isFinite(raw.duration) || raw.duration<=0 || Math.abs(raw.duration/1000-context.duration)>1
         || !/^\d{1,20}$/.test(String(raw.id ?? '')) || typeof raw.accesskey!=='string' || !/^[A-Za-z0-9_-]{1,256}$/.test(raw.accesskey)
         || /伴奏|instrumental|karaoke/iu.test(raw.language || '')) continue;
-      const song={source:'kugou',id:String(raw.id),title:raw.song,artist:raw.singer,duration:raw.duration/1000};
+      const song={source:'kugou',id:String(raw.id),title:raw.song,artist:raw.singer,duration:raw.duration/1000,...(context.recordingProvider==='spotify'?{
+        ...(raw.creditedArtistNames!==undefined?{creditedArtistNames:raw.creditedArtistNames}:{}),
+        ...(raw.isrc?{isrc:raw.isrc}:{}),...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{})}:{})};
       if(!sameRecordingNames(song,request) || !preservesAlbumVersion(song,request) || recordingScore(song,request)<0) continue;
       const previous=records.get(song.id);
       if(previous && (JSON.stringify(previous.song)!==JSON.stringify(song) || previous.key!==raw.accesskey)) throw new RecordingMismatchError();

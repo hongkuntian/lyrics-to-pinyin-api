@@ -1,3 +1,4 @@
+import {createSpotifyLyricsService} from './utils/spotify-lyrics.js';
 import {withAppAuth} from './utils/app-auth/http.js';
 import {createRedisFromEnv} from './utils/redis-client.js';
 import {detectLanguage,getDefaultRomanizationSystem} from './utils/language-detection.js';
@@ -39,6 +40,7 @@ export function createMusicRomanizeService(dependencies={}) {
     responseCache=new BoundedCache(),aliasCache=new BoundedCache({ttlMs:86400000}),analyzeLyricLanguageFn=analyzeLyricLanguage,
     rejectRecordingLyricsFn=isRejectedRecordingLyrics
   }=dependencies;
+  const spotifyService=createSpotifyLyricsService(dependencies);
   const inflight=new Map(),canonicalInflight=new Map();
   const canonicalCache=new BoundedCache();
   let latestStart=0;
@@ -66,6 +68,7 @@ export function createMusicRomanizeService(dependencies={}) {
     res.setHeader('Content-Type','application/json');
     if(Buffer.byteLength(JSON.stringify(req.body??{}))>32768)return res.status(400).json({code:'invalid_request'});
     if(req.method!=='POST') return send({status:405,body:{error:'Only POST allowed'}});
+    if(req.body && Object.hasOwn(req.body,'recording'))return spotifyService(req,res);
     const {artist,title,album,duration,catalog_id,storefront,account_storefront,isrc,language,romanization_system,music_platform,options={}}=req.body || {};
     if((account_storefront!=null&&(typeof account_storefront!=='string'||!/^[a-z]{2}$/.test(account_storefront)))||
       (isrc!=null&&(typeof isrc!=='string'||!/^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$/.test(isrc)))) return send({status:400,body:{error:'Invalid recording hints',code:'invalid_recording'}});

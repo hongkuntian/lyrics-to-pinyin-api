@@ -1,3 +1,5 @@
+import {independentModelContext,hasIndependentContext} from './model-context.js';
+import {spotifyHash} from './spotify-recording.js';
 import {createHash} from 'node:crypto';
 
 export const TRANSLATION_IDENTITY_VERSION='song-meaning-1';
@@ -8,6 +10,14 @@ const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex
 // complete ordered source and speaker semantics; names alone never establish reuse.
 export function translationIdentity(doc,{omitContext=false}={}) {
   const song=doc.response?.song,structure=doc.structure;
+  if(hasIndependentContext(doc)) {
+    const context=independentModelContext(doc);
+    if(!song?.language||!structure?.occurrences?.length)return null;
+    return spotifyHash(['independent-song-meaning-1',context.source.provider,context.source.itemID,
+      {title:context.title??null,artist:context.artist??null,album:context.album??null},song.language,
+      structure.speakers??[],structure.occurrences.map(o=>[o.sourceID,o.sourceText,o.lyricText,o.speakerID??null,Boolean(o.startsTurn),o.sourcePrefix??''])]);
+  }
+
   if(!song?.language || !song.title?.original || !song.artist?.original || !structure?.occurrences?.length) return null;
   return hash({version:TRANSLATION_IDENTITY_VERSION,language:song.language,
     context:omitContext ? null : doc.response.metadata?.catalog_resolution?.canonical_context

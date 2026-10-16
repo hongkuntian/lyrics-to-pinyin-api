@@ -197,8 +197,76 @@
                   "const": "source-speakers-1"
                 }
               }
+            },
+            "recordingBinding": {
+              "$ref": "spotify-recording-binding.schema.json"
+            },
+            "textRevision": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "timingRevision": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "readingRevision": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
-          }
+          },
+          "dependentRequired": {
+            "recordingBinding": [
+              "textRevision",
+              "timingRevision",
+              "readingRevision"
+            ]
+          },
+          "allOf": [
+            {
+              "if": {
+                "required": [
+                  "recordingBinding"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "textRevision": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "timingRevision": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "readingRevision": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     },
