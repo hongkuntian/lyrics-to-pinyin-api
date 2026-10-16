@@ -18,16 +18,26 @@ export function closeConnection(c,reason,now,put,status='disconnected'){
  c.epoch=randomUUID();c.status=status;c.reason=reason;c.refresh=null;c.access=null;c.stage=null;c.refreshLease=null;c.pollLease=null;c.document=null;c.observation=null;c.closedAt=now;
 }
 export class SpotifyService {
- constructor({store,config,provider,enqueue,send,acquire,admit,eligible=admit,resolveRecipe=async()=>({}),now=Date.now,crash=async()=>{}}){Object.assign(this,{store,config,provider,enqueue,send,acquire,admit,eligible,resolveRecipe,now,crash});}
- contextMatches(c){return Boolean(c)&&c.environment===this.config.environment&&c.clientID===this.config.clientID;}
+ constructor({store,config,provider,enqueue,send,acquire,admit,eligible=admit,resolveRecipe=async()=>({}),now=Date.now,crash=async()=>{}}){const apnsEnvironment=config.apnsEnvironment===undefined?'production':config.apnsEnvironment;if(!['production','development'].includes(apnsEnvironment))fail('spotify_not_configured',503);Object.assign(this,{store,config:{...config,apnsEnvironment},provider,enqueue,send,acquire,admit,eligible,resolveRecipe,now,crash});}
+ deploymentMatches(c){return Boolean(c)&&c.environment===this.config.environment&&c.clientID===this.config.clientID;}
+ contextMatches(c){return this.deploymentMatches(c)&&c.apnsEnvironment===this.config.apnsEnvironment;}
+ async invalidatePushContext(c){
+  if(!this.deploymentMatches(c))fail('spotify_environment_mismatch',503);
+  if(this.contextMatches(c))return c;
+  // A destination change retires the grant and its activities. Never redirect
+  // an existing activity/widget token or rewrite its immutable push environment.
+  await this.store.mutate(c.id,(current,put)=>{if(!this.deploymentMatches(current))fail('spotify_environment_mismatch',503);if(!this.contextMatches(current)&&['connected','pending'].includes(current.status))closeConnection(current,'pushEnvironmentChanged',this.now(),put,'reconnectRequired');});
+  await this.store.revokeCapabilities(c.id);return this.store.read(c.id);
+ }
+ async ensureContext(c){if(!this.deploymentMatches(c))fail('spotify_environment_mismatch',503);if(this.contextMatches(c))return c;c=await this.invalidatePushContext(c);await this.drain(c.id);return this.store.read(c.id);}
  seal(c,value,purpose){return this.config.vault.seal(value,{...vaultContext(c),purpose});}
  open(c,value,purpose){return this.config.vault.open(value,{...vaultContext(c),purpose});}
- async owned(user,id,epoch){const c=await this.store.read(id);if(!c||c.ownerID!==user.id||c.keyID!==user.keyID||c.credentialDigest!==user.credentialDigest)fail('spotify_connection_not_found',404);if(!this.contextMatches(c))fail('spotify_environment_mismatch',503);if(epoch!==undefined&&c.epoch!==epoch)fail('spotify_connection_replaced');return c;}
+ async owned(user,id,epoch){let c=await this.store.read(id);if(!c||c.ownerID!==user.id||c.keyID!==user.keyID||c.credentialDigest!==user.credentialDigest)fail('spotify_connection_not_found',404);c=await this.ensureContext(c);if(epoch!==undefined&&c.epoch!==epoch)fail('spotify_connection_replaced');return c;}
  dto(c){if(c.status!=='connected')return {version:1,status:c.status};return {version:1,status:'connected',credential:{connectionID:c.id,connectionEpoch:c.epoch,credentialVersion:c.credentialVersion,accessToken:this.open(c,c.access,'access'),expiresAtMS:c.expiresAtMS,refreshOwnershipAcknowledged:true}};}
  async enrollment(user,input){
   let c=await this.store.enrollment(user,input.enrollmentID);
-  if(!c){c={id:randomUUID(),epoch:randomUUID(),enrollmentID:input.enrollmentID,ownerID:user.id,keyID:user.keyID,credentialDigest:user.credentialDigest,bundleID:user.bundleID,apnsEnvironment:user.environment,clientID:this.config.clientID,environment:this.config.environment,status:'pending',credentialVersion:0,consumers:{},tickOrdinal:0,createdAt:this.now(),grantExpiresAt:this.now()+180*86400000};c.refresh=this.seal(c,input.refreshToken,'refresh');c=await this.store.create(c);}
-  if(!this.contextMatches(c))fail('spotify_environment_mismatch',503);
+  if(!c){c={id:randomUUID(),epoch:randomUUID(),enrollmentID:input.enrollmentID,ownerID:user.id,keyID:user.keyID,credentialDigest:user.credentialDigest,bundleID:user.bundleID,ownerEnvironment:user.environment,apnsEnvironment:this.config.apnsEnvironment,clientID:this.config.clientID,environment:this.config.environment,status:'pending',credentialVersion:0,consumers:{},tickOrdinal:0,createdAt:this.now(),grantExpiresAt:this.now()+180*86400000};c.refresh=this.seal(c,input.refreshToken,'refresh');c=await this.store.create(c);}
+  c=await this.ensureContext(c);
   if(c.credentialDigest!==user.credentialDigest)fail('spotify_connection_not_found',404);
   if(c.status==='pending')await this.credentials(c.id,{initial:true});
   c=await this.store.read(c.id);
@@ -36,8 +46,11 @@ export class SpotifyService {
  }
  async finishEnrollment(user,id){
   const ids=await this.store.adopt(id,user,(current,connections,put)=>{
-   if(!this.contextMatches(current))fail('spotify_environment_mismatch',503);
-   const scoped=connections.filter(c=>this.contextMatches(c));
+   if(!this.deploymentMatches(current))fail('spotify_environment_mismatch',503);
+   const scoped=connections.filter(c=>this.deploymentMatches(c));
+   for(const prior of scoped)if(!this.contextMatches(prior)&&['connected','pending'].includes(prior.status)){
+    const rows=[];closeConnection(prior,'pushEnvironmentChanged',this.now(),(...args)=>rows.push(args));for(const args of rows)put(prior,...args);
+   }
    if(current.status==='connected'){
     const compare=(a,b)=>(a.createdAt??0)-(b.createdAt??0)||(a.id<b.id?-1:a.id>b.id?1:0);
     const winner=scoped.filter(c=>c.status==='connected').sort(compare).at(-1);
@@ -55,7 +68,7 @@ export class SpotifyService {
   return this.dto(await this.owned(user,id));
  }
  async credentials(id,{initial=false,force=false}={}){
-  const existingConnection=await this.store.read(id);if(!this.contextMatches(existingConnection))fail('spotify_environment_mismatch',503);
+  await this.ensureContext(await this.store.read(id));
   const lease=randomUUID(),time=this.now();let work;
   await this.store.mutate(id,(c,put)=>{
    if(!['connected','pending'].includes(c.status))return;
@@ -103,7 +116,7 @@ export class SpotifyService {
  async access(user,input){const c=await this.owned(user,input.connectionID,input.connectionEpoch);if(!await this.store.ownerValid(c))fail('app_access_revoked',403);return this.dto(await this.credentials(c.id));}
  async disconnect(user,input){
   let c;
-  if(input.enrollmentID){c=await this.store.enrollment(user,input.enrollmentID);if(!c)c=await this.store.create({id:randomUUID(),epoch:randomUUID(),enrollmentID:input.enrollmentID,ownerID:user.id,keyID:user.keyID,credentialDigest:user.credentialDigest,status:'disconnected',clientID:this.config.clientID,environment:this.config.environment,consumers:{},closedAt:this.now()});else await this.owned(user,c.id);}
+  if(input.enrollmentID){c=await this.store.enrollment(user,input.enrollmentID);if(!c)c=await this.store.create({id:randomUUID(),epoch:randomUUID(),enrollmentID:input.enrollmentID,ownerID:user.id,keyID:user.keyID,credentialDigest:user.credentialDigest,ownerEnvironment:user.environment,apnsEnvironment:this.config.apnsEnvironment,status:'disconnected',clientID:this.config.clientID,environment:this.config.environment,consumers:{},closedAt:this.now()});else await this.owned(user,c.id);}
   else c=await this.owned(user,input.connectionID); // Repeated stop tolerates the closed epoch.
   await this.store.mutate(c.id,(current,put)=>{if(current.status!=='disconnected')closeConnection(current,'disconnected',this.now(),put);});
   await this.store.revokeCapabilities(c.id);await this.drain(c.id);return {version:1,status:'disconnected'};
@@ -162,7 +175,7 @@ export class SpotifyService {
   for(let pass=0;pass<8;pass++){
   const rows=await this.store.pending(id);if(!rows.length)return;
   for(const row of rows){
-   const c=await this.store.read(id);if(!c)return;if(!this.contextMatches(c))fail('spotify_environment_mismatch',503);
+   let c=await this.store.read(id);if(!c)return;if(!this.deploymentMatches(c))fail('spotify_environment_mismatch',503);if(!this.contextMatches(c))c=await this.invalidatePushContext(c);
    if(row.kind!=='cleanup'&&(c.epoch!==row.epoch||c.status!=='connected'||!active(c).length)){await this.store.receipt(row.id,null,'cancelled');continue;}
    if(row.kind!=='cleanup'&&!await this.store.ownerValid(c)){await this.store.mutate(id,(current,put)=>closeConnection(current,'ownerRevoked',this.now(),put));await this.store.revokeCapabilities(id);await this.store.receipt(row.id,null,'cancelled');continue;}
    if(row.kind==='publication'||row.kind==='widget'){await this.publish(c,row);continue;}
@@ -178,8 +191,9 @@ export class SpotifyService {
  }
  async tick(message){
   const id=message.connectionID;let c=await this.store.read(id);if(!c)return;
-  if(!this.contextMatches(c))fail('spotify_environment_mismatch',503);
+  if(!this.deploymentMatches(c))fail('spotify_environment_mismatch',503);
   if(message.kind==='cleanup'){await this.cleanup(message);await this.drain(id);return;}
+  c=await this.ensureContext(c);
   await this.drain(id);c=await this.store.read(id);
   if(message.connectionEpoch!==c.epoch||c.status!=='connected')return;
   if(!await this.store.ownerValid(c)){await this.stopAll(id,'ownerRevoked');return;}
@@ -258,7 +272,7 @@ export class SpotifyService {
   }else throw error;}finally{if(!crashed)await this.store.mutate(c.id,current=>{const latest=current.consumers[s.sessionID];if(latest.sendLease?.id===sendLease)latest.sendLease=null;});}
  }
  async acquireMessage(message){
-  let c=await this.store.read(message.connectionID);if(!c)return;await this.drain(c.id);c=await this.store.read(c.id);
+  let c=await this.store.read(message.connectionID);if(!c)return;c=await this.ensureContext(c);await this.drain(c.id);c=await this.store.read(c.id);
   const row=await this.store.outbox(message.outboxID);if(!row||row.state==='cancelled'||c.document||c.acquisition?.attempt!==row.data.attempt||c.status!=='connected'||c.epoch!==message.connectionEpoch||!active(c).length||c.observation?.requestHash!==row.data.requestHash)return;
   if(!await this.store.ownerValid(c)){await this.stopAll(c.id,'ownerRevoked');return;}
   let result;try{result=await this.acquire(row.data.recording,{id:c.ownerID,keyID:c.keyID,credentialDigest:c.credentialDigest,bundleID:c.bundleID});}catch(error){result={status:error.status??503,code:error.code};}
@@ -277,15 +291,15 @@ export class SpotifyService {
  async stopOne(id,sessionID,reason){await this.store.mutate(id,(c,put)=>endConsumer(c,c.consumers[sessionID],reason,this.now(),put));await this.store.revokeCapabilities(id,sessionID);}
  async stopAll(id,reason){await this.store.mutate(id,(c,put)=>closeConnection(c,reason,this.now(),put,'reconnectRequired'));await this.store.revokeCapabilities(id);await this.drain(id);}
  async exhaust(message){
-  const c=await this.store.read(message.connectionID);if(!c)return;
-  if(!this.contextMatches(c))fail('spotify_environment_mismatch',503);
+  let c=await this.store.read(message.connectionID);if(!c)return;
+  c=await this.ensureContext(c);
   if(c.epoch!==message.connectionEpoch){await this.drain(c.id);return;}
   await this.store.mutate(c.id,(current,put)=>{if(!this.contextMatches(current)||current.epoch!==message.connectionEpoch)return;for(const s of active(current))endConsumer(current,s,'queueDeliveryExhausted',this.now(),put);});
   await this.drain(c.id);
  }
  async cleanup(message){
   const row=await this.store.outbox(message.outboxID);if(!row||row.kind!=='cleanup')return;
-  let c=await this.store.read(message.connectionID),s=c?.consumers[row.data.sessionID];if(!s||s.cleanupComplete?.includes(row.id))return;
+  let c=await this.store.read(message.connectionID),s=c?.consumers[row.data.sessionID];if(!s||s.cleanupComplete?.includes(row.id))return;if(!this.deploymentMatches(c))fail('spotify_environment_mismatch',503);
   if(this.now()<Number(row.due_at_ms))throw new LibraryError('spotify_cleanup_early',503);
   // A late old-token failure cannot end a rebound current token. Terminal intent
   // is only for the exact closed generation/token captured by the transaction.
@@ -302,7 +316,7 @@ export class SpotifyService {
  }
  async snapshot(token,input){
   const capability=await this.store.capability(sha(token));if(!capability||Number(capability.expiresAtMS)<=this.now())fail('snapshot_expired',410);
-  const c=await this.store.read(capability.connectionID),s=c?.consumers[capability.sessionID];
+  let c=await this.store.read(capability.connectionID);if(c&&this.deploymentMatches(c))c=await this.ensureContext(c);const s=c?.consumers[capability.sessionID];
   if(!c||!this.contextMatches(c)||!s||s.status==='ended'||c.status!=='connected'||s.capabilityDigest!==sha(token)||!await this.store.ownerValid(c))fail('snapshot_expired',410);
   if(input.action==='snapshot.token')await this.store.mutate(c.id,current=>{const currentSession=current.consumers[s.sessionID];if(currentSession.status==='ended')fail('snapshot_expired',410);if(input.tokenVersion<=(currentSession.widgetTokenVersion??0)){if(input.tokenVersion===currentSession.widgetTokenVersion&&input.widgetToken===this.open(current,currentSession.widgetToken,'widget:'+s.sessionID))return;fail('spotify_token_superseded');}currentSession.widgetTokenVersion=input.tokenVersion;currentSession.widgetToken=this.seal(current,input.widgetToken,'widget:'+s.sessionID);});
   if(input.action==='snapshot.token')return {version:1,status:'registered',tokenVersion:input.tokenVersion};
