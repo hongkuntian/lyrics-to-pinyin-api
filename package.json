@@ -20,10 +20,10 @@
     "test:ru": "node tests/run-language-tests.js ru",
     "test:yue": "node tests/run-language-tests.js yue",
     "test:music": "node tests/music-tests.js",
-    "build": "echo 'No build step required'",
+    "build": "node scripts/build-output.mjs",
     "start": "node scripts/dev-server.js",
     "deploy": "vercel --prod",
-    "vercel-build": "node scripts/vercel-library-build.js"
+    "vercel-build": "node scripts/build-output.mjs"
   },
   "dependencies": {
     "@apple/app-store-server-library": "3.1.0",
@@ -40,11 +40,12 @@
     "node-app-attest": "1.0.1",
     "node-fetch": "^3.3.2",
     "pg": "^8.23.0",
-    "pinyin-pro": "^3.26.0"
+    "pinyin-pro": "^3.26.0",
+    "@vercel/queue": "0.8.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
-    "@vercel/node": "^2.9.6"
+    "@vercel/node": "24.0.2"
   },
   "engines": {
     "node": "24.x"

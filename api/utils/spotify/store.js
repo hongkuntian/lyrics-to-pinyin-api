@@ -1,0 +1,29 @@
+import {database} from '../song-library/database.js';
+import {LibraryError} from '../song-library/store.js';
+export class SpotifyStore {
+ constructor(db=database()){this.db=db;}
+ async create(c){return this.db.transaction(async db=>{
+  // Serialize owner/key enrollment replacements without a transaction over HTTP.
+  await db.query('SELECT key_id FROM app_attest_keys WHERE key_id=$1 FOR UPDATE',[c.keyID]);
+  const prior=(await db.query('SELECT data FROM spotify_connections WHERE owner_id=$1 AND key_id=$2 AND enrollment_id=$3',[c.ownerID,c.keyID,c.enrollmentID])).rows[0];if(prior)return prior.data;
+  await db.query('INSERT INTO spotify_connections(id,owner_id,key_id,credential_digest,enrollment_id,data) VALUES($1,$2,$3,$4,$5,$6)',[c.id,c.ownerID,c.keyID,c.credentialDigest,c.enrollmentID,JSON.stringify(c)]);return c;
+ });}
+ async read(id){return (await this.db.query('SELECT data FROM spotify_connections WHERE id=$1',[id])).rows[0]?.data??null;}
+ async enrollment(user,id){return (await this.db.query('SELECT data FROM spotify_connections WHERE owner_id=$1 AND key_id=$2 AND enrollment_id=$3',[user.id,user.keyID,id])).rows[0]?.data??null;}
+ async mutate(id,fn){return this.db.transaction(async db=>{
+  const row=(await db.query('SELECT data FROM spotify_connections WHERE id=$1 FOR UPDATE',[id])).rows[0];if(!row)throw new LibraryError('spotify_connection_not_found',404);
+  const c=row.data,rows=[];const result=await fn(c,(kind,key,data,due)=>rows.push({kind,id:key,data,due}));
+  await db.query('UPDATE spotify_connections SET data=$2,updated_at=now() WHERE id=$1',[id,JSON.stringify(c)]);
+  for(const o of rows)await db.query(`INSERT INTO spotify_outbox(id,connection_id,epoch,kind,due_at_ms,data,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO NOTHING`,[o.id,id,c.epoch,o.kind,o.due,JSON.stringify(o.data),new Date(o.due+86400000)]);
+  return result;
+ });}
+ async pending(id){return (await this.db.query("SELECT id,kind,epoch,due_at_ms AS due,data FROM spotify_outbox WHERE connection_id=$1 AND state='pending' ORDER BY due_at_ms,id",[id])).rows.map(r=>({...r,due:Number(r.due)}));}
+ async receipt(id,receipt,state='published'){await this.db.query("UPDATE spotify_outbox SET state=$2,receipt=$3 WHERE id=$1 AND state='pending'",[id,state,receipt??null]);}
+ async outbox(id){return (await this.db.query('SELECT * FROM spotify_outbox WHERE id=$1',[id])).rows[0]??null;}
+ async ownerValid(c){const row=(await this.db.query(`SELECT k.bundle_id,k.environment FROM app_attest_keys k JOIN library_users u ON u.id=k.user_id JOIN library_tokens t ON t.user_id=u.id WHERE u.id=$1 AND k.key_id=$2 AND t.digest=$3 AND NOT k.revoked AND NOT u.disabled AND NOT t.revoked AND (t.expires_at IS NULL OR t.expires_at>now())`,[c.ownerID,c.keyID,c.credentialDigest])).rows[0];return row&&row.bundle_id===c.bundleID&&row.environment===c.apnsEnvironment;}
+ async capability(digest){return (await this.db.query('SELECT connection_id AS "connectionID",session_id AS "sessionID",expires_at_ms AS "expiresAtMS" FROM spotify_snapshot_capabilities WHERE digest=$1',[digest])).rows[0]??null;}
+ async addCapability(digest,id,sessionID,expiry){await this.db.query('INSERT INTO spotify_snapshot_capabilities(digest,connection_id,session_id,expires_at_ms) VALUES($1,$2,$3,$4) ON CONFLICT(digest) DO NOTHING',[digest,id,sessionID,expiry]);}
+ async revokeCapabilities(id,sessionID){await this.db.query('DELETE FROM spotify_snapshot_capabilities WHERE connection_id=$1 AND ($2::text IS NULL OR session_id=$2)',[id,sessionID??null]);}
+ async circuit(bucket,notBefore,reason){if(notBefore)await this.db.query(`INSERT INTO spotify_provider_circuits(id,not_before_ms,reason) VALUES($1,$2,$3) ON CONFLICT(id) DO UPDATE SET not_before_ms=greatest(spotify_provider_circuits.not_before_ms,EXCLUDED.not_before_ms),reason=EXCLUDED.reason`,[bucket,notBefore,reason]);return Number((await this.db.query('SELECT not_before_ms FROM spotify_provider_circuits WHERE id=$1',[bucket])).rows[0]?.not_before_ms??0);}
+ async matching({ownerID,keyID,credentialDigest}){return (await this.db.query('SELECT data FROM spotify_connections WHERE ($1::text IS NULL OR owner_id=$1) AND ($2::text IS NULL OR key_id=$2) AND ($3::text IS NULL OR credential_digest=$3)',[ownerID??null,keyID??null,credentialDigest??null])).rows.map(r=>r.data);}
+}

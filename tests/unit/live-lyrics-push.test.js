@@ -50,3 +50,12 @@ test('APNs errors are bounded and invalid activity tokens are distinguished from
   const send=createAPNsSender({env:{},send:async()=>{throw Error('should not send');}});
   await assert.rejects(()=>send({}),{code:'push_not_configured'});
 });
+test('WidgetKit push derives an allowlisted topic from configured app identity and keeps legacy default unchanged',async()=>{
+ let headers,body;
+ const stream=new EventEmitter();stream.setEncoding=()=>{};stream.close=()=>{};
+ stream.end=value=>{body=JSON.parse(value);queueMicrotask(()=>{stream.emit('response',{':status':200});stream.emit('end');});};
+ const session=new EventEmitter();session.request=value=>{headers=value;return stream;};session.close=()=>{};session.destroy=()=>{};
+ await sendAPNs({bundleID:'com.hongkuntian.Lyra',environment:'development',token:'ab'.repeat(32),jwt:'fixture',priority:5,pushType:'widgets',payload:{aps:{'content-changed':true}}},()=>session);
+ assert.equal(headers['apns-topic'],'com.hongkuntian.Lyra.push-type.widgets');assert.equal(headers['apns-push-type'],'widgets');assert.deepEqual(body,{aps:{'content-changed':true}});
+ for(const pushType of ['alert','widgets\r\ninjected','com.other.topic'])assert.throws(()=>sendAPNs({bundleID:'com.hongkuntian.Lyra',pushType},()=>{throw Error('unexpected');}),{code:'invalid_request'});
+});

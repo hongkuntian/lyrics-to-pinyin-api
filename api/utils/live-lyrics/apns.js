@@ -19,7 +19,8 @@ export function apnsConfiguration(env=process.env) {
 }
 
 // One bounded HTTP/2 request. Neither tokens nor payloads are logged or persisted.
-export function sendAPNs({bundleID,environment,token,payload,priority,jwt},transport=connect) {
+export function sendAPNs({bundleID,environment,token,payload,priority,jwt,pushType='liveactivity'},transport=connect) {
+  if(!['liveactivity','widgets'].includes(pushType))throw new LibraryError('invalid_request',400);
   if(!BUNDLES.has(bundleID))throw new LibraryError('app_access_revoked',403);
   return new Promise((resolve,reject)=>{
     const host=environment==='development'?'https://api.sandbox.push.apple.com':'https://api.push.apple.com';
@@ -32,7 +33,7 @@ export function sendAPNs({bundleID,environment,token,payload,priority,jwt},trans
     session.on('error',finish);
     try {
       request=session.request({':method':'POST',':path':`/3/device/${token}`,
-        authorization:`bearer ${jwt}`,'apns-topic':`${bundleID}.push-type.liveactivity`,'apns-push-type':'liveactivity',
+        authorization:`bearer ${jwt}`,'apns-topic':`${bundleID}.push-type.${pushType}`,'apns-push-type':pushType,
         'apns-priority':String(priority),'apns-expiration':'0','content-type':'application/json'});
       let status,body='';
       request.on('response',headers=>{status=headers[':status'];});

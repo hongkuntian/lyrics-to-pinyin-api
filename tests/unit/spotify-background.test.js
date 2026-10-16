@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createVault} from '../../api/utils/spotify/vault.js';
+import {observePlayback,requestFingerprint} from '../../api/utils/spotify/observation.js';
+import {renderState,immutablePush} from '../../api/utils/spotify/render.js';
+const time=1800000000000;
+test('Spotify vault binds ciphertext to owner/key/epoch/environment and supports bounded key rotation',()=>{
+ const context={ownerID:'a',keyID:'k',connectionID:'c',epoch:'e',clientID:'public',environment:'preview'};
+ const old=createVault({active:'old',keys:{old:Buffer.alloc(32,1).toString('base64')}});
+ const sealed=old.seal('fixture-secret',context);
+ assert(!JSON.stringify(sealed).includes('fixture-secret'));
+ assert.notDeepEqual(old.seal('fixture-secret',context),sealed);
+ const rotated=createVault({active:'new',keys:{old:Buffer.alloc(32,1).toString('base64'),new:Buffer.alloc(32,2).toString('base64')}});
+ assert.equal(rotated.open(sealed,context),'fixture-secret');
+ assert.throws(()=>rotated.open(sealed,{...context,epoch:'other'}));
+ assert.throws(()=>createVault({active:'x',keys:{x:'invalid'}}));
+});
+const playback=(progress=10000)=>({timestamp:time-60000,is_playing:true,progress_ms:progress,device:{id:'device',name:'Fixture speaker'},item:{type:'track',id:'0123456789ABCDEFGHIJKL',name:'Independent fixture',duration_ms:240000,artists:[{name:'A & B'},{name:'Guest'}],album:{name:'Album'},is_local:false}});
+test('Spotify observation uses receipt clock, equal provider timestamps advance, regression/slow samples abstain',()=>{
+ const a=observePlayback({status:200,body:playback(),requestStartedAt:time,responseReceivedAt:time+100},null,1);
+ assert.equal(a.confirmedAt,time+100);assert.equal(a.positionMS,10000);
+ const b=observePlayback({status:200,body:playback(12000),requestStartedAt:time+2000,responseReceivedAt:time+2100},a,2);
+ assert.equal(b.positionMS,12000);assert.equal(b.playbackOccurrence,a.playbackOccurrence);
+ const back=observePlayback({status:200,body:playback(500),requestStartedAt:time+4000,responseReceivedAt:time+4100},b,3);
+ assert.notEqual(back.playbackOccurrence,b.playbackOccurrence);
+ assert.equal(observePlayback({status:200,body:playback(),requestStartedAt:time,responseReceivedAt:time+8000},null,1).phase,'unavailable');
+ assert.equal(observePlayback({status:204,requestStartedAt:time,responseReceivedAt:time+1},a,2).recording,null);
+ assert.notEqual(requestFingerprint(a.recording),requestFingerprint({...a.recording,metadata:{...a.recording.metadata,artists:['A','B','Guest']}}));
+});
+test('immutable publication keeps real timestamps/freshness, no lyric survives stale or wrong binding',()=>{
+ const observation=observePlayback({status:200,body:playback(),requestStartedAt:time,responseReceivedAt:time+1},null,1);
+ const consumer={sessionID:'session',generation:1,sequence:0,recipe:{version:1,reading:'sourceDefault',showPronunciation:true,showTranslation:false,pronunciationAbove:true,alignment:'leading'}};
+ const state=renderState({observation,consumer,now:time+100,document:null});
+ const push=immutablePush({state,consumer,now:time+100});
+ assert.equal(push.payload.aps.timestamp,Math.floor((time+100)/1000));
+ assert.equal(push.payload.aps['stale-date'],Math.floor((time+8001)/1000));
+ assert.equal(renderState({observation,consumer,now:time+8001,document:null}).original,'');
+ assert.equal(renderState({observation,consumer,now:time+8001,document:null}).statusReason,'updatesDelayed');
+ assert.throws(()=>immutablePush({state,consumer:{...consumer,lastTimestamp:Math.floor(time/1000)},now:time+100}),/publication_coalesced/);
+});

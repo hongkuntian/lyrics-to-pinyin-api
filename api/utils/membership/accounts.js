@@ -1,3 +1,4 @@
+import {revokeSpotifyInTransaction,flushSpotifyCleanup} from '../spotify/revocation.js';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {digest,LibraryError} from '../song-library/store.js';
 import {authPolicy} from '../app-auth/store.js';
@@ -6,8 +7,8 @@ import {AppleIdentityService} from './apple-identity.js';
 import {first} from './policy.js';
 
 export class AccountStore {
-  constructor(db,{policy,attestFn=attest,apple=new AppleIdentityService()}={}) {
-    this.db=db;this.policy=policy??authPolicy();this.attest=attestFn;this.apple=apple;
+  constructor(db,{policy,attestFn=attest,apple=new AppleIdentityService(),spotifyCleanupFn=flushSpotifyCleanup}={}) {
+    this.spotifyCleanup=spotifyCleanupFn;this.db=db;this.policy=policy??authPolicy();this.attest=attestFn;this.apple=apple;
   }
   async enabled(db=this.db) {
     const settings=await first(db,'SELECT public_access_enabled FROM membership_settings WHERE id=1');
@@ -71,7 +72,7 @@ export class AccountStore {
     input={...input,keyID:user.keyID};
     await this.nonce(this.db,input,'apple',user.id);
     const verified=await this.apple.authenticate(input),credential='lyra_a_'+randomBytes(32).toString('base64url');
-    let userID;
+    let userID,spotifyCleanup=[];
     await this.db.transaction(async db=>{
       // Serialize identity creation, deletion and starter claims across devices.
       await db.query('SELECT id FROM membership_settings WHERE id=1 FOR UPDATE');
@@ -91,6 +92,7 @@ export class AccountStore {
         const active=await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
         if(!active)throw new LibraryError('app_access_revoked',403);
       }
+      spotifyCleanup=await revokeSpotifyInTransaction(db,{ownerID:user.id,keyID:user.keyID},'ownerChanged');
       const moved=await first(db,`UPDATE app_attest_keys SET user_id=$2 WHERE key_id=$1 AND user_id=$3 AND NOT revoked RETURNING key_id`,
         [user.keyID,userID,user.id]);
       if(!moved)throw new LibraryError('app_access_revoked',403);
@@ -98,10 +100,16 @@ export class AccountStore {
       await db.query('DELETE FROM app_auth_sessions WHERE key_id=$1',[user.keyID]);
       await db.query("INSERT INTO library_tokens(digest,user_id,expires_at) VALUES($1,$2,now()+interval '365 days')",[digest(credential),userID]);
     });
+    await this.spotifyCleanup(this.db,spotifyCleanup);
     return {credential,userID};
   }
   async signOut(user) {
-    await this.db.query('UPDATE library_tokens SET revoked=true WHERE digest=$1',[user.credentialDigest]);
+    let spotifyCleanup;
+    await this.db.transaction(async db=>{
+      spotifyCleanup=await revokeSpotifyInTransaction(db,{ownerID:user.id,credentialDigest:user.credentialDigest},'signedOut');
+      await db.query('UPDATE library_tokens SET revoked=true WHERE digest=$1',[user.credentialDigest]);
+    });
+    await this.spotifyCleanup(this.db,spotifyCleanup);
     return {signedOut:true};
   }
   async delete(user,input) {
@@ -112,9 +120,11 @@ export class AccountStore {
     const verified=await this.apple.authenticate(input);
     if(verified.subjectHash!==identity.subject_hash)throw new LibraryError('apple_identity_invalid',403);
     await this.apple.revoke({...identity,apple_client_id:input.bundleID,refresh_token_encrypted:verified.refreshTokenEncrypted});
+    let spotifyCleanup=[];
     await this.db.transaction(async db=>{
       await db.query('SELECT id FROM membership_settings WHERE id=1 FOR UPDATE');
       await this.nonce(db,input,'delete',user.id,true);
+      spotifyCleanup=await revokeSpotifyInTransaction(db,{ownerID:user.id},'accountDeleted');
       await db.query('UPDATE library_users SET disabled=true WHERE id=$1',[user.id]);
       await db.query('UPDATE library_tokens SET revoked=true WHERE user_id=$1',[user.id]);
       await db.query("UPDATE app_attest_keys SET revoked=true,receipt=''::bytea,public_key='' WHERE user_id=$1",[user.id]);
@@ -123,6 +133,7 @@ export class AccountStore {
       await db.query('DELETE FROM live_lyrics_push_receipts WHERE user_id=$1',[user.id]);
       await db.query("UPDATE correction_reports SET detail='[Account deleted]',assessment=NULL WHERE user_id=$1",[user.id]);
     });
+    await this.spotifyCleanup(this.db,spotifyCleanup);
     return {deleted:true};
   }
 }

@@ -6,6 +6,8 @@ export const migrationNames=['001-song-library.sql','002-dashboard-views.sql','0
 migrationNames.push('025-memberships.sql');
 // Independent-source Spotify V2 documents and request-bound match evidence.
 migrationNames.push('026-spotify-recordings.sql');
+// Durable broker, activity publisher and queue recovery.
+migrationNames.push('027-spotify-background.sql');
 export async function migrateLibrary(database) {
   return database.transaction(async db=> {
     await db.query("SET LOCAL lock_timeout='5s'");
