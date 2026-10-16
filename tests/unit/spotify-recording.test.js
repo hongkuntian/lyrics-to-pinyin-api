@@ -72,6 +72,9 @@ test('source revisions separate item, optional request hints, text, cue and read
 });
 
 test('incidental album words are not version labels but explicit album versions still reject',()=>{
+  for(const album of [undefined,null,'']) {
+    assert.ok(recordingScore(candidate({album}),request(['A & B'],{album}))>=0);
+  }
   for(const album of ['Live Through Tomorrow','Cover Me','Clean Slate','Reprise of Summer']) {
     assert.ok(recordingScore(candidate({album:'Studio Album',isrc:'USABC2600001'}),request(['A & B'],{album,isrc:'USABC2600001'}))>=0,album);
   }
