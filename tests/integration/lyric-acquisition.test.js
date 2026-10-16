@@ -119,3 +119,15 @@ for(const progressive of [false,true])for(const failure of ['timeout','outage','
  const res=progressive?streamResponse():createMockRes();await f.call(f.make(),{...request,...(progressive?{options:{delivery:'progressive-v1'}}:{})},res);
  assert.equal(queries.filter(q=>q==='Song').length,1);assert.equal(res.statusCode,failure==='timeout'?504:failure==='outage'?502:404);if(progressive)assert.equal(res.chunks.length,0);
 });
+test('later admitted speculative recording mismatch retains actionable 409 without repeating discovery',async()=>{
+ const queries=[];const f=fixture({speculativeDiscovery:true,resolveCatalogAliasesFn:async r=>{await tick();const aliases=[],p=proof(r);p.searches=[{...p.searches[0],title:'Alias Song'},p.searches[0]];Object.defineProperty(aliases,'resolution',{value:p});return aliases;}});
+ f.api.searchSong=async(_,title)=>{queries.push(title);if(title==='Song')throw Object.assign(new Error('wrong recording'),{code:'recording_mismatch',reason:'version_conflict'});return null;};
+ const res=await f.call(f.make());assert.equal(res.statusCode,409);assert.equal(res.body.code,'recording_mismatch');assert.equal(queries.filter(q=>q==='Song').length,1);
+});
+test('an original probe absent from admitted catalog searches cannot pollute final provider status',async()=>{
+ for(const code of ['provider_timeout','recording_mismatch','provider_unavailable']){
+  const queries=[];const f=fixture({speculativeDiscovery:true,resolveCatalogAliasesFn:async r=>{await tick();const aliases=[],p=proof(r);p.searches=[{...p.searches[0],title:'Alias Song'}];Object.defineProperty(aliases,'resolution',{value:p});return aliases;}});
+  f.api.searchSong=async(_,title)=>{queries.push(title);if(title==='Song')throw Object.assign(new Error('unadmitted failure'),{code});return null;};
+  const res=await f.call(f.make());assert.equal(res.statusCode,404,code);assert.equal(res.body.code,undefined);assert.deepEqual(queries,['Song','Alias Song']);
+ }
+});
