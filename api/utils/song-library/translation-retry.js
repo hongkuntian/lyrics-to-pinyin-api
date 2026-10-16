@@ -21,7 +21,7 @@ export async function retryTranslation(database,{jobID,expectedAttempt,requestKe
     if(job.state!=='failed'||operation?.state!=='settled')throw new LibraryError('retry_requires_known_failure');
     const row=await first(db,'SELECT * FROM lyric_documents WHERE id=$1 AND superseded_by IS NULL',[job.document_id]);
     if(!row)throw new LibraryError('source_revision_superseded');
-    const doc={id:row.id,sourceHash:row.source_hash,response:row.response,structure:row.structure,...(row.source_capsule?{sourceCapsule:row.source_capsule,modelContext:row.model_context}:{})};
+    const doc={id:row.id,sourceHash:row.source_hash,response:row.response,structure:row.structure,...(row.source_capsule?{sourceCapsule:row.source_capsule,modelContext:row.model_context,recordingKey:row.recording_key}:{})};
     if(!await first(db,'SELECT 1 FROM lyric_requests WHERE document_id=$1 LIMIT 1',[doc.id]))throw new LibraryError('source_revision_superseded');
     // Dry runs perform no binding writes. Actual admission checks saved content first.
     if(!dryRun&&await reusableTranslation(db,doc,job.target))throw new LibraryError('translation_already_available');

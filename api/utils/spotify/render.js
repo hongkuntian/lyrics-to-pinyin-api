@@ -1,10 +1,12 @@
 import {LibraryError} from '../song-library/store.js';
 import {verifySpotifyBinding,sourceCapsule} from '../song-library/spotify-recording.js';
 import {displayText} from './display.js';
+import {isRejectedRecordingLyrics} from '../rejected-lyrics.js';
 const swift=ms=>ms/1000-978307200;
 const bytes=v=>Buffer.byteLength(JSON.stringify(v));
 export function validateDocument(doc,recording){
  if(!doc?.response||!doc.selectionRevision||doc.response.metadata?.selection_revision!==doc.selectionRevision)throw new LibraryError('recording_mismatch',409);
+ if(isRejectedRecordingLyrics(doc.response.lines.map(l=>({text:l.original})),recording))throw new LibraryError('recording_mismatch',409);
  const b=verifySpotifyBinding(doc.recordingBinding,recording,sourceCapsule(doc.response),doc.selectionRevision,doc.response,{durable:true});
  if(b.documentID!==doc.id||b.recordingKey!==doc.recordingKey||['sourceHash','textRevision','timingRevision','readingRevision'].some(k=>b[k]!==doc[k]))throw new LibraryError('recording_mismatch',409);
  return b;

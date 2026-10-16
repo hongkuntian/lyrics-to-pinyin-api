@@ -3,7 +3,9 @@ import {createRequire} from 'node:module';
 import {normalizeRecordingText} from './recording-match.js';
 
 const require=createRequire(import.meta.url);
-const {recordings,catalogRecordings=[]}=require('../data/rejected-lyrics.json');
+const {recordings,catalogRecordings=[],spotifyRecordings=[]}=require('../data/rejected-lyrics.json');
+const spotifyKeys=new Map(spotifyRecordings.flatMap(record=>record.itemIDs.map(itemID=>[
+  createHash('sha256').update(JSON.stringify(['spotify-recording-2',itemID])).digest('hex'),record])));
 
 // Match words independently of timestamps, wrapping, punctuation, and Chinese
 // script. Metadata alone cannot identify a mislabeled language version.
@@ -21,7 +23,13 @@ export function isRejectedLyrics(provider,id,lines,records=recordings) {
 // Negative evidence never grants recording equivalence or supplies replacement
 // words/timing. Provider metadata still validates through the ordinary matcher.
 export function isRejectedRecordingLyrics(lines,request={},records=catalogRecordings) {
-  const matches=records.filter(record=>record.catalogIDs.includes(request.catalog_id));
+  // Negative evidence never aliases a Spotify item to an Apple recording. The
+  // same predicate accepts the validated V2 request and its internal search DTO.
+  const spotifyID=request.provider==='spotify'&&request.version===2?request.item_id
+    :request.recordingProvider==='spotify'?request.recordingItemID:null;
+  const immutableReview=request.recordingProvider==='spotify'?spotifyKeys.get(request.recordingKey):null;
+  const matches=[...records.filter(record=>record.catalogIDs?.includes(request.catalog_id)),
+    ...spotifyRecordings.filter(record=>spotifyID&&record.itemIDs.includes(spotifyID)),...(immutableReview?[immutableReview]:[])];
   return matches.length>0 && matches.some(record=> {
     if(record.requiredScripts) {
       // Reviewed recording-specific source evidence, never a title-script guess.

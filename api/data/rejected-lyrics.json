@@ -16,6 +16,19 @@
       ]
     }
   ],
+  "spotifyRecordings": [
+    {
+      "itemIDs": ["7ovUcF5uHTBRzUpB6ZOmvt"],
+      "requiredScripts": ["Hiragana", "Katakana"],
+      "reviewedDate": "2026-10-16",
+      "reason": "Spotify identifies this exact item as YOASOBI's Japanese アイドル single. Its separate English Idol item is 1zVsw1SqQKgtzE4aqmE8nE. Reject English-only and romanized substitutes only for this item, including localized request titles. This is negative source-language evidence, not Apple recording equivalence or acoustic/timing verification.",
+      "provenance": [
+        "https://open.spotify.com/track/7ovUcF5uHTBRzUpB6ZOmvt",
+        "https://open.spotify.com/track/1zVsw1SqQKgtzE4aqmE8nE",
+        "https://musicbrainz.org/release-group/4c84aae8-4b9b-4205-83e8-5d8d67879c28"
+      ]
+    }
+  ],
   "catalogRecordings": [
     {
       "catalogIDs": ["1679278167"],

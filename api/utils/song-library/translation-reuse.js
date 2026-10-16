@@ -2,8 +2,12 @@ import {randomUUID} from 'node:crypto';
 import {translationIdentity} from './translation-identity.js';
 import {currentTranslationSQL} from './revisions.js';
 import {digest} from './store.js';
+import {independentModelContext,hasIndependentContext} from './model-context.js';
+import {sourceCapsule,canonicalJSON,independentProvider} from './spotify-recording.js';
+import {requestBody,translationRecipe,strictJSON} from './translation.js';
 
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??null;
+const modelRequestIdentity=body=>canonicalJSON({...body,input:body.input.map(message=>({...message,content:strictJSON(message.content)}))});
 export function contentFitsSource(content,doc) {
   if(!Array.isArray(content.lines)||content.lines.length!==doc.structure.occurrences.length) return false;
   const rows=new Map(content.lines.map(l=>[l.sourceID,l]));
@@ -31,6 +35,8 @@ export async function reusableTranslation(db,doc,target) {
     ORDER BY t.created_at,t.id`,[identity,target])).rows;
   for(const candidate of candidates) if(contentFitsSource(candidate.content,doc))
     return bindTranslation(db,doc,target,candidate.container_id);
+  const bridged=await reusableIndependentTranslation(db,doc,target);
+  if(bridged)return bridged;
   const proof=doc.response.metadata?.catalog_resolution;
   if(doc.canonicalRecordingID && proof?.catalog_items?.length) {
     const keys=[...new Set(proof.catalog_items.map(item=>digest({catalogID:item.catalog_id,storefront:item.storefront})))];
@@ -49,6 +55,50 @@ export async function reusableTranslation(db,doc,target) {
       if(translationIdentity(old,{omitContext:true})===meaning && contentFitsSource(candidate.content,doc))
         return bindTranslation(db,doc,target,candidate.container_id,'verified_catalog_semantics');
     }
+  }
+  return null;
+}
+
+async function reusableIndependentTranslation(db,doc,target) {
+  // One side must carry a verified independent source capsule. A matching
+  // title, ISRC or legacy context hash never establishes this bridge alone.
+  const spotify=hasIndependentContext(doc);
+  let source,body;
+  try {
+    if(spotify)independentModelContext(doc);
+    source=sourceCapsule(doc.response);body=requestBody(doc,target);
+  } catch {return null;}
+  const labels={lrclib:['lrclib','LRCAPI'],netease:['netease','NeteaseAPI'],kugou:['kugou','KugouAPI']}[source.provider];
+  const candidates=(await db.query(`SELECT t.id AS container_id,r.content,r.recipe,j.generation_request,
+    d.response,d.structure,d.source_hash,d.source_capsule,d.model_context,d.recording_key
+    FROM song_translations t JOIN translation_heads h ON h.translation_id=t.id
+    JOIN translation_revisions r ON r.id=h.revision_id JOIN lyric_documents d ON d.id=t.document_id
+    LEFT JOIN translation_jobs j ON j.id=t.id
+    WHERE t.target=$1 AND r.recipe=$2 AND d.superseded_by IS NULL
+      AND (d.source_capsule IS NULL)=$6
+      AND ((d.source_capsule->>'provider'=$3 AND d.source_capsule->>'itemID'=$4)
+        OR (d.source_capsule IS NULL AND d.response->'metadata'->>'source'=ANY($5::text[])
+          AND d.response->'song'->>'id'=$4))
+    ORDER BY t.created_at,t.id LIMIT 50`,[target,translationRecipe(target),source.provider,source.itemID,labels,spotify])).rows;
+  for(const candidate of candidates) {
+    const other={response:candidate.response,structure:candidate.structure,sourceHash:candidate.source_hash,
+      recordingKey:candidate.recording_key,...(candidate.source_capsule?{sourceCapsule:candidate.source_capsule,modelContext:candidate.model_context}:{})};
+    try {
+      if(hasIndependentContext(other)===spotify)continue;
+      if(!spotify)independentModelContext(other);
+      const otherSource=sourceCapsule(other.response);
+      if(independentProvider(otherSource.provider)!==source.provider||otherSource.itemID!==source.itemID)continue;
+      // Compare the actual complete input, including source language, every
+      // repeated occurrence, speaker semantics, context and current recipe.
+      // Different album context or an unknown legacy recipe deliberately misses.
+      const expected=requestBody(other,target);
+      // PostgreSQL JSONB reorders structure keys. Canonicalize the embedded
+      // JSON too, while preserving every source string and ordered array.
+      if(modelRequestIdentity(expected)!==modelRequestIdentity(body)
+        ||candidate.generation_request&&modelRequestIdentity(candidate.generation_request)!==modelRequestIdentity(expected)
+        ||!contentFitsSource(candidate.content,doc))continue;
+      return bindTranslation(db,doc,target,candidate.container_id,'verified_independent_model_input');
+    } catch { /* Missing/invalid provenance leaves the ordinary generation path. */ }
   }
   return null;
 }

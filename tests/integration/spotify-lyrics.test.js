@@ -5,6 +5,7 @@ import {lyricLoader} from '../../api/song-library.js';
 import {makeDocument,requestKey} from '../../api/utils/song-library/document.js';
 import {sourceCapsule,spotifyBinding,spotifySearchRequest} from '../../api/utils/song-library/spotify-recording.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
+import {createSpotifyLyricsService} from '../../api/utils/spotify-lyrics.js';
 const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Request title',artists:['Band & Name','Guest'],duration_ms:240001}};
 const song={id:'source-42',title:'Request title',artist:'Band & Name & Guest',creditedArtistNames:['Band & Name','Guest'],duration:240,source:'lrclib'};
 const words=[{text:'風來了',timestamp:12.5},{text:'海在這裡',timestamp:60.125}];
@@ -99,4 +100,23 @@ test('Redis restoration revalidates the complete source candidate before returni
   assert.deepEqual(makeDocument(recording,restored.body,SELECTION_REVISION).requestEvidence.candidate.creditedArtistNames,recording.metadata.artists);
   entry.candidate.creditedArtistNames=['Band','Name','Guest'];
   const checked=await call(createMusicRomanizeService(dependencies),{recording});assert.equal(checked.statusCode,200);assert.equal(searches,2);
+});
+
+test('reviewed Spotify language guards reject fresh and cached wrong-language sources',async()=>{
+  const r={version:2,provider:'spotify',item_id:'7ovUcF5uHTBRzUpB6ZOmvt',metadata:{origin:'spotify',title:'Idol',artists:['YOASOBI'],duration_ms:213234}};
+  const source={id:'reviewed-test',title:'Idol',artist:'YOASOBI',duration:213.234};
+  let searches=0,lines=[{text:'An English version.',timestamp:12},{text:'A second English line.',timestamp:60}];
+  const api={name:'LRCAPI',searchSong:async()=>{searches++;return source;},getLyrics:async()=>({lines})};
+  const dependencies={redis:null,getAvailableAPIsFn:()=>[api],detectLanguageFn:async()=> 'ja',getDefaultRomanizationSystemFn:()=> 'none',logger:{info(){}}};
+  const rejected=await call(createSpotifyLyricsService(dependencies),{recording:r});assert.equal(rejected.statusCode,409);
+  lines=[{text:'君の声が聞こえる',timestamp:12},{text:'風が吹いている',timestamp:60}];
+  const good=await call(createSpotifyLyricsService(dependencies),{recording:r});assert.equal(good.statusCode,200);
+  const stale=structuredClone(good.body);stale.lines=stale.lines.map(l=>({...l,original:'An English version.',romanized:'An English version.'}));
+  delete stale.metadata.lyric_structure;
+  stale.recordingBinding=spotifyBinding(r,sourceCapsule(stale),SELECTION_REVISION,stale);
+  assert.throws(()=>makeDocument(r,stale,SELECTION_REVISION),{code:'recording_mismatch'});
+  searches=0;
+  const restored=await call(createSpotifyLyricsService({...dependencies,redis:{},getCachedFn:async()=>({response:stale,candidate:source}),setCachedFn:async()=>{},waitUntilFn:p=>p.catch(()=>{})}),{recording:r});
+  assert.equal(restored.statusCode,200);assert.equal(searches,1);
+  assert.equal(restored.body.lines[0].original,'君の声が聞こえる');
 });

@@ -70,3 +70,13 @@ test('source revisions separate item, optional request hints, text, cue and read
   const read=structuredClone(f.source);read.lines[0].romanized+='!';const r=spotifyHashes(f.recording,read,f.selectionRevision);
   assert.notEqual(r.readingRevision,h.readingRevision);assert.equal(r.timingRevision,h.timingRevision);
 });
+
+test('incidental album words are not version labels but explicit album versions still reject',()=>{
+  for(const album of ['Live Through Tomorrow','Cover Me','Clean Slate','Reprise of Summer']) {
+    assert.ok(recordingScore(candidate({album:'Studio Album',isrc:'USABC2600001'}),request(['A & B'],{album,isrc:'USABC2600001'}))>=0,album);
+  }
+  for(const album of ['Live at the Hall','Album (Live)','Album [Remastered 2024]','Album - Acoustic Version','Album (Radio Edit)','現場演唱會']) {
+    assert.equal(recordingScore(candidate({album}),request(['A & B'],{album:'Studio Album'})),-1,album);
+  }
+  assert.equal(recordingScore(candidate({title:'Song (Live)',isrc:'USABC2600001'}),request(['A & B'],{isrc:'USABC2600001'})),-1);
+});

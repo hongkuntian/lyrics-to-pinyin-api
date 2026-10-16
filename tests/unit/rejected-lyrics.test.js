@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {lyricsFingerprint,isRejectedLyrics,isRejectedRecordingLyrics} from '../../api/utils/rejected-lyrics.js';
 import {lyricSourceNeedsRefresh} from '../../api/utils/timing-corrections.js';
+import {spotifyRecordingKey} from '../../api/utils/song-library/spotify-recording.js';
 
 const lines=[{text:'這是測試文字',timestamp:10},{text:'我們一起練習',timestamp:20}];
 const records=[{provider:'lrclib',id:'123',lyricsSha256:lyricsFingerprint(lines)}];
@@ -13,6 +14,20 @@ test('reviewed Japanese recording rejects English-version and romanized substitu
   }
   assert.equal(isRejectedRecordingLyrics([{text:'君の声が聞こえる'}],{catalog_id:'1679278167'}),false);
   assert.equal(isRejectedRecordingLyrics([{text:'歌の名前は日本語',timestamp:0}],{catalog_id:'another'}),false);
+});
+
+test('reviewed Spotify language evidence is bound to the actual item, not title spelling or Apple IDs',()=>{
+  const recording={version:2,provider:'spotify',item_id:'7ovUcF5uHTBRzUpB6ZOmvt',metadata:{origin:'spotify',title:'Idol',artists:['YOASOBI'],duration_ms:213234}};
+  const context={recordingProvider:'spotify',recordingItemID:recording.item_id,title:'Idol',artist:'YOASOBI',creditedArtistNames:['YOASOBI'],duration:213.234};
+  for(const request of [recording,context,{recordingProvider:'spotify',recordingKey:spotifyRecordingKey(recording)}]) {
+    assert.equal(isRejectedRecordingLyrics([{text:'An English version.'}],request),true);
+    assert.equal(isRejectedRecordingLyrics([{text:'kimi no koe'}],request),true);
+    assert.equal(isRejectedRecordingLyrics([{text:'君の声が聞こえる'}],request),false);
+    assert.equal(lyricSourceNeedsRefresh({lines:[{original:'An English version.'}]},request),true);
+  }
+  assert.equal(isRejectedRecordingLyrics([{text:'An English version.'}],{...context,recordingItemID:'1zVsw1SqQKgtzE4aqmE8nE'}),false);
+  assert.equal(isRejectedRecordingLyrics([{text:'An English version.'}],{...context,recordingItemID:undefined}),false);
+  assert.equal(isRejectedRecordingLyrics([{text:'An English version.'}],{...recording,provider:'appleMusic'}),false);
 });
 test('reviewed rejection binds the provider, record ID, and lyric content',()=>{
   assert.equal(isRejectedLyrics('lrclib',123,lines,records),true);

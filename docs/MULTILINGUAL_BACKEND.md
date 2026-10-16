@@ -210,6 +210,19 @@ serve the same current revision with the requesting document's ID and source has
 job aliases coalesce pending work while preserving the v1 client contract. Corrections,
 rollback history, reports and translated Study keep the shared revision identity.
 
+Apple and Spotify recording identities remain separate. A narrow saved-translation
+bridge can bind their content only when they refer to the same independent lyric
+provider/item, one side has a validated independent source capsule, and the complete
+current model input agrees: source language, every ordered/repeated occurrence,
+speaker semantics, contextual labels and recipe. Embedded JSON is compared
+canonically because PostgreSQL JSONB can reorder object keys; source strings and
+array order remain exact. A retained generation request must agree too. Different
+album context, insufficient provenance and incompatible legacy recipes decline
+reuse. The bridge shares the correction head and serves the caller's document/source
+references without spending allowance; it never aliases playback, timing corrections,
+personal learning records or pending jobs across providers. No schema migration or
+automatic generation is needed.
+
 Migration 017 adds reuse bindings and immutable source archives. The build's explicit
 production migration route indexes current documents and repairs retired translations
 only when a reconstructed or archived source matches the historical SHA-256 hash,
