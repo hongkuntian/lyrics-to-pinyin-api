@@ -31,13 +31,28 @@ export class SpotifyService {
   if(c.credentialDigest!==user.credentialDigest)fail('spotify_connection_not_found',404);
   if(c.status==='pending')await this.credentials(c.id,{initial:true});
   c=await this.store.read(c.id);
-  if(c.status==='connected'){
-   // Replace only after proof succeeds; old work is fenced before ACK.
-   for(const prior of await this.store.matching({ownerID:user.id,keyID:user.keyID}))if(prior.id!==c.id&&['connected','pending'].includes(prior.status)){
-    await this.store.mutate(prior.id,(p,put)=>closeConnection(p,'grantReplaced',this.now(),put));await this.drain(prior.id);
+  await this.crash('enrollmentProved');
+  return this.finishEnrollment(user,c.id);
+ }
+ async finishEnrollment(user,id){
+  const ids=await this.store.adopt(id,user,(current,connections,put)=>{
+   if(!this.contextMatches(current))fail('spotify_environment_mismatch',503);
+   const scoped=connections.filter(c=>this.contextMatches(c));
+   if(current.status==='connected'){
+    const compare=(a,b)=>(a.createdAt??0)-(b.createdAt??0)||(a.id<b.id?-1:a.id>b.id?1:0);
+    const winner=scoped.filter(c=>c.status==='connected').sort(compare).at(-1);
+    for(const prior of scoped)if(['connected','pending'].includes(prior.status)&&compare(prior,winner)<0){
+     const rows=[];closeConnection(prior,'grantReplaced',this.now(),(...args)=>rows.push(args));
+     for(const args of rows)put(prior,...args);
+    }
    }
-  }
-  return this.dto(c);
+   // Include already closed grants: a previous process may have committed
+   // adoption and died before publishing their terminal executors.
+   return scoped.map(c=>c.id);
+  });
+  await this.crash('enrollmentAdopted');
+  for(const connectionID of ids){const c=await this.store.read(connectionID);if(c.status!=='connected')await this.store.revokeCapabilities(connectionID);await this.drain(connectionID);}
+  return this.dto(await this.owned(user,id));
  }
  async credentials(id,{initial=false,force=false}={}){
   const existingConnection=await this.store.read(id);if(!this.contextMatches(existingConnection))fail('spotify_environment_mismatch',503);
@@ -84,7 +99,7 @@ export class SpotifyService {
    if(changed)c.credentialVersion++;
   });
  }
- async status(user,input){let c=await this.store.enrollment(user,input.enrollmentID);if(!c)return {version:1,status:'disconnected'};await this.owned(user,c.id);if(c.status==='pending')c=await this.credentials(c.id,{initial:true});return this.dto(c);}
+ async status(user,input){let c=await this.store.enrollment(user,input.enrollmentID);if(!c)return {version:1,status:'disconnected'};await this.owned(user,c.id);if(c.status==='pending')c=await this.credentials(c.id,{initial:true});return this.finishEnrollment(user,c.id);}
  async access(user,input){const c=await this.owned(user,input.connectionID,input.connectionEpoch);if(!await this.store.ownerValid(c))fail('app_access_revoked',403);return this.dto(await this.credentials(c.id));}
  async disconnect(user,input){
   let c;
@@ -194,7 +209,8 @@ export class SpotifyService {
   }
   if(error?.notBefore)await this.store.circuit(this.config.rateBucket,error.notBefore,error.code);
   await this.store.mutate(id,(current,put)=>{
-   if(current.epoch!==claim.epoch||current.pollLease?.id!==lease||current.tickOrdinal!==claim.ordinal||current.pollLease.until<this.now())return;
+   if(current.epoch!==claim.epoch||current.tickOrdinal!==claim.ordinal)return;
+   if(current.pollLease?.id!==lease||current.pollLease.until<=this.now())throw new LibraryError('spotify_poll_lease_expired',503);
    current.pollLease=null;const previousObservation=current.observation;
    if(error&&['spotify_invalid_grant','spotify_access_denied','spotify_unauthorized','spotify_reconnect_required'].includes(error.code)){closeConnection(current,error.code,this.now(),put,'reconnectRequired');return;}
    if(sample){
@@ -262,7 +278,9 @@ export class SpotifyService {
  async stopAll(id,reason){await this.store.mutate(id,(c,put)=>closeConnection(c,reason,this.now(),put,'reconnectRequired'));await this.store.revokeCapabilities(id);await this.drain(id);}
  async exhaust(message){
   const c=await this.store.read(message.connectionID);if(!c)return;
-  await this.store.mutate(c.id,(current,put)=>{for(const s of active(current))endConsumer(current,s,'queueDeliveryExhausted',this.now(),put);});
+  if(!this.contextMatches(c))fail('spotify_environment_mismatch',503);
+  if(c.epoch!==message.connectionEpoch){await this.drain(c.id);return;}
+  await this.store.mutate(c.id,(current,put)=>{if(!this.contextMatches(current)||current.epoch!==message.connectionEpoch)return;for(const s of active(current))endConsumer(current,s,'queueDeliveryExhausted',this.now(),put);});
   await this.drain(c.id);
  }
  async cleanup(message){

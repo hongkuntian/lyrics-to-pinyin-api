@@ -18,7 +18,7 @@ test('Spotify vault binds ciphertext to owner/key/epoch/environment and supports
 const playback=(progress=10000)=>({timestamp:time-60000,is_playing:true,progress_ms:progress,device:{id:'device',name:'Fixture speaker'},item:{type:'track',id:'0123456789ABCDEFGHIJKL',name:'Independent fixture',duration_ms:240000,artists:[{name:'A & B'},{name:'Guest'}],album:{name:'Album'},is_local:false}});
 test('Spotify observation uses receipt clock, equal provider timestamps advance, regression/slow samples abstain',()=>{
  const a=observePlayback({status:200,body:playback(),requestStartedAt:time,responseReceivedAt:time+100},null,1);
- assert.equal(a.confirmedAt,time+100);assert.equal(a.positionMS,10000);
+ assert.equal(a.confirmedAt,time);assert.equal(a.positionMS,10000);
  const b=observePlayback({status:200,body:playback(12000),requestStartedAt:time+2000,responseReceivedAt:time+2100},a,2);
  assert.equal(b.positionMS,12000);assert.equal(b.playbackOccurrence,a.playbackOccurrence);
  const back=observePlayback({status:200,body:playback(500),requestStartedAt:time+4000,responseReceivedAt:time+4100},b,3);
@@ -33,7 +33,7 @@ test('immutable publication keeps real timestamps/freshness, no lyric survives s
  const state=renderState({observation,consumer,now:time+100,document:null});
  const push=immutablePush({state,consumer,now:time+100});
  assert.equal(push.payload.aps.timestamp,Math.floor((time+100)/1000));
- assert.equal(push.payload.aps['stale-date'],Math.floor((time+8001)/1000));
+ assert.equal(push.payload.aps['stale-date'],Math.floor((time+8000)/1000));
  assert.equal(renderState({observation,consumer,now:time+8001,document:null}).original,'');
  assert.equal(renderState({observation,consumer,now:time+8001,document:null}).statusReason,'updatesDelayed');
  assert.throws(()=>immutablePush({state,consumer:{...consumer,lastTimestamp:Math.floor(time/1000)},now:time+100}),/publication_coalesced/);

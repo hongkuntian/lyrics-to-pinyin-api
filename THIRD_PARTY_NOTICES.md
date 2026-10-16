@@ -381,3 +381,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## OpenCC-JS 1.4.2
+
+Spotify Live Lyrics uses OpenCC-JS solely for explicitly selected Chinese display script conversion. Canonical source text and recording bindings are retained. Code is MIT; bundled OpenCC dictionary data is Apache-2.0. The deployed bundles retain `opencc-js/LICENSE`, `THIRD_PARTY_LICENSES.md` and `LICENSES/Apache-2.0.txt` alongside this notice. Upstream: https://github.com/nk2028/opencc-js.

@@ -1,4 +1,4 @@
-import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,sourceCapsule} from './spotify-recording.js';
+import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,sourceCapsule,spotifyHash} from './spotify-recording.js';
 import {LYRIC_NORMALIZATION_VERSION} from '../lyric-annotations.js';
 import {digest,LibraryError} from './store.js';
 
@@ -38,10 +38,10 @@ export function publicDocument(doc,request=null) {
 }
 
 export function publicTranslation(translation,doc) {
-  const {rejectedNotes,...value}=translation;
+  const {rejectedNotes,contentFingerprint:ignoredFingerprint,...value}=translation;
   const vocalTextOnly=normalized(doc);
   const occurrences=new Map(doc.structure.occurrences.map(o=>[o.sourceID,o]));
-  return {...value,lines:value.lines.map(line=> {
+  const projected={...value,lines:value.lines.map(line=> {
     const speaker=doc.structure.speakers.find(s=>s.id===line.speakerID);
     return {...line,startsTurn:vocalTextOnly?false:line.startsTurn,
       text:!vocalTextOnly && line.startsTurn?`${speaker.displayName}: ${line.lyricText}`:line.lyricText};
@@ -53,4 +53,8 @@ export function publicTranslation(translation,doc) {
     if(occurrence && note.sourceQuote===occurrence.sourceText)return [{...note,sourceQuote:occurrence.lyricText}];
     return occurrence?.lyricText.includes(note.sourceQuote)?[note]:[];
   })};
+  // The exact public content, rather than a device-generated reconstruction,
+  // admits an already-ready translation into Spotify's background recipe.
+  // Keep the existing Apple projection byte-for-byte unchanged.
+  return doc.sourceCapsule?{...projected,contentFingerprint:spotifyHash(projected)}:projected;
 }

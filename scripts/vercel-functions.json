@@ -8,7 +8,10 @@
         "node_modules/kuromoji/LICENSE-2.0.txt",
         "node_modules/kuroshiro/LICENSE",
         "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
-        "THIRD_PARTY_NOTICES.md"
+        "THIRD_PARTY_NOTICES.md",
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**"
       ]
     },
     {
@@ -21,7 +24,10 @@
         "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
         "THIRD_PARTY_NOTICES.md",
         "api/data/reviewed-catalog-aliases.json",
-        "api/data/lyric-performers.json"
+        "api/data/lyric-performers.json",
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**"
       ]
     },
     {
@@ -35,37 +41,68 @@
         "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
         "THIRD_PARTY_NOTICES.md",
         "api/data/reviewed-catalog-aliases.json",
-        "api/data/lyric-performers.json"
+        "api/data/lyric-performers.json",
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**"
       ]
     },
     {
       "entry": "api/review-reports.js",
       "maxDuration": 300,
-      "includeFiles": []
+      "includeFiles": [
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**",
+        "THIRD_PARTY_NOTICES.md"
+      ]
     },
     {
       "entry": "api/app-auth.js",
-      "includeFiles": []
+      "includeFiles": [
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**",
+        "THIRD_PARTY_NOTICES.md"
+      ]
     },
     {
       "entry": "api/live-lyrics.js",
       "maxDuration": 15,
-      "includeFiles": []
+      "includeFiles": [
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**",
+        "THIRD_PARTY_NOTICES.md"
+      ]
     },
     {
       "entry": "api/account.js",
-      "includeFiles": []
+      "includeFiles": [
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**",
+        "THIRD_PARTY_NOTICES.md"
+      ]
     },
     {
       "entry": "api/membership.js",
       "includeFiles": [
-        "api/data/apple-pki/*.cer"
+        "api/data/apple-pki/*.cer",
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**",
+        "THIRD_PARTY_NOTICES.md"
       ]
     },
     {
       "entry": "api/store-notifications.js",
       "includeFiles": [
-        "api/data/apple-pki/*.cer"
+        "api/data/apple-pki/*.cer",
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**",
+        "THIRD_PARTY_NOTICES.md"
       ]
     },
     {
@@ -79,7 +116,10 @@
         "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
         "THIRD_PARTY_NOTICES.md",
         "api/data/reviewed-catalog-aliases.json",
-        "api/data/lyric-performers.json"
+        "api/data/lyric-performers.json",
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**"
       ]
     },
     {
@@ -93,7 +133,10 @@
         "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
         "THIRD_PARTY_NOTICES.md",
         "api/data/reviewed-catalog-aliases.json",
-        "api/data/lyric-performers.json"
+        "api/data/lyric-performers.json",
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**"
       ],
       "experimentalTriggers": [
         {
@@ -115,7 +158,10 @@
         "node_modules/kuroshiro-analyzer-kuromoji/LICENSE",
         "THIRD_PARTY_NOTICES.md",
         "api/data/reviewed-catalog-aliases.json",
-        "api/data/lyric-performers.json"
+        "api/data/lyric-performers.json",
+        "node_modules/opencc-js/LICENSE",
+        "node_modules/opencc-js/THIRD_PARTY_LICENSES.md",
+        "node_modules/opencc-js/LICENSES/**"
       ],
       "experimentalTriggers": [
         {

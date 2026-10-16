@@ -12,6 +12,21 @@ export class SpotifyStore {
  });}
  async read(id){return (await this.db.query('SELECT data FROM spotify_connections WHERE id=$1',[id])).rows[0]?.data??null;}
  async enrollment(user,id){return (await this.db.query('SELECT data FROM spotify_connections WHERE owner_id=$1 AND key_id=$2 AND enrollment_id=$3',[user.id,user.keyID,id])).rows[0]?.data??null;}
+ async adopt(id,user,fn){return this.db.transaction(async db=>{
+  // Adoption serializes every proven grant for this attested owner/key. A
+  // per-connection lock cannot prevent two finalizers from retiring each other.
+  const key=(await db.query('SELECT user_id,revoked FROM app_attest_keys WHERE key_id=$1 FOR UPDATE',[user.keyID])).rows[0];
+  const credential=(await db.query('SELECT 1 FROM library_tokens t JOIN library_users u ON u.id=t.user_id WHERE t.digest=$1 AND t.user_id=$2 AND NOT t.revoked AND NOT u.disabled AND (t.expires_at IS NULL OR t.expires_at>now())',[user.credentialDigest,user.id])).rows[0];
+  if(!key||key.user_id!==user.id||key.revoked||!credential)throw new LibraryError('app_access_revoked',403);
+  const rows=(await db.query('SELECT data FROM spotify_connections WHERE owner_id=$1 AND key_id=$2 ORDER BY id FOR UPDATE',[user.id,user.keyID])).rows;
+  const connections=rows.map(row=>row.data),current=connections.find(c=>c.id===id);
+  if(!current||current.credentialDigest!==user.credentialDigest)throw new LibraryError('spotify_connection_not_found',404);
+  const before=new Map(connections.map(c=>[c.id,JSON.stringify(c)])),outbox=[];
+  const result=fn(current,connections,(c,kind,outboxID,data,due)=>outbox.push({connectionID:c.id,epoch:c.epoch,kind,id:outboxID,data,due}));
+  for(const c of connections)if(JSON.stringify(c)!==before.get(c.id))await db.query('UPDATE spotify_connections SET data=$2,updated_at=now() WHERE id=$1',[c.id,JSON.stringify(c)]);
+  for(const o of outbox)await db.query('INSERT INTO spotify_outbox(id,connection_id,epoch,kind,due_at_ms,data,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO NOTHING',[o.id,o.connectionID,o.epoch,o.kind,o.due,JSON.stringify(o.data),new Date(o.due+86400000)]);
+  return result;
+ });}
  async mutate(id,fn){return this.db.transaction(async db=>{
   const row=(await db.query('SELECT data FROM spotify_connections WHERE id=$1 FOR UPDATE',[id])).rows[0];if(!row)throw new LibraryError('spotify_connection_not_found',404);
   const c=row.data,rows=[];const result=await fn(c,(kind,key,data,due)=>rows.push({kind,id:key,data,due}));

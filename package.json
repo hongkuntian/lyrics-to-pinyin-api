@@ -29,6 +29,7 @@
     "@apple/app-store-server-library": "3.1.0",
     "@upstash/redis": "^1.35.0",
     "@vercel/functions": "^3.9.5",
+    "@vercel/queue": "0.8.0",
     "chinese-conv": "^1.0.5",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -39,9 +40,9 @@
     "kuroshiro-analyzer-kuromoji": "1.1.0",
     "node-app-attest": "1.0.1",
     "node-fetch": "^3.3.2",
+    "opencc-js": "1.4.2",
     "pg": "^8.23.0",
-    "pinyin-pro": "^3.26.0",
-    "@vercel/queue": "0.8.0"
+    "pinyin-pro": "^3.26.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

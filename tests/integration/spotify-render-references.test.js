@@ -13,6 +13,10 @@ test('render references resolve only owner-ready current revision with exact pub
  await f.store.saveDocument(doc,{lookupOwner:lease});await f.store.releaseLookup(doc.requestKey,doc.selectionRevision,lease);
  const admitted=await f.store.reserve({userID:'reader-a',documentID:doc.id,target:'en',recipe:'fixture',reservedMicros:30000});await f.store.claim(admitted.job.id);await f.store.complete(admitted.job.id,parseTranslation(JSON.stringify({translations:{L0001:'First translated line.',L0002:'Second translated line.'},sourceNotes:[]}),doc),1000,{});
  const current=await f.store.translation(doc.id,'en'),dto=publicTranslation(current,doc),fingerprint=contentFingerprint(dto);assert.equal(contentFingerprint({...dto,contentFingerprint:fingerprint}),fingerprint);
+ assert.equal(dto.contentFingerprint,fingerprint,'native receives the exact ready public DTO fingerprint');
+ assert.equal(publicTranslation({...current,contentFingerprint:'wrong'},doc).contentFingerprint,fingerprint,'never trust a stored or caller-supplied digest');
+ const {sourceCapsule:ignored,...legacyDocument}=doc;
+ assert.equal(Object.hasOwn(publicTranslation(current,legacyDocument),'contentFingerprint'),false,'legacy Apple projection stays unchanged');
  const runtime=createSpotifyRuntime({store:new SpotifyStore(f.store.db),config:{},provider:{},enqueue:async()=>{},send:async()=>{},acquire:async()=>{},admit:async()=>{}});
  const readyTranslation={documentID:doc.id,sourceHash:doc.sourceHash,translationID:current.id,recipeVersion:current.recipe,textRevision:doc.textRevision,target:'en',contentFingerprint:fingerprint};
  const timingCorrection={recordingKey:doc.recordingKey,sourceHash:doc.sourceHash,timingRevision:doc.timingRevision,correctionRevision:'explicit-1',offsetSeconds:2};

@@ -5,10 +5,11 @@ import {promisify} from 'node:util';
 import {mkdtemp,rm,readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 const run=promisify(execFile);
 test('process death after PostgreSQL tick+acquisition commit recovers all required queue executors from duplicate predecessor',async t=>{
  const directory=await mkdtemp(join(tmpdir(),'spotify-process-recovery-'));t.after(()=>rm(directory,{recursive:true,force:true}));
- const worker=new URL('../fixtures/spotify-recovery-worker.mjs',import.meta.url).pathname;
+ const worker=fileURLToPath(new URL('../fixtures/spotify-recovery-worker.mjs',import.meta.url));
  await assert.rejects(run(process.execPath,[worker,directory,'crash']),e=>e.code===73);
  const before=JSON.parse(await readFile(directory+'/queue.json','utf8'));assert.equal(before.length,1);assert.equal(before[0].message.ordinal,0);
  const {stdout}=await run(process.execPath,[worker,directory,'recover']);const proof=JSON.parse(stdout.trim());

@@ -1,5 +1,6 @@
 import {LibraryError} from '../song-library/store.js';
 import {verifySpotifyBinding,sourceCapsule} from '../song-library/spotify-recording.js';
+import {displayText} from './display.js';
 const swift=ms=>ms/1000-978307200;
 const bytes=v=>Buffer.byteLength(JSON.stringify(v));
 export function validateDocument(doc,recording){
@@ -29,17 +30,18 @@ export function renderState({observation:o,document,consumer:c,now}){
  if(correction?.recordingKey===b.recordingKey&&correction.sourceHash===b.sourceHash&&correction.timingRevision===b.timingRevision&&c.validatedCorrection)offset=correction.offsetSeconds;
  // The anchor is the returned progress. Bounded age interpolation is an estimate,
  // never providerChangedAt-derived elapsed time.
- const position=o.positionMS/1000+(o.playing?Math.max(0,now-o.confirmedAt)/1000:0)-offset;
+ const position=o.positionMS/1000+(o.playing?Math.max(0,now-(o.responseReceivedAt??o.confirmedAt))/1000:0)-offset;
  let index=-1;for(let i=0;i<lines.length;i++)if(Number.isFinite(lines[i].timestamp)&&lines[i].timestamp<=position)index=i;
  if(index<0)return {...state,phase:'waiting'};
  const line=lines[index],end=lines[index+1]?.timestamp??o.recording.metadata.duration_ms/1000;
- const parts=segments(line.original??''),fraction=Math.max(0,Math.min(.999999,(position-line.timestamp)/Math.max(.001,end-line.timestamp))),part=Math.floor(fraction*parts.length);
+ const parts=segments(displayText(line.original??'',c.recipe.language)),fraction=Math.max(0,Math.min(.999999,(position-line.timestamp)/Math.max(.001,end-line.timestamp))),part=Math.floor(fraction*parts.length);
  Object.assign(state,{phase:'lyrics',lineID:document.structure?.occurrences?.[index]?.sourceID??`L${index+1}`,original:parts[part],parts:parts.length,part,progress:fraction*parts.length-part});
  if(c.recipe.showPronunciation&&c.recipe.reading!=='none'&&parts.length===1)state.pronunciation=typeof line.romanized==='string'&&bytes(line.romanized)<=500?line.romanized:'';
- if(c.recipe.reading==='validatedDeviceAid'&&c.validatedAid?.sourceHash===b.sourceHash&&c.validatedAid.textRevision===b.textRevision&&c.validatedAid.readingRevision===b.readingRevision&&parts.length===1)state.pronunciation=c.validatedAid.lines?.[index]?.pronunciation??state.pronunciation;
+ if(c.recipe.showPronunciation&&c.recipe.reading==='validatedDeviceAid'&&c.validatedAid?.sourceHash===b.sourceHash&&c.validatedAid.textRevision===b.textRevision&&c.validatedAid.readingRevision===b.readingRevision&&parts.length===1)state.pronunciation=c.validatedAid.lines?.[index]?.pronunciation??state.pronunciation;
  if(c.recipe.showTranslation&&c.validatedTranslation?.sourceHash===b.sourceHash&&c.validatedTranslation.documentID===document.id&&parts.length===1)state.translation=c.validatedTranslation.lines?.[index]?.translation??'';
- state.nextOriginal=parts.length===1&&bytes(lines[index+1]?.original??'')<=256?(lines[index+1]?.original??''):'';
- for(const key of ['title','artist'])if(bytes(state[key])>256)state[key]='';
+ const next=displayText(lines[index+1]?.original??'',c.recipe.language);
+ state.nextOriginal=parts.length===1&&bytes(next)<=256?next:'';
+ for(const key of ['title','artist']){state[key]=displayText(state[key],c.recipe.language);if(bytes(state[key])>256)state[key]='';}
  return state;
 }
 export function immutablePush({state,consumer,now,event='update'}){
