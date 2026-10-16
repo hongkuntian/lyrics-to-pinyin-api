@@ -12,5 +12,6 @@ async function sample(progressive){
  await handler({method:'POST',body:{artist:song.artist,title:song.title,duration:song.duration,language:'zh',options:progressive?{delivery:'progressive-v1'}:{}}},res);
  return {mode:progressive?'progressive-v1':'legacy-json',events,status:res.statusCode};
 }
-const results=[];for(let i=0;i<3;i++){results.push(await sample(false));results.push(await sample(true));}
-console.log(JSON.stringify({kind:'controlled_backend_delivery_replay',node:process.version,sourceDelaysMs:{plain:40,timed:1000},notes:'Source provider order, hedge and final timing preference are unchanged; these are injected delays, not production or phone benchmarks.',results},null,2));
+if(process.argv.includes('--acquisition')){const {benchmarkAcquisition}=await import('./benchmark-lyric-acquisition.mjs');console.log(JSON.stringify(await benchmarkAcquisition(),null,2));}
+else {const results=[];for(let i=0;i<3;i++){results.push(await sample(false));results.push(await sample(true));}
+console.log(JSON.stringify({kind:'controlled_backend_delivery_replay',node:process.version,sourceDelaysMs:{plain:40,timed:1000},notes:'Source provider order, hedge and final timing preference are unchanged; these are injected delays, not production or phone benchmarks.',results},null,2));}

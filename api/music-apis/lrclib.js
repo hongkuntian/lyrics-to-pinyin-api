@@ -1,7 +1,7 @@
 import {BaseMusicAPI} from './base.js';
 import {fetchJSON} from '../utils/fetch-json.js';
 import {parseLRC} from '../utils/lrc.js';
-import {findRecording,findLyricsRecording,searchTitle,sameRecordingNames,recordingNames} from '../utils/recording-match.js';
+import {findRecording,findLyricsRecording,searchTitle,sameRecordingNames,recordingNames,RecordingMismatchError} from '../utils/recording-match.js';
 import chinese from 'chinese-conv';
 import {cleanLyrics,hasUsableLyrics} from '../utils/lyric-quality.js';
 import {isRejectedLyrics,isRejectedRecordingLyrics} from '../utils/rejected-lyrics.js';
@@ -13,23 +13,7 @@ export class LRCAPI extends BaseMusicAPI {
   async searchSong(artist,title,context={}) {
     const request={artist,title,...context}, records=new Map();
     let failure;
-    const add=song=> {
-      if(!song || song.id==null) return;
-      const lyricsData=this.lyricsFromRecord(song,request);
-      const candidate={id:song.id,title:song.trackName || song.name,artist:song.artistName,album:song.albumName,duration:song.duration,source:'lrclib',instrumental:lyricsData?.instrumental===true,lyricsData,...(context.recordingProvider==='spotify'?{
-        ...(song.creditedArtistNames!==undefined?{creditedArtistNames:song.creditedArtistNames}:{}),
-        ...(song.isrc?{isrc:song.isrc}:{}),...(typeof song.explicit==='boolean'?{explicit:song.explicit}:{})}:{})};
-      // Some LRCLIB uploads print duet credits as "Singer + Guest". Normalize
-      // that delimiter only against the complete requested contributors. An
-      // already matching stage name, unspaced plus, or Spotify identity stays
-      // untouched; ordinary title/version/album/duration validation still runs.
-      if(context.recordingProvider!=='spotify' && typeof candidate.artist==='string'
-        && !sameRecordingNames(candidate,request) && recordingNames(request).credits.length>1) {
-        const artist=candidate.artist.normalize('NFKC').replace(/\s+\+\s+/gu,' & ');
-        if(artist!==candidate.artist && sameRecordingNames({...candidate,artist},request))candidate.artist=artist;
-      }
-      records.set(song.id,candidate);
-    };
+    const add=song=> {const candidate=this.recordingFromRecord(song,request);if(candidate)records.set(song.id,candidate);};
     const choose=()=>findLyricsRecording([...records.values()].filter(song=>hasUsableLyrics(song.lyricsData,{duration:song.duration})),request);
     const attempt=()=> {
       try { return choose(); }
@@ -66,6 +50,27 @@ export class LRCAPI extends BaseMusicAPI {
     if(match) return match;
     if(failure) throw failure;
     return null;
+  }
+  recordingFromRecord(record,request={}) {
+    if(!record||record.id==null)return null;
+    const lyricsData=this.lyricsFromRecord(record,request);
+    const candidate={id:record.id,title:record.trackName||record.name,artist:record.artistName,album:record.albumName,duration:record.duration,source:'lrclib',instrumental:lyricsData?.instrumental===true,lyricsData,...(request.recordingProvider==='spotify'?{
+      ...(record.creditedArtistNames!==undefined?{creditedArtistNames:record.creditedArtistNames}:{}),...(record.isrc?{isrc:record.isrc}:{}),...(typeof record.explicit==='boolean'?{explicit:record.explicit}:{})}:{})};
+    // The same guarded duet-credit spelling applies to search and fresh IDs.
+    if(request.recordingProvider!=='spotify'&&typeof candidate.artist==='string'&&!sameRecordingNames(candidate,request)&&recordingNames(request).credits.length>1){
+      const artist=candidate.artist.normalize('NFKC').replace(/\s+\+\s+/gu,' & ');
+      if(artist!==candidate.artist&&sameRecordingNames({...candidate,artist},request))candidate.artist=artist;
+    }
+    return candidate;
+  }
+  async getRecording(id,context={}) {
+    if(!/^\d{1,20}$/.test(String(id)))return null;
+    // An ID is a routing hint only. Fetch metadata and words together afresh;
+    // never consult context.song.lyricsData or retain provider downloads.
+    const record=await fetchJSON(`${this.baseURL}/get/${id}`,context);
+    if(String(record?.id)!==String(id))throw new RecordingMismatchError('source_id_changed');
+    const song=this.recordingFromRecord(record,context);
+    return song?{song,lyrics:song.lyricsData}:null;
   }
   lyricsFromRecord(record,request={}) {
     const make=raw=>cleanLyrics({lines:raw ? parseLRC(raw):[],source:'lrclib',songId:record.id,instrumental:record.instrumental===true},{duration:record.duration});

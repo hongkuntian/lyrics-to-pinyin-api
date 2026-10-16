@@ -46,7 +46,7 @@ test('English catalog names do not hide Chinese text or invent its pronunciation
   assert.equal(res.body.lines[1].romanized,'Sing with me');
   assert.equal(res.body.song.title.romanized,'Unbreakable Love');
 });
-test('verified storefront owners stay independent and reuse canonical cache with their original anchor',async()=>{
+test('localized owners spend one bounded original probe and reuse canonical cache with their own anchor',async()=>{
  const english={kind:'song',trackId:1321295664,trackName:request.title,artistName:request.artist,collectionName:'The Chaos After You',trackTimeMillis:258264};
  const native={...english,trackName:localized.title,artistName:localized.artist,collectionName:localized.album};
  const fetchFn=async url=>({ok:true,json:async()=>({results:new URL(url).searchParams.get('country')==='us'?[english]:[native]})});
@@ -61,12 +61,12 @@ test('verified storefront owners stay independent and reuse canonical cache with
  const results=await Promise.all(inputs.map(run));
  // Different request owners cannot join a promise without subscriber/cancel
  // accounting. Canonical content reuse after completion remains available.
- assert.equal(calls,2);
+ assert.equal(calls,3);
  for(let i=0;i<results.length;i++){
   assert.equal(results[i].statusCode,200);
   assert.equal(results[i].body.metadata.catalog_resolution.requested.storefront,inputs[i].storefront);
  }
- const cached=await run({...inputs[1],storefront:'hk'});assert.equal(cached.statusCode,200);assert.equal(calls,2);
+ const cached=await run({...inputs[1],storefront:'hk'});assert.equal(cached.statusCode,200);assert.equal(calls,3);
  const wrong=await run({...inputs[1],artist:'Cover Artist'});assert.equal(wrong.statusCode,409);
 });
 test('verified aliases retry providers and return identity evidence for iOS',async()=> {

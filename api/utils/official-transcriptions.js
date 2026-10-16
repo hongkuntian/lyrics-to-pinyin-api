@@ -11,6 +11,7 @@ function freeze(value) {
 }
 // Literal JSON require keeps the metadata-only registry in cloud bundles.
 const productionRegistry=freeze(require('../data/official-transcriptions.json'));
+export const hasOfficialCatalogSource=request=>productionRegistry.recordings.some(r=>r.signature?.catalog_id===request.catalog_id);
 const maxBytes=5*1024*1024;
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const nonempty=value=>typeof value==='string' && !!value.trim();

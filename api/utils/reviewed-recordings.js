@@ -10,6 +10,7 @@ import {timingFingerprint} from './timing-corrections.js';
 // The registry contains reviewed public metadata, never lyric text or timing.
 const require=createRequire(import.meta.url);
 const {recordings}=require('../data/reviewed-recordings.json');
+export const hasReviewedCatalogSource=request=>recordings.some(r=>r.acceptedRequests?.some(s=>s.catalog_id===request.catalog_id));
 const provider='https://netease-cloud-music-api-gules-mu.vercel.app';
 const numericID=value=>typeof value==='string' && /^\d{1,20}$/.test(value);
 const present=value=>typeof value==='string' && value.trim().length>0;

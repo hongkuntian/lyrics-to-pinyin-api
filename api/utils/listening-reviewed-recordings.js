@@ -19,6 +19,7 @@ export const listeningReviews=[{
   checkpoints:[{source:36.68,heard:28},{source:90.94,heard:82},{source:199.45,heard:191}]
 }];
 const same=(a,b)=>typeof a==='string' && normalizeRecordingText(a)===normalizeRecordingText(b);
+export const hasListeningCatalogSource=request=>listeningReviews.some(r=>r.catalogID===request.catalog_id);
 const close=(a,b)=>Number.isFinite(a) && Number.isFinite(b) && Math.abs(a-b)<=0.5;
 
 export async function lookupListeningReviewedRecording(request,context={}, {reviews=listeningReviews}={}) {

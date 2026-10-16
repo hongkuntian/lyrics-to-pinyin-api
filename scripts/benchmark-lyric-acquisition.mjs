@@ -1,0 +1,29 @@
+// Comparable M2 probes: production service with deterministic injected sources.
+import {performance} from 'node:perf_hooks';
+import {EventEmitter} from 'node:events';
+import {createMusicRomanizeService} from '../api/music-romanize.js';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const base={catalog_id:'123',storefront:'us',artist:'Test artist',title:'Original song',album:'Test album',duration:240,language:'zh'};
+const song={id:42,artist:base.artist,title:base.title,album:base.album,duration:240,source:'lrclib'};
+const lyrics={lines:[{text:'一起唱',timestamp:12},{text:'向前走',timestamp:30}]};
+const proof=request=>({version:'catalog-recording-1',method:'same_catalog_id',requested:{catalog_id:request.catalog_id,storefront:request.storefront??null},canonical_recording_id:'apple:123',canonical_context:{title:base.title,artist:base.artist},accepted_request:{catalog_id:request.catalog_id,artist:request.artist,title:request.title,album:request.album??null,duration:request.duration},catalog_items:['us','ca'].map(storefront=>({catalog_id:'123',storefront,provenance:'apple_music'})),genres:[],searches:[{catalog_id:'123',artist:base.artist,title:base.title,album:base.album,duration:240}]});
+function fixture({catalogMs=800,providerMs=40,speculativeDiscovery=true,formatGate=null}={}) {
+ const state={values:new Map(),pending:[],now:1_800_000_000_000,stats:{catalog:0,search:0,idRead:0,lyricsRead:0,peak:0,active:0},events:[],start:performance.now()};
+ const mark=name=>state.events.push({name,ms:Math.round(performance.now()-state.start)});
+ const source=async(kind,delay,work)=>{state.stats[kind]++;state.stats.active++;state.stats.peak=Math.max(state.stats.peak,state.stats.active);mark(kind+'_start');try{await sleep(delay);return work();}finally{state.stats.active--;mark(kind+'_complete');}};
+ const api={name:'LRCAPI',searchSong:async()=>source('search',providerMs,()=>({...song})),getLyrics:async()=>{state.stats.lyricsRead++;return structuredClone(lyrics);},getRecording:async()=>source('idRead',providerMs,()=>({song:{...song},lyrics:structuredClone(lyrics)}))};
+ const redis={get:async key=>state.values.get(key)??null,setex:async(key,ttl,value)=>state.values.set(key,structuredClone(value)),eval:async(_,keys,args)=>{state.values.set(keys[0],JSON.parse(args[0]));return 1;}};
+ const make=()=>createMusicRomanizeService({redis,getCachedFn:async(_,key)=>state.values.get(key)??null,setCachedFn:async(_,key,value)=>state.values.set(key,structuredClone(value)),waitUntilFn:p=>state.pending.push(p),logger:{info(){},error(){}},contextNow:()=>state.now,contextTTLms:1000,speculativeDiscovery,getAvailableAPIsFn:()=>[api],resolveCatalogAliasesFn:async request=>{state.stats.catalog++;mark('catalog_start');await sleep(catalogMs);mark('catalog_complete');const aliases=[];Object.defineProperty(aliases,'resolution',{value:proof(request)});return aliases;},lookupListeningReviewedRecordingFn:async()=>null,lookupReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,detectLanguageFn:async()=> 'zh',getProcessorFn:()=>({romanize:async text=>{if(formatGate)await formatGate;return {romanized:text};}})});
+ const reset=()=>{state.stats={catalog:0,search:0,idRead:0,lyricsRead:0,peak:0,active:0};state.events=[];state.start=performance.now();};
+ const response=()=>{const res=new EventEmitter();Object.assign(res,{statusCode:200,frames:[],headers:{},setHeader(k,v){this.headers[k]=v;},status(n){this.statusCode=n;return this;},json(body){this.body=body;mark('final_json');return this;},write(line){const frame=JSON.parse(line);this.frames.push(frame);if(frame.event==='readable'&&!state.events.some(e=>e.name==='first_readable'))mark('first_readable');if(frame.event==='complete')mark('final_complete');return true;},end(){}});return res;};
+ const invoke=async(handler,{recording=base,reading='pinyin',refresh=false,res=response()}={})=>{await handler({method:'POST',body:{...recording,romanization_system:reading,options:{delivery:'progressive-v1',...(refresh?{refresh:true}:{})}}},res);await Promise.all(state.pending);return res;};
+ const result=(name,res)=>({case:name,events:state.events,counts:state.stats,status:res.statusCode,finalIdentity:res.frames.at(-1)?.response?{id:res.frames.at(-1).response.song.id,source:res.frames.at(-1).response.metadata.source,text:res.frames.at(-1).response.lines.map(l=>l.original),request:res.frames.at(-1).response.metadata.catalog_resolution?.requested}:null});
+ return {state,make,reset,response,invoke,result};
+}
+export async function benchmarkAcquisition(){
+ const results=[];
+ for(const catalogMs of [0,800]){const f=fixture({catalogMs});const res=await f.invoke(f.make());results.push(f.result(`cold_catalog_${catalogMs}ms`,res));}
+ for(const kind of ['warm_context_new_instance','expired_context','refresh_bypasses_context']){const f=fixture();await f.invoke(f.make());f.reset();if(kind==='expired_context')f.state.now+=1001;const res=await f.invoke(f.make(),{reading:'none',refresh:kind==='refresh_bypasses_context'});results.push(f.result(kind,res));}
+ for(const cancel of [false,true]){let release;const gate=cancel?new Promise(r=>release=r):null;const f=fixture({catalogMs:40,providerMs:80,speculativeDiscovery:false,formatGate:gate}),handler=f.make(),a=f.response(),b=f.response();const first=f.invoke(handler,{res:a});await sleep(10);const second=f.invoke(handler,{recording:{...base,storefront:'ca'},res:b});if(cancel){await sleep(180);a.emit('close');release();}await Promise.all([first,second]);results.push(f.result(cancel?'canonical_first_reader_cancelled':'canonical_aliases_share',b));}
+ return {kind:'controlled_backend_acquisition_replay',node:process.version,sourceDelaysMs:{catalog:800,provider:40},notes:'Injected catalog/provider/format scheduling only; no network, playback or paid generation. Different instances share the fake durable store; no distributed in-flight claim.',results};
+}
