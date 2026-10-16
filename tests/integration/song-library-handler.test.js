@@ -264,6 +264,19 @@ test('fresh cached note placeholders refresh without an explicit reload',async t
  assert.deepEqual(second.response.lines,response.lines);
  assert.equal((await store.document(first.id)).response.lines[0].original,'♪');
 });
+test('fresh saved performer credits acquire a clean immutable document without mutating the old source',async t=>{
+ let calls=0;
+ const old={...response,lines:['男声：单色凌','戏腔：单色凌','和声：曾婕'].map((original,i)=>({original,romanized:'credit',timestamp:i+1})).concat(
+   response.lines.map(l=>({...l,timestamp:12})))};
+ const fresh={...response,lines:old.lines.slice(3)};
+ const {call,store}=await setup(t,{loadLyrics:async()=>++calls===1?old:fresh});
+ const first=(await call({action:'lyrics',recording})).body.document;
+ const second=(await call({action:'lyrics',recording})).body.document;
+ assert.notEqual(second.id,first.id);assert.notEqual(second.sourceHash,first.sourceHash);assert.equal(calls,2);
+ assert.deepEqual(second.response.lines,fresh.lines);assert.equal(second.structure.occurrences[0].sourceID,'L0001');
+ assert.deepEqual((await store.document(first.id)).response.lines,old.lines);
+ assert.equal((await call({action:'lyrics',recording})).body.document.id,second.id);assert.equal(calls,2);
+});
 test('known bad cached timing yields to readable fallback and cannot masquerade as valid on an outage',async t=>{
  const plain={...response,lines:response.lines.map(l=>({...l,timestamp:null})),quality:{...response.quality,synced:false}};
  const {call,instance,store}=await setup(t);

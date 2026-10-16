@@ -11,7 +11,7 @@ import {timingQuality} from './lyric-selection.js';
 import {hedgedLookup} from './hedged-lookup.js';
 import {isRejectedRecordingLyrics} from './rejected-lyrics.js';
 import {analyzeLyricLanguage} from './lyric-language.js';
-import {LYRIC_SELECTION_REVISION} from './lyric-annotations.js';
+import {LYRIC_SELECTION_REVISION,hasEmbeddedLyricCredits} from './lyric-annotations.js';
 import {BoundedCache} from './bounded-cache.js';
 import {waitUntil} from '@vercel/functions';
 import {LibraryError} from './song-library/store.js';
@@ -30,6 +30,7 @@ export function createSpotifyLyricsService(dependencies={}) {
     try {
       if(!candidate||String(candidate.id)!==String(response?.song?.id)||recordingScore(candidate,spotifySearchRequest(r))<0)return false;
       if(rejectRecordingLyricsFn(response.lines.map(l=>({text:l.original})),spotifySearchRequest(r)))return false;
+      if(hasEmbeddedLyricCredits(response,spotifySearchRequest(r)))return false;
       if(response.metadata.selection_revision!==LYRIC_SELECTION_REVISION||response.metadata.spotify_response_version!==1)return false;
       if(!Number.isFinite(Date.parse(response.metadata.timestamp))||Date.now()-Date.parse(response.metadata.timestamp)>(response.quality.partial||!response.quality.synced?300000:86400000))return false;
       verifySpotifyBinding(response.recordingBinding,r,sourceCapsule(response),LYRIC_SELECTION_REVISION,response);return true;

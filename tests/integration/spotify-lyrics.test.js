@@ -102,6 +102,26 @@ test('Redis restoration revalidates the complete source candidate before returni
   entry.candidate.creditedArtistNames=['Band','Name','Guest'];
   const checked=await call(createMusicRomanizeService(dependencies),{recording});assert.equal(checked.statusCode,200);assert.equal(searches,2);
 });
+test('Spotify rejects fresh Redis credit leaks and persists only clean independent source rows',async()=>{
+  const credits=['男声：单色凌','戏腔：单色凌','和声：曾婕'];let searches=0,entry;const writes=[];
+  const api={name:'LRCAPI',searchSong:async()=>{searches++;return song;},getLyrics:async()=>({lines:[...credits.map((text,i)=>({text,timestamp:i+1})),...words]})};
+  const deps={redis:{},logger:{info(){}},getAvailableAPIsFn:()=>[api],detectLanguageFn:async()=> 'zh',
+    getProcessorFn:()=>({romanize:async text=>({romanized:text})}),getCachedFn:async()=>entry,
+    setCachedFn:async(redis,key,value)=>{entry=structuredClone(value);},waitUntilFn:p=>writes.push(p)};
+  const first=await call(createSpotifyLyricsService(deps),{recording});await Promise.all(writes);
+  assert.equal(first.statusCode,200);assert.deepEqual(first.body.lines.map(l=>l.original),words.map(l=>l.text));
+  assert.equal(first.body.song_details.credits.length,3);
+  const doc=makeDocument(recording,first.body,SELECTION_REVISION);
+  assert.deepEqual(doc.sourceCapsule.lines,first.body.lines);
+  assert.ok(!JSON.stringify(doc.structure).includes('单色凌'));
+  entry.response.lines.unshift(...credits.map((original,i)=>({original,romanized:'credit',timestamp:i+1})));
+  delete entry.response.metadata.lyric_structure;
+  entry.response.recordingBinding=spotifyBinding(recording,sourceCapsule(entry.response),SELECTION_REVISION,entry.response);
+  const refreshed=await call(createSpotifyLyricsService(deps),{recording});await Promise.all(writes);
+  assert.equal(refreshed.statusCode,200);assert.equal(searches,2);
+  assert.deepEqual(refreshed.body.lines,first.body.lines);
+  await call(createSpotifyLyricsService(deps),{recording});assert.equal(searches,2);
+});
 
 test('reviewed Spotify language guards reject fresh and cached wrong-language sources',async()=>{
   const r={version:2,provider:'spotify',item_id:'7ovUcF5uHTBRzUpB6ZOmvt',metadata:{origin:'spotify',title:'Idol',artists:['YOASOBI'],duration_ms:213234}};

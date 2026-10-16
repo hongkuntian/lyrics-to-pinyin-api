@@ -2,9 +2,49 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {cleanLyrics} from '../../api/utils/lyric-quality.js';
-import {LYRIC_NORMALIZATION_VERSION} from '../../api/utils/lyric-annotations.js';
+import {LYRIC_NORMALIZATION_VERSION,hasEmbeddedLyricCredits} from '../../api/utils/lyric-annotations.js';
 const top={artist:'TOP Debut Boy Group',duration:271.291};
 const rows=texts=>texts.map((text,i)=>({text,timestamp:i*4+1}));
+
+test('corroborated performance credits leave every source array at header, middle and footer',()=>{
+  const credits=['男声：单色凌','戏腔：单色凌','和声：曾婕'];
+  for(const texts of [[...credits,'一起唱','慢慢听'],['一起唱',...credits,'慢慢听'],['一起唱','慢慢听',...credits],
+    ['男聲：單色凌','戲腔：單色凌','和聲：曾婕','一起唱']]) {
+    const data={source:'netease',lines:rows(texts)};
+    const result=cleanLyrics(data,{artist:'胡66'});
+    assert.deepEqual(result.lines,data.lines.filter(l=>!l.text.includes('：')));
+    assert.deepEqual(result.lyricStructure.sourceRows,result.lines);
+    assert.equal(result.credits.length,3);
+    assert.deepEqual(cleanLyrics(result,{artist:'胡66'}),result);
+    assert.equal(hasEmbeddedLyricCredits({lines:data.lines.map(l=>({original:l.text}))}),true);
+    assert.equal(hasEmbeddedLyricCredits({lines:result.lines.map(l=>({original:l.text}))}),false);
+  }
+});
+test('unconfirmed voice names, sung cues and separated roles remain performed content',()=>{
+  for(const texts of [['男声：一起唱','戏腔：一起唱','和声：一起唱'],['男声：单色凌','一起唱','戏腔：单色凌'],
+    ['男声：单色凌','女声：曾婕'],['男：一起唱','女：慢慢听'],['戏腔：单色凌'],['和声：曾婕']]) {
+    const data={lines:rows(texts)};assert.deepEqual(cleanLyrics(data).lines,data.lines);
+    assert.equal(hasEmbeddedLyricCredits({lines:data.lines.map(l=>({original:l.text}))}),false);
+  }
+  const data={lines:rows(['张极Jeremy：男声：单色凌','张泽禹Zack：戏腔：单色凌'])};
+  const first=cleanLyrics(data,top);
+  assert.deepEqual(cleanLyrics(first,top),first);
+  assert.equal(hasEmbeddedLyricCredits({lines:first.lines.map(l=>({original:l.text})),metadata:{lyric_structure:first.lyricStructure}},top),false);
+});
+test('server production roles cover the native credit families without admitting partial labels',()=>{
+  const credits=['出品监制：Example','发行合作：Example','鼓录音室：Example','和声编写：Example','和声：郑楠(SBMS)',
+    '管弦乐编写：Example','管弦乐团：Example','制作统筹：Example','后期制作：Example','母带后期处理：Example',
+    '混音&母带处理工作室：Example','词/曲OP：Example','词/曲SP：Example','母带管理：Example','艺人经纪：Example',
+    '出品方：Example','第二小提琴：Example','音乐统筹：Example','PGM：Example','OP：Example','SP：Example',
+    '编曲 MUSIC ARRANGEMENT：Example','和声 BACKGROUND VOCALS：Example','笛 DIZI：Example'];
+  const data={source:'netease',lines:rows(['一起唱',...credits,'慢慢听','出品监制着梦：一起唱','PGM is my name: hello'])};
+  const result=cleanLyrics(data);
+  assert.equal(result.credits.length,credits.length);
+  assert.deepEqual(result.lines,[data.lines[0],...data.lines.slice(credits.length+1)]);
+  assert.deepEqual(result.lyricStructure.sourceRows,result.lines);
+  assert.deepEqual(cleanLyrics(result),result);
+  assert.deepEqual(cleanLyrics({lines:rows(['和声：一起唱(SBMS)','和声：郑楠(SBMS)'])}).lines,rows(['和声：一起唱(SBMS)','和声：郑楠(SBMS)']));
+});
 
 test('exact recording headings and rights notices leave performed speech and timing intact',()=>{
   const data={source:'netease',lines:rows(['一起唱 (Live) - 练习歌手','本作品声明，著作权归权利人所有，权利保留','我说：一起唱','一起唱'])};

@@ -40,7 +40,7 @@ model input keep real performer turns. IDs and hashes identify that canonical
 document, independent of its API view. Existing clients remain compatible without
 requiring a coordinated rollout of the saved-translation feature. Legacy documents are reprocessed into clean revisions by the explicit production migration; old IDs retain retirement records, not raw lyric payloads.
 
-The response selection revision is `lyrics-selection-2026-09-29-source-content-3`.
+The response selection revision is `lyrics-selection-2026-09-30-storefront-1`.
 Backend cache keys also include the normalization version. Native memory/disk
 cache admission and durable song-library lookups use the matching revision;
 older results remain readable during rollout but must be refetched rather than
@@ -67,3 +67,9 @@ Sources: [Apple recording](https://music.apple.com/us/song/1835909383),
 [group's release announcement and members](https://www.weibo.com/7854957897/PEC5ClzmX).
 
 Production credits live only in `song_details.credits`, persisted separately in `lyric_document_extras`. Source arrays contain no credit copies. Repeated Chinese^English pairs use the separate aligned `provider_translation` structure. See [source recovery](SOURCE_CONTENT_RECOVERY.md) for migration, refresh and listening gates.
+
+## Corroborated performance credits
+
+Compact Chinese personal names following 男声, 女声, or 戏腔 require corroboration: verified performer metadata, two adjacent distinct roles naming the same person, or two neighboring confirmed credit rows. A single backing-vocal name can also qualify at either edge of that block. Traditional labels normalize only for comparison. Unconfirmed names, sung chorus phrases, and already separated performer-cue bodies remain performed text. Extracted credits stay in Song details; source rows, romanization and new model input contain only the retained vocals, with unchanged timestamps and repeated words.
+
+Cached responses containing recognized embedded credits revalidate through the existing recording-bound acquisition path, including Spotify memory/Redis and durable documents. This is a targeted repair under the existing selection contract. Reacquisition creates a new immutable source identity; saved translations are never remapped or regenerated automatically. The native projection keeps older copies readable offline without changing their source IDs/hashes and requests a throttled refresh for the newly recognized performance block. Clean sources with credits only in metadata do not trigger that refresh.

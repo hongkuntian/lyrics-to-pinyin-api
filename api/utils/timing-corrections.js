@@ -3,7 +3,7 @@ import {fetchJSON,withDeadline} from './fetch-json.js';
 import {parseLRC} from './lrc.js';
 import {cleanLyrics} from './lyric-quality.js';
 import {normalizeRecordingText,normalizedAlbum,recordingScore} from './recording-match.js';
-import {isMusicNotePlaceholder} from './lyric-annotations.js';
+import {isMusicNotePlaceholder,hasEmbeddedLyricCredits} from './lyric-annotations.js';
 import {isRejectedRecordingLyrics} from './rejected-lyrics.js';
 
 export function timingFingerprint(lyrics) {
@@ -45,6 +45,7 @@ function correctionRule(lyrics,request,rules) {
 export function lyricSourceNeedsRefresh(response,request,{rules=timingCorrections,recordingRejections}={}) {
   const lines=response?.lines || [];
   if(lines.some(line=>isMusicNotePlaceholder(line.original))) return true;
+  if(hasEmbeddedLyricCredits(response,request)) return true;
   if(isRejectedRecordingLyrics(lines.map(line=>({text:line.original})),request,recordingRejections)) return true;
   return Boolean(correctionRule({lines:lines.map(line=>({text:line.original,timestamp:line.timestamp}))},request,rules));
 }
