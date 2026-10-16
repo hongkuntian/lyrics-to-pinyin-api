@@ -1,4 +1,5 @@
-import {isSpotifyRecording} from './utils/song-library/spotify-recording.js';
+import {withLyricsDelivery} from './utils/lyrics-delivery.js';
+import {isSpotifyRecording,spotifyBinding} from './utils/song-library/spotify-recording.js';
 import {withAppAuth} from './utils/app-auth/http.js';
 import {waitUntil} from '@vercel/functions';
 import {performance} from 'node:perf_hooks';
@@ -19,12 +20,12 @@ import {reserveExplanation,claimExplanation,finishExplanation,publicExplanation,
 
 import {annotationFor,pronunciationKey,enabledProfiles} from './utils/pronunciation-aids.js';
 
-export const config={maxDuration:300};
+export const config={maxDuration:300,supportsResponseStreaming:true};
 const actions={capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeService()) {
-  return async (recording,{refresh=false}={})=> {
+  return async (recording,{refresh=false,delivery}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
-    await handler({method:'POST',body:{...(isSpotifyRecording(recording)?{recording}:recording),options:{tone_style:'marks',separator:' ',case:'lower',...(refresh?{refresh:true}:{})}}},result);
+    await handler({method:'POST',...(delivery?{lyricDelivery:delivery}:{}),body:{...(isSpotifyRecording(recording)?{recording}:recording),options:{tone_style:'marks',separator:' ',case:'lower',...(refresh?{refresh:true}:{})}}},result);
     if(result.code!==200) throw new LibraryError(result.body?.code??'lyrics_unavailable',result.code);
     return result.body;
   };
@@ -34,7 +35,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
   lyricSourceNeedsRefreshFn=lyricSourceNeedsRefresh}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
   const execute=(db,id,doc)=>executeTranslationJob(db,id,{apiKey,generateFn,doc});
-  return async(req,res)=> {
+  return withLyricsDelivery(async(req,res)=> {
     const started=performance.now(),timings=[];
     let lyricCache;
     const measure=async(name,work)=>{const start=performance.now();try{return await work();}finally{timings.push(`${name};dur=${(performance.now()-start).toFixed(1)}`);}};
@@ -79,6 +80,11 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         let doc=await measure('document_read',()=>db.documentForRequest(key,selectionRevision));
         if(!doc && !explicit && !isSpotifyRecording(recording) && db.bindRecordingHead) doc=await measure('recording_bind',()=>db.bindRecordingHead(recording,key,selectionRevision));
         lyricCache='LIBRARY';
+        if(doc && !explicit && !lyricSourceNeedsRefreshFn(doc.response,recording) && req.lyricDelivery) {
+          const readable=structuredClone(publicDocument(doc,recording).response);
+          if(doc.sourceCapsule)readable.recordingBinding=spotifyBinding(recording,doc.sourceCapsule,selectionRevision,doc.response);
+          req.lyricDelivery.publish(readable,{cache:'LIBRARY',serverTiming:timings.join(', ')});
+        }
         const stale=value=>!value || lyricSourceNeedsRefreshFn(value.response,recording)
           || Date.now()-new Date(value.checkedAt??0).getTime()>((value.response.quality.synced && !value.response.quality.partial)?86400000:300000);
         if(explicit || stale(doc)) {
@@ -91,7 +97,8 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
               // First acquisition may reuse the current selection policy's
               // already-verified provider cache. Existing stale documents and
               // explicit reloads still demand a new source check.
-              const candidate=makeDocument(recording,await measure('lyrics_lookup',()=>loadLyrics(recording,{refresh:explicit||Boolean(doc)})),selectionRevision);
+              const candidate=makeDocument(recording,await measure('lyrics_lookup',()=>loadLyrics(recording,{refresh:explicit||Boolean(doc),delivery:req.lyricDelivery})),selectionRevision);
+              req.lyricDelivery?.signal.throwIfAborted();
               // Provider outages or regressions cannot erase a complete timed source.
               const keep=doc?.response.quality.synced && !candidate.response.quality.synced && !lyricSourceNeedsRefreshFn(doc.response,recording);
               doc=await measure('document_save',()=>db.saveDocument(keep?{...doc,requestKey:key}:candidate,{replaceID:doc?.id,lookupOwner:owner}));
@@ -217,7 +224,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       if(status===429)res.setHeader('Retry-After','60');
       return send(status,{code:known?error.code:'store_unavailable'});
     }
-  };
+  },{library:true,waitUntilFn});
 }
 export function createSongLibraryHandler(dependencies={}) {
   return withAppAuth(createSongLibraryService(dependencies),{...dependencies,libraryStore:dependencies.store,route:'library'});

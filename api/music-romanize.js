@@ -1,3 +1,4 @@
+import {withLyricsDelivery} from './utils/lyrics-delivery.js';
 import {createSpotifyLyricsService} from './utils/spotify-lyrics.js';
 import {withAppAuth} from './utils/app-auth/http.js';
 import {createRedisFromEnv} from './utils/redis-client.js';
@@ -24,6 +25,7 @@ import {analyzeLyricLanguage} from './utils/lyric-language.js';
 import {chooseLyricCandidate,timingQuality} from './utils/lyric-selection.js';
 import {isRejectedRecordingLyrics} from './utils/rejected-lyrics.js';
 export const RESPONSE_VERSION='2.5.0';
+export const config={supportsResponseStreaming:true};
 export const SELECTION_REVISION=LYRIC_SELECTION_REVISION;
 const responseLifetimeMs=response=>response.quality?.partial===true || (response.quality?.synced===false && response.quality?.instrumental!==true) ? 300000:86400000;
 const remainingLifetimeMs=response=> {
@@ -48,7 +50,7 @@ export function createMusicRomanizeService(dependencies={}) {
     const previous=cache.get(key);
     if((previous?.metadata?.acquisition_started_at??0)<=(response.metadata?.acquisition_started_at??0)) cache.set(key,response,{ttlMs});
   };
-  return async (req,res)=> {
+  return withLyricsDelivery(async (req,res)=> {
     const started=performance.now(),requestID=randomUUID(),timings=[];
     const acquisitionStartedAt=latestStart=Math.max(Date.now(),latestStart+0.001);
     let cacheStatus='MISS';
@@ -88,7 +90,7 @@ export function createMusicRomanizeService(dependencies={}) {
       const stableOptions=Object.fromEntries(Object.entries(options).filter(([key])=>key!=='refresh').sort(([a],[b])=>a.localeCompare(b)));
       const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,isrc,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,cachePolicy:2,selectionPolicy:SELECTION_REVISION,normalizationPolicy:LYRIC_NORMALIZATION_VERSION}),searchScript,searchSystem,stableOptions);
       const request={artist,title,album,duration,catalog_id,storefront,...(account_storefront?{account_storefront}:{}),...(isrc?{isrc}:{})};
-      const inflightKey=options.refresh===true?key+':refresh':key;
+      const inflightKey=(options.refresh===true?key+':refresh':key)+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const local=options.refresh===true?null:responseCache.get(key);
       if(local && !lyricSourceNeedsRefresh(local,request)) { cacheStatus='MEMORY';return send({status:200,body:local}); }
       if(inflight.has(inflightKey)) { cacheStatus='COALESCED';return send(await measure('shared',()=>inflight.get(inflightKey))); }
@@ -100,13 +102,14 @@ export function createMusicRomanizeService(dependencies={}) {
           }
         }
         let matched=false,mismatch=false,timedOut=false,unavailable=false;
-        const deadline=Date.now()+16000;
+        const deadline=Math.min(Date.now()+16000,req.lyricDelivery?.deadlineAtMS??Infinity);
+        let publishCandidate=async()=>{};
         const diagnose=(provider,reason)=>logger.info?.('lyrics_lookup',{requestID,provider,reason});
         const aliasKey=JSON.stringify(request),knownAliases=options.refresh===true?null:aliasCache.get(aliasKey);
         // Resolve metadata before selecting a provider spelling. The fixed query
         // order makes native and international requests compete on the same terms.
         const aliasTask=(catalog_id || (album && duration))
-          ? measure('catalog_alias',()=>knownAliases || withDeadline(signal=>resolveCatalogAliasesFn(request,{signal}),2500).catch(()=>[]))
+          ? measure('catalog_alias',()=>knownAliases || withDeadline(signal=>resolveCatalogAliasesFn(request,{signal}),2500,req.lyricDelivery?.signal).catch(()=>[]))
           : Promise.resolve([]);
         const tryRecording=async target=> {
           const lookup=async(api,parentSignal)=> {
@@ -135,13 +138,13 @@ export function createMusicRomanizeService(dependencies={}) {
             }
           };
           // An explicit source retains its first opportunity before fallback.
-          if(preferred) { for(const api of apis) { const result=await lookup(api);if(result) return result; }return null; }
+          if(preferred) { for(const api of apis) { const result=await lookup(api,req.lyricDelivery?.signal);if(result){await publishCandidate(result);return result;} }return null; }
           // Fast plain lyrics remain available, but do not cancel a verified
           // timed candidate after just 350 ms. The extra wait applies only
           // when the current fallback has no timestamps, and remains bounded.
           const targetScript=await detectLanguageFn(`${target.artist} ${target.title}`);
           const targetAPIs=target===request || preferred ? apis : [...new Set([...getAvailableAPIsFn(targetScript),...apis])];
-          return hedgedLookup(targetAPIs,lookup,{delayMs:hedgeDelayMs,untimedGraceMs:Math.min(untimedGraceMs,Math.max(0,deadline-Date.now()))});
+          return hedgedLookup(targetAPIs,lookup,{delayMs:hedgeDelayMs,untimedGraceMs:Math.min(untimedGraceMs,Math.max(0,deadline-Date.now())),signal:req.lyricDelivery?.signal,onCandidate:publishCandidate});
         };
         // Reuse previously verified localizations first on repeated catalog requests.
         const timed=candidate=>timingQuality(candidate).usable;
@@ -159,36 +162,21 @@ export function createMusicRomanizeService(dependencies={}) {
         const canonicalKey=resolution?.canonical_recording_id ? JSON.stringify({recording:resolution.canonical_recording_id,
           language:language??null,reading:romanization_system??null,source:music_platform??null,
           policy:SELECTION_REVISION,options:stableOptions}):null;
+        const canonicalWorkKey=canonicalKey&&canonicalKey+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
         const bind=body=>({...body,metadata:{...body.metadata,catalog_resolution:proof,
           recording_match:{method:'catalog_alias',catalog_id:catalog_id??resolution.accepted_request.catalog_id,artist,title,album,duration}},
           song_details:{...body.song_details,catalog_id:catalog_id??null}});
         if(canonicalKey && options.refresh!==true) {
           const cached=canonicalCache.get(canonicalKey);
           if(cached && !lyricSourceNeedsRefresh(cached,request)){cacheStatus='RECORDING_MEMORY';return {status:200,body:bind(cached)};}
-          if(canonicalInflight.has(canonicalKey)) {
-            const shared=await canonicalInflight.get(canonicalKey);
+          if(canonicalInflight.has(canonicalWorkKey)) {
+            const shared=await canonicalInflight.get(canonicalWorkKey);
             if(shared.status===200 && !lyricSourceNeedsRefresh(shared.body,request)){cacheStatus='RECORDING_COALESCED';return {...shared,body:bind(shared.body)};}
           }
         }
-        const lookupResolved=async()=>{
-        // Reviewed cross-catalog metadata is only an exact-ID discovery path.
-        // The helper rechecks complete catalog and source signatures before
-        // returning any provider words; ordinary mismatches stay strict.
-        let result=!preferred ? await measure('reviewed_recording',()=>withDeadline(async signal=> {
-          const candidate=await lookupListeningReviewedRecordingFn(request,{signal}) ?? await lookupReviewedRecordingFn(request,{signal});
-          return candidate ? applyTimingCorrectionFn(candidate,request,{signal,deadline}):null;
-        },Math.min(reviewedTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null):null;
-        if(!result && !preferred) result=await measure('official_transcription',()=>withDeadline(
-          signal=>lookupOfficialTranscriptionFn(request,{signal,diagnose:event=>logger.info?.('official_transcription',{requestID,...event})}),Math.min(providerTimeoutMs,Math.max(1,deadline-Date.now())))).catch(()=>null);
-        const searches=preferred ? [request,...aliases] : resolution?.searches ?? [request,...aliases];
-        const queryLimit=4;
-        for(const target of searches.slice(0,queryLimit)) {
-          if(!mayImprove(result) || deadline<=Date.now())break;
-          // Preserve object identity for an exact original query and its proof.
-          const original=target.artist===artist&&target.title===title&&target.album===album&&target.catalog_id===catalog_id;
-          result=better(result,await tryRecording(original?request:target));
-        }
-        if(result) {
+        const formatted=new WeakMap();
+        const responseFor=result=>{if(!formatted.has(result))formatted.set(result,req.lyricDelivery?.own?req.lyricDelivery.own(formatCandidate(result)):formatCandidate(result));return formatted.get(result);};
+        const formatCandidate=async result=> {
           const {song,api,target}=result;
           const lyrics=cleanLyrics(result.lyrics,{duration:song.duration,title:song.title,artist:song.artist,catalogID:catalog_id});
           const cacheable=result.timingCorrection?.status!=='untimed_fallback';
@@ -204,7 +192,7 @@ export function createMusicRomanizeService(dependencies={}) {
             ]);
             return formatMusicResponseFn({...song,source:api.name},{title:romanizedTitle.romanized,artist:romanizedArtist.romanized,language:script,system,lines});
           });
-          if(!response) return {status:400,body:{error:'Script is not supported for romanization'}};
+          if(!response)return null;
           response.song.album=song.album ?? null;response.song.duration=song.duration ?? null;
           response.metadata.version=RESPONSE_VERSION;
           response.metadata.acquisition_started_at=acquisitionStartedAt;
@@ -228,6 +216,40 @@ export function createMusicRomanizeService(dependencies={}) {
             const method=result.timingCorrection?.status==='replacement' && !metadataEquivalence(song,request) ? 'catalog_alias':'metadata_equivalence';
             response.metadata.recording_match={method,catalog_id,artist,title,album,duration};
           }
+          req.lyricDelivery?.signal.throwIfAborted();
+          return response;
+        };
+        let publishedCandidate=null;
+        publishCandidate=async candidate=> {
+          if(!req.lyricDelivery || chooseLyricCandidate(publishedCandidate,candidate)!==candidate)return;
+          const response=await responseFor(candidate);
+          if(response?.song&&chooseLyricCandidate(publishedCandidate,candidate)===candidate){publishedCandidate=candidate;req.lyricDelivery.publish(response,{requestID,serverTiming:timings.join(', ')});}
+        };
+        const lookupResolved=async()=>{
+        // Reviewed cross-catalog metadata is only an exact-ID discovery path.
+        // The helper rechecks complete catalog and source signatures before
+        // returning any provider words; ordinary mismatches stay strict.
+        let result=!preferred ? await measure('reviewed_recording',()=>withDeadline(async signal=> {
+          const candidate=await lookupListeningReviewedRecordingFn(request,{signal}) ?? await lookupReviewedRecordingFn(request,{signal});
+          return candidate ? applyTimingCorrectionFn(candidate,request,{signal,deadline}):null;
+        },Math.min(reviewedTimeoutMs,Math.max(1,deadline-Date.now())),req.lyricDelivery?.signal)).catch(()=>null):null;
+        if(!result && !preferred) result=await measure('official_transcription',()=>withDeadline(
+          signal=>lookupOfficialTranscriptionFn(request,{signal,diagnose:event=>logger.info?.('official_transcription',{requestID,...event})}),Math.min(providerTimeoutMs,Math.max(1,deadline-Date.now())),req.lyricDelivery?.signal)).catch(()=>null);
+        if(result)await publishCandidate(result);
+        const searches=preferred ? [request,...aliases] : resolution?.searches ?? [request,...aliases];
+        const queryLimit=4;
+        for(const target of searches.slice(0,queryLimit)) {
+          if(!mayImprove(result) || deadline<=Date.now())break;
+          // Preserve object identity for an exact original query and its proof.
+          const original=target.artist===artist&&target.title===title&&target.album===album&&target.catalog_id===catalog_id;
+          result=better(result,await tryRecording(original?request:target));
+        }
+        if(result) {
+          const {song,api,target}=result;
+          const response=await responseFor(result);
+          if(!response)return {status:400,body:{error:'Script is not supported for romanization'}};
+          const cacheable=result.timingCorrection?.status!=='untimed_fallback';
+          const languageDetails=response.metadata.language_details;
           diagnose(api.name,target===request ? 'matched':'catalog_alias');
           if(cacheable) saveNewest(responseCache,key,response,responseLifetimeMs(response));
           if(cacheable && canonicalKey)saveNewest(canonicalCache,canonicalKey,response,responseLifetimeMs(response));
@@ -249,8 +271,8 @@ export function createMusicRomanizeService(dependencies={}) {
         if(matched) return {status:404,body:{error:'Lyrics not found',code:'lyrics_absent'}};
         return {status:404,body:{error:'Song not found',details:`Tried ${apis.map(api=>api.name).join(', ')}`}};
         };
-        const shared=lookupResolved();if(canonicalKey)canonicalInflight.set(canonicalKey,shared);
-        try{return await shared;}finally{if(canonicalKey&&canonicalInflight.get(canonicalKey)===shared)canonicalInflight.delete(canonicalKey);}
+        const shared=lookupResolved();if(canonicalKey)canonicalInflight.set(canonicalWorkKey,shared);
+        try{return await shared;}finally{if(canonicalKey&&canonicalInflight.get(canonicalWorkKey)===shared)canonicalInflight.delete(canonicalWorkKey);}
       };
       const task=compute();inflight.set(inflightKey,task);
       try { return send(await task); } finally { inflight.delete(inflightKey); }
@@ -258,7 +280,7 @@ export function createMusicRomanizeService(dependencies={}) {
       logger.error('Music romanization failed',error.message);
       return send({status:500,body:{error:'Server error'}});
     }
-  };
+  },{waitUntilFn});
 }
 export function createMusicRomanizeHandler(dependencies={}) {
   return withAppAuth(createMusicRomanizeService(dependencies),{...dependencies,route:'music'});

@@ -16,6 +16,7 @@ const includes=[],runtime=[];
 for(const entry of manifest.entries){
  const dir=path.join(out,'functions',entry.entry.replace(/\.js$/,'')+'.func'),vc=JSON.parse(await fs.readFile(path.join(dir,'.vc-config.json')));
  assert.equal(vc.runtime,'nodejs24.x');assert.equal(vc.launcherType,'Nodejs');assert.equal(vc.shouldAddHelpers,true);assert((await fs.stat(path.join(dir,vc.handler))).size>0);
+ if(['api/music-romanize.js','api/song-library.js'].includes(entry.entry))assert.equal(vc.supportsResponseStreaming,true);
  if(entry.maxDuration)assert.equal(vc.maxDuration,entry.maxDuration);
  for(const trigger of vc.experimentalTriggers??[]){assert(trigger.consumer);assert.equal(trigger.retryAfterSeconds,2);assert.equal(trigger.maxDeliveries,128);}
  const inventory=receipt.functions.find(x=>x.entry===entry.entry);

@@ -13,6 +13,9 @@ export const manifest=JSON.parse(await fs.readFile(new URL('./vercel-functions.j
 // Runtime bundles need dependency/module identity, never package lifecycle hooks.
 // The outer explicit static carrier owns the one and only packaging invocation.
 export function isolatedBuilderPackage(packageJSON){return {...packageJSON,scripts:{}};}
+export function runtimeConfiguration(lambda){
+ return {runtime:lambda.runtime,handler:lambda.handler,launcherType:lambda.launcherType,shouldAddHelpers:lambda.shouldAddHelpers,shouldAddSourcemapSupport:lambda.shouldAddSourcemapSupport,supportsResponseStreaming:lambda.supportsResponseStreaming,maxDuration:lambda.maxDuration,regions:lambda.regions,experimentalTriggers:lambda.experimentalTriggers};
+}
 export async function packageFunctions({workPath=root,output=path.join(workPath,'.vercel/output'),preflight=true}={}){
  if(process.versions.node.split('.')[0]!=='24')throw new Error('node24_required');
  if(preflight)await execute(process.execPath,[path.join(workPath,'scripts/vercel-library-build.js')],{cwd:workPath});
@@ -40,7 +43,8 @@ export async function packageFunctions({workPath=root,output=path.join(workPath,
   }
   // Preserve the builder's actual launcher and helper behavior and the processed
   // trigger shape required by Lambda deserialization (including consumer).
-  const vc={runtime:lambda.runtime,handler:lambda.handler,launcherType:lambda.launcherType,shouldAddHelpers:lambda.shouldAddHelpers,shouldAddSourcemapSupport:lambda.shouldAddSourcemapSupport,maxDuration:lambda.maxDuration,regions:lambda.regions,experimentalTriggers:lambda.experimentalTriggers};
+  const vc=runtimeConfiguration(lambda);
+  if(['api/music-romanize.js','api/song-library.js'].includes(entry)&&vc.supportsResponseStreaming!==true)throw new Error('lyric_response_streaming_required');
   await fs.writeFile(path.join(dir,'.vc-config.json'),JSON.stringify(vc,null,2)+'\n');
   const required=[...new Set((await Promise.all((includeFiles??[]).map(pattern=>u.glob(pattern,stage)))).flatMap(files=>Object.keys(files)))];
   for(const included of required)await fs.access(path.join(dir,included));
