@@ -57,7 +57,7 @@ export function spotifyRequestHash(value) {
 export const spotifyRecordingKey=r=>spotifyHash(['spotify-recording-2',spotifyRecording(r).item_id]);
 export function spotifySearchRequest(value) {
   const r=spotifyRecording(value),m=r.metadata;
-  return {recordingProvider:'spotify',creditedArtistNames:[...m.artists],artist:m.artists.join(' & '),title:m.title,
+  return {recordingProvider:'spotify',recordingItemID:r.item_id,creditedArtistNames:[...m.artists],artist:m.artists.join(' & '),title:m.title,
     ...(m.album!==undefined?{album:m.album}:{}),duration:m.duration_ms/1000,...(m.isrc?{isrc:m.isrc}:{}),...(m.explicit!==undefined?{explicit:m.explicit}:{})};
 }
 const providers=new Map([['lrclib','lrclib'],['LRCAPI','lrclib'],['netease','netease'],['NeteaseAPI','netease'],['kugou','kugou'],['KugouAPI','kugou']]);

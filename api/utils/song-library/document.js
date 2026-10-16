@@ -1,6 +1,7 @@
 import {isSpotifyRecording,spotifyRecording,spotifyRequestHash,sourceCapsule,spotifyHashes,spotifyBinding,verifySpotifyBinding,modelContextFromSource,spotifyMatchEvidence} from './spotify-recording.js';
 import {digest,LibraryError} from './store.js';
 import {reviewedSpeakerLabels,validLyricStructure} from '../lyric-annotations.js';
+import {isRejectedRecordingLyrics} from '../rejected-lyrics.js';
 
 // Source metadata carried forward from the reviewed corpus, not guessed from arbitrary colons.
 export function recordingRequest(value) {
@@ -26,6 +27,7 @@ export function makeDocument(request,response,selectionRevision,labels=isSpotify
   if(response.lines.some(l=>typeof l.original!=='string'||!l.original.trim()||/[\r\n]/.test(l.original)||l.original.length>2000||typeof l.romanized!=='string'||
     (l.timestamp!=null&&(!Number.isFinite(l.timestamp)||l.timestamp<0)))) throw new LibraryError('invalid_source',502);
   if(isSpotifyRecording(request)) {
+    if(isRejectedRecordingLyrics(response.lines.map(l=>({text:l.original})),request))throw new LibraryError('recording_mismatch');
     const source=sourceCapsule(response);
     verifySpotifyBinding(response.recordingBinding,request,source,selectionRevision,response);
     const {recordingBinding,...independentResponse}=response;

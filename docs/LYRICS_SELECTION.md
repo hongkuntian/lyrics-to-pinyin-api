@@ -12,6 +12,19 @@ LRCLIB's spaced `Singer + Guest` delimiter can normalize to `Singer & Guest` onl
 
 Duplicated lyrics can normalize script, punctuation and production credits only when all remaining line timestamps agree exactly. Conflicting timelines remain ambiguous. A response containing timestamps proves structural timing availability, not acoustic alignment.
 
+Spotify uses complete credited artist names and its own request-bound identity.
+Explicit track-version labels, album annotations/suffixes and recognized phrases
+such as “Live at” remain version evidence. Ordinary album prose such as “Live
+Through Tomorrow” or “Cover Me” does not classify a recording as live or a cover.
+Equal ISRC never overrides a real version conflict.
+
+`api/data/rejected-lyrics.json` also supports exact Spotify `itemIDs` with reviewed
+negative source-language/text evidence. The current Japanese アイドル item is
+separate from its English release; localized title spelling does not change its
+language guard. Unknown items do not inherit it by title, artist or script. The
+same predicate checks provider and durable caches, model/review/retry input and
+Live Lyrics rendering. It supplies no replacement words, Apple aliases or timing.
+
 ## Usable lyrics and instrumentals
 
 Explicit production-credit lines and instrumental placeholder prose are excluded from vocal lyrics. Invalid or out-of-duration timestamps become untimed text. A credit-only synced field can fall back to a usable plain transcription. Only an explicit provider instrumental flag (including NetEase's fixed full “纯音乐，请欣赏” marker) with no vocal text yields `quality.instrumental: true`, `quality.synced: false`, and `lines: []`. Do not count these as lyric coverage.

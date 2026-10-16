@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {libraryDB} from '../helpers/library-db.js';
 import {makeDocument,requestKey} from '../../api/utils/song-library/document.js';
-import {sourceCapsule,spotifyBinding} from '../../api/utils/song-library/spotify-recording.js';
+import {sourceCapsule,spotifyBinding,spotifyRecordingKey} from '../../api/utils/song-library/spotify-recording.js';
 import {requestBody,generate,parseTranslation} from '../../api/utils/song-library/translation.js';
 import {explanationBody,generateExplanation} from '../../api/utils/song-library/study-explanation.js';
 import {assessmentBody} from '../../api/utils/song-library/review-assessment.js';
@@ -48,6 +48,13 @@ test('copied request metadata with a renamed origin cannot become model context 
   const identical=document();identical.requestRecording={...recording,metadata:{...recording.metadata,title:'Independent title',artists:['Independent artist']}};
   sourceOnly(requestBody(identical));
 });
+
+test('reviewed language rejection also fences immutable pre-repair documents from paid model input',()=>{
+  const old=document(),r={...recording,item_id:'7ovUcF5uHTBRzUpB6ZOmvt'};
+  old.recordingKey=spotifyRecordingKey(r);
+  assert.throws(()=>requestBody(old),{code:'recording_mismatch'});
+  assert.throws(()=>explanationBody(old,null,selection),{code:'recording_mismatch'});
+});
 test('persisted job, operator retry, review and timing reuse retain source context without new automatic admission',async t=>{
   const {db,store}=await libraryDB();t.after(()=>db.close());const doc=await saved(store,document());
   const body=requestBody(doc),r=await store.reserve({userID:'reader-a',documentID:doc.id,target:'en',recipe:'test',reservedMicros:10000,generationRequest:body});
@@ -57,6 +64,7 @@ test('persisted job, operator retry, review and timing reuse retain source conte
     const sent=JSON.parse(init.body);sourceOnly(sent);return provider(sent,{translations:{L0001:'The wind comes.'},sourceNotes:[]});}})});
   assert.equal((await store.job(r.job.id)).state,'ready');
   const content=await store.translation(doc.id,'en'),review=await reviewContext(db,content.id);
+  assert.equal(review.doc.recordingKey,doc.recordingKey);
   sourceOnly(assessmentBody(review.doc,review.content,[]));
   const r2={...recording,item_id:'0123456789ABCDEFGHIJKM',metadata:{...recording.metadata,title:'DIFFERENT_SPOTIFY_TITLE'}};
   const timed=await saved(store,document({r:r2,timestamp:14}));

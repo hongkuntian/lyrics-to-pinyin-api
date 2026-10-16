@@ -283,7 +283,18 @@ const spotifyVersionMarkers=[
   /\bacoustic\b|不插电/iu,/\ba[ -]?cap(?:p)?ella\b|清唱/iu,/\bradio\s+edit\b/iu,
   /\bedit\b|剪辑版/iu,/\bclean\b/iu,/\bexplicit\b/iu,/\bcover\b|翻唱/iu,/\breprise\b/iu
 ];
-const spotifyVersions=song=>spotifyVersionMarkers.map(re=>re.test(chinese.sify(`${song.title??''} ${song.album??''}`).normalize('NFKC')));
+function spotifyAlbumVersionText(value='') {
+  const album=chinese.sify(value).normalize('NFKC');
+  // Album names are prose as well as version labels: "Live Through Tomorrow"
+  // and "Cover Me" do not establish live/cover recordings. Explicit annotations,
+  // version suffixes and recognized recording phrases remain material.
+  const annotations=[...album.matchAll(/\(([^()]*)\)|\[([^\[\]]*)\]/gu)].map(m=>m[1]??m[2]);
+  const suffix=album.split(/\s+[-–—:]\s+/u).slice(1);
+  const label=/^(?:(?:\d{4}\s+)?remaster(?:ed)?(?:\s+\d{4})?|live|demo|remix|instrumental|karaoke|acoustic|a[ -]?cap(?:p)?ella|radio\s+edit|edit|clean|explicit|cover|reprise)(?:\s+(?:version|edition|sessions?|recordings?|collection))?$/iu;
+  const phrases=album.match(/\blive\s+(?:at|in|from|on|recordings?|performances?)\b[^()[\]]*|\bacoustic\s+sessions?\b|演唱会|现场|重制|概念版|小样|混音|纯音乐|器乐|伴奏|不插电|清唱|剪辑版|翻唱/giu)??[];
+  return [...[album,...annotations,...suffix].filter(s=>label.test(s.trim())),...phrases].join(' ');
+}
+const spotifyVersions=song=>spotifyVersionMarkers.map(re=>re.test(chinese.sify(song.title??'').normalize('NFKC'))||re.test(spotifyAlbumVersionText(song.album)));
 function spotifyFailure(song,request) {
   if(JSON.stringify(spotifyVersions(song))!==JSON.stringify(spotifyVersions(request)))return 'version_conflict';
   if(song.isrc&&request.isrc&&song.isrc!==request.isrc)return 'isrc_conflict';

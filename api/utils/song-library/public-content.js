@@ -1,6 +1,7 @@
 import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,sourceCapsule,spotifyHash} from './spotify-recording.js';
 import {LYRIC_NORMALIZATION_VERSION} from '../lyric-annotations.js';
 import {digest,LibraryError} from './store.js';
+import {isRejectedRecordingLyrics} from '../rejected-lyrics.js';
 
 const normalizedVersions=new Set(['lyric-annotations-1','lyric-annotations-2',LYRIC_NORMALIZATION_VERSION]);
 const normalized=doc=>normalizedVersions.has(doc.structure.version);
@@ -11,6 +12,7 @@ const normalized=doc=>normalizedVersions.has(doc.structure.version);
 export function publicDocument(doc,request=null) {
   if(doc.sourceCapsule||isSpotifyRecording(request)) {
     if(!isSpotifyRecording(request)||!doc.sourceCapsule||!doc.requestEvidence)throw new LibraryError('recording_mismatch');
+    if(isRejectedRecordingLyrics(doc.response.lines.map(l=>({text:l.original})),request))throw new LibraryError('recording_mismatch');
     const h=spotifyHashes(request,doc.sourceCapsule,doc.selectionRevision),e=doc.requestEvidence;
     const binding=spotifyBinding(request,doc.sourceCapsule,doc.selectionRevision,doc.response,{durable:true});
     if(doc.canonicalRecordingID!=null||canonicalJSON(e.source)!==canonicalJSON(binding.source)||canonicalJSON(e.match)!==canonicalJSON(binding.match)
