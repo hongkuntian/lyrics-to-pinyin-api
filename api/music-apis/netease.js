@@ -6,7 +6,7 @@ import {findRecording,searchTitle,recordingNames,recordingScore,normalizeRecordi
 import {BoundedCache} from '../utils/bounded-cache.js';
 import chinese from 'chinese-conv';
 export class NeteaseAPI extends BaseMusicAPI {
-  constructor() { super('NeteaseAPI',['zh','yue','en']); this.baseURL='https://netease-cloud-music-api-gules-mu.vercel.app'; this.artistAliases=new BoundedCache({limit:128,ttlMs:86400000}); }
+  constructor() { super('NeteaseAPI',['zh','yue','en']); this.supportsVocalTiming=true; this.baseURL='https://netease-cloud-music-api-gules-mu.vercel.app'; this.artistAliases=new BoundedCache({limit:128,ttlMs:86400000}); }
   async searchSong(artist,title,context={}) {
     const request={artist,title,...context},records=new Map(),profiles=new Map(),hydrated=new Set();
     let lastMismatch;

@@ -42,6 +42,20 @@ selection revision and saved document/job identities stay pinned. Existing
 caches and accepted saved songs are not promised an automatic upgrade; new
 acquisitions and the existing explicit Reload/refresh can select YRC.
 
+Automatic acquisition publishes a complete line-timed fallback as soon as it
+is readable, then keeps an eligible NetEase lookup alive for a measured-timing
+upgrade within the existing provider/shared deadline (at most six seconds).
+Only source-bound validated YRC can improve line timing. Missing, malformed,
+cancelled or late word data leaves the readable fallback in place. The lookup
+window starts once and is not reset by another line-timed result; at most two
+providers run concurrently. Explicit source choices, listening-reviewed timing
+and reviewed replacement corrections retain their priority.
+
+The internal `measured-vocal-selection-1` acquisition-cache marker separates the
+new selection behavior from earlier line-only cached acquisitions. It does not
+change YRC parsing revisions, source hashes, the global selection revision or
+saved document/job identities. Existing accepted line-only songs need Reload.
+
 Hermetic coverage is in `tests/unit/netease-yrc.test.js` and
 `tests/integration/netease-yrc.test.js`, with synthetic source text only. Coverage
 includes public Apple/Spotify DTOs, legacy hashes, word/source revision changes,

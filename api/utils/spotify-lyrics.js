@@ -13,7 +13,7 @@ import {getCached,setLyricsCached,cacheUnavailable,suspendCache} from './cache.j
 import {withDeadline} from './fetch-json.js';
 import {recordingScore,findRecording,RecordingMismatchError} from './recording-match.js';
 import {cleanLyrics,hasUsableLyrics} from './lyric-quality.js';
-import {chooseLyricCandidate,timingQuality} from './lyric-selection.js';
+import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,VOCAL_SELECTION_CAPABILITY} from './lyric-selection.js';
 import {hedgedLookup} from './hedged-lookup.js';
 import {isRejectedRecordingLyrics} from './rejected-lyrics.js';
 import {analyzeLyricLanguage} from './lyric-language.js';
@@ -28,7 +28,7 @@ import {spotifyRecording,spotifyRequestHash,spotifySearchRequest,independentProv
 export function createSpotifyLyricsService(dependencies={}) {
   const {redis=createRedisFromEnv(),getAvailableAPIsFn=getAvailableAPIs,detectLanguageFn=detectLanguage,
     getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,
-    getCachedFn=getCached,setCachedFn=setLyricsCached,providerTimeoutMs=6000,cacheTimeoutMs=300,hedgeDelayMs=350,untimedGraceMs=2500,
+    getCachedFn=getCached,setCachedFn=setLyricsCached,providerTimeoutMs=6000,cacheTimeoutMs=300,hedgeDelayMs=350,untimedGraceMs=2500,wordTimingGraceMs=providerTimeoutMs,
     rejectRecordingLyricsFn=isRejectedRecordingLyrics,analyzeLyricLanguageFn=analyzeLyricLanguage,waitUntilFn=waitUntil,logger=console,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800}=dependencies;
   const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION}});
   const cache=new BoundedCache(),inflight=new Map();let latestStart=0;
@@ -60,7 +60,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         ||('tone_style' in options&&options.tone_style!=='marks')||('separator' in options&&options.separator!==' ')
         ||('case' in options&&options.case!=='lower')||('refresh' in options&&typeof options.refresh!=='boolean'))throw new LibraryError('invalid_recording',400);
       const r=spotifyRecording(body.recording),target=spotifySearchRequest(r),requestHash=spotifyRequestHash(r);
-      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CAPABILITY}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
+      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const send=result=>{if(result.candidate)attachSpotifyMatchEvidence(result.body,result.candidate);res.setHeader('X-Lyrics-Cache',result.cache??'MISS');return reply(result.status,result.body);};
       const cached=!options.refresh&&cache.get(key);
       if(cached&&validate('cache_validation',()=>validCached(cached,r)))return send({status:200,body:cached.response,candidate:cached.candidate,cache:'MEMORY'});
@@ -163,16 +163,18 @@ export function createSpotifyLyricsService(dependencies={}) {
           attachSpotifyMatchEvidence(response,{...candidate.song,id:String(candidate.song.id)});
           publishedCandidate=candidate;req.lyricDelivery.publish(response,{requestID,serverTiming:timings.join(', ')});
         };
-        let selected=await hedgedLookup(apis,lookup,{delayMs:hedgeDelayMs,untimedGraceMs,signal:req.lyricDelivery?.signal,onCandidate:publishCandidate});
+        const hedgeOptions=()=>({delayMs:hedgeDelayMs,untimedGraceMs,wordTimingGraceMs:Math.min(wordTimingGraceMs,Math.max(0,deadline-Date.now())),chooseCandidate:chooseLyricCandidate,signal:req.lyricDelivery?.signal,onCandidate:publishCandidate});
+        let selected=await hedgedLookup(apis,lookup,hedgeOptions());
         if(!selected&&localizations.length&&Date.now()<deadline) {
           // One bounded native-name retry. Ambiguous NetEase timelines remain
           // rejected; LRCLIB/Kugou must supply their own verified recording.
           selected=await hedgedLookup(apis.filter(api=>independentProvider(api.name)!=='netease'),
-            (api,signal)=>lookup(api,signal,localizations[0]),{delayMs:hedgeDelayMs,untimedGraceMs,signal:req.lyricDelivery?.signal,onCandidate:publishCandidate});
+            (api,signal)=>lookup(api,signal,localizations[0]),hedgeOptions());
         }
         if(!selected)return timedOut?{status:504,body:{code:'provider_timeout'}}:unavailable?{status:502,body:{code:'provider_unavailable'}}
           :mismatch?{status:409,body:{code:'recording_mismatch',reason:mismatch}}:{status:404,body:{code:'lyrics_absent'}};
         const {song}=selected,response=await responseFor(selected);
+        req.lyricDelivery?.signal.throwIfAborted();
         const ttlMs=response.quality.partial||!response.quality.synced?300000:86400000;
         // Late ordinary work cannot replace a newer explicit refresh in memory.
         const candidate={id:String(song.id),title:song.title,artist:song.artist,duration:song.duration,

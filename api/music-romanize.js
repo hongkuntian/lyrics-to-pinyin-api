@@ -28,7 +28,7 @@ import {lookupReviewedRecording,hasReviewedCatalogSource} from './utils/reviewed
 import {lookupOfficialTranscription,hasOfficialCatalogSource} from './utils/official-transcriptions.js';
 import {lookupListeningReviewedRecording,hasListeningCatalogSource} from './utils/listening-reviewed-recordings.js';
 import {analyzeLyricLanguage} from './utils/lyric-language.js';
-import {chooseLyricCandidate,timingQuality} from './utils/lyric-selection.js';
+import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,VOCAL_SELECTION_CAPABILITY} from './utils/lyric-selection.js';
 import {isRejectedRecordingLyrics} from './utils/rejected-lyrics.js';
 export const RESPONSE_VERSION='2.5.0';
 export const config={supportsResponseStreaming:true};
@@ -43,7 +43,7 @@ export function createMusicRomanizeService(dependencies={}) {
     redis=createRedisFromEnv(),detectLanguageFn=detectLanguage,getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,
     getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,getCacheKeyFn=getCacheKey,
     getCachedFn=getCached,setCachedFn=setLyricsCached,getMusicAPIFn=getMusicAPI,getAvailableAPIsFn=getAvailableAPIs,
-    getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,reviewedTimeoutMs=providerTimeoutMs*2,hedgeDelayMs=350,untimedGraceMs=2500,cacheTimeoutMs=300,
+    getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,reviewedTimeoutMs=providerTimeoutMs*2,hedgeDelayMs=350,untimedGraceMs=2500,wordTimingGraceMs=providerTimeoutMs,cacheTimeoutMs=300,
     applyTimingCorrectionFn=applyTimingCorrection,resolveCatalogAliasesFn=resolveCatalogAliases,lookupReviewedRecordingFn=lookupReviewedRecording,lookupListeningReviewedRecordingFn=lookupListeningReviewedRecording,lookupOfficialTranscriptionFn=lookupOfficialTranscription,waitUntilFn=waitUntil,logger=console,
     responseCache=new BoundedCache(),analyzeLyricLanguageFn=analyzeLyricLanguage,
     rejectRecordingLyricsFn=isRejectedRecordingLyrics,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800,speculativeDiscovery=true
@@ -96,7 +96,7 @@ export function createMusicRomanizeService(dependencies={}) {
       // Refresh controls acquisition, not the identity of the verified content.
       // Its successful result must warm subsequent ordinary requests too.
       const stableOptions=Object.fromEntries(Object.entries(options).filter(([key])=>key!=='refresh').sort(([a],[b])=>a.localeCompare(b)));
-      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,isrc,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,cachePolicy:2,selectionPolicy:SELECTION_REVISION,normalizationPolicy:LYRIC_NORMALIZATION_VERSION,providerCapability:NETEASE_ACQUISITION_CAPABILITY}),searchScript,searchSystem,stableOptions);
+      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,isrc,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,cachePolicy:2,selectionPolicy:SELECTION_REVISION,normalizationPolicy:LYRIC_NORMALIZATION_VERSION,providerCapability:NETEASE_ACQUISITION_CAPABILITY,vocalSelection:VOCAL_SELECTION_CAPABILITY}),searchScript,searchSystem,stableOptions);
       const request={artist,title,album,duration,catalog_id,storefront,...(account_storefront?{account_storefront}:{}),...(isrc?{isrc}:{})};
       const inflightKey=(options.refresh===true?key+':refresh':key)+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const local=options.refresh===true?null:responseCache.get(key);
@@ -179,7 +179,7 @@ export function createMusicRomanizeService(dependencies={}) {
           // when the current fallback has no timestamps, and remains bounded.
           const targetScript=await detectLanguageFn(`${target.artist} ${target.title}`);
           const targetAPIs=target===request || preferred ? apis : [...new Set([...getAvailableAPIsFn(targetScript),...apis])];
-          return hedgedLookup(targetAPIs,lookup,{delayMs:hedgeDelayMs,untimedGraceMs:Math.min(untimedGraceMs,Math.max(0,deadline-Date.now())),signal:scope?.signal,onCandidate:publishCandidate});
+          return hedgedLookup(targetAPIs,lookup,{delayMs:hedgeDelayMs,untimedGraceMs:Math.min(untimedGraceMs,Math.max(0,deadline-Date.now())),wordTimingGraceMs:Math.min(wordTimingGraceMs,Math.max(0,deadline-Date.now())),chooseCandidate:chooseLyricCandidate,signal:scope?.signal,onCandidate:publishCandidate});
         };
         // Reuse previously verified localizations first on repeated catalog requests.
         const timed=candidate=>timingQuality(candidate).usable;
@@ -195,7 +195,7 @@ export function createMusicRomanizeService(dependencies={}) {
         if(artist_entities?.length)request.artist_entities=artist_entities;
         // Never join work by names or client ISRC. Only server-verified catalog
         // evidence establishes the shared recording, then each caller is rebound.
-        const canonicalKey=canonicalAcquisitionKey(request,resolution,{language:language??null,reading:romanization_system??null,source:music_platform??null,sources:apis.map(a=>a.name),selection:SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,response:RESPONSE_VERSION,providerCapability:NETEASE_ACQUISITION_CAPABILITY,options:stableOptions});
+        const canonicalKey=canonicalAcquisitionKey(request,resolution,{language:language??null,reading:romanization_system??null,source:music_platform??null,sources:apis.map(a=>a.name),selection:SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,response:RESPONSE_VERSION,providerCapability:NETEASE_ACQUISITION_CAPABILITY,vocalSelection:VOCAL_SELECTION_CAPABILITY,options:stableOptions});
         const canonicalWorkKey=canonicalKey&&(options.refresh===true?canonicalKey+':refresh:'+acquisitionStartedAt:canonicalKey);
         const bind=body=>{
           const bound={...body,metadata:{...body.metadata,catalog_resolution:proof},song_details:{...body.song_details,catalog_id:catalog_id??null}};
@@ -290,9 +290,11 @@ export function createMusicRomanizeService(dependencies={}) {
           const original=target.artist===artist&&target.title===title&&target.album===album&&target.catalog_id===catalog_id;
           result=better(result,await tryRecording(original?request:target));
         }
+        scope?.signal.throwIfAborted();
         if(result) {
           const {song,api,target}=result;
           const response=await responseFor(result);
+          scope?.signal.throwIfAborted();
           if(!response)return {status:400,body:{error:'Script is not supported for romanization'}};
           const cacheable=result.timingCorrection?.status!=='untimed_fallback';
           const languageDetails=response.metadata.language_details;
