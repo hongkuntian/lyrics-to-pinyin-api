@@ -1,6 +1,9 @@
 import {createHash} from 'node:crypto';
 import {validVocalTiming,MAX_LYRIC_SECONDS} from './vocal-timing.js';
 export const NETEASE_ACQUISITION_CAPABILITY='netease-yrc-1';
+// Acquisition caches must revisit sheets previously downgraded to sibling LRC.
+// Keep the source hash recipe stable for already accepted sung rows and cues.
+export const NETEASE_ACQUISITION_CACHE_CAPABILITY=NETEASE_ACQUISITION_CAPABILITY+':signed-credits-1';
 const integer=value=>Number.isSafeInteger(value)&&value>=0;
 const number=value=>/^-?\d+$/.test(value)?Number(value):NaN;
 
@@ -15,7 +18,7 @@ export function parseYRC(raw,{songId,duration=MAX_LYRIC_SECONDS}={}) {
  for(const row of raw.replace(/^\uFEFF/,'').split(/\r?\n/)){
   if(!row.trim())continue;
   if(!lines.length&&/^\s*\{/.test(row)){
-   try{const v=JSON.parse(row);if(integer(v?.t)&&Array.isArray(v.c)&&v.c.length<=128&&v.c.every(c=>typeof c?.tx==='string')&&++metadata<=32)continue;}catch{}
+   try{const v=JSON.parse(row);if(Number.isSafeInteger(v?.t)&&Array.isArray(v.c)&&v.c.length<=128&&v.c.every(c=>typeof c?.tx==='string')&&++metadata<=32)continue;}catch{}
    return null;
   }
   if(!lines.length&&(/^\[(?:ar|al|ti|by|re|ve):[^\r\n]*\]$/i.test(row)||/^\[offset:0\]$/i.test(row))){if(++metadata>32)return null;continue;}

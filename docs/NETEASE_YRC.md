@@ -15,6 +15,14 @@ match exactly and cue ranges must follow UTF-16 and grapheme boundaries. Trim,
 performer-prefix removal, untimed correction and excessive response size can
 remove optional cues without losing readable lyrics.
 
+Recognized leading JSON credit entries may have signed safe-integer display
+timestamps, including negative lead-in times. They are ignored metadata, not
+sung rows or word cues. Actual lyric starts remain nonnegative and word cues
+retain their recording-bound range checks. The acquisition-only
+`netease-yrc-1:signed-credits-1` marker bypasses cached LRC fallbacks from the
+older parser. It does not change `netease-yrc-1` source hash recipes, accepted
+document identities or saved Study jobs.
+
 `metadata.lyric_timing` binds the measured source to the current Spotify raw
 22-character ID or Apple catalog ID. Requests without an Apple catalog ID get
 readable lyrics without the word extension. Source revisions hash integer

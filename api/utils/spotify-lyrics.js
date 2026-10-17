@@ -1,5 +1,5 @@
 import {withLyricsDelivery} from './lyrics-delivery.js';
-import {NETEASE_ACQUISITION_CAPABILITY} from './netease-yrc.js';
+import {NETEASE_ACQUISITION_CACHE_CAPABILITY} from './netease-yrc.js';
 import {attachVocalTiming,stripVocalTiming} from './vocal-timing.js';
 import {createVerifiedContextCache} from './verified-lyric-context.js';
 import {hintedRecording} from './source-hint.js';
@@ -60,7 +60,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         ||('tone_style' in options&&options.tone_style!=='marks')||('separator' in options&&options.separator!==' ')
         ||('case' in options&&options.case!=='lower')||('refresh' in options&&typeof options.refresh!=='boolean'))throw new LibraryError('invalid_recording',400);
       const r=spotifyRecording(body.recording),target=spotifySearchRequest(r),requestHash=spotifyRequestHash(r);
-      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
+      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const send=result=>{if(result.candidate)attachSpotifyMatchEvidence(result.body,result.candidate);res.setHeader('X-Lyrics-Cache',result.cache??'MISS');return reply(result.status,result.body);};
       const cached=!options.refresh&&cache.get(key);
       if(cached&&validate('cache_validation',()=>validCached(cached,r)))return send({status:200,body:cached.response,candidate:cached.candidate,cache:'MEMORY'});

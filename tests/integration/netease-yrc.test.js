@@ -40,6 +40,18 @@ test('Apple and Spotify HTTP -> capsule -> durable public projection use exact f
  assert.equal(results[0].metadata.lyric_timing.revision,results[1].metadata.lyric_timing.revision);
  const f=yrcService(),explicit=await f.call({...appleRequest,music_platform:'netease'});assert.ok(explicit.body.lines[0].vocalTiming);
 });
+test('negative credit metadata preserves measured Apple and Spotify durable sources instead of selecting sibling LRC',async()=>{
+ const credits='{"t":-1000,"c":[{"tx":"Invented credit"}]}\n{"t":-500,"c":[{"tx":"Another credit"}]}\n';
+ for(const request of [appleRequest,spotifyRequest]){
+  const normal=await acquired(request),signed=await acquired(request,{yrc:credits+syntheticYRC});
+  assert.ok(signed.response.lines[0].vocalTiming);
+  assert.deepEqual(signed.response.lines,normal.response.lines);
+  assert.equal(signed.doc.sourceHash,normal.doc.sourceHash);
+  assert.equal(signed.doc.timingRevision,normal.doc.timingRevision);
+  assert.deepEqual(publicDocument(signed.doc,request).response.lines,normal.response.lines);
+  assert.equal(signed.f.urls.length,1);
+ }
+});
 test('no catalog ID and final normalization changes omit words; same-payload LRC remains readable',async()=>{
  const {catalog_id,...request}=appleRequest,f=yrcService(),res=await f.call(request);
  assert.equal(res.statusCode,200);assert.equal(res.body.metadata.lyric_timing,undefined);assert.ok(res.body.lines.every(l=>!l.vocalTiming));
@@ -73,7 +85,7 @@ test('Spotify published hash recipes stay exact; same observed ID hints stay sta
 test('ordinary/canonical acquisition keys carry only internal provider capability; aliases bind current catalog proof',async()=>{
  const keys=[],f=yrcService({speculativeDiscovery:false,getCacheKeyFn:(raw)=>{keys.push(JSON.parse(raw));return raw;}});
  const a=await f.call(),b=await f.call({...appleRequest,storefront:'ca'});assert.equal(a.statusCode,200);assert.equal(b.statusCode,200);
- assert.ok(keys.every(k=>k.providerCapability==='netease-yrc-1'));assert.equal(f.queries.length,1);assert.equal(b.body.metadata.lyric_timing.recordingID,'123');
+ assert.ok(keys.every(k=>k.providerCapability==='netease-yrc-1:signed-credits-1'));assert.equal(f.queries.length,1);assert.equal(b.body.metadata.lyric_timing.recordingID,'123');
  const sameMetadataAlias={...appleRequest,catalog_id:'456',storefront:'ca'},c=await f.call(sameMetadataAlias);
  assert.equal(c.statusCode,200);assert.equal(c.body.metadata.lyric_timing.recordingID,'456');
  assert.equal(c.body.metadata.lyric_timing.revision,a.body.metadata.lyric_timing.revision);

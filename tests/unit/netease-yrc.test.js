@@ -21,6 +21,13 @@ test('recognized leading metadata is ignored and all source rows are adopted wit
  const result=parse('\uFEFF{"t":0,"c":[{"tx":"Synthetic credit"}]}\n[ar:Synthetic]\n'+good+'\n[13000,1000]line without words');
  assert.equal(result.lines.length,2);assert.equal(result.lines[1].text,'line without words');assert.equal(result.lines[1].vocalTiming,undefined);
 });
+test('signed leading credit timestamps do not discard a measured YRC edition or change its source revision',()=>{
+ const credits='{"t":-1000,"c":[{"tx":"Invented credit"}]}\n{"t":-500,"c":[{"tx":"Another credit"}]}\n';
+ assert.deepEqual(parse(credits+good),parse(good));
+ for(const timestamp of ['-0.5','null','"-1000"','-9007199254740992'])
+  assert.equal(parse(`{"t":${timestamp},"c":[{"tx":"Credit"}]}\n${good}`),null);
+ assert.equal(parse('[-1000,1000](-1000,1000,0)text'),null);
+});
 test('invalid optional token times keep fully decoded readable rows',()=>{
  for(const raw of ['[1000,1000](0,1000,0)text','[0,1000](0,700,0)a(500,500,0)b',
   '[0,1000](0,1100,0)text','[0,1000](0,-1,0)text','[0,1000](0,x,0)text',
