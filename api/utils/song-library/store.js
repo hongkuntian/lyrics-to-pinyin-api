@@ -6,17 +6,18 @@ import {budget,checkBudget,checkEmergencyBudget,configureReviews,reserveReview,c
 import {translationIdentity} from './translation-identity.js';
 import {reusableTranslation,jobForDocument} from './translation-reuse.js';
 import {reserveMemberUsage,settleMemberUsage} from '../membership/store.js';
+import {hasVocalTiming,bindAppleTimingRequest} from './apple-vocal-timing.js';
 
 export class LibraryError extends Error {
   constructor(code,status=409) { super(code);this.code=code;this.status=status; }
 }
 export const digest=value=>createHash('sha256').update(typeof value==='string'?value:JSON.stringify(value)).digest('hex');
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0] ?? null;
-const document=row=>row && ({id:row.id,recordingKey:row.recording_key,sourceHash:row.source_hash,
+const document=row=>row && bindAppleTimingRequest({id:row.id,recordingKey:row.recording_key,sourceHash:row.source_hash,
   canonicalRecordingID:row.canonical_recording_id??null,textRevision:row.text_revision??null,timingRevision:row.timing_revision??null,readingRevision:row.reading_revision??null,
   ...(row.source_capsule?{sourceCapsule:row.source_capsule,modelContext:row.model_context,
     ...(row.request_recording?{requestRecording:row.request_recording,requestEvidence:row.request_evidence,requestKey:row.request_key}:{})}:{}),
-  selectionRevision:row.selection_revision,checkedAt:row.checked_at??null,response:{...row.response,...(row.song_details?{song_details:row.song_details}:{}),...(row.provider_translation?{provider_translation:row.provider_translation}:{})},structure:row.structure});
+  selectionRevision:row.selection_revision,checkedAt:row.checked_at??null,response:{...row.response,...(row.song_details?{song_details:row.song_details}:{}),...(row.provider_translation?{provider_translation:row.provider_translation}:{})},structure:row.structure},row.request_key);
 const publicJob=row=>({id:row.id,state:row.state,documentID:row.document_id,target:row.target,errorCode:row.error_code});
 
 export class SongLibraryStore {
@@ -82,6 +83,10 @@ export class SongLibraryStore {
       if(spotify) {
         await db.query(`UPDATE lyric_documents SET source_capsule=$2,model_context=$3,text_revision=$4,timing_revision=$5,reading_revision=$6
           WHERE id=$1 AND source_capsule IS NULL`,[value.id,JSON.stringify(value.sourceCapsule),JSON.stringify(value.modelContext),value.textRevision,value.timingRevision,value.readingRevision]);
+      }
+      if(!spotify&&hasVocalTiming(value.response)){
+        await db.query(`UPDATE lyric_documents SET text_revision=$2,timing_revision=$3,reading_revision=$4
+          WHERE id=$1 AND timing_revision IS NULL`,[value.id,value.textRevision,value.timingRevision,value.readingRevision]);
       }
       if(value.canonicalRecordingID) {
         await db.query(`UPDATE lyric_documents SET canonical_recording_id=$2,text_revision=$3,timing_revision=$4,reading_revision=$5 WHERE id=$1 AND canonical_recording_id IS NULL`,
@@ -158,7 +163,7 @@ export class SongLibraryStore {
         || original.album!==request.album || original.duration!==request.duration)return null;
       await db.query(`INSERT INTO lyric_requests(request_key,selection_revision,document_id,checked_at) VALUES($1,$2,$3,$4)
         ON CONFLICT(request_key,selection_revision) DO NOTHING`,[key,revision,row.id,row.checked_at]);
-      return document(row);
+      return document({...row,request_key:key});
     });
   }
   async isCurrentDocument(id,revision) {

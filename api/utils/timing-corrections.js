@@ -76,7 +76,8 @@ export async function applyTimingCorrection(candidate, request, context={}, {rul
   } catch { /* The other provider can still supply verified timing. */ }
   // Known-bad timing is never returned as synced merely because a correction
   // source is unavailable. Preserve the words for reading and study.
-  return {...candidate,lyrics:{...candidate.lyrics,lines:candidate.lyrics.lines.map(line=>({...line,timestamp:null})),
+  const {timingSource,...readableLyrics}=candidate.lyrics;
+  return {...candidate,lyrics:{...readableLyrics,lines:candidate.lyrics.lines.map(({vocalTiming,...line})=>({...line,timestamp:null})),
     ...(candidate.lyrics.lyricStructure ? {lyricStructure:{...candidate.lyrics.lyricStructure,
       sourceRows:candidate.lyrics.lyricStructure.sourceRows.map(row=>({...row,timestamp:null}))}}:{})},
     timingCorrection:{id:rule.id,status:'untimed_fallback'}};

@@ -1,4 +1,6 @@
 import {SourceAcquisitions,canonicalAcquisitionKey} from './utils/source-acquisitions.js';
+import {NETEASE_ACQUISITION_CAPABILITY} from './utils/netease-yrc.js';
+import {attachVocalTiming,verifiedTimingAlias,stripVocalTiming} from './utils/vocal-timing.js';
 import {startSpeculativeDiscovery} from './utils/speculative-discovery.js';
 import {withLyricsDelivery} from './utils/lyrics-delivery.js';
 import {createVerifiedContextCache,contextSignature} from './utils/verified-lyric-context.js';
@@ -19,7 +21,7 @@ import {randomUUID} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
 import {BoundedCache} from './utils/bounded-cache.js';
 import {cleanLyrics,hasUsableLyrics} from './utils/lyric-quality.js';
-import {LYRIC_NORMALIZATION_VERSION,LYRIC_SELECTION_REVISION} from './utils/lyric-annotations.js';
+import {LYRIC_NORMALIZATION_VERSION,LYRIC_SELECTION_REVISION,publicRawLyrics} from './utils/lyric-annotations.js';
 import {applyTimingCorrection,lyricSourceNeedsRefresh} from './utils/timing-corrections.js';
 import {hedgedLookup} from './utils/hedged-lookup.js';
 import {lookupReviewedRecording,hasReviewedCatalogSource} from './utils/reviewed-recordings.js';
@@ -94,7 +96,7 @@ export function createMusicRomanizeService(dependencies={}) {
       // Refresh controls acquisition, not the identity of the verified content.
       // Its successful result must warm subsequent ordinary requests too.
       const stableOptions=Object.fromEntries(Object.entries(options).filter(([key])=>key!=='refresh').sort(([a],[b])=>a.localeCompare(b)));
-      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,isrc,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,cachePolicy:2,selectionPolicy:SELECTION_REVISION,normalizationPolicy:LYRIC_NORMALIZATION_VERSION}),searchScript,searchSystem,stableOptions);
+      const key=getCacheKeyFn(JSON.stringify({artist,title,album,duration,catalog_id,storefront,isrc,requestedSource:music_platform || 'auto',sources:apis.map(api=>api.name),version:RESPONSE_VERSION,cachePolicy:2,selectionPolicy:SELECTION_REVISION,normalizationPolicy:LYRIC_NORMALIZATION_VERSION,providerCapability:NETEASE_ACQUISITION_CAPABILITY}),searchScript,searchSystem,stableOptions);
       const request={artist,title,album,duration,catalog_id,storefront,...(account_storefront?{account_storefront}:{}),...(isrc?{isrc}:{})};
       const inflightKey=(options.refresh===true?key+':refresh':key)+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const local=options.refresh===true?null:responseCache.get(key);
@@ -193,10 +195,16 @@ export function createMusicRomanizeService(dependencies={}) {
         if(artist_entities?.length)request.artist_entities=artist_entities;
         // Never join work by names or client ISRC. Only server-verified catalog
         // evidence establishes the shared recording, then each caller is rebound.
-        const canonicalKey=canonicalAcquisitionKey(request,resolution,{language:language??null,reading:romanization_system??null,source:music_platform??null,sources:apis.map(a=>a.name),selection:SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,response:RESPONSE_VERSION,options:stableOptions});
+        const canonicalKey=canonicalAcquisitionKey(request,resolution,{language:language??null,reading:romanization_system??null,source:music_platform??null,sources:apis.map(a=>a.name),selection:SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,response:RESPONSE_VERSION,providerCapability:NETEASE_ACQUISITION_CAPABILITY,options:stableOptions});
         const canonicalWorkKey=canonicalKey&&(options.refresh===true?canonicalKey+':refresh:'+acquisitionStartedAt:canonicalKey);
-        const bind=body=>({...body,metadata:{...body.metadata,catalog_resolution:proof},
-          song_details:{...body.song_details,catalog_id:catalog_id??null}});
+        const bind=body=>{
+          const bound={...body,metadata:{...body.metadata,catalog_resolution:proof},song_details:{...body.song_details,catalog_id:catalog_id??null}};
+          if(bound.metadata.lyric_timing){
+            if(verifiedTimingAlias(resolution,request,resolution?.canonical_recording_id))bound.metadata.lyric_timing={...bound.metadata.lyric_timing,recordingID:catalog_id};
+            else stripVocalTiming(bound);
+          }
+          return bound;
+        };
         if(canonicalKey && options.refresh!==true) {
           const cached=canonicalCache.get(canonicalKey);
           if(cached && remainingLifetimeMs(cached)>0 && !lyricSourceNeedsRefresh(cached,request)){cacheStatus='RECORDING_MEMORY';return {status:200,body:bind(cached)};}
@@ -216,7 +224,7 @@ export function createMusicRomanizeService(dependencies={}) {
             const romanize=async text=>processor && /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Cyrillic}]/u.test(text)
               ? processor.romanize(text,system,options):{romanized:text};
             const [romanizedTitle,romanizedArtist,lines]=await Promise.all([
-              romanize(song.title),romanize(song.artist),Promise.all(lyrics.lines.filter(line=>line.text?.trim()).map(async line=>({original:line.text,romanized:(await romanize(line.text)).romanized,timestamp:Number.isFinite(line.timestamp) && line.timestamp>=0 ? line.timestamp:null})))
+              romanize(song.title),romanize(song.artist),Promise.all(lyrics.lines.filter(line=>line.text?.trim()).map(async line=>({original:line.text,romanized:(await romanize(line.text)).romanized,timestamp:Number.isFinite(line.timestamp) && line.timestamp>=0 ? line.timestamp:null,...(line.vocalTiming?{vocalTiming:line.vocalTiming}:{})})))
             ]);
             return formatMusicResponseFn({...song,source:api.name},{title:romanizedTitle.romanized,artist:romanizedArtist.romanized,language:script,system,lines});
           });
@@ -244,6 +252,8 @@ export function createMusicRomanizeService(dependencies={}) {
             const method=result.timingCorrection?.status==='replacement' && !metadataEquivalence(song,request) ? 'catalog_alias':'metadata_equivalence';
             response.metadata.recording_match={method,catalog_id,artist,title,album,duration};
           }
+          if(lyrics.timingSource)publicRawLyrics(response);
+          attachVocalTiming(response,lyrics,{provider:'appleMusic',recordingID:catalog_id,sourceID:song.id});
           scope?.signal.throwIfAborted();
           return response;
         };

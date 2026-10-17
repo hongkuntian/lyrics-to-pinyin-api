@@ -1,5 +1,6 @@
 import {createRequire} from 'node:module';
 import chinese from 'chinese-conv';
+import {revalidatedVocalLine} from './vocal-timing.js';
 const require=createRequire(import.meta.url);
 const roster=require('../data/lyric-performers.json');
 export const LYRIC_NORMALIZATION_VERSION='lyric-annotations-3';
@@ -210,7 +211,7 @@ export function separateProviderTranslation(data) {
       && /[A-Za-z]/u.test(target) && !/\p{Script=Han}/u.test(target)?{source,target}:null;
   });
   if(pairs.filter(Boolean).length<3 || pairs.filter(Boolean).length<rows.filter(r=>r.text?.trim()).length*.8) return data;
-  return {...data,lines:rows.map((row,i)=>pairs[i]?{...row,text:pairs[i].source}:row),providerTranslation:{language:'en',
+  return {...data,lines:rows.map((row,i)=>pairs[i]?revalidatedVocalLine(row,pairs[i].source):row),providerTranslation:{language:'en',
     source:data.source??'unknown',kind:'provider',lines:pairs.flatMap((pair,i)=>pair?[{sourceID:`L${String(i+1).padStart(4,'0')}`,
       sourceText:pair.source,text:pair.target,original:rows[i].text}]:[])}};
 }
@@ -270,7 +271,7 @@ export function normalizeLyricAnnotations(data,options={}) {
       if(!lyricText) return;
     } else if(original?.speakerID) active=original.speakerID;
     startsTurn=startsTurn||pendingTurn;pendingTurn=false;
-    lines.push({...line,text:lyricText});
+    lines.push(revalidatedVocalLine(line,lyricText));
     occurrences.push({sourceID:`L${String(lines.length).padStart(4,'0')}`,sourceIndex,sourceText,
       lyricText,sourcePrefix,speakerID:active,startsTurn});
   });

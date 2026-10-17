@@ -2,6 +2,8 @@ import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,sourceCaps
 import {LYRIC_NORMALIZATION_VERSION,publicLyricStructure,publicRawLyrics} from '../lyric-annotations.js';
 import {digest,LibraryError} from './store.js';
 import {isRejectedRecordingLyrics} from '../rejected-lyrics.js';
+import {appleVocalHashes,appleTimingRequest,hasVocalTiming} from './apple-vocal-timing.js';
+import {requestKey} from './document.js';
 
 const normalizedVersions=new Set(['lyric-annotations-1','lyric-annotations-2',LYRIC_NORMALIZATION_VERSION]);
 const normalized=doc=>normalizedVersions.has(doc.structure.version);
@@ -10,6 +12,20 @@ const normalized=doc=>normalizedVersions.has(doc.structure.version);
 // prefix. Keep that wire contract while canonical documents retain raw rows,
 // performer turns and clean-to-source indices for translation and provenance.
 export function publicDocument(doc,request=null) {
+  if(!doc.sourceCapsule&&hasVocalTiming(doc.response)){
+    let hashes;
+    try{hashes=appleVocalHashes(doc.response,doc.structure,doc);}catch{throw new LibraryError('recording_mismatch');}
+    if(hashes.sourceHash!==doc.sourceHash||hashes.timingRevision!==doc.timingRevision
+      ||digest({recordingKey:doc.recordingKey,sourceHash:doc.sourceHash})!==doc.id)throw new LibraryError('recording_mismatch');
+    if(request&&appleTimingRequest(doc)!==requestKey(request))throw new LibraryError('recording_mismatch');
+    const p=doc.response.metadata.lyric_timing;
+    if(request&&p.recordingID!==request.catalog_id){
+      const proof=doc.response.metadata.catalog_resolution;
+      if(!doc.canonicalRecordingID||proof?.canonical_recording_id!==doc.canonicalRecordingID
+        ||!proof.catalog_items?.some(i=>i.catalog_id===request.catalog_id&&(i.storefront??null)===(request.storefront??null)))throw new LibraryError('recording_mismatch');
+      doc={...doc,response:{...doc.response,metadata:{...doc.response.metadata,lyric_timing:{...p,recordingID:request.catalog_id}}}};
+    }
+  }
   if(doc.sourceCapsule||isSpotifyRecording(request)) {
     if(!isSpotifyRecording(request)||!doc.sourceCapsule||!doc.requestEvidence)throw new LibraryError('recording_mismatch');
     if(isRejectedRecordingLyrics(doc.response.lines.map(l=>({text:l.original})),request))throw new LibraryError('recording_mismatch');

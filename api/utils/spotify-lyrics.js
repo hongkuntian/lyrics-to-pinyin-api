@@ -1,4 +1,6 @@
 import {withLyricsDelivery} from './lyrics-delivery.js';
+import {NETEASE_ACQUISITION_CAPABILITY} from './netease-yrc.js';
+import {attachVocalTiming,stripVocalTiming} from './vocal-timing.js';
 import {createVerifiedContextCache} from './verified-lyric-context.js';
 import {hintedRecording} from './source-hint.js';
 import {randomUUID} from 'node:crypto';
@@ -15,7 +17,7 @@ import {chooseLyricCandidate,timingQuality} from './lyric-selection.js';
 import {hedgedLookup} from './hedged-lookup.js';
 import {isRejectedRecordingLyrics} from './rejected-lyrics.js';
 import {analyzeLyricLanguage} from './lyric-language.js';
-import {LYRIC_SELECTION_REVISION,LYRIC_NORMALIZATION_VERSION,hasEmbeddedLyricCredits} from './lyric-annotations.js';
+import {LYRIC_SELECTION_REVISION,LYRIC_NORMALIZATION_VERSION,hasEmbeddedLyricCredits,publicRawLyrics} from './lyric-annotations.js';
 import {BoundedCache} from './bounded-cache.js';
 import {waitUntil} from '@vercel/functions';
 import {LibraryError} from './song-library/store.js';
@@ -58,7 +60,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         ||('tone_style' in options&&options.tone_style!=='marks')||('separator' in options&&options.separator!==' ')
         ||('case' in options&&options.case!=='lower')||('refresh' in options&&typeof options.refresh!=='boolean'))throw new LibraryError('invalid_recording',400);
       const r=spotifyRecording(body.recording),target=spotifySearchRequest(r),requestHash=spotifyRequestHash(r);
-      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
+      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CAPABILITY}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const send=result=>{if(result.candidate)attachSpotifyMatchEvidence(result.body,result.candidate);res.setHeader('X-Lyrics-Cache',result.cache??'MISS');return reply(result.status,result.body);};
       const cached=!options.refresh&&cache.get(key);
       if(cached&&validate('cache_validation',()=>validCached(cached,r)))return send({status:200,body:cached.response,candidate:cached.candidate,cache:'MEMORY'});
@@ -143,8 +145,13 @@ export function createSpotifyLyricsService(dependencies={}) {
         response.quality={...response.quality,partial:lyrics.partial===true,instrumental:lyrics.instrumental===true,synced:response.quality.synced&&timingQuality(selected).usable};
         response.song_details={catalog_id:null,source_id:String(song.id),source:independentProvider(api.name),credits:lyrics.credits??[]};
         if(lyrics.providerTranslation)response.provider_translation=lyrics.providerTranslation;
+        if(lyrics.timingSource)publicRawLyrics(response);
+        attachVocalTiming(response,lyrics,{provider:'spotify',recordingID:r.item_id,sourceID:song.id});
         const capsule=sourceCapsule(response);
         response.recordingBinding=spotifyBinding(r,capsule,LYRIC_SELECTION_REVISION,response);
+        if(Buffer.byteLength(JSON.stringify(response))>160_000&&response.metadata.lyric_timing){
+          stripVocalTiming(response);response.recordingBinding=spotifyBinding(r,sourceCapsule(response),LYRIC_SELECTION_REVISION,response);
+        }
         req.lyricDelivery?.signal.throwIfAborted();
         return response;
         };

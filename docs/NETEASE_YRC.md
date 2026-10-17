@@ -1,0 +1,49 @@
+# NetEase YRC acquisition
+
+The existing independent recording matcher selects the NetEase ID. Acquisition
+fetches `/lyric/new` once and selects the complete YRC text/timestamp edition,
+with optional measured token cues. Missing or undecodable YRC uses the same
+payload's LRC. Only an unavailable or invalid new endpoint response falls back
+to the legacy `/lyric` endpoint. Both requests share the caller's cancellation
+and existing provider deadline; source selection priority is unchanged.
+
+YRC line and token starts are absolute milliseconds. Zero-duration token text
+remains visible without an invented interval. The reserved token integer has
+no role semantics. Unknown rows reject the complete YRC edition; invalid cues
+in an otherwise decoded row remove only its optional timing. Final text must
+match exactly and cue ranges must follow UTF-16 and grapheme boundaries. Trim,
+performer-prefix removal, untimed correction and excessive response size can
+remove optional cues without losing readable lyrics.
+
+`metadata.lyric_timing` binds the measured source to the current Spotify raw
+22-character ID or Apple catalog ID. Requests without an Apple catalog ID get
+readable lyrics without the word extension. Source revisions hash integer
+millisecond source rows and accepted cues under `netease-yrc-1`, excluding
+request IDs, hints, provider fetch timestamps, romanization and model data.
+
+Spotify v2 hash formulas are unchanged. For Apple, the legacy branch without
+word cues keeps its existing JSON digest bytes. Only the new word branch hashes
+**canonical JSON** (recursive sorted object keys, original array/string order):
+
+- `sourceHash = H({language, lines, structure, lyricTiming: {source, revision}})`
+- `timingRevision = H({policy: 'apple-vocal-timing-1', recording,
+  textRevision, timestamps, vocalTiming, lyricTiming: {source, revision}})`
+
+Here `recording` retains the existing canonical ID or recording key. Existing
+recording-key and document-ID formulas remain unchanged. Canonical encoding
+lets public projection verify hashes after PostgreSQL JSONB reorders keys.
+Apple request lookup evidence is private to each server-side document object.
+A verified canonical alias can project only the timing `recordingID`; exact
+current request lookup evidence and catalog membership are both required.
+Cloning or serializing a document cannot grant projection evidence.
+
+Only internal acquisition keys gain the `netease-yrc-1` capability. Global
+selection revision and saved document/job identities stay pinned. Existing
+caches and accepted saved songs are not promised an automatic upgrade; new
+acquisitions and the existing explicit Reload/refresh can select YRC.
+
+Hermetic coverage is in `tests/unit/netease-yrc.test.js` and
+`tests/integration/netease-yrc.test.js`, with synthetic source text only. Coverage
+includes public Apple/Spotify DTOs, legacy hashes, word/source revision changes,
+JSONB reopen, verified alias projection, saved jobs, leased Spotify refresh,
+captured model-request privacy, final-text validation and optional-size fallback.

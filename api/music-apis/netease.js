@@ -1,6 +1,7 @@
 import {BaseMusicAPI} from './base.js';
 import {fetchJSON} from '../utils/fetch-json.js';
 import {parseLRC} from '../utils/lrc.js';
+import {parseYRC} from '../utils/netease-yrc.js';
 import {findRecording,searchTitle,recordingNames,recordingScore,normalizeRecordingText} from '../utils/recording-match.js';
 import {BoundedCache} from '../utils/bounded-cache.js';
 import chinese from 'chinese-conv';
@@ -59,7 +60,7 @@ export class NeteaseAPI extends BaseMusicAPI {
         await Promise.all(tied.map(async song=>{
           if(hydrated.has(song.id)) return;
           hydrated.add(song.id);
-          song.lyricsData=await this.getLyrics(song.id,context);
+          song.lyricsData=await this.getLyrics(song.id,{...context,song});
         }));
         try { return findRecording(songs,request); }
         catch(error) { if(error.code!=='recording_mismatch') throw error;lastMismatch=error; }
@@ -87,9 +88,21 @@ export class NeteaseAPI extends BaseMusicAPI {
   }
   async getLyrics(id,context={}) {
     if(context.song?.lyricsData) return context.song.lyricsData;
-    const data=await fetchJSON(`${this.baseURL}/lyric?id=${id}`,context);
-    if(data.code!==200) throw new Error('NetEase lyrics unavailable');
-    return data.lrc?.lyric ? {lines:this.parseLyrics(data.lrc.lyric),source:'netease',songId:id}:null;
+    let data;
+    try {
+      context.signal?.throwIfAborted();
+      data=await fetchJSON(`${this.baseURL}/lyric/new?id=${encodeURIComponent(id)}`,context);
+      if(data?.code!==200||!((typeof data.lrc?.lyric==='string')||(typeof data.yrc?.lyric==='string')||data.nolyric===true||data.uncollected===true))throw new Error('Invalid NetEase lyric payload');
+    }catch(error){
+      // At most one legacy fallback, sharing the original caller's signal and
+      // provider deadline. Cancellation never starts another network operation.
+      if(context.signal?.aborted||error.name==='AbortError'||error.code==='provider_timeout')throw error;
+      data=await fetchJSON(`${this.baseURL}/lyric?id=${encodeURIComponent(id)}`,context);
+    }
+    if(data?.code!==200) throw new Error('NetEase lyrics unavailable');
+    const yrc=parseYRC(data.yrc?.lyric,{songId:id,...(Number.isFinite(context.song?.duration)?{duration:context.song.duration}:{})});
+    if(yrc)return yrc;
+    return typeof data.lrc?.lyric==='string'&&data.lrc.lyric ? {lines:this.parseLyrics(data.lrc.lyric),source:'netease',songId:id}:null;
   }
   parseLyrics(raw) { return parseLRC(raw); }
 }

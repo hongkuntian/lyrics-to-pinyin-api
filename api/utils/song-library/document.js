@@ -2,6 +2,7 @@ import {isSpotifyRecording,spotifyRecording,spotifyRequestHash,sourceCapsule,spo
 import {digest,LibraryError} from './store.js';
 import {reviewedSpeakerLabels,validLyricStructure} from '../lyric-annotations.js';
 import {isRejectedRecordingLyrics} from '../rejected-lyrics.js';
+import {appleVocalHashes,bindAppleTimingRequest} from './apple-vocal-timing.js';
 
 // Source metadata carried forward from the reviewed corpus, not guessed from arbitrary colons.
 export function recordingRequest(value) {
@@ -60,8 +61,7 @@ export function makeDocument(request,response,selectionRevision,labels=isSpotify
   // Preserve recording and exact ordered source; local IDs are generated from occurrence position.
   // Provider fetch timestamps and model versions do not expire a durable document.
   const recordingKey=digest({catalogID:request.catalog_id,storefront:request.storefront});
-  const sourceHash=digest({language:response.song.language,lines:response.lines,structure});
-  const id=digest({recordingKey,sourceHash});
+  let sourceHash=digest({language:response.song.language,lines:response.lines,structure});
   const resolution=response.metadata.catalog_resolution;
   const accepted=resolution?.accepted_request;
   const canonicalRecordingID=resolution?.version==='catalog-recording-1'&&resolution.requested?.catalog_id===request.catalog_id
@@ -71,7 +71,14 @@ export function makeDocument(request,response,selectionRevision,labels=isSpotify
     && resolution.catalog_items?.some(item=>item.catalog_id===request.catalog_id)
     && /^apple:\d{1,20}$/.test(resolution.canonical_recording_id)?resolution.canonical_recording_id:null;
   const textRevision=digest({language:response.song.language,speakers:structure.speakers,occurrences:structure.occurrences.map(o=>({sourceID:o.sourceID,lyricText:o.lyricText,speakerID:o.speakerID,startsTurn:o.startsTurn,sourcePrefix:o.sourcePrefix}))});
-  return {id,recordingKey,sourceHash,requestKey:requestKey(request),selectionRevision,response,structure,canonicalRecordingID,textRevision,
-    timingRevision:digest({recording:canonicalRecordingID??recordingKey,textRevision,timestamps:response.lines.map(l=>l.timestamp??null)}),
-    readingRevision:digest({textRevision,system:response.song.romanization_system,readings:response.lines.map(l=>l.romanized)})};
+  let wordHashes;
+  try{wordHashes=appleVocalHashes(response,structure,{recordingKey,canonicalRecordingID,textRevision});}catch{throw new LibraryError('invalid_source',502);}
+  if(wordHashes){
+    if(response.metadata.lyric_timing.recordingID!==request.catalog_id)throw new LibraryError('invalid_source',502);
+    sourceHash=wordHashes.sourceHash;
+  }
+  const id=digest({recordingKey,sourceHash});
+  return bindAppleTimingRequest({id,recordingKey,sourceHash,requestKey:requestKey(request),selectionRevision,response,structure,canonicalRecordingID,textRevision,
+    timingRevision:wordHashes?.timingRevision??digest({recording:canonicalRecordingID??recordingKey,textRevision,timestamps:response.lines.map(l=>l.timestamp??null)}),
+    readingRevision:digest({textRevision,system:response.song.romanization_system,readings:response.lines.map(l=>l.romanized)})},requestKey(request));
 }

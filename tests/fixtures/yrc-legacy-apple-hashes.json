@@ -1,0 +1,53 @@
+{
+  "request": {
+    "catalog_id": "123",
+    "artist": "Synthetic Artist",
+    "title": "Synthetic Song",
+    "album": "Synthetic Album",
+    "duration": 240,
+    "storefront": "us"
+  },
+  "response": {
+    "song": {
+      "id": 42,
+      "title": {
+        "original": "Synthetic Song"
+      },
+      "artist": {
+        "original": "Synthetic Artist"
+      },
+      "language": "en",
+      "romanization_system": "none",
+      "duration": 240
+    },
+    "lines": [
+      {
+        "original": "Synthetic dawn",
+        "romanized": "Synthetic dawn",
+        "timestamp": 10
+      },
+      {
+        "original": "Synthetic sky",
+        "romanized": "Synthetic sky",
+        "timestamp": 20
+      }
+    ],
+    "quality": {
+      "synced": true,
+      "partial": false,
+      "instrumental": false
+    },
+    "metadata": {
+      "source": "NeteaseAPI"
+    }
+  },
+  "hashes": {
+    "id": "aabe943e2d5bc6fa24efec57141a5791c37ceda02550494114d9fe1e46883fb7",
+    "recordingKey": "876daf5192a11aa850acc8d37e2db2339c2dbf283f48db162f0d631ddb06ef14",
+    "sourceHash": "0002fbf93894a05a4686db5708febc2abca34aa9537812154f6a901f19f9bb94",
+    "textRevision": "85d8b61fbbc7552b5ef152df043daa08c2378c77d5f48432f6a4c45cbd21a920",
+    "timingRevision": "579d4a3cfdca5f93e9b4dbe39f1446f11cb9a9d4d62639e583fdfd5ef1243a4d",
+    "readingRevision": "81a655584f18b8d7f05510fd7e69398c7333163a4027aa0d193ab1e77ecece86",
+    "requestKey": "455aa99f18aa2ab7864a1918e91bfd97fc167bc02b0556e93179d26725f52204"
+  }
+}
