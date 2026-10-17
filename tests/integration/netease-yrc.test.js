@@ -13,9 +13,17 @@ import {requestBody,generate} from '../../api/utils/song-library/translation.js'
 import {generateExplanation} from '../../api/utils/song-library/study-explanation.js';
 import {applyTimingCorrection,timingFingerprint} from '../../api/utils/timing-corrections.js';
 import {createSongLibraryService} from '../../api/song-library.js';
+import {resolveCatalogAliases} from '../../api/utils/catalog-aliases.js';
 
 async function acquired(request=appleRequest,options={}){const f=yrcService(options),r=await f.call(request.provider?{recording:request}:request);assert.equal(r.statusCode,200,JSON.stringify(r.body));return {f,response:r.body,doc:makeDocument(request,r.body,SELECTION_REVISION)};}
 async function save(store,doc,replaceID=null){const owner=await store.claimLookup(doc.requestKey,SELECTION_REVISION);assert.ok(owner);try{return await store.saveDocument(doc,{lookupOwner:owner,replaceID});}finally{await store.releaseLookup(doc.requestKey,SELECTION_REVISION,owner);}}
+test('synthetic resolver proof retains the required canonical context from the real resolver',async()=>{
+ const aliases=await resolveCatalogAliases(appleRequest,{appleCatalog:null,fetchFn:async()=>({ok:true,json:async()=>({results:[{kind:'song',trackId:123,trackName:appleRequest.title,artistName:appleRequest.artist,collectionName:appleRequest.album,trackTimeMillis:appleRequest.duration*1000}]})})});
+ assert.ok(aliases.resolution);const expected=aliases.resolution.canonical_context;
+ assert.deepEqual(expected,{title:appleRequest.title,artist:appleRequest.artist});
+ assert.deepEqual(catalogProof(appleRequest).canonical_context,expected);
+ const response=await yrcService().call();assert.deepEqual(response.body.metadata.catalog_resolution.canonical_context,expected);
+});
 test('Apple and Spotify HTTP -> capsule -> durable public projection use exact frozen word DTO',async()=>{
  const results=[];
  for(const request of [appleRequest,spotifyRequest]){
