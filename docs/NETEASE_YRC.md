@@ -83,6 +83,9 @@ Explicit refresh still bypasses content caches and re-resolves Apple catalog
 proof. A prior NetEase hint may route fresh source validation only if its target
 matches the newly accepted target. LRCLIB's prior refresh behavior is unchanged.
 A usable NetEase hint suppresses redundant speculative search, not catalog checks.
+The matching currently verified localization is tried first when its complete
+target signature equals the hint. This only reorders the current admitted list;
+it cannot add aliases, reuse old proof, or change explicit other-provider order.
 The single selected-source hint can be replaced by a later accepted line fallback;
 no guarantee is made that a failed NetEase route remains remembered indefinitely.
 

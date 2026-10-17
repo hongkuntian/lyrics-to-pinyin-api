@@ -4,7 +4,7 @@ import {attachVocalTiming,verifiedTimingAlias,stripVocalTiming} from './utils/vo
 import {startSpeculativeDiscovery} from './utils/speculative-discovery.js';
 import {withLyricsDelivery} from './utils/lyrics-delivery.js';
 import {createVerifiedContextCache,contextSignature} from './utils/verified-lyric-context.js';
-import {hintedRecording} from './utils/source-hint.js';
+import {hintedRecording,prioritizeHintedTargets} from './utils/source-hint.js';
 import {createSpotifyLyricsService} from './utils/spotify-lyrics.js';
 import {withAppAuth} from './utils/app-auth/http.js';
 import {createRedisFromEnv} from './utils/redis-client.js';
@@ -284,17 +284,18 @@ export function createMusicRomanizeService(dependencies={}) {
         const lookupResolved=async(reviewed)=>{
         let result=reviewed;
         if(result)await publishCandidate(result);
-        const searches=preferred ? [request,...aliases] : resolution?.searches ?? [request,...aliases];
-        const firstSearch=searches[0],originalFirst=firstSearch&&firstSearch.artist===artist&&firstSearch.title===title&&firstSearch.album===album&&firstSearch.catalog_id===catalog_id;
+        const admittedSearches=preferred?[request,...aliases]:resolution?.searches??[request,...aliases];
+        const currentTargets=admittedSearches.map(target=>target.artist===artist&&target.title===title&&target.album===album&&target.catalog_id===catalog_id?request:target);
+        const searches=!preferred||preferred.name==='NeteaseAPI'?prioritizeHintedTargets(currentTargets,hintContext):currentTargets;
+        const originalFirst=searches[0]===request;
         // A held probe must never occupy a third slot while another spelling
         // starts its two-source hedge. Only the first admitted target adopts it.
         if(speculation&&!originalFirst){speculation.discarded=true;speculation.cancel();await speculation.promise;}
         const queryLimit=4-(speculation?.discarded?1:0);
         for(const target of searches.slice(0,queryLimit)) {
           if(!mayImprove(result) || deadline<=Date.now())break;
-          // Preserve object identity for an exact original query and its proof.
-          const original=target.artist===artist&&target.title===title&&target.album===album&&target.catalog_id===catalog_id;
-          result=better(result,await tryRecording(original?request:target));
+          // Targets above retain the original request identity and fresh proof.
+          result=better(result,await tryRecording(target));
         }
         scope?.signal.throwIfAborted();
         if(result) {

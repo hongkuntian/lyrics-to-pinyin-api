@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {NeteaseAPI} from '../../api/music-apis/netease.js';
-import {hintedRecording} from '../../api/utils/source-hint.js';
+import {hintedRecording,prioritizeHintedTargets} from '../../api/utils/source-hint.js';
 import {createVerifiedContextCache} from '../../api/utils/verified-lyric-context.js';
 
 const request={artist:'Eason Chan',title:'Synthetic Song',album:'Synthetic Album',duration:240};
@@ -65,4 +65,13 @@ test('a NetEase source hint uses its bounded provider-specific budget and keeps 
  assert.equal(result.song.id,42);assert.ok(suppliedSignal);
  const controller=new AbortController();controller.abort();let calls=0;
  assert.equal(await hintedRecording({...api,getRecording:async()=>{calls++;}},target,{hints:[hint]},{deadline:Date.now()+100,signal:controller.signal}),null);assert.equal(calls,0);
+});
+
+test('hint ordering only promotes an exact current target and leaves proof and unrelated targets untouched',()=>{
+ const original={...request,catalog_id:'123'},localized={...original,artist:'Independent Singer'},targets=[original,localized];
+ const hint={hints:[{provider:'NeteaseAPI',target:structuredClone(localized)}]},before=JSON.stringify(targets);
+ assert.deepEqual(prioritizeHintedTargets(targets,hint),[localized,original]);assert.equal(JSON.stringify(targets),before);
+ for(const changed of [{duration:241},{album:'Changed'},{catalog_id:'124'},{artist_entities:[{id:'new',name:'Independent Singer'}]}])
+  assert.equal(prioritizeHintedTargets([original,{...localized,...changed}],hint)[0],original);
+ assert.equal(prioritizeHintedTargets(targets,{hints:[{provider:'LRCAPI',target:localized}]}),targets);
 });

@@ -170,3 +170,13 @@ test('production speculation cannot bypass a valid NetEase ID hint during fresh-
  const refreshed=await f.call(f.make(),{...request,options:{refresh:true}});
  assert.equal(refreshed.statusCode,200);assert.equal(f.stats.catalog,1);assert.equal(f.stats.id,1);assert.equal(f.stats.search,0);
 });
+
+for(const refresh of [false,true])test(`current verified localization matching NetEase hint gets the first lookup opportunity (${refresh?'refresh':'ordinary'})`,async()=>{
+ const f=fixture({resolveCatalogAliasesFn:async r=>{f.stats.catalog++;const aliases=[],p=proof(r);p.searches=[p.searches[0],{...p.searches[0],artist:'Native Singer'}];Object.defineProperty(aliases,'resolution',{value:p});return aliases;}});
+ f.api.name='NeteaseAPI';f.api.searchSong=async artist=>{f.stats.search++;return artist==='Native Singer'?{...song,artist}:null;};
+ assert.equal((await f.call(f.make())).statusCode,200);assert.equal(f.contexts()[0][1].hints[0].target.artist,'Native Singer');
+ f.clearContent();f.reset();f.api.searchSong=async()=>{f.stats.search++;return {...song};};
+ f.api.getRecording=async(_,c)=>{f.stats.id++;assert.equal(c.artist,'Native Singer');return {song:{...song,artist:'Native Singer'},lyrics:structuredClone(words)};};
+ const second=await f.call(f.make(),{...request,...(refresh?{options:{refresh:true}}:{})});
+ assert.equal(second.statusCode,200);assert.equal(f.stats.id,1);assert.equal(f.stats.search,0);assert.equal(f.stats.catalog,refresh?1:0);
+});
