@@ -61,3 +61,41 @@ Hermetic coverage is in `tests/unit/netease-yrc.test.js` and
 includes public Apple/Spotify DTOs, legacy hashes, word/source revision changes,
 JSONB reopen, verified alias projection, saved jobs, leased Spotify refresh,
 captured model-request privacy, final-text validation and optional-size fallback.
+
+
+## Repeated lookup and native upgrade admission
+
+The verified-context cache now supports the selected NetEase source ID as well
+as LRCLIB. This is the existing six-hour, exact-request/policy-bound context,
+not a title-only mapping or a new persistent table. Only final accepted candidates
+write a hint. Hints contain independent metadata and the target signature, never
+provider lyric downloads. Ordinary hint reads do not extend their expiry.
+
+A NetEase ID routes `/song/detail` followed by current lyric acquisition. The
+adapter requires one exact returned ID, validates recording/version/duration and
+complete source credits, and resolves translated artist names through matching-ID
+provider profiles before fetching words. Metadata drift, missing/duplicate IDs,
+no lyrics and failed validation return to ordinary discovery within the original
+provider deadline. The NetEase hint gets at most 2500ms (LRCLIB retains 800ms),
+clamped by that deadline; it does not start a new six-second lookup window.
+
+Explicit refresh still bypasses content caches and re-resolves Apple catalog
+proof. A prior NetEase hint may route fresh source validation only if its target
+matches the newly accepted target. LRCLIB's prior refresh behavior is unchanged.
+A usable NetEase hint suppresses redundant speculative search, not catalog checks.
+The single selected-source hint can be replaced by a later accepted line fallback;
+no guarantee is made that a failed NetEase route remains remembered indefinitely.
+
+Optional `metadata.word_timing_upgrade_supported` reports registry capability
+for the current lookup. It is false for instrumentals, partial/corrected curated
+sources, or an explicitly requested provider without measured-timing capability.
+An absent field on older cached documents means unknown, not unsupported. The
+field is outside immutable source/timing hash recipes and changes no source
+selection revision, saved document, job, or translation identity.
+
+`node scripts/benchmark-netease-reuse.mjs --live` performs three sequential
+NetEase-only acquisitions of the public 256-second Apple recording, clearing
+content caches while preserving an in-memory shared context across fresh service
+instances. It records request timings and cue counts without retaining lyric
+bodies. It is opt-in, network-dependent, and outside `npm test`; it measures this
+server host and does not establish physical-phone or production percentile latency.

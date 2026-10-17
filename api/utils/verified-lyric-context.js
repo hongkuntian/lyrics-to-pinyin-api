@@ -25,7 +25,7 @@ export function createVerifiedContextCache({redis,getFn=getCached,setFn=setLyric
  const valid=(value,request,kind)=>{try{return value?.version===1&&value.kind===kind&&value.signature===contextSignature(request)&&same(value.policy,policy)
   &&Number.isFinite(value.metadata?.acquisition_started_at)&&Number.isFinite(value.verifiedAtMS)&&value.verifiedAtMS<=now()+5000&&Number.isFinite(value.expiresAtMS)&&value.expiresAtMS>now()
   &&value.expiresAtMS-value.verifiedAtMS<=ttlMs&&Array.isArray(value.hints)&&value.hints.length<=1
-  &&value.hints.every(h=>h&&h.provider==='LRCAPI'&&/^\d{1,20}$/.test(h.id??'')&&h.signature&&String(h.signature.id)===h.id&&h.signature.lyricsData===undefined
+  &&value.hints.every(h=>h&&['LRCAPI','NeteaseAPI'].includes(h.provider)&&/^\d{1,20}$/.test(h.id??'')&&h.signature&&String(h.signature.id)===h.id&&h.signature.lyricsData===undefined
     &&typeof h.signature.artist==='string'&&typeof h.signature.title==='string'&&Number.isFinite(h.signature.duration)&&h.target&&typeof h.target.artist==='string'&&typeof h.target.title==='string'&&Number.isFinite(h.target.duration)&&h.target.lyricsData===undefined)
   &&(kind==='catalog'?Array.isArray(value.aliases)&&value.aliases.length<=8&&value.aliases.every(a=>a&&typeof a.artist==='string'&&typeof a.title==='string'&&Number.isFinite(a.duration))&&verifiedCatalogProof(value.resolution,request):value.proof?.version==='verified-spotify-source-1'&&/^[a-f0-9]{64}$/.test(value.proof.sourceHash??''));}catch{return false;}};
  return {
@@ -46,8 +46,8 @@ export function createVerifiedContextCache({redis,getFn=getCached,setFn=setLyric
    const verifiedAtMS=now();return {version:1,kind:'spotify',signature:contextSignature(request),request:structuredClone(request),policy:structuredClone(policy),verifiedAtMS,expiresAtMS:verifiedAtMS+ttlMs,proof:{version:'verified-spotify-source-1',sourceHash:response.recordingBinding.sourceHash},hints:[],metadata:{acquisition_started_at:acquisitionStartedAt}};
   },
   hint(context,candidate,acquisitionStartedAt=context?.metadata?.acquisition_started_at){
-   if(!context||candidate.api?.name!=='LRCAPI'||!/^\d{1,20}$/.test(String(candidate.song?.id??''))||candidate.timingCorrection?.status==='untimed_fallback')return context;
-   return {...context,metadata:{acquisition_started_at:acquisitionStartedAt},hints:[{provider:'LRCAPI',id:String(candidate.song.id),signature:sourceSignature(candidate.song),target:sourceTarget(candidate.target)}]};
+   if(!context||!['LRCAPI','NeteaseAPI'].includes(candidate.api?.name)||!/^\d{1,20}$/.test(String(candidate.song?.id??''))||candidate.timingCorrection?.status==='untimed_fallback')return context;
+   return {...context,metadata:{acquisition_started_at:acquisitionStartedAt},hints:[{provider:candidate.api.name,id:String(candidate.song.id),signature:sourceSignature(candidate.song),target:sourceTarget(candidate.target)}]};
   },
   save(context){
    if(!context||!valid(context,context.request,context.kind))return;

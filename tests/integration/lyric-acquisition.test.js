@@ -131,3 +131,42 @@ test('an original probe absent from admitted catalog searches cannot pollute fin
   const res=await f.call(f.make());assert.equal(res.statusCode,404,code);assert.equal(res.body.code,undefined);assert.deepEqual(queries,['Song','Alias Song']);
  }
 });
+
+for(const provider of ['apple','spotify'])for(const refresh of [false,true])test(`${provider}: accepted NetEase ID survives instance restart${refresh?' and explicit refresh':''} without reusing stale words`,async()=>{
+ const f=fixture(),r=provider==='apple'?{...request}:{recording:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Song',artists:['Artist'],album:'Album',duration_ms:240000}}};
+ f.api.name='NeteaseAPI';f.api.supportsVocalTiming=true;
+ const first=await f.call(f.make(),r);assert.equal(first.statusCode,200);
+ assert.equal(first.body.metadata.word_timing_upgrade_supported,true);
+ const before=structuredClone(f.contexts()[0][1]);assert.equal(before.hints[0].provider,'NeteaseAPI');
+ f.clearContent();f.reset();f.advance(20);
+ f.api.getRecording=async()=>{f.stats.id++;return {song:{...song},lyrics:{lines:[{text:'Fresh independent words',timestamp:15}]}};};
+ const second=await f.call(f.make(),{...r,...(refresh?{options:{refresh:true}}:{})});
+ assert.equal(second.statusCode,200);assert.equal(f.stats.id,1);assert.equal(f.stats.search,0);assert.equal(f.stats.lyrics,0);
+ assert.equal(f.stats.catalog,provider==='apple'&&refresh?1:0);
+ assert.equal(second.body.lines[0].original,'Fresh independent words');
+ if(!refresh){const after=f.contexts()[0][1];assert.equal(after.verifiedAtMS,before.verifiedAtMS);assert.equal(after.expiresAtMS,before.expiresAtMS);}
+});
+test('capability is derived from registry and curated timing remains non-upgradeable',async()=>{
+ const ordinary=fixture();assert.equal((await ordinary.call(ordinary.make())).body.metadata.word_timing_upgrade_supported,false);
+ const f=fixture({applyTimingCorrectionFn:async c=>({...c,timingCorrection:{status:'replacement',id:'reviewed'}})});f.api.supportsVocalTiming=true;
+ const corrected=await f.call(f.make());assert.equal(corrected.statusCode,200);assert.equal(corrected.body.metadata.word_timing_upgrade_supported,false);
+});
+
+test('NetEase failed hint and fallback share the original provider deadline',async()=>{
+ const f=fixture({neteaseSourceHintBudgetMs:20,providerTimeoutMs:45});f.api.name='NeteaseAPI';await f.call(f.make());f.clearContent();f.reset();let cancelled=0;
+ const hold=context=>new Promise((resolve,reject)=>context.signal.addEventListener('abort',()=>{cancelled++;reject(Object.assign(new Error('cancelled'),{name:'AbortError'}));},{once:true}));
+ f.api.getRecording=async(_,c)=>f.count('id',()=>hold(c));f.api.searchSong=async(_,__,c)=>f.count('search',()=>hold(c));
+ const start=Date.now(),res=await f.call(f.make(),{...request,options:{refresh:true}});
+ assert.equal(res.statusCode,504);assert.equal(f.stats.id,1);assert.equal(f.stats.search,1);assert.equal(cancelled,2);assert.ok(Date.now()-start<160);assert.equal(f.stats.peak,1);
+});
+test('a refresh fresh catalog target change cannot reuse the former NetEase hint',async()=>{
+ const f=fixture();f.api.name='NeteaseAPI';await f.call(f.make());f.clearContent();f.reset();
+ f.deps.resolveCatalogAliasesFn=async r=>{f.stats.catalog++;const aliases=[],p=proof(r);p.artist_entities=[{id:'fresh-provider-entity',name:'Artist'}];Object.defineProperty(aliases,'resolution',{value:p});return aliases;};
+ const res=await f.call(f.make(),{...request,options:{refresh:true}});assert.equal(res.statusCode,200);assert.equal(f.stats.catalog,1);assert.equal(f.stats.id,0);assert.equal(f.stats.search,1);
+});
+
+test('production speculation cannot bypass a valid NetEase ID hint during fresh-instance refresh',async()=>{
+ const f=fixture({speculativeDiscovery:true});f.api.name='NeteaseAPI';await f.call(f.make());f.clearContent();f.reset();
+ const refreshed=await f.call(f.make(),{...request,options:{refresh:true}});
+ assert.equal(refreshed.statusCode,200);assert.equal(f.stats.catalog,1);assert.equal(f.stats.id,1);assert.equal(f.stats.search,0);
+});

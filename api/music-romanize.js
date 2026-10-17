@@ -46,7 +46,7 @@ export function createMusicRomanizeService(dependencies={}) {
     getSupportedMusicAPIsFn=getSupportedCombinations,providerTimeoutMs=6000,reviewedTimeoutMs=providerTimeoutMs*2,hedgeDelayMs=350,untimedGraceMs=2500,wordTimingGraceMs=providerTimeoutMs,cacheTimeoutMs=300,
     applyTimingCorrectionFn=applyTimingCorrection,resolveCatalogAliasesFn=resolveCatalogAliases,lookupReviewedRecordingFn=lookupReviewedRecording,lookupListeningReviewedRecordingFn=lookupListeningReviewedRecording,lookupOfficialTranscriptionFn=lookupOfficialTranscription,waitUntilFn=waitUntil,logger=console,
     responseCache=new BoundedCache(),analyzeLyricLanguageFn=analyzeLyricLanguage,
-    rejectRecordingLyricsFn=isRejectedRecordingLyrics,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800,speculativeDiscovery=true
+    rejectRecordingLyricsFn=isRejectedRecordingLyrics,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800,neteaseSourceHintBudgetMs=2500,speculativeDiscovery=true
   }=dependencies;
   const spotifyService=createSpotifyLyricsService(dependencies);
   const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:RESPONSE_VERSION,selection:SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION}});
@@ -121,9 +121,13 @@ export function createMusicRomanizeService(dependencies={}) {
           else if(error.code==='provider_timeout'||error.name==='AbortError'){timedOut=true;diagnose(api.name,'provider_timeout');}
           else{unavailable=true;logger.error('Lyrics provider failed',api.name,error.message);}
         };
-        let verifiedContext=options.refresh===true?null:await measure('verified_context_read',()=>contexts.read(request));
+        const sourceContext=await measure('verified_context_read',()=>options.refresh===true&&!apis.some(a=>a.name==='NeteaseAPI'&&typeof a.getRecording==='function')?null:contexts.read(request));
+        // Explicit refresh still resolves Apple catalog evidence afresh. An old
+        // NetEase ID may only route fresh source validation for the new target.
+        let verifiedContext=options.refresh===true?null:sourceContext;
+        const hintContext=options.refresh===true&&sourceContext?{hints:sourceContext.hints.filter(h=>h.provider==='NeteaseAPI')}:sourceContext;
         const {storefront:routeStorefront,account_storefront:routeAccount,...routeRequest}=JSON.parse(contextSignature(request)),routeKey=JSON.stringify(routeRequest);
-        if(speculativeDiscovery&&!verifiedContext&&!verifiedRouting.get(routeKey)&&!preferred&&!hasReviewedCatalogSource(request)&&!hasOfficialCatalogSource(request)&&!hasListeningCatalogSource(request)&&(catalog_id||(album&&duration))&&!/[&,/、]|\b(?:feat|featuring|with)\b/iu.test(artist+' '+title))speculation=startSpeculativeDiscovery(apis[0],request,{deadline,timeoutMs:providerTimeoutMs,signal:scope?.signal,measure});
+        if(speculativeDiscovery&&!verifiedContext&&!hintContext?.hints?.some(h=>h.provider==='NeteaseAPI')&&!verifiedRouting.get(routeKey)&&!preferred&&!hasReviewedCatalogSource(request)&&!hasOfficialCatalogSource(request)&&!hasListeningCatalogSource(request)&&(catalog_id||(album&&duration))&&!/[&,/、]|\b(?:feat|featuring|with)\b/iu.test(artist+' '+title))speculation=startSpeculativeDiscovery(apis[0],request,{deadline,timeoutMs:providerTimeoutMs,signal:scope?.signal,measure});
         const knownAliases=verifiedContext?Object.assign([...verifiedContext.aliases],{resolution:verifiedContext.resolution}):null;
         // Resolve metadata before selecting a provider spelling. The fixed query
         // order makes native and international requests compete on the same terms.
@@ -158,7 +162,7 @@ export function createMusicRomanizeService(dependencies={}) {
                   const candidate=await applyTimingCorrectionFn({song,lyrics,api,target},request,{signal,deadline:providerDeadline});
                   return hasUsableLyrics(candidate.lyrics,{duration:candidate.song.duration})?candidate:null;
                 };
-                const fresh=probe?null:await hintedRecording(api,target,verifiedContext,{signal,deadline:providerDeadline,budgetMs:sourceHintBudgetMs,measure});
+                const fresh=probe?null:await hintedRecording(api,target,hintContext,{signal,deadline:providerDeadline,budgetMs:sourceHintBudgetMs,neteaseBudgetMs:neteaseSourceHintBudgetMs,measure});
                 signal.throwIfAborted();
                 if(fresh){try{const candidate=await validateSource(fresh.song,fresh.lyrics);if(candidate){matched=true;return candidate;}}catch(error){diagnose(api.name,error.reason??'source_hint_rejected');}signal.throwIfAborted();}
                 const discovered=probe?await probe.promise:null;if(discovered?.error)throw discovered.error;
@@ -245,6 +249,8 @@ export function createMusicRomanizeService(dependencies={}) {
           response.quality.instrumental=lyrics.instrumental===true;
           response.quality.partial=lyrics.partial===true;
           response.quality.synced=response.quality.synced && timingQuality(result).usable;
+          response.metadata.word_timing_upgrade_supported=!lyrics.instrumental&&!lyrics.partial&&result.timingCorrection?.status!=='replacement'
+            &&(preferred?preferred.supportsVocalTiming===true:apis.some(a=>a.supportsVocalTiming===true));
           if(result.timingCorrection) response.metadata.timing_correction=result.timingCorrection;
           if(result.reviewedIdentity) response.metadata.reviewed_recording=result.reviewedIdentity;
           if(target!==request) response.metadata.recording_match={method:catalog_id ? 'catalog_alias':'metadata_alias',catalog_id:catalog_id || target.catalog_id,artist,title,duration,...(!catalog_id ? {album}:{})};

@@ -11,11 +11,11 @@ export function freshHintMatches(hint,fresh,target){
   &&['isrc','explicit','creditedArtistNames'].every(k=>previous[k]===undefined||JSON.stringify(previous[k])===JSON.stringify(song[k]))
   &&recordingScore(song,target)>=0);
 }
-export async function hintedRecording(api,target,context,{signal,deadline,budgetMs=800,measure=async(_,fn)=>fn()}={}){
+export async function hintedRecording(api,target,context,{signal,deadline,budgetMs=800,neteaseBudgetMs=2500,measure=async(_,fn)=>fn()}={}){
  try {
   const hint=Array.isArray(context?.hints)?context.hints.find(h=>h&&h.target&&h.provider===api.name&&sameTarget(h.target,target)):null;
   if(!hint||typeof api.getRecording!=='function')return null;
-  const remaining=Math.min(budgetMs,deadline-Date.now());if(remaining<=0)return null;
+  const remaining=Math.min(api.name==='NeteaseAPI'?neteaseBudgetMs:budgetMs,deadline-Date.now());if(remaining<=0)return null;
   const fresh=await measure(`${api.name}_source_id`,()=>withDeadline(child=>api.getRecording(hint.id,{...target,signal:child}),remaining,signal));
   return freshHintMatches(hint,fresh,target)?fresh:null;
  }catch{return null;}

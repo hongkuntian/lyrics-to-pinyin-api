@@ -16,40 +16,12 @@ export class NeteaseAPI extends BaseMusicAPI {
       catch(error) { if(error.code!=='recording_mismatch') throw error;lastMismatch=error; }
       const expected=recordingNames(request);
       const spotify=context.recordingProvider==='spotify';
-      const expectedCredits=spotify ? (request.creditedArtistNames??[]).map(normalizeRecordingText).sort():expected.credits;
       // Resolve authoritative artist aliases only for plausible recordings.
       // The profile promises are shared between the shallow and deeper pages.
       const plausible=songs.filter(song=>recordingNames(song).title===expected.title && Number.isFinite(song.duration) && Number.isFinite(request.duration)
         && recordingScore({...song,title,artist,...(spotify?{creditedArtistNames:request.creditedArtistNames}:{})},request)>=0).slice(0,3);
-      for(const song of plausible) {
-        const performers=records.get(song.id).raw.artists || [];
-        if(!performers.length || performers.length>3 || performers.length!==expectedCredits.length) continue;
-        const aliases=await Promise.all(performers.map(async performer=>{
-          const direct=[performer.name].filter(name=>expectedCredits.includes(normalizeRecordingText(name)));
-          if(direct.length) return direct[0];
-          if(!/^\d{1,20}$/.test(String(performer.id))) return null;
-          const id=String(performer.id);
-          if(!profiles.has(id)) profiles.set(id,this.namesForArtist(id,context));
-          const names=await profiles.get(id);
-          const matching=names.filter(name=>expectedCredits.includes(normalizeRecordingText(name)));
-          return new Set(matching.map(normalizeRecordingText)).size===1 ? matching[0]:null;
-        }));
-        if(aliases.every(Boolean) && JSON.stringify(aliases.map(normalizeRecordingText).sort())===JSON.stringify(expectedCredits)) {
-          // Spotify keeps complete artist entities and independent display
-          // labels. Only this provider's ID-verified profile names may supply
-          // equivalent credits; request strings never backfill source labels.
-          if(spotify) {
-            song.creditedArtistNames=aliases;
-            if(recordingScore(song,request)>=0 && performers.every(p=>/^\d{1,20}$/.test(String(p.id)) && typeof p.name==='string' && p.name.trim())) {
-              // Share only contributor-name equivalence for this request. The
-              // other provider must independently validate its own recording
-              // and lyrics; no text, timing or Apple catalog evidence is shared.
-              context.onVerifiedArtistCredits?.({names:performers.map(p=>p.name),aliases:[...aliases]});
-            }
-          }
-          else song.artist=aliases.join(' & ');
-        }
-      }
+      for(const song of plausible)
+        await this.resolveArtistAliases(song,records.get(song.id).raw.artists||[],request,context,profiles);
       try { return findRecording(songs,request); }
       catch(error) { if(error.code!=='recording_mismatch') throw error;lastMismatch=error; }
       const ranked=songs.map(song=>({song,score:recordingScore(song,request)})).filter(item=>item.score>=0).sort((a,b)=>b.score-a.score);
@@ -76,6 +48,47 @@ export class NeteaseAPI extends BaseMusicAPI {
     }
     if(lastMismatch) throw lastMismatch;
     return null;
+  }
+  async resolveArtistAliases(song,performers,request,context,profiles=new Map()) {
+    const spotify=context.recordingProvider==='spotify',expected=recordingNames(request);
+    const expectedCredits=spotify?(request.creditedArtistNames??[]).map(normalizeRecordingText).sort():expected.credits;
+    if(!performers.length || performers.length>3 || performers.length!==expectedCredits.length)return;
+    const aliases=await Promise.all(performers.map(async performer=>{
+      const direct=[performer.name].filter(name=>expectedCredits.includes(normalizeRecordingText(name)));
+      if(direct.length)return direct[0];
+      if(!/^\d{1,20}$/.test(String(performer.id)))return null;
+      const id=String(performer.id);
+      if(!profiles.has(id))profiles.set(id,this.namesForArtist(id,context));
+      const names=await profiles.get(id),matching=names.filter(name=>expectedCredits.includes(normalizeRecordingText(name)));
+      return new Set(matching.map(normalizeRecordingText)).size===1?matching[0]:null;
+    }));
+    if(aliases.every(Boolean)&&JSON.stringify(aliases.map(normalizeRecordingText).sort())===JSON.stringify(expectedCredits)) {
+      if(spotify) {
+        song.creditedArtistNames=aliases;
+        if(recordingScore(song,request)>=0&&performers.every(p=>/^\d{1,20}$/.test(String(p.id))&&typeof p.name==='string'&&p.name.trim()))
+          context.onVerifiedArtistCredits?.({names:performers.map(p=>p.name),aliases:[...aliases]});
+      } else song.artist=aliases.join(' & ');
+    }
+  }
+  async getRecording(id,context={}) {
+    if(!/^[1-9]\d{0,19}$/.test(String(id)))return null;
+    context.signal?.throwIfAborted();
+    const data=await fetchJSON(`${this.baseURL}/song/detail?ids=${id}`,context);
+    // A cached ID routes a fresh lookup only. Do not substitute a relink or
+    // reuse old labels/words when the provider no longer returns that record.
+    if(data?.code!==200||!Array.isArray(data.songs)||data.songs.length!==1||String(data.songs[0]?.id)!==String(id))
+      throw Object.assign(new Error('NetEase source ID changed'),{code:'recording_mismatch'});
+    const raw=data.songs[0],performers=raw.ar;
+    if(!Array.isArray(performers)||!performers.length||performers.some(p=>!p||!/^\d{1,20}$/.test(String(p.id))||typeof p.name!=='string'||!p.name.trim())
+      ||typeof raw.name!=='string'||!raw.name.trim()||!Number.isFinite(raw.dt)||raw.dt<=0)
+      throw Object.assign(new Error('Invalid NetEase source metadata'),{code:'recording_mismatch'});
+    const song={id:raw.id,title:raw.name,artist:performers.map(p=>p.name).join(' & '),album:raw.al?.name,duration:raw.dt/1000,source:'netease',
+      ...(context.recordingProvider==='spotify'?{creditedArtistNames:performers.map(p=>p.name),...(raw.isrc?{isrc:raw.isrc}:{}),...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{})}:{})};
+    if(recordingScore(song,context)<0)await this.resolveArtistAliases(song,performers,context,context);
+    findRecording([song],context);
+    context.signal?.throwIfAborted();
+    const lyrics=await this.getLyrics(id,{...context,song});
+    return {song,lyrics};
   }
   async namesForArtist(id,context) {
     const cached=this.artistAliases.get(id);if(cached) return cached;
