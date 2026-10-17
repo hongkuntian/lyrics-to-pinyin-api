@@ -71,12 +71,15 @@ test('new endpoint is one primary fetch with same-payload ordinary LRC fallback'
  assert.equal(value.lines[0].text,'!你 😀e\u0301');assert.equal(value.lines[0].timestamp,10);assert.ok(value.lines[0].vocalTiming);assert.equal(urls.length,1);
 });
 test('legacy endpoint is bounded fallback only for unavailable/invalid new payload and shares cancellation',async()=>{
- for(const broken of [new Error('unavailable'),{code:500},{code:200,unrecognized:true}]){
+ for(const broken of [new Error('unavailable'),{code:500},{code:200,unrecognized:true},
+  {code:200,yrc:{lyric:'[malformed]'}},{code:200,yrc:{lyric:'[malformed]'},lrc:{lyric:''}},
+  {code:200,yrc:{lyric:'[malformed]'},lrc:{lyric:'[00:99]invalid'}}]){
   const urls=[],signals=[],signal=new AbortController().signal;
   const value=await new NeteaseAPI().getLyrics(42,{signal,fetchFn:fetcher([broken,{code:200,lrc:{lyric:'[00:01]legacy'}}],urls,signals)});
   assert.equal(value.lines[0].text,'legacy');assert.equal(urls.length,2);assert.match(urls[1],/\/lyric\?id=42$/);assert.deepEqual(signals,[signal,signal]);
  }
- for(const payload of [{code:200,nolyric:true},{code:200,lrc:{lyric:''}}]){
+ for(const payload of [{code:200,nolyric:true},{code:200,uncollected:true,yrc:{lyric:'[malformed]'}},
+  {code:200,lrc:{lyric:''}},{code:200,yrc:{lyric:''}}]){
   const urls=[];assert.equal(await new NeteaseAPI().getLyrics(42,{fetchFn:fetcher([payload],urls)}),null);assert.equal(urls.length,1);
  }
  const urls=[],controller=new AbortController();

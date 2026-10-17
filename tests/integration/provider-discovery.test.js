@@ -64,19 +64,20 @@ test('NetEase hydrates only bounded top metadata ties and reuses the selected ly
  const requests=[];
  const fetchFn=async url=>{
   requests.push(url);
-  return ok(new URL(url).pathname==='/lyric' ? {code:200,lrc:{lyric:'[00:10]一起唱歌\n[00:20]慢慢听懂'}}:page([netease(2),netease(1)]));
+  return ok(new URL(url).pathname==='/lyric/new' ? {code:200,lrc:{lyric:'[00:10]一起唱歌\n[00:20]慢慢听懂'}}:page([netease(2),netease(1)]));
  };
  const api=new NeteaseAPI(),song=await api.searchSong('Artist','Song',{...context,fetchFn});
  assert.equal(song.id,1);assert.ok(song.lyricsData);
  await api.getLyrics(song.id,{song,fetchFn});
  assert.equal(requests.length,3);assert.equal(requests.filter(url=>new URL(url).pathname==='/search').length,1);
+ assert.equal(requests.filter(url=>new URL(url).pathname==='/lyric/new').length,2);
 });
 test('conflicting or oversized NetEase ties stay ambiguous without unbounded lyric requests',async()=>{
  for(const count of [2,4]) {
   let lyrics=0;
   const fetchFn=async url=>{
    const parsed=new URL(url);
-   if(parsed.pathname==='/lyric') {lyrics++;return ok({code:200,lrc:{lyric:`[00:10]original fixture ${parsed.searchParams.get('id')}\n[00:20]another line`}});}
+   if(parsed.pathname==='/lyric/new') {lyrics++;return ok({code:200,lrc:{lyric:`[00:10]original fixture ${parsed.searchParams.get('id')}\n[00:20]another line`}});}
    return ok(page(Array.from({length:count},(_,i)=>netease(i+1))));
   };
   await assert.rejects(()=>new NeteaseAPI().searchSong('Artist','Song',{...context,fetchFn}),{code:'recording_mismatch'});

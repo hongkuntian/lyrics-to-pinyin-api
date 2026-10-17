@@ -88,21 +88,34 @@ export class NeteaseAPI extends BaseMusicAPI {
   }
   async getLyrics(id,context={}) {
     if(context.song?.lyricsData) return context.song.lyricsData;
-    let data;
+    const decode=data=>{
+      if(data?.code!==200)return {valid:false,lyrics:null};
+      const yrc=parseYRC(data.yrc?.lyric,{songId:id,...(Number.isFinite(context.song?.duration)?{duration:context.song.duration}:{})});
+      if(yrc)return {valid:true,lyrics:yrc};
+      const lrc=typeof data.lrc?.lyric==='string'?data.lrc.lyric:null;
+      const lines=lrc?this.parseLyrics(lrc):[];
+      if(lines.some(l=>l.text?.trim()))return {valid:true,lyrics:{lines,source:'netease',songId:id}};
+      // Explicit absence and genuinely empty variants are terminal. A failed
+      // nonempty YRC/LRC decode with no readable sibling is an invalid payload,
+      // even when its JSON field types look right, and needs the legacy route.
+      const variants=[lrc,data.yrc?.lyric].filter(value=>typeof value==='string');
+      return {valid:data.nolyric===true||data.uncollected===true||(variants.length>0&&variants.every(value=>!value.trim())),lyrics:null};
+    };
+    let data,result;
     try {
       context.signal?.throwIfAborted();
       data=await fetchJSON(`${this.baseURL}/lyric/new?id=${encodeURIComponent(id)}`,context);
-      if(data?.code!==200||!((typeof data.lrc?.lyric==='string')||(typeof data.yrc?.lyric==='string')||data.nolyric===true||data.uncollected===true))throw new Error('Invalid NetEase lyric payload');
+      result=decode(data);
+      if(!result.valid)throw new Error('Invalid NetEase lyric payload');
     }catch(error){
       // At most one legacy fallback, sharing the original caller's signal and
       // provider deadline. Cancellation never starts another network operation.
       if(context.signal?.aborted||error.name==='AbortError'||error.code==='provider_timeout')throw error;
       data=await fetchJSON(`${this.baseURL}/lyric?id=${encodeURIComponent(id)}`,context);
+      result=decode(data);
     }
     if(data?.code!==200) throw new Error('NetEase lyrics unavailable');
-    const yrc=parseYRC(data.yrc?.lyric,{songId:id,...(Number.isFinite(context.song?.duration)?{duration:context.song.duration}:{})});
-    if(yrc)return yrc;
-    return typeof data.lrc?.lyric==='string'&&data.lrc.lyric ? {lines:this.parseLyrics(data.lrc.lyric),source:'netease',songId:id}:null;
+    return result.lyrics;
   }
   parseLyrics(raw) { return parseLRC(raw); }
 }
