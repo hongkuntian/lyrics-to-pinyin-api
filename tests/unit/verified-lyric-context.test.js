@@ -31,3 +31,18 @@ test('malformed optional context is a nonthrowing miss',async()=>{
   stored=structuredClone(base);mutate(stored);assert.equal(await createVerifiedContextCache(deps).read(request),null);
  }
 });
+
+test('QQ source hints persist only exact metadata and require fresh source revalidation',async()=>{
+ const {hintedRecording}=await import('../../api/utils/source-hint.js');
+ const disk=new Map(),pending=[],deps={redis:{},getFn:async(_,k)=>disk.get(k),setFn:async(_,k,v)=>disk.set(k,structuredClone(v)),
+  waitUntilFn:p=>pending.push(p),now:()=>1000,ttlMs:100,policy:{selection:'expanded'}};
+ const cache=createVerifiedContextCache(deps),base=cache.catalog(request,aliases(),10);
+ const song={id:'42',source:'qq',artist:request.artist,title:request.title,album:request.album,duration:240,lyricsData:{private:'must not persist'}};
+ const hinted=cache.hint(base,{api:{name:'QQMusicAPI'},song,target:request});cache.save(hinted);await Promise.all(pending);
+ const restored=await createVerifiedContextCache(deps).read(request);assert.equal(restored.hints[0].provider,'QQMusicAPI');
+ assert.equal(restored.hints[0].signature.lyricsData,undefined);assert.equal(restored.expiresAtMS,base.expiresAtMS);
+ let calls=0;const api={name:'QQMusicAPI',getRecording:async id=>{calls++;assert.equal(id,'42');return {song,lyrics:{lines:[{text:'Fresh',timestamp:1}]}};}};
+ assert.ok(await hintedRecording(api,request,restored,{deadline:Date.now()+1000}));assert.equal(calls,1);
+ api.getRecording=async()=>({song:{...song,title:'Song (Live)'},lyrics:{lines:[{text:'Wrong',timestamp:1}]}});
+ assert.equal(await hintedRecording(api,request,restored,{deadline:Date.now()+1000}),null);
+});

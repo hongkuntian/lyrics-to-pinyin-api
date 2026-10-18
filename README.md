@@ -12,12 +12,22 @@ A Node.js serverless backend (Vercel) for romanizing multilingual lyrics and tex
   - `POST /api/app-auth` (beta enrollment and renewal only)
 - Music sources currently enabled in runtime registry:
   - `netease`
+  - `kugou`
+  - `qq` (raw acquisition opt-in)
   - `lrclib`
 
 Lyric discovery through LRCLIB accepts other language tags, including Latin,
 Cyrillic, Arabic and Indic scripts. Discovery support does not guarantee provider
 coverage or a pronunciation processor. Original words stay readable when a
 language or pronunciation dialect cannot be established.
+
+Raw music acquisition accepts `options.lyric_sources_version: 2` to include QQ
+QRC alongside NetEase YRC and Kugou KRC measured word cues. Omitted or version 1
+keeps the legacy provider set, including for durable library acquisition. The
+native client can use a newer raw result as a temporary word-timing upgrade
+without replacing a saved lyric document. See [measured source findings and
+benchmark](docs/research/word-timing-findings.md) for format, identity and
+performance evidence and its limits.
 
 ## Storefront-independent lyric resolution
 

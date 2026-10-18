@@ -32,7 +32,8 @@ function withoutLeadingLRCMetadata(raw='') {
   return kept.join('\n');
 }
 export class NeteaseAPI extends BaseMusicAPI {
-  constructor() { super('NeteaseAPI',['zh','yue','en']); this.supportsVocalTiming=true; this.baseURL='https://netease-cloud-music-api-gules-mu.vercel.app'; this.artistAliases=new BoundedCache({limit:128,ttlMs:86400000}); }
+  constructor() { super('NeteaseAPI',['zh','yue','en','ja','ko','ru']); this.supportsVocalTiming=true; this.languageAgnosticDiscovery=true; this.baseURL='https://netease-cloud-music-api-gules-mu.vercel.app'; this.artistAliases=new BoundedCache({limit:128,ttlMs:86400000}); }
+  supportsLanguage(language) { return typeof language==='string'&&/^[a-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(language); }
   async searchSong(artist,title,context={}) {
     const request={artist,title,...context},records=new Map(),profiles=new Map(),hydrated=new Set();
     let lastMismatch;
