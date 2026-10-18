@@ -8,6 +8,7 @@ migrationNames.push('025-memberships.sql');
 migrationNames.push('026-spotify-recordings.sql');
 // Durable broker, activity publisher and queue recovery.
 migrationNames.push('027-spotify-background.sql');
+migrationNames.push('029-listening-sessions.sql');
 export async function migrateLibrary(database) {
   return database.transaction(async db=> {
     await db.query("SET LOCAL lock_timeout='5s'");

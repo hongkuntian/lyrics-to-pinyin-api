@@ -22,7 +22,7 @@ export function validateSpotifyInput(b,now=Date.now()){
  if(b.activityID!==undefined&&(typeof b.activityID!=='string'||!/^[A-Za-z0-9-]{1,128}$/.test(b.activityID)))bad();
  for(const k of ['token','widgetToken'])if(b[k]!==undefined&&(typeof b[k]!=='string'||!/^([a-f0-9]{2}){32,256}$/.test(b[k])))bad();
  if(b.tokenVersion!==undefined&&(!Number.isSafeInteger(b.tokenVersion)||b.tokenVersion<1||b.tokenVersion>2147483647))bad();
- if(b.action==='connection.enroll'&&(typeof b.refreshToken!=='string'||!b.refreshToken.length||b.refreshToken.length>4096||b.scopeRawValue!==49152))bad();
+ if(b.action==='connection.enroll'&&(typeof b.refreshToken!=='string'||!b.refreshToken.length||b.refreshToken.length>4096||![49152,114697].includes(b.scopeRawValue)))bad();
  if(b.frequentPushesEnabled!==undefined&&typeof b.frequentPushesEnabled!=='boolean')bad();
  if(b.action==='live.arm'&&(!Number.isSafeInteger(b.activityCreatedAtMS)||b.activityCreatedAtMS>now+2000||b.activityCreatedAtMS<=now-28500000))bad();
  if(b.action==='live.arm'&&(b.activityGeneration!==1||typeof b.frequentPushesEnabled!=='boolean'))bad();
