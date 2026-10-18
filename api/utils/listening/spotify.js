@@ -61,7 +61,8 @@ export class ListeningSpotify {
   if(p.context?.uri!=='spotify:playlist:'+room.providerState.playlistID||p.device?.id!==room.providerState.deviceID)return {contextURI:p.context?.uri,deviceID:p.device?.id};
   const queue=await this.request(token,'GET','/v1/me/player/queue');
   if(!Array.isArray(queue?.queue)||p.item?.uri!=='spotify:track:'+p.item?.id)fail('spotify_session_invalid_response',503);
-  return {contextURI:p.context.uri,deviceID:p.device.id,trackID:p.item.id,positionMS:p.progress_ms,playing:p.is_playing,queue:queue.queue.map(t=>t.id)};
+  if(queue.currently_playing?.id!==p.item.id||queue.currently_playing?.uri!==p.item.uri)fail('spotify_observation_changed',503);
+  return {contextURI:p.context.uri,deviceID:p.device.id,trackID:p.item.id,positionMS:p.progress_ms,playing:p.is_playing,queue:queue.queue.map(t=>t.uri==='spotify:track:'+t.id?t.id:null)};
  }
  async control(room,action,token){
   if(!['play','pause','next'].includes(action))fail('invalid_request',400);

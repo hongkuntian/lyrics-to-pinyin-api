@@ -93,7 +93,7 @@ test('Spotify guest edit persists and reaches the playlist without a running hos
  f.service.spotify=new ListeningSpotify({broker,fetchFn:async(raw,options)=>{
   const url=new URL(raw),path=url.pathname,method=options.method,body=options.body?JSON.parse(options.body):null;calls.push({path,method,body});
   if(method==='GET'&&path==='/v1/me/player')return Response.json({device:{id:'phone',name:'Fixture phone',is_active:true,is_restricted:false},context:context?{uri:context}:null,item:{id:current,uri:'spotify:track:'+current},progress_ms:position,is_playing:playing,shuffle_state:shuffle,repeat_state:repeat});
-  if(method==='GET'&&path==='/v1/me/player/queue'){const index=saved.indexOf(current);return Response.json({queue:saved.slice(index+1).map(id=>({id}))});}
+  if(method==='GET'&&path==='/v1/me/player/queue'){const index=saved.indexOf(current);return Response.json({currently_playing:{id:current,uri:'spotify:track:'+current},queue:saved.slice(index+1).map(id=>({id,uri:'spotify:track:'+id}))});}
   if(method==='POST'&&path==='/v1/me/playlists')return Response.json({id:playlist,public:false});
   if(path===`/v1/playlists/${playlist}/items`){if(method==='GET')return Response.json({items:saved.map(id=>({item:{id,uri:'spotify:track:'+id}})),next:null});saved=body.uris.map(uri=>uri.slice(14));return Response.json({snapshot_id:'fixture'});}
   if(path.endsWith('/shuffle'))shuffle=url.searchParams.get('state')==='true';
@@ -143,4 +143,31 @@ test('history pagination is stable, bounded and account-private',async t=>{
  const last=await f.service.send(host,{action:'list',cursor:first.nextCursor});assert.equal(last.summaries.length,5);assert.equal(last.nextCursor,null);
  assert.equal(new Set([...first.summaries,...last.summaries].map(r=>r.id)).size,56);
  assert.equal((await f.service.send(guest,{action:'list'})).summaries.length,0);
+});
+async function mockSpotifyRoom(t){
+ const f=await fixture(t),calls=[];let creation=async()=> 'p'.repeat(22);
+ f.service.spotify={authorize:async()=> 'token',token:async()=> 'token',player:async()=>({device:{id:'phone',name:'Phone',is_active:true,is_restricted:false}}),createPlaylist:(...a)=>creation(...a),replace:async()=>{},request:async(token,method,path)=>{calls.push({method,path});return {};},control:async(room,action)=>{calls.push({method:'CONTROL',path:action});}};
+ let room=(await f.create('spotify')).session;room=(await f.service.send(host,command('add',room,{trackID:'a'.repeat(22)}))).session;
+ const target=await f.service.send(host,{action:'target',sessionID:room.id});
+ return {...f,calls,room,start:()=>f.service.send(host,command('start',room,{targetNonce:target.target.nonce})),setCreation:fn=>creation=fn};
+}
+test('End during an admitted but delayed Spotify Play prevents the late audio effect',async t=>{
+ const f=await mockSpotifyRoom(t);let room=(await f.start()).session;
+ let entered,release;const waiting=new Promise(resolve=>entered=resolve),held=new Promise(resolve=>release=resolve);let once=true;
+ f.service.spotify.token=async()=>{if(once){once=false;entered();await held;}return 'token';};
+ const play=f.service.send(host,command('control',room,{control:'play'}));await waiting;
+ room=(await f.service.send({...host,keyID:'second-device'},command('end',room))).session;
+ release();await assert.rejects(play,{code:'session_playback_replaced'});
+ assert(!f.calls.some(c=>c.method==='CONTROL'&&c.path==='play'));assert.equal((await f.store.read(room.id)).status,'ended');
+});
+test('End during playlist creation retains the returned playlist for cleanup and never starts audio',async t=>{
+ const f=await mockSpotifyRoom(t);let entered,release;const waiting=new Promise(resolve=>entered=resolve),held=new Promise(resolve=>release=resolve);
+ f.setCreation(async()=>{entered();await held;return 'p'.repeat(22);});
+ const starting=f.start();await waiting;
+ let room=(await f.service.send(host,{action:'read',sessionID:f.room.id})).session;
+ room=(await f.service.send({...host,keyID:'second-device'},command('end',room))).session;
+ release();await starting;
+ const actual=await f.store.read(room.id);assert.equal(actual.providerState.playlistID,'p'.repeat(22));assert(actual.providerState.cleanupComplete);
+ assert(f.calls.some(c=>c.method==='DELETE'&&c.path.endsWith('/followers')));
+ assert(!f.calls.some(c=>c.path.endsWith('/play')));
 });

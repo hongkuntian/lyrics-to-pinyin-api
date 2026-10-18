@@ -71,3 +71,34 @@ test('Spotify duplicate occurrences use exact remaining queue, not URI or a gues
  observeSpotify(room,{...sample(0,[]),contextURI:'spotify:playlist:unrelated'},4,1700);
  assert.equal(room.history.length,2);assert.equal(room.playback.state,'detached');
 });
+test('a uniquely observed retired Spotify occurrence recovers its contributor without replaying skipped picks',()=>{
+ const {room,add}=fixture('spotify'),A='a'.repeat(22),X='x'.repeat(22),B='b'.repeat(22),C='c'.repeat(22);
+ for(const id of [A,X,B,C])add(id);
+ const ids=room.entries.map(e=>e.id);
+ applyCommand(room,host,{action:'begin',revision:room.revision,leaseID:randomUUID()},1300);
+ Object.assign(room.providerState,{playlistID:'p',deviceID:'phone',appliedRevision:room.revision,appliedOrder:ids.slice()});
+ const sample=(id,queue)=>({contextURI:'spotify:playlist:p',deviceID:'phone',trackID:id,positionMS:1000,playing:true,queue});
+ observeSpotify(room,sample(A,[X,B,C]),1,1400);
+ applyCommand(room,guest,{action:'remove',revision:room.revision,entryID:ids[2]},1500);
+ Object.assign(room.providerState,{appliedRevision:room.revision,appliedOrder:room.entries.map(e=>e.id),syncPending:false,nativeQueuePending:true});
+ observeSpotify(room,sample(B,[C]),2,1600);
+ assert.deepEqual(room.history.map(h=>h.track.id),[A,B]);assert.equal(room.history[1].contributorID,room.members[1].id);
+ assert.deepEqual(room.entries.map(e=>e.id),ids);assert.equal(room.playback.entryID,ids[2]);assert(room.providerState.syncPending);
+});
+test('retired/active duplicate identity and indistinguishable long suffixes remain unconfirmed',()=>{
+ const {room,add}=fixture('spotify'),A='a'.repeat(22),B='b'.repeat(22),C='c'.repeat(22);
+ for(const id of [A,B,B,C])add(id);
+ const ids=room.entries.map(e=>e.id);
+ applyCommand(room,host,{action:'begin',revision:room.revision,leaseID:randomUUID()},1300);
+ Object.assign(room.providerState,{playlistID:'p',deviceID:'phone',appliedRevision:room.revision,appliedOrder:ids.slice()});
+ observeSpotify(room,{contextURI:'spotify:playlist:p',deviceID:'phone',trackID:A,positionMS:1000,playing:true,queue:[B,B,C]},1,1400);
+ applyCommand(room,guest,{action:'remove',revision:room.revision,entryID:ids[1]},1500);
+ Object.assign(room.providerState,{appliedRevision:room.revision,appliedOrder:room.entries.map(e=>e.id),syncPending:false});
+ observeSpotify(room,{contextURI:'spotify:playlist:p',deviceID:'phone',trackID:B,positionMS:1000,playing:true,queue:[C]},2,1600);
+ assert.equal(room.playback.state,'unconfirmed');assert.equal(room.history.length,1);
+ const long=fixture('spotify');for(let i=0;i<24;i++)long.add(B);
+ applyCommand(long.room,host,{action:'begin',revision:long.room.revision,leaseID:randomUUID()},1300);
+ Object.assign(long.room.providerState,{playlistID:'p',deviceID:'phone',appliedRevision:long.room.revision,appliedOrder:long.room.entries.map(e=>e.id)});
+ observeSpotify(long.room,{contextURI:'spotify:playlist:p',deviceID:'phone',trackID:B,positionMS:1000,playing:true,queue:Array(20).fill(B)},1,1400);
+ assert.equal(long.room.playback.state,'unconfirmed');assert.equal(long.room.history.length,0);
+});

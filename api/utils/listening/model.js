@@ -51,6 +51,7 @@ export function applyCommand(room,user,input,now){
  }
  case 'begin':
   requireHost(room,user,true);if(!room.entries.length)fail('session_queue_empty');if(!uuid(input.leaseID))fail('invalid_request',400);
+  room.providerState.observationOrder=room.entries.map(e=>e.id);
   room.providerState.started=true;room.providerState.leaseID=input.leaseID;room.providerState.lastSequence=0;
   if(input.entryID&&!upcoming(room).some(e=>e.id===input.entryID))fail('upcoming_only');
   room.playback={state:'starting',entryID:input.entryID??room.playback.entryID??room.entries[0].id,positionMS:0,playing:false,observedAtMS:null};break;
@@ -97,12 +98,33 @@ export function observeSpotify(room,sample,ordinal,now){
  // queue prefixes and delayed provider state cannot silently bind by title.
  candidates.sort((a,b)=>b.tail.length-a.tail.length);
  const candidate=candidates[0];
+ const retained=(room.providerState.observationOrder??[]).map(id=>room.entries.find(e=>e.id===id)??room.retiredEntries.find(e=>e.id===id)).filter(Boolean);
+ const retainedCursor=retained.findIndex(e=>e.id===room.playback.entryID);
+ const possibleRetired=retained.slice(retainedCursor+1).some(e=>e.track.id===sample.trackID&&room.retiredEntries.some(r=>r.id===e.id));
+ if((!candidate||possibleRetired)&&Number.isSafeInteger(sample.positionMS)&&sample.positionMS>=0&&typeof sample.playing==='boolean'){
+  // A song can start between observations while its removal is being applied.
+  // Retain the confirmed occurrence cursor until native queue confirmation.
+  const former=(room.providerState.observationOrder??[]).map(id=>room.entries.find(e=>e.id===id)??room.retiredEntries.find(e=>e.id===id)).filter(Boolean);
+  const cursor=former.findIndex(e=>e.id===room.playback.entryID),eligible=former.slice(cursor+1);
+  const matching=[...new Map([...eligible,...upcoming(room)].filter(e=>e.track.id===sample.trackID).map(e=>[e.id,e])).values()];
+  if(matching.length===1&&room.retiredEntries.some(e=>e.id===matching[0].id)){
+   const entry=matching[0],index=former.findIndex(e=>e.id===entry.id),successors=new Set(former.slice(index+1).map(e=>e.id));
+   const insertion=room.entries.findIndex(e=>successors.has(e.id)),tail=insertion>=0?room.entries.slice(insertion):[];
+   const afterCurrent=room.entries.findIndex(e=>e.id===room.playback.entryID);
+   if(insertion>afterCurrent&&tail.length>0&&sample.queue.length>=Math.min(tail.length,20)&&tail.slice(0,20).every((e,i)=>sample.queue[i]===e.track.id)){
+    room.entries.splice(insertion,0,entry);room.retiredEntries=room.retiredEntries.filter(e=>e.id!==entry.id);
+    room.revision++;room.providerState.syncPending=true;room.providerState.nativeQueuePending=true;
+    capture(room,entry,sample.positionMS,sample.playing,now);return;
+   }
+  }
+ }
+ if(possibleRetired||candidate&&candidates.filter(c=>Math.min(c.tail.length,20)===Math.min(candidate.tail.length,20)).length>1){room.playback.state='unconfirmed';return;}
  if(!candidate||!Number.isSafeInteger(sample.positionMS)||sample.positionMS<0||typeof sample.playing!=='boolean'){room.playback.state='unconfirmed';return;}
  const previous=order.findIndex(e=>e.id===room.playback.entryID);
  if(candidate.index<previous){room.playback.state='unconfirmed';return;}
  if(candidate.index>previous&&previous>=0&&order[previous].track.id===candidate.entry.track.id&&
     (candidate.tail.length===0||sample.positionMS+1500>=room.playback.positionMS)){room.playback.state='unconfirmed';return;}
- room.providerState.nativeQueuePending=false;capture(room,candidate.entry,sample.positionMS,sample.playing,now);
+ room.providerState.nativeQueuePending=false;room.providerState.observationOrder=room.providerState.appliedOrder.slice();capture(room,candidate.entry,sample.positionMS,sample.playing,now);
 }
 export function roomDTO(room,user,{publicRecap=false,inviteCode,inviteURL,shareURL}={}){
  if(publicRecap&&(!room.shared||room.status!=='ended'))fail('session_not_shared',404);

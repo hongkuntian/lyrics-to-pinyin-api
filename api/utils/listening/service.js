@@ -62,8 +62,17 @@ export class ListeningService {
   }
   if(input.action==='control'){
    requireHost(room,user,true);if(room.provider!=='spotify'||room.status!=='active')fail('invalid_request',400);
-   const accepted=await this.store.command(user,id,input,r=>{requireHost(r,user,true);r.providerState.controlPending=input.control;});
-   if(!accepted.duplicate)await this.spotify.control(accepted.room,input.control,await this.spotify.token(accepted.room));return {version:1,session:this.dto(await this.room(id),user)};
+   const accepted=await this.store.command(user,id,input,r=>{requireHost(r,user,true);if(r.status!=='active'||!r.providerState.started)fail('session_ended',410);r.providerState.controlPending=input.control;});
+   if(!accepted.duplicate){
+    const token=await this.spotify.token(accepted.room);
+    await this.store.mutate(id,async r=>{
+     requireHost(r,user,true);if(r.status!=='active'||r.providerState.leaseID!==accepted.room.providerState.leaseID)fail('session_playback_replaced');
+     // End serializes after the admitted external effect; a late Play cannot
+     // resume audio after another device has already ended the session.
+     await this.spotify.control(r,input.control,token);r.providerState.controlPending=null;
+    });
+   }
+   return {version:1,session:this.dto(await this.room(id),user)};
   }
   let track;
   if(input.action==='add')track=await this.catalog.lookup(room,input.trackID);
@@ -102,7 +111,13 @@ export class ListeningService {
   }
   await this.drain(id);return {version:1,session:this.dto(await this.room(id),user)};
  }
- async recordProviderError(id,error){await this.store.mutate(id,r=>{r.providerState.syncError=error.code??'spotify_session_unavailable';r.providerState.syncPending=true;});}
+ async recordProviderError(id,error,{leaseID,cleanup=false}={}){
+  try{await this.store.mutate(id,r=>{
+   if(leaseID&&r.providerState.leaseID!==leaseID)return;
+   if(r.status==='ended'&&(!cleanup||r.providerState.cleanupComplete))return;
+   r.providerState.syncError=error.code??'spotify_session_unavailable';r.providerState.syncPending=true;
+  });}catch(e){if(e.code!=='session_not_found')throw e;}
+ }
  async startSpotify(id,leaseID){
   try{
    // The intent is already durable. A duplicate start never repeats playback.
@@ -110,7 +125,15 @@ export class ListeningService {
    if(!room.providerState.playlistID){
     const playlistID=room.providerState.setupUncertain?await this.spotify.recoverPlaylist(room,token):await this.spotify.createPlaylist(room,token);
     if(!playlistID)fail('spotify_session_setup_uncertain');
-    await this.store.mutate(id,r=>{if(r.providerState.leaseID!==leaseID||r.status!=='active')fail('session_playback_replaced');r.providerState.playlistID=playlistID;r.providerState.setupUncertain=false;});
+    let proceed=false,ended=false,unused=false;
+    try{await this.store.mutate(id,r=>{
+     unused=Boolean(r.providerState.playlistID&&r.providerState.playlistID!==playlistID);
+     if(!unused){r.providerState.playlistID=playlistID;r.providerState.setupUncertain=false;}
+     ended=r.status==='ended';proceed=!unused&&!ended&&r.providerState.leaseID===leaseID;
+    });}catch(error){if(error.code==='session_not_found')await this.spotify.request(token,'DELETE',`/v1/playlists/${playlistID}/followers`);throw error;}
+    if(unused){await this.spotify.request(token,'DELETE',`/v1/playlists/${playlistID}/followers`);return;}
+    if(ended){await this.finishSpotify(id);return;}
+    if(!proceed)return;
    }
    await this.store.mutate(id,async r=>{
     if(r.providerState.leaseID!==leaseID||r.status!=='active')fail('session_playback_replaced');
@@ -124,7 +147,7 @@ export class ListeningService {
     await this.spotify.request(token,'PUT','/v1/me/player/play',{context_uri:'spotify:playlist:'+r.providerState.playlistID,offset:{position:index},position_ms:0},device);
     r.providerState.appliedRevision=r.revision;r.providerState.appliedOrder=r.entries.map(e=>e.id);r.providerState.syncPending=false;r.providerState.nativeQueuePending=true;r.providerState.syncError=null;
    });
-  }catch(error){await this.recordProviderError(id,error);}
+  }catch(error){await this.recordProviderError(id,error,{leaseID});}
  }
  async syncSpotify(id,{recover=false,observeOnly=false}={}){
   try{
@@ -151,7 +174,7 @@ export class ListeningService {
    }
    await this.spotify.request(token,'DELETE',`/v1/playlists/${room.providerState.playlistID}/followers`);
    await this.store.mutate(id,r=>{r.providerState.cleanupComplete=true;r.providerState.syncPending=false;r.providerState.nativeQueuePending=false;r.providerState.syncError=null;});
-  }catch(error){await this.recordProviderError(id,error);}
+  }catch(error){await this.recordProviderError(id,error,{cleanup:true});}
  }
  async tick(message){
   const id=message.sessionID;let room=await this.store.read(id);if(!room)return;await this.drain(id);room=await this.room(id);
