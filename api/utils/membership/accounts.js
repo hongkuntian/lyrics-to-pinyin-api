@@ -1,3 +1,4 @@
+import {scrubListeningAccount} from '../listening/account.js';
 import {revokeSpotifyInTransaction,flushSpotifyCleanup} from '../spotify/revocation.js';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {digest,LibraryError} from '../song-library/store.js';
@@ -125,6 +126,7 @@ export class AccountStore {
       await db.query('SELECT id FROM membership_settings WHERE id=1 FOR UPDATE');
       await this.nonce(db,input,'delete',user.id,true);
       spotifyCleanup=await revokeSpotifyInTransaction(db,{ownerID:user.id},'accountDeleted');
+      await scrubListeningAccount(db,user.id);
       await db.query('UPDATE library_users SET disabled=true WHERE id=$1',[user.id]);
       await db.query('DELETE FROM selected_source_access WHERE user_id=$1',[user.id]);
       await db.query('UPDATE library_tokens SET revoked=true WHERE user_id=$1',[user.id]);
