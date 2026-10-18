@@ -6,9 +6,9 @@ import * as packaging from '../../scripts/build-output.mjs';
 test('explicit static carrier prevents API helper auto-discovery and redundant package hooks',async()=>{
  const config=JSON.parse(await readFile(new URL('../../vercel.json',import.meta.url)));
  const pkg=JSON.parse(await readFile(new URL('../../package.json',import.meta.url)));
- // Production CLI 64.3.1 supplies build-utils 14.21.2. Match the carrier's
- // exact peer requirement so npm can install it before packaging our functions.
- assert.deepEqual(config.builds,[{src:'package.json',use:'@vercel/static-build@21.0.2'}]);
+ // Hosted builds can select different CLI versions. A default runtime spec
+ // resolves to that CLI's bundled carrier and matching build-utils peer.
+ assert.deepEqual(config.builds,[{src:'package.json',use:'@vercel/static-build'}]);
  assert.equal(config.functions,undefined);
  assert.equal(config.crons,undefined,'Build Output owns cron configuration; the CLI appends top-level duplicates');
  assert.deepEqual(packaging.manifest.crons,[{path:'/api/review-reports',schedule:'0 8 * * *'}]);

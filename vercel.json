@@ -3,7 +3,7 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/static-build@21.0.2"
+      "use": "@vercel/static-build"
     }
   ],
   "buildCommand": "node scripts/build-output.mjs",
