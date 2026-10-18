@@ -4,7 +4,7 @@ import {cleanLyrics} from '../utils/lyric-quality.js';
 import {parseLRC} from '../utils/lrc.js';
 import {decryptQRC} from '../utils/vendor/qq-qrc-codec.js';
 import {parseQRC,qrcBody} from '../utils/qq-qrc.js';
-import {sameRecordingNames,sameRecordingVersions,recordingNames,recordingScore,findRecording,RecordingMismatchError,searchTitle} from '../utils/recording-match.js';
+import {sameRecordingNames,sameRecordingVersions,recordingNames,normalizeRecordingText,stripTitleDescription,recordingScore,findRecording,RecordingMismatchError,searchTitle} from '../utils/recording-match.js';
 
 const maxBytes=512*1024,legacyOrigin='https://c.y.qq.com',musicuOrigin='https://u.y.qq.com';
 const comm={ct:24,cv:4747474,format:'json',inCharset:'utf-8',outCharset:'utf-8',notice:0,platform:'yqq.json',needNewCode:1,g_tk:5381,chid:'0'};
@@ -52,6 +52,59 @@ function completeTitle(primary,subtitle) {
  if(!scalar(primary)||subtitle!==undefined&&subtitle!==''&&!scalar(subtitle))return null;
  return subtitle&&!primary.includes(subtitle)?`${primary} (${subtitle})`:primary;
 }
+// An open marker list cannot prove that an unknown annotation is harmless.
+// Keep every complete annotation/suffix as edition evidence except these
+// closed release labels and reviewed, freshly source-bound sheet semantics.
+const releaseLabel=/^(?:(?:super\s+|digital\s+)?deluxe(?:\s+edition)?|expanded\s+edition|standard\s+edition|single|ep|lp|album|bonus\s+tracks?|disc\s+\d{1,2}|cd\s*\d{1,2})$/iu;
+const materialWords=/(?<![\p{L}\p{N}])(?:live|remaster(?:ed)?|re[\s-]?record(?:ed|ing)?|remix|mix(?:ed)?|version|edition|edit(?:ed)?|mono(?:phonic)?|stereo(?:phonic)?|instrumental|karaoke|acoustic|a[\s-]?cap(?:p)?ella|demo|cover|reprise|clean|explicit|sped(?:\s+up)?|speed(?:\s+up)?|slowed(?:\s+down)?|nightcore|daycore|pitch(?:ed)?|dub|surround|spatial|dolby)(?![\p{L}\p{N}])|版本?|混音|现场|現場|演唱会|演唱會|重制|重製|重录|重錄|再录|再錄|伴奏|纯音乐|純音樂|不插电|不插電|清唱|翻唱|剪辑|剪輯|单声道|單聲道|立体声|立體聲|加速|减速|減速|ライブ|ライヴ|リミックス|バージョン|ヴァージョン|リマスター|モノラル|ステレオ|再録|라이브|리믹스|버전|리마스터|스테레오|모노|재녹음/iu;
+const descriptorSet=values=>[...new Set(values)].sort();
+const sameDescriptors=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+function editionDetails(value,{album=false,information=[]}={}) {
+ if(value===undefined||value==='')return {base:'',canonical:'',descriptors:[]};
+ if(!scalar(value,1000))return null;
+ const text=value.normalize('NFKC').trim(),pairs={'(':')','[':']','{':'}','【':'】','「':'」','『':'』'},closers=new Set(Object.values(pairs));
+ const pieces=[];let plain='',at=0;
+ while(at<text.length) {
+  const char=text[at];
+  if(!pairs[char]){if(closers.has(char))return null;plain+=char;at++;continue;}
+  if(plain){pieces.push({plain});plain='';}
+  const start=at++,stack=[pairs[char]];
+  while(at<text.length&&stack.length) {
+   const next=text[at++];if(pairs[next]){stack.push(pairs[next]);if(stack.length>8)return null;}
+   else if(closers.has(next)&&stack.pop()!==next)return null;
+  }
+  if(stack.length)return null;
+  pieces.push({raw:text.slice(start,at),label:text.slice(start+1,at-1).trim()});if(pieces.length>64)return null;
+ }
+ if(plain)pieces.push({plain});
+ const outside=pieces.filter(p=>p.plain!==undefined).map(p=>p.plain).join(' '),suffixes=outside.split(/\s+[-–—:|]\s+/u);
+ let base=suffixes.shift().trim(),canonical='',descriptors=[];
+ for(const piece of pieces) {
+  if(piece.plain!==undefined){canonical+=piece.plain;continue;}
+  const label=piece.label;if(!label)continue;
+  const reviewed=information.some(rule=>normalizeRecordingText(outside)===rule.base&&normalizeRecordingText(label)===rule.label);
+  const credits=/^(?:feat\.?|ft\.?|featuring|with)\s+\S/iu.test(label);
+  const description=stripTitleDescription(`x (${label})`)==='x';
+  if(reviewed||album&&releaseLabel.test(label)||credits||description&&!materialWords.test(label))continue;
+  descriptors.push(normalizeRecordingText(label));canonical+=piece.raw;
+ }
+ for(const suffix of suffixes)if(suffix.trim()&&!(album&&releaseLabel.test(suffix.trim())))descriptors.push(normalizeRecordingText(suffix));
+ // Bare album names remain release names. Explicitly qualified trailing
+ // editions and live-venue phrases retain their entire supplied descriptor.
+ if(album) {
+  base=base.replace(/\s+(?:(?:super\s+|digital\s+)?deluxe(?:\s+edition)?|expanded\s+edition|standard\s+edition)$/iu,'');
+  const remaster=/(?:^|\s)((?:\d{4}\s+)?remaster(?:ed)?(?:\s+\d{4})?(?:\s+(?:version|edition))?)$/iu.test(base);
+  const live=/\blive\s+(?:at|in|from|on|recordings?|performances?)\b.*$/iu.exec(base);
+  const qualified=/\bacoustic\s+sessions?\b|\bre[\s-]?record(?:ed|ing)?\b|\b(?:sped|slowed|dolby|atmos|spatial|surround|reverb)\b|\bspeed\s+up\b|\bpitch(?:ed)?\s+(?:shift|up|down|[+-]?\d)/iu.test(base);
+  const tail=/(?<![\p{L}\p{N}])(?:live|mix(?:ed)?|remix|version|edition|edit(?:ed)?|mono(?:phonic)?|stereo(?:phonic)?|instrumental|karaoke|acoustic|a[\s-]?cap(?:p)?ella|demo|cover|reprise|clean|explicit|nightcore|daycore|reverb)(?:\s+\d{4})?$|\b\d+(?:\.\d+)?x$|\b\d{2,3}\s*bpm$/iu.test(base);
+  const localized=materialWords.test(base.replace(/\p{Script=Latin}+/gu,''));
+  // Without a delimiter the recording/release boundary is ambiguous. Retain
+  // the complete qualified label rather than dropping earlier descriptors.
+  if(remaster||live||qualified||tail||localized)descriptors.push(normalizeRecordingText(base));
+ }else if(materialWords.test(base))descriptors.push(normalizeRecordingText(base));
+ const titleText=canonical.replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+[^()]+\)/giu,'');
+ return {base:normalizeRecordingText(base),canonical:normalizeRecordingText(titleText),descriptors:descriptorSet(descriptors)};
+}
 function metadata(raw,detail=false,allowMissingAlbum=false) {
  if(!object(raw))return null;
  const songID=id(detail?raw.id:raw.songid),songMID=detail?raw.mid:raw.songmid;
@@ -69,32 +122,31 @@ function metadata(raw,detail=false,allowMissingAlbum=false) {
   ||(raw.explicit!==undefined&&typeof raw.explicit!=='boolean')||(raw.isrc!=null&&!scalar(raw.isrc,32)))return null;
  const names=raw.singer.map(s=>s.name);
  const artist=names.join(' & '),entities=raw.singer.map(s=>({id:id(s.id),name:s.name}));
+ // Reviewed sheet-label semantics only; this never rewrites a request or
+ // equates catalog names. Unknown appended translations fail closed.
+ const information=detail&&primary==='アイドル'&&fullTitle.normalize('NFKC')==='アイドル (偶像)'&&names.length===1&&names[0]==='YOASOBI'
+  ?[{base:normalizeRecordingText('アイドル'),label:normalizeRecordingText('偶像')}]:[];
+ let displayAuthority=false;
  if(detail) {
-  const left={title:primary,artist,album,artist_entities:entities},right={...left,title:fullTitle},empty={...left,title:''};
+  const left={title:primary,artist,album,artist_entities:entities},right={...left,title:fullTitle};
   const primaryNames=recordingNames(left),displayNames=recordingNames(right);
-  const a=primaryNames.credits,b=displayNames.credits,sameCredits=JSON.stringify(a)===JSON.stringify(b);
-  // Category flags establish that a title label is material, not that two
-  // years, venues or named edits identify the same edition. Compare the full
-  // normalized descriptors before granting display-label authority. Ignore
-  // shared album markers here so they cannot mask contradictory title labels.
-  const ownVersion=value=>!sameRecordingVersions({...value,album:''},{...empty,album:''});
-  if(ownVersion(left)&&ownVersion(right)&&primaryNames.title!==displayNames.title)return null;
-  if(sameRecordingVersions(left,right)&&sameCredits)title=primary;
-  else {
-   const primaryVersion=!sameRecordingVersions(left,empty),displayVersion=!sameRecordingVersions(right,empty);
-   // Translation alone is informational. A version or printed guest carried
-   // in either authoritative label must never disappear from admission.
-   if(primaryVersion&&!displayVersion||a.length>b.length&&b.every(n=>a.includes(n)))title=primary;
-   else if(primaryVersion&&displayVersion&&!sameRecordingVersions(left,right)
-    ||!sameCredits&&!a.every(n=>b.includes(n)))return null;
-  }
+  const p=editionDetails(primary,{information}),d=editionDetails(fullTitle,{information}),release=editionDetails(album,{album:true,information});
+  if(!p||!d||!release)return null;
+  if(p.canonical===d.canonical)d.descriptors=p.descriptors;
+  else if(p.descriptors.length&&d.descriptors.length||p.base!==d.base)return null;
+  const required=descriptorSet([...p.descriptors,...d.descriptors,...release.descriptors]);
+  const credits=descriptorSet([...primaryNames.credits,...displayNames.credits]);
+  const complete=(parts,names)=>sameDescriptors(descriptorSet([...parts.descriptors,...release.descriptors]),required)&&sameDescriptors(names,credits);
+  const primaryComplete=complete(p,primaryNames.credits);displayAuthority=complete(d,displayNames.credits);
+  if(!primaryComplete&&!displayAuthority)return null;
+  title=primaryComplete?primary:fullTitle;
  }
  const song={source:'qq',id:songID,qqMID:songMID,title,artist,...(completeAlbum?{album}:{}),duration:raw.interval,
   creditedArtistNames:names,artist_entities:entities,
   providerTitle:detail?(raw.name??raw.title):primary,...(raw.subtitle?{subtitle:raw.subtitle}:{}),
   ...(detail?{providerDisplayTitle:display,providerDisplayArtistNames:raw.singer.map(s=>s.title||s.name)}:{}),
   ...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),...(raw.isrc?{isrc:raw.isrc}:{})};
- if(detail)boundLabels.set(song,{title:fullTitle,artists:song.providerDisplayArtistNames});return song;
+ if(detail)boundLabels.set(song,{title:displayAuthority?fullTitle:null,artists:song.providerDisplayArtistNames,information});return song;
 }
 function validateNames(data,song) {
  if(id(data?.songID)!==song.id)throw mismatch();
@@ -109,9 +161,15 @@ function matchesArtistLabel(value,song) {
  return !!artists&&sameRecordingNames({...song,artist:value},{...song,artist:artists.join(' & ')});
 }
 function matchesTitleLabel(value,song) {
- if(sameRecordingNames({...song,title:value},song))return true;
+ const information=boundLabels.get(song)?.information;
+ const equivalent=reference=>{
+  const a=editionDetails(value,{information}),b=editionDetails(reference,{information});
+  return !!a&&!!b&&sameRecordingNames({...song,title:value},{...song,title:reference})
+   &&(a.canonical===b.canonical||sameDescriptors(a.descriptors,b.descriptors));
+ };
+ if(equivalent(song.title))return true;
  const display=boundLabels.get(song)?.title;
- if(display&&sameRecordingNames({...song,title:value},{...song,title:display}))return true;
+ if(display&&equivalent(display))return true;
  // QQ's source-owned sheet may append an informational Grammy award label.
  // This closed descriptor grammar excludes guests and recording versions;
  // its remaining base must still exactly match the selected catalog source.
@@ -145,7 +203,14 @@ function compatibleVersions(song,request) {
  // An explicit request flag can qualify that one marker; it cannot erase Clean,
  // Live, Remix, guests, or any other recording distinction.
  const classified=value=>request.explicit===true?{...value,title:`${value.title} (Explicit)`}:value;
- return sameRecordingVersions(classified(song),classified(request));
+ if(!sameRecordingVersions(classified(song),classified(request)))return false;
+ const information=boundLabels.get(song)?.information;
+ const left=editionDetails(song.album,{album:true,information}),right=editionDetails(request.album,{album:true});
+ const a=editionDetails(song.title,{information}),b=editionDetails(request.title);
+ if(!left||!right||!a||!b)return false;
+ const qualified=parts=>descriptorSet(parts.descriptors.filter(label=>request.explicit!==true||label!=='explicit'));
+ return sameDescriptors(qualified(left),qualified(right))
+  &&(a.canonical===b.canonical||sameDescriptors(qualified(a),qualified(b)));
 }
 const compatible=(song,request)=>sameRecordingNames(song,request)&&recordingScore(song,request)>=0
  &&compatibleVersions(song,request)

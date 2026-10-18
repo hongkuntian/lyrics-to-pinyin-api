@@ -14,6 +14,8 @@ const bilingualQRC={
 const request={artist:'Test',title:'Synthetic',duration:120,album:'Example'};
 // Material edition descriptors, with synthetic First/Second source rows.
 const editionQRC={
+  "opaque": "ee7befb746f93831d42dcdf2e21f0d5dd9fd95a45509a645c457a4c6b1f25e151e8cad1e55389e4864eb076a798a526b819f34df40ae0b36fdd4984b94688c564e9d16a5f1726d3a0e89c80296ae7683916dacccb3f3b9b6e0396a06cdd95dfe82c56fd602227302c5fb217554c32ecea41c21461a1fea1ae731f9db972be9374b2c49600a56aeabd4450e4dd7975651ae6c3d9aaed629ce",
+  "caption": "4c8e63086c537f1dd5f809ab8bdf9d49856c7fd798cd6b5daf7ce698547da00c1c925b19479198605876e50cd348dda70540e8c667278adccd33aa980f94c7c3c4da4a2bec8ee669bd55dde28837141259b0bbd93722720f58fddb4709c38b2fe3afb357c08b7536b67aed41ba618d7df1006d23f8199452942e279a178e70bf5b9e8c5bd40c6cbad28b0a861a21f112c403667125a51622",
   "remaster": "ee7befb746f93831d42dcdf2e21f0d5dd9fd95a45509a645c457a4c6b1f25e151e8cad1e55389e4864eb076a798a526b819f34df40ae0b36fdd4984b94688c567db1400a5842b1b2c8161cf2ac409a3ae0396a06cdd95dfe82c56fd602227302c5fb217554c32ecea41c21461a1fea1ae731f9db972be9374b2c49600a56aeabdd81f508cc44f7dbe06af8010ed7b5b3",
   "live": "ee7befb746f93831d42dcdf2e21f0d5dd9fd95a45509a645c457a4c6b1f25e151e8cad1e55389e4864eb076a798a526b819f34df40ae0b36fdd4984b94688c56272ced23d1af1267dc40fcb29e6549da9a7b9cf1334b49cf717a33a005de4c5b23b828f3620c7aa662c792bfbd7d85906cc8044c493a392d33efe2de008de861d47470cf47ed511e2348468e83d970e6",
   "edit": "ee7befb746f93831d42dcdf2e21f0d5dd9fd95a45509a645c457a4c6b1f25e151e8cad1e55389e4864eb076a798a526b819f34df40ae0b36fdd4984b94688c561cc417465a3f0e3391370693e4f76ad5e0396a06cdd95dfe82c56fd602227302c5fb217554c32ecea41c21461a1fea1ae731f9db972be9374b2c49600a56aeabdd81f508cc44f7db6fab791f38fc93cf",
@@ -56,6 +58,79 @@ function context(rows=[candidate()],lyrics={},extra={}) {
  }};
 }
 const search=ctx=>new QQMusicAPI().searchSong(ctx.artist,ctx.title,ctx);
+
+test('QQ full display-edition authority rejects mixes, versions, channels and unclassified qualifiers',async()=>{
+ for(const [primary,display,hex] of [
+  ['Synthetic (Original Mix)','Synthetic (Extended Mix)',f.providerEditionQRC['Synthetic (Extended Mix)']],
+  ['Synthetic (Original Version)','Synthetic (Re-recorded Version)',f.providerEditionQRC['Synthetic (Re-recorded Version)']],
+  ['Synthetic (Mono)','Synthetic (Stereo)',f.providerEditionQRC['Synthetic (Stereo)']],
+  ['Synthetic (Red Opaque Qualifier)','Synthetic (Blue Opaque Qualifier)',editionQRC.opaque]
+ ])for(const provider of ['apple','spotify']) {
+  const row=candidate('123',{songname:primary,detailTitle:display}),lyrics={123:{hex,fields:{songName:display}}};
+  const target={title:primary,...(provider==='spotify'?{recordingProvider:'spotify',creditedArtistNames:['Test']}:{})};
+  await assert.rejects(new QQMusicAPI().getRecording('123',context([row],lyrics,target)),{code:'recording_mismatch'});
+  await assert.rejects(search(context([row],lyrics,{...target,fastRows:[row]})),{code:'recording_mismatch'});
+ }
+});
+test('QQ one-sided material labels remain in catalog admission and cannot authorize an unqualified sheet',async()=>{
+ const title='Synthetic (Original Mix)',hex=f.providerEditionQRC[title],lyrics={123:{hex,fields:{songName:title}}};
+ const qualified=candidate('123',{detailTitle:title});
+ await assert.rejects(new QQMusicAPI().getRecording('123',context([qualified],lyrics)),{code:'recording_mismatch'});
+ const accepted=await new QQMusicAPI().getRecording('123',context([qualified],lyrics,{title}));assert.equal(accepted.song.title,title);
+ const primary=candidate('123',{songname:title,detailTitle:'Synthetic'});
+ const proper=await new QQMusicAPI().getRecording('123',context([primary],lyrics,{title}));assert.equal(proper.song.title,title);
+ await assert.rejects(new QQMusicAPI().getRecording('123',context([primary],{}, {title})),{code:'recording_mismatch'});
+});
+test('QQ compares complete album descriptors while permitting ordinary alternate release names',async()=>{
+ const conflicts=[['2011 Remaster','2015 Remaster'],['Paris Live','Tokyo Live'],['Original Mix','Extended Mix'],
+  ['Original Version','Re-recorded Version'],['Mono','Stereo'],['Short Edit','Extended Edit'],['Sped Up 1.1x','Sped Up 1.2x'],
+  ['Slowed 0.8x','Slowed 0.9x'],['2011 Re-recording','2015 Re-recording'],['Red Opaque Qualifier','Blue Opaque Qualifier']];
+ for(const [left,right] of conflicts)for(const provider of ['apple','spotify']) {
+  const row=candidate('123',{albumname:`Other [${right}]`}),target={album:`Example (${left})`,...(provider==='spotify'?{recordingProvider:'spotify',creditedArtistNames:['Test']}:{})};
+  await assert.rejects(new QQMusicAPI().getRecording('123',context([row],{},target)),{code:'recording_mismatch'});
+  await assert.rejects(search(context([row],{}, {...target,fastRows:[row]})),{code:'recording_mismatch'});
+ }
+ for(const [album,sourceAlbum] of [['Example (2011 Remaster)','Other [2011 Remaster]'],['Example (Original Mix)','Other (Original Mix)'],
+  ['Example (Red Opaque Qualifier)','Other (Red Opaque Qualifier)'],['Example - Single','Other (Deluxe Edition)'],
+  ['Ordinary Collection','Cover Me'],['Example Deluxe Edition','Other Standard Edition']]) {
+  const row=candidate('123',{albumname:sourceAlbum}),ctx=context([row],{}, {album,fastRows:[row]}),song=await search(ctx);
+  assert.equal(song.album,sourceAlbum);assert.ok(song.lyricsData.lines.every(l=>l.vocalTiming));
+  const fresh=await new QQMusicAPI().getRecording('123',context([row],{}, {album}));assert.equal(fresh.song.album,sourceAlbum);
+ }
+ const prose=candidate('123',{albumname:'Live Through Tomorrow'}),target={album:'Cover Me',recordingProvider:'spotify',creditedArtistNames:['Test']};
+ assert.equal((await new QQMusicAPI().getRecording('123',context([prose],{},target))).song.album,'Live Through Tomorrow');
+});
+test('QQ material descriptors cannot hide in descriptive captions or malformed nested labels',async()=>{
+ const title='Synthetic (from The Mono Edition)',lyrics={123:{hex:editionQRC.caption,fields:{songName:''}}};
+ await assert.rejects(new QQMusicAPI().getRecording('123',context([candidate()],lyrics)),{code:'recording_mismatch'});
+ await assert.rejects(new QQMusicAPI().getRecording('123',context([candidate('123',{detailTitle:title})],lyrics)),{code:'recording_mismatch'});
+ for(const album of ['Example (2011 Remaster','Example [Mono)','Example '+ '('.repeat(9)+'Mono'+')'.repeat(9)]) {
+  await assert.rejects(new QQMusicAPI().getRecording('123',context([candidate('123',{albumname:album})],{}, {album})),{code:'recording_mismatch'});
+ }
+ for(const [album,sourceAlbum] of [['Example Mono 2011 Remaster','Example Stereo 2011 Remaster'],
+  ['Example Live Original Mix','Example Live Extended Mix'],['Example - Blue Unknown','Other - Red Unknown']]) {
+  await assert.rejects(new QQMusicAPI().getRecording('123',context([candidate('123',{albumname:sourceAlbum})],{}, {album})),{code:'recording_mismatch'});
+ }
+ for(const [album,sourceAlbum] of [['Example Monophonic','Example Stereophonic'],['Example Dolby Atmos','Example Stereo'],
+  ['Example 立体声','Example 单声道'],['Example SpedUp 0.8x','Example SpedUp 1.2x'],['Example 120 BPM','Example 130 BPM']]) {
+  await assert.rejects(new QQMusicAPI().getRecording('123',context([candidate('123',{albumname:sourceAlbum})],{}, {album})),{code:'recording_mismatch'});
+ }
+});
+test('QQ reviewed Idol labels are informational only on fresh source objects and retain every other edition',async()=>{
+ const row=candidate('123',{songname:'アイドル',detailTitle:'アイドル (偶像)',albumname:'アイドル (偶像)',
+  singer:[{id:1,mid:'00000000000001',name:'YOASOBI',title:'YOASOBI (ヨアソビ)'}]});
+ const target={artist:'YOASOBI',title:'アイドル',album:'アイドル - Single'},lyrics={123:{hex:bilingualQRC.idol,fields:{songName:'',singerName:''}}};
+ const ctx=context([row],lyrics,{...target,fastRows:[row]}),song=await search(ctx);assert.equal(song.title,'アイドル');assert.equal(song.album,'アイドル (偶像)');
+ const fresh=await new QQMusicAPI().getRecording('123',context([row],lyrics,target));assert.ok(fresh.lyrics.lines.every(l=>l.vocalTiming));
+ const copied=JSON.parse(JSON.stringify(song));copied.information=[{base:'アイドル',label:'偶像'}];
+ await assert.rejects(new QQMusicAPI().getLyrics('123',{...ctx,song:copied}),{code:'recording_mismatch'});
+ for(const edition of ['2015 Remaster','Tokyo Live','Original Mix','Mono','Unknown Qualifier']) {
+  const other={...row,albumname:`アイドル (偶像) (${edition})`};
+  await assert.rejects(new QQMusicAPI().getRecording('123',context([other],lyrics,target)),{code:'recording_mismatch'});
+ }
+ const unknown=candidate('123',{albumname:'Other (Blue Opaque Qualifier)'});
+ await assert.rejects(new QQMusicAPI().getRecording('123',context([unknown],{}, {album:'Example (Red Opaque Qualifier)',explicit:true})),{code:'recording_mismatch'});
+});
 
 for(const edition of [
  {key:'remaster',primary:'Synthetic (2011 Remaster)',display:'Synthetic (2015 Remaster)'},
