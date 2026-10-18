@@ -1,4 +1,4 @@
-import {chooseLyricCandidate,timingQuality,hasMeasuredVocalTiming} from './lyric-selection.js';
+import {chooseLyricCandidate,timingQuality,hasCompleteMeasuredVocalTiming,measuredSelectionProtected} from './lyric-selection.js';
 // At most two lookups run at once. Only the caller's validated results compete.
 // Timed lyrics win immediately; untimed lyrics leave a short window for timing.
 export function hedgedLookup(apis, lookup, {delayMs=350, untimedGraceMs=350,wordTimingGraceMs=0,chooseCandidate=chooseLyricCandidate,signal,onCandidate}={}) {
@@ -24,7 +24,7 @@ export function hedgedLookup(apis, lookup, {delayMs=350, untimedGraceMs=350,word
         const complete=result&&!result.lyrics.partial&&timingQuality(result).usable;
         if(complete) {
           untimed=chooseCandidate(untimed,result);
-          if(wordTimingGraceMs<=0||hasMeasuredVocalTiming(untimed)||!capableRemaining())finish(untimed);
+          if(wordTimingGraceMs<=0||hasCompleteMeasuredVocalTiming(untimed)||measuredSelectionProtected(untimed)||!capableRemaining())finish(untimed);
           else {
             clearTimeout(graceTimer);
             if(wordDeadline===null){wordDeadline=Date.now()+wordTimingGraceMs;wordTimer=setTimeout(()=>finish(untimed),wordTimingGraceMs);}

@@ -69,7 +69,7 @@ async function reusableIndependentTranslation(db,doc,target) {
     if(spotify)independentModelContext(doc);
     source=sourceCapsule(doc.response);body=requestBody(doc,target);
   } catch {return null;}
-  const labels={lrclib:['lrclib','LRCAPI'],netease:['netease','NeteaseAPI'],kugou:['kugou','KugouAPI']}[source.provider];
+  const labels={lrclib:['lrclib','LRCAPI'],netease:['netease','NeteaseAPI'],kugou:['kugou','KugouAPI'],qq:['qq','QQMusicAPI']}[source.provider];
   const candidates=(await db.query(`SELECT t.id AS container_id,r.content,r.recipe,j.generation_request,
     d.response,d.structure,d.source_hash,d.source_capsule,d.model_context,d.recording_key
     FROM song_translations t JOIN translation_heads h ON h.translation_id=t.id

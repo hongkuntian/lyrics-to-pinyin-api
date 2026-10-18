@@ -3,6 +3,7 @@ import { SpotifyAPI } from "./spotify.js";
 import { GeniusAPI } from "./genius.js";
 import { LRCAPI } from "./lrclib.js";
 import { KugouAPI } from "./kugou.js";
+import { QQMusicAPI } from "./qq.js";
 
 // Music API registry
 const musicAPIs = new Map();
@@ -11,17 +12,18 @@ const musicAPIs = new Map();
 musicAPIs.set("lrclib", new LRCAPI());
 musicAPIs.set("netease", new NeteaseAPI());
 musicAPIs.set("kugou", new KugouAPI());
+musicAPIs.set("qq", new QQMusicAPI());
 // musicAPIs.set("spotify", new SpotifyAPI());
 // musicAPIs.set("genius", new GeniusAPI());
 
 // Script to platform mapping - NetEase as primary, LRC Lib as backup
 const scriptPlatformMap = {
-  "zh": ["netease", "lrclib", "kugou"], // Recording-verified fallback after the existing sources.
-  "yue": ["netease", "lrclib", "kugou"],
-  "ja": ["lrclib"],            // Japanese - LRC Lib only
-  "ko": ["lrclib"],            // Korean - LRC Lib only
-  "ru": ["lrclib"],
-  "en": ["netease", "lrclib", "kugou"]
+  "zh": ["netease", "qq", "kugou", "lrclib"],
+  "yue": ["netease", "qq", "kugou", "lrclib"],
+  "ja": ["netease", "qq", "kugou", "lrclib"],
+  "ko": ["kugou", "qq", "lrclib", "netease"],
+  "ru": ["kugou", "qq", "lrclib", "netease"],
+  "en": ["kugou", "qq", "lrclib", "netease"]
 };
 
 export function getMusicAPI(script, platform = null) {
