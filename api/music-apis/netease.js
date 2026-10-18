@@ -11,6 +11,26 @@ const withTitleEvidence=(song,raw,field,request)=>{
   const evidence=neteaseTitleEvidence(raw,field),candidate={...song,neteaseTitleEvidence:evidence};
   return evidence&&neteaseDescriptiveTitleMatches(candidate,request,normalizeRecordingText)?candidate:song;
 };
+// NetEase may prepend the same structured credits to LRC as to YRC. They
+// describe the sheet, not sung rows. Unknown shapes and later JSON stay intact.
+function withoutLeadingLRCMetadata(raw='') {
+  const rows=raw.replace(/^\uFEFF/,'').split(/\r?\n/),kept=[];let leading=true,count=0;
+  for(const row of rows){
+    if(leading&&!row.trim()){kept.push(row);continue;}
+    if(leading&&/^\[(?:ar|al|ti|by|offset|length|re|ve):[^\r\n]*\]$/i.test(row)){kept.push(row);continue;}
+    if(leading&&count<32&&row.length<=16384&&/^\s*\{/.test(row)){
+      try {
+        const v=JSON.parse(row),bounded=s=>typeof s==='string'&&s.length<=4096&&!/\p{Surrogate}/u.test(s);
+        if(v&&Object.keys(v).every(k=>['t','c'].includes(k))&&Number.isSafeInteger(v.t)&&Math.abs(v.t)<=7200000
+          &&Array.isArray(v.c)&&v.c.length>0&&v.c.length<=128&&v.c.every(c=>c&&typeof c==='object'&&!Array.isArray(c)
+            &&Object.keys(c).every(k=>['tx','li','or'].includes(k))&&bounded(c.tx)&&c.tx.length<=2000
+            &&['li','or'].every(k=>!(k in c)||bounded(c[k])))) {count++;continue;}
+      }catch { /* Preserve unrecognized content for the normal parser. */ }
+    }
+    leading=false;kept.push(row);
+  }
+  return kept.join('\n');
+}
 export class NeteaseAPI extends BaseMusicAPI {
   constructor() { super('NeteaseAPI',['zh','yue','en']); this.supportsVocalTiming=true; this.baseURL='https://netease-cloud-music-api-gules-mu.vercel.app'; this.artistAliases=new BoundedCache({limit:128,ttlMs:86400000}); }
   async searchSong(artist,title,context={}) {
@@ -146,5 +166,5 @@ export class NeteaseAPI extends BaseMusicAPI {
     if(data?.code!==200) throw new Error('NetEase lyrics unavailable');
     return result.lyrics;
   }
-  parseLyrics(raw) { return parseLRC(raw); }
+  parseLyrics(raw) { return parseLRC(withoutLeadingLRCMetadata(raw)); }
 }
