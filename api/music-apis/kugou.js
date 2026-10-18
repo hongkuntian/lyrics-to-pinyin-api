@@ -88,8 +88,40 @@ function lyricsBody(data,song) {
   return result;
 }
 
+// Manual discovery deliberately does not claim recording equivalence. Provider
+// download capabilities live only within this call and never reach a client.
+async function lyricCandidates(query,context={}) {
+  if(typeof query!=='string'||!query.trim()||query.length>500)throw providerError();
+  const data=await requestJSON('/search',{ver:1,man:'yes',client:'pc',keyword:chinese.sify(query),
+    ...(Number.isFinite(context.duration)&&context.duration>0?{duration:Math.round(context.duration*1000)}:{})},context);
+  if(!Array.isArray(data.candidates)||data.candidates.length>100)throw providerError();
+  const records=new Map();
+  for(const raw of data.candidates) {
+    if(!raw||!/^\d{1,20}$/.test(String(raw.id??''))||String(raw.id).startsWith('0')
+      ||typeof raw.song!=='string'||!raw.song.trim()||raw.song.length>500
+      ||typeof raw.singer!=='string'||!raw.singer.trim()||raw.singer.length>1024
+      ||!Number.isFinite(raw.duration)||raw.duration<=0||raw.duration>7200000
+      ||typeof raw.accesskey!=='string'||!/^[A-Za-z0-9_-]{1,256}$/.test(raw.accesskey))continue;
+    const song={source:'kugou',id:String(raw.id),title:raw.song,artist:raw.singer,duration:raw.duration/1000};
+    const existing=records.get(song.id);
+    if(existing&&(JSON.stringify(existing.song)!==JSON.stringify(song)||existing.key!==raw.accesskey))throw providerError();
+    records.set(song.id,{song,key:raw.accesskey});
+  }
+  return records;
+}
+
 export class KugouAPI extends BaseMusicAPI {
   constructor() { super('KugouAPI',['zh','en','yue']); }
+  async searchLyrics(query,context={}) {
+    return [...(await lyricCandidates(query,context)).values()].map(entry=>entry.song);
+  }
+  async previewLyrics(id,query,context={}) {
+    if(!/^[1-9]\d{0,19}$/.test(String(id)))throw providerError();
+    const entry=(await lyricCandidates(query,context)).get(String(id));
+    if(!entry)return null;
+    const raw=await requestJSON('/download',{ver:1,client:'pc',id:entry.song.id,accesskey:entry.key,fmt:'lrc',charset:'utf8'},context);
+    return {...entry.song,lyricsData:lyricsBody(raw,entry.song)};
+  }
   async searchSong(artist,title,context={}) {
     cancelled(context.signal);
     if(!Number.isFinite(context.duration) || context.duration<=0) return null;

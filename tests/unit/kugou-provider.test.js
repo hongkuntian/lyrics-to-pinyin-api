@@ -16,6 +16,29 @@ function context(candidates,lyrics={},extra={}) {
 }
 const search=(ctx,values={})=>new KugouAPI().searchSong(values.artist ?? request.artist,values.title ?? request.title,ctx);
 
+test('manual discovery retains alternative versions without weakening automatic matching or exposing capabilities',async()=>{
+  const ctx=context([candidate('10'),candidate('11',{song:'窗前 (Live)',duration:135000,product_from:'ugc'})]);
+  const values=await new KugouAPI().searchLyrics('窗前 林小雨',ctx);
+  assert.deepEqual(values.map(v=>[v.id,v.title,v.duration]),[['10','窗前',120],['11','窗前 (Live)',135]]);
+  assert.equal(JSON.stringify(values).includes('public-candidate-key'),false);
+  assert.equal(ctx.calls.length,1);assert.equal(ctx.calls[0].url.origin,'https://lyrics.kugou.com');
+});
+
+test('manual preview re-searches and downloads only the requested source without persisted capabilities',async()=>{
+  const api=new KugouAPI(),ctx=context([candidate('10'),candidate('11')]);
+  const value=await api.previewLyrics('11','窗前 林小雨',ctx);
+  assert.equal(value.id,'11');assert.equal(value.lyricsData.lines.length,2);
+  assert.equal(ctx.calls.length,2);assert.equal(ctx.calls[1].url.searchParams.get('id'),'11');
+  assert.equal(JSON.stringify(value).includes('public-candidate-key'),false);
+  const absent=context([candidate('10')]);assert.equal(await api.previewLyrics('11','窗前',absent),null);
+  assert.equal(absent.calls.length,1);
+});
+
+test('manual discovery rejects duplicate provider IDs with conflicting source labels or capabilities',async()=>{
+  for(const change of [{singer:'另一人'},{accesskey:'another-key'}])
+    await assert.rejects(new KugouAPI().searchLyrics('窗前',context([candidate(),candidate('10',change)])));
+});
+
 test('fetches only official exact recordings and returns cleaned lyrics without capability',async()=>{
   const controller=new AbortController();const ctx=context([candidate('11'),candidate('9'),candidate('99',{product_from:'ugc'}),candidate('98',{singer:'别的歌手'})],{}, {signal:controller.signal,headers:{'X-Test':'safe'}});
   const song=await search(ctx);

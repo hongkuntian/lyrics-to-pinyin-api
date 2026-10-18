@@ -2,9 +2,11 @@ import chinese from 'chinese-conv';
 import {fetchJSON,withDeadline} from './fetch-json.js';
 import {LRCAPI} from '../music-apis/lrclib.js';
 import {NeteaseAPI} from '../music-apis/netease.js';
+import {KugouAPI} from '../music-apis/kugou.js';
 import {cleanLyrics} from './lyric-quality.js';
 import {sameSpotifyRecordingNames,normalizeRecordingText} from './recording-match.js';
-import {isRejectedRecordingLyrics} from './rejected-lyrics.js';
+import {isRejectedLyrics,isRejectedRecordingLyrics} from './rejected-lyrics.js';
+import {validVocalTiming} from './vocal-timing.js';
 
 // Discovery is deliberately separate from recording verification. These source
 // capsules never become Song Library documents or playback identities.
@@ -38,11 +40,13 @@ function score(candidate,hints) {
       +(hints.album&&candidate.album?0.5*similarity(candidate.album,hints.album):0)+(candidate.lines?.length?0.5:0)};
 }
 const rank=(candidate,hints)=>({...candidate,...(hints?score(candidate,hints):{namesMatch:false,durationMatches:false,score:0})});
-const lrclib=new LRCAPI(),netease=new NeteaseAPI();
-const sourceLines=lyrics=>{
+const lrclib=new LRCAPI(),netease=new NeteaseAPI(),kugou=new KugouAPI();
+const sourceLines=(lyrics,duration=7200)=>{
   const lines=lyrics?.lines?.map(l=>({text:l.text,...(Number.isFinite(l.timestamp)&&l.timestamp>=0?{timestamp:l.timestamp}:{})}));
   if(!lines?.length||lines.length>250||lines.some(l=>!text(l.text,4000))||Buffer.byteLength(JSON.stringify(lines))>180000)return null;
-  return lines;
+  const timed=lines.map((l,i)=>({...l,...(validVocalTiming(lyrics.lines[i],{duration})?{vocalTiming:lyrics.lines[i].vocalTiming}:{})}));
+  // Optional cues cannot turn a readable transcription into an oversized miss.
+  return Buffer.byteLength(JSON.stringify(timed))<=180000?timed:lines;
 };
 function fromLRCLIB(raw,hints) {
   if(!raw||!sourceID(String(raw.id))||!text(raw.trackName)&&!text(raw.name)||!text(raw.artistName,1024))return null;
@@ -76,21 +80,52 @@ async function previewNetEase(id,signal) {
   const raw=page.code===200&&page.songs?.length===1?page.songs[0]:null;
   const candidate=fromNetEase(raw);if(!candidate||candidate.itemID!==id)return null;
   const lyrics=cleanLyrics(await netease.getLyrics(id,{signal,song:candidate}),{title:candidate.title,artist:candidate.artist,duration:candidate.duration});
-  const lines=sourceLines(lyrics);return lines?{...candidate,lines}:null;
+  const lines=sourceLines(lyrics,candidate.duration);return lines?{...candidate,lines}:null;
+}
+async function searchKugou(query,hints,signal) {return kugou.searchLyrics(query,{signal,duration:hints?.duration});}
+const fromKugou=raw=>raw&&sourceID(String(raw.id))&&text(raw.title)&&text(raw.artist,1024)&&finiteDuration(raw.duration)
+  ?{provider:'kugou',itemID:String(raw.id),title:raw.title,artist:raw.artist,duration:raw.duration}:null;
+async function previewKugou(id,signal,context) {
+  const raw=await kugou.previewLyrics(id,context.query,{signal,duration:context.hints?.duration});
+  const candidate=fromKugou(raw),lines=sourceLines(raw?.lyricsData,raw?.duration);
+  return candidate&&lines?{...candidate,lines}:null;
+}
+
+/// Shared by explicit learning-source admission and the independent preview API.
+/// Returned words/labels come from fixed providers, never caller supplied text.
+export function createLyricSourceLoader(dependencies={}) {
+  const previews={lrclib:dependencies.previewLRCLIB??previewLRCLIB,netease:dependencies.previewNetEase??previewNetEase,kugou:dependencies.previewKugou??previewKugou};
+  return async({provider,itemID,query,hints},signal)=>{
+    if(!Object.hasOwn(previews,provider)||!sourceID(itemID)||!validHints(hints)
+      ||(query!==undefined&&!text(query))||(provider==='kugou'&&!text(query)))return null;
+    const raw=await previews[provider](itemID,signal,{query,hints});
+    const candidate=provider==='lrclib'?fromLRCLIB(raw,hints):raw;
+    if(!candidate||candidate.provider!==provider||candidate.itemID!==itemID||!text(candidate.title)||!text(candidate.artist,1024))return null;
+    const lines=sourceLines({lines:candidate.lines},candidate.duration);
+    if(!lines||isRejectedLyrics(provider,itemID,lines)||isRejectedRecordingLyrics(lines,rejectionContext(hints)))return null;
+    return {provider,itemID,title:candidate.title,artist:candidate.artist,
+      ...(text(candidate.album,1024)?{album:candidate.album}:{}),
+      ...(finiteDuration(candidate.duration)?{duration:candidate.duration}:{}),
+      ...(Array.isArray(candidate.artists)&&candidate.artists.length<=32&&candidate.artists.every(a=>text(a,1024))?{artists:candidate.artists}:{}),lines};
+  };
 }
 export function createLyricSearchService(dependencies={}) {
-  const searchers={lrclib:dependencies.searchLRCLIB??searchLRCLIB,netease:dependencies.searchNetEase??searchNetEase};
-  const previews={lrclib:dependencies.previewLRCLIB??previewLRCLIB,netease:dependencies.previewNetEase??previewNetEase};
+  const searchers={lrclib:dependencies.searchLRCLIB??searchLRCLIB,netease:dependencies.searchNetEase??searchNetEase,kugou:dependencies.searchKugou??searchKugou};
+  const loadSource=createLyricSourceLoader(dependencies);
   const timeout=dependencies.searchTimeoutMs??5000;
   return async(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');
     const body=req.body,fail=()=>res.status(400).json({version:1,code:'invalid_request'});
     if(req.method!=='POST'||!object(body))return fail();
     if(body.action==='search_lyrics') {
-      if(!keys(body,['action','query','hints'])||!text(body.query)||!validHints(body.hints))return fail();
-      const pages=await Promise.all(Object.entries(searchers).map(async([provider,search])=>{
+      const providers=body.providers??['lrclib','netease'];
+      if(!keys(body,['action','query','hints','providers'])||!text(body.query)||!validHints(body.hints)
+        ||!Array.isArray(providers)||!providers.length||providers.length>3||new Set(providers).size!==providers.length
+        ||providers.some(p=>!Object.hasOwn(searchers,p)))return fail();
+      const pages=await Promise.all(providers.map(async provider=>{
+        const search=searchers[provider];
         try {const raw=await withDeadline(signal=>search(body.query,body.hints,signal),timeout);
-          return {provider,candidates:(Array.isArray(raw)?raw:[]).slice(0,300).map(r=>provider==='lrclib'?fromLRCLIB(r,body.hints):fromNetEase(r)).filter(Boolean)};
+          return {provider,candidates:(Array.isArray(raw)?raw:[]).slice(0,300).map(r=>provider==='lrclib'?fromLRCLIB(r,body.hints):provider==='kugou'?fromKugou(r):fromNetEase(r)).filter(Boolean)};
         }catch{return {provider,candidates:[],failed:true};}
       }));
       const unavailable=pages.filter(p=>p.failed).map(p=>p.provider);
@@ -104,13 +139,12 @@ export function createLyricSearchService(dependencies={}) {
       return res.status(200).json({version:1,candidates,unavailable});
     }
     if(body.action==='preview_lyrics') {
-      if(!keys(body,['action','provider','itemID','hints'])||!Object.hasOwn(previews,body.provider)||!sourceID(body.itemID)||!validHints(body.hints))return fail();
+      if(!keys(body,['action','provider','itemID','hints','query'])||!Object.hasOwn(searchers,body.provider)||!sourceID(body.itemID)||!validHints(body.hints)
+        ||(body.query!==undefined&&!text(body.query))||(body.provider==='kugou'&&!text(body.query)))return fail();
       try {
-        const raw=await withDeadline(signal=>previews[body.provider](body.itemID,signal),timeout);
-        const candidate=body.provider==='lrclib'?fromLRCLIB(raw,body.hints):raw;
-        if(!candidate||candidate.itemID!==body.itemID||candidate.provider!==body.provider||!sourceLines({lines:candidate.lines}))
+        const candidate=await withDeadline(signal=>loadSource(body,signal),timeout);
+        if(!candidate)
           return res.status(404).json({version:1,code:'lyrics_absent'});
-        if(isRejectedRecordingLyrics(candidate.lines,rejectionContext(body.hints)))return res.status(404).json({version:1,code:'lyrics_absent'});
         return res.status(200).json({version:1,candidate});
       }catch{return res.status(502).json({version:1,code:'provider_unavailable'});}
     }
