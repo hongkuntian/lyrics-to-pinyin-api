@@ -6,6 +6,7 @@ import {withLyricsDelivery} from './utils/lyrics-delivery.js';
 import {createVerifiedContextCache,contextSignature} from './utils/verified-lyric-context.js';
 import {hintedRecording,prioritizeHintedTargets} from './utils/source-hint.js';
 import {createSpotifyLyricsService} from './utils/spotify-lyrics.js';
+import {createLyricSearchService} from './utils/lyric-search.js';
 import {withAppAuth} from './utils/app-auth/http.js';
 import {createRedisFromEnv} from './utils/redis-client.js';
 import {detectLanguage,getDefaultRomanizationSystem} from './utils/language-detection.js';
@@ -49,6 +50,7 @@ export function createMusicRomanizeService(dependencies={}) {
     rejectRecordingLyricsFn=isRejectedRecordingLyrics,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800,neteaseSourceHintBudgetMs=2500,speculativeDiscovery=true
   }=dependencies;
   const spotifyService=createSpotifyLyricsService(dependencies);
+  const searchService=createLyricSearchService(dependencies);
   const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:RESPONSE_VERSION,selection:SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION}});
   const inflight=new Map(),sourceAcquisitions=new SourceAcquisitions({waitUntilFn});
   const canonicalCache=new BoundedCache();
@@ -58,7 +60,7 @@ export function createMusicRomanizeService(dependencies={}) {
     const previous=cache.get(key);
     if((previous?.metadata?.acquisition_started_at??0)<=(response.metadata?.acquisition_started_at??0)) cache.set(key,response,{ttlMs});
   };
-  return withLyricsDelivery(async (req,res)=> {
+  const musicService=withLyricsDelivery(async (req,res)=> {
     const started=performance.now(),requestID=randomUUID(),timings=[];
     const acquisitionStartedAt=latestStart=Math.max(Date.now(),latestStart+0.001);
     let cacheStatus='MISS';
@@ -373,6 +375,7 @@ export function createMusicRomanizeService(dependencies={}) {
       return send({status:500,body:{error:'Server error'}});
     }
   },{waitUntilFn});
+  return (req,res)=>['search_lyrics','preview_lyrics'].includes(req.body?.action)?searchService(req,res):musicService(req,res);
 }
 export function createMusicRomanizeHandler(dependencies={}) {
   return withAppAuth(createMusicRomanizeService(dependencies),{...dependencies,route:'music'});
