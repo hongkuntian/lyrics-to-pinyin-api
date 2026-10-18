@@ -1,0 +1,25 @@
+# Shared listening Sessions
+
+One host plays audio through Apple Music or Spotify. Invited Lyrica members see the host's observed song and contribute picks to one ordered room queue. Members may add, remove upcoming picks, and reorder upcoming picks; only the original host device starts or controls playback. Joining never starts audio. Personal listening/learning queues remain separate.
+
+The native Sessions tab contains active rooms and private ended-session history. Invitations use a six-digit code or an opaque link. Rooms last up to eight hours, with 25 members and 100 song picks (including removed picks) per room. A queue occurrence is credited once after playback is actually observed; queued, removed, or skipped-over songs do not become played history. This is a played-song recap, not a measurement of listening duration.
+
+## Provider adapters
+
+Apple Music uses the host storefront for server catalog search and exact MusicKit catalog recordings on the host. A device-bound playback lease and increasing observation sequence reject old host reports. The native queue uses separate occurrence IDs even for repeated recordings. Guest edits are pending until the host applies and acknowledges them. Background application depends on iOS continuing the host's actual MusicKit playback; a suspended or disconnected host can leave edits pending. No silent background audio is added to keep the app alive.
+
+Spotify hosts explicitly authorize `user-modify-playback-state`, `playlist-read-private`, and `playlist-modify-private` in addition to the existing two scopes. The existing encrypted broker remains the sole refresh-token authority. The host must have Premium for ordered on-demand playback and confirm an active playback device. Starting replaces that device's prior manual queue with a private Lyrica session playlist; the prior manual queue cannot be reconstructed automatically.
+
+The service edits and reads back that private playlist. A durable Vercel Queues consumer observes playback and applies committed guest edits independently of the host app's process. Saved playlist order and observed live queue confirmation are distinct. Exact context, device, recording and remaining queue identify occurrences; ambiguous duplicates remain unconfirmed rather than receiving guessed credit. No private Jam APIs are used. Provider rate limits share the existing durable Spotify circuit and are respected across calls. Ending pauses only the owned context/device, restores captured shuffle/repeat options, and removes the temporary playlist from the host's library. Failed cleanup is visible and may be retried explicitly from the saved recap.
+
+## API and privacy
+
+`POST /api/sessions` requires the existing app-auth session and version 1 strict action schemas. Rooms are row-locked; queue edits carry revisions and idempotent command UUIDs. Duplicate commands do not repeat external playback actions. Server state versions prevent older native read replies from replacing newer room data. Read/observe, catalog search, and mutation request budgets are separate. Environment-scoped storage prevents preview workers from reading or changing production rooms.
+
+`GET /api/sessions?join=<invitation>` is a generic invitation page and discloses no room metadata. Ended rooms remain private until the host shares. `GET /api/sessions?recap=<opaque-token>` provides a recipient page with exact provider song links; `&format=json` supplies the same public recap to the native image/QR share sheet. Names appear publicly only with each member's explicit consent. Members can change that preference in People. The host may revoke a link. Responses are not cached; pages contain no scripts or external tracking assets. Deleting an account removes its hosted rooms and anonymizes its contributor names in other rooms.
+
+Migration `029-listening-sessions.sql` grants runtime data access and narrow account cleanup rights. `/api/_listening-tick` is a private queue consumer and is excluded from public routes. Existing provider credentials, app-auth identity and account gates are reused.
+
+## Evidence boundaries
+
+Hermetic model, HTTP and PostgreSQL integration tests cover queue concurrency, duplicate commands, observation identity, consent, revocation, role privileges, pagination, environment fences and a host-free Spotify adapter flow. Native account-free UI fixtures verify presentation and navigation. They do not establish live account or physical background behavior. The earlier physical Spotify playlist probe establishes adapter feasibility; final app-to-service host/guest, Apple Music and locked-phone acceptance are separate checks.

@@ -112,7 +112,9 @@ test('Spotify guest edit persists and reaches the playlist without a running hos
  const tick=()=>[...f.messages.values()].at(-1);
  await f.service.tick(tick());room=(await f.service.send(guest,{action:'read',sessionID:room.id})).session;
  assert.equal(room.history.length,1);assert.equal(room.history[0].track.id,A);
- room=(await f.service.send(guest,command('add',room,{trackID:C}))).session;assert.deepEqual(saved,[A,B,C]);
+ const replace=f.service.spotify.replace.bind(f.service.spotify);let failOnce=true;f.service.spotify.replace=async(...args)=>{if(failOnce){failOnce=false;throw Object.assign(new Error('interrupted'),{code:'spotify_session_unavailable'});}return replace(...args);};
+ room=(await f.service.send(guest,command('add',room,{trackID:C}))).session;assert.deepEqual(saved,[A,B]);assert(room.syncPending);
+ f.advance(5000);await f.service.tick(tick());room=(await f.service.send(guest,{action:'read',sessionID:room.id})).session;assert.deepEqual(saved,[A,B,C]);assert.equal(room.syncPending,false);
  room=(await f.service.send(guest,command('reorder',room,{order:[room.queue[2].id,room.queue[1].id]}))).session;assert.deepEqual(saved,[A,C,B]);
  current=C;position=1200;f.advance(5000);await f.service.tick(tick());room=(await f.service.send(host,{action:'read',sessionID:room.id})).session;
  assert.deepEqual(room.history.map(h=>h.track.id),[A,C]);assert.equal(room.history[1].contributorName,'Mina');
@@ -120,4 +122,25 @@ test('Spotify guest edit persists and reaches the playlist without a running hos
  assert.equal(calls.filter(c=>c.path.endsWith('/next')).length,1,'An uncertain next command must never replay');
  room=(await f.service.send(host,command('end',room))).session;assert.equal(playing,false);assert.equal(shuffle,true);assert.equal(repeat,'context');assert.equal(room.syncError,null);
  assert.equal(calls.filter(c=>c.path.endsWith('/followers')&&c.method==='DELETE').length,1);
+});
+test('runtime and account roles receive only their Sessions schema privileges',async t=>{
+ const f=await fixture(t);
+ await f.db.exec('CREATE ROLE lyra_runtime_v1;CREATE ROLE lyra_account_v1;');
+ await f.db.exec(await readFile(new URL('../../db/029-listening-sessions.sql',import.meta.url),'utf8'));
+ const rows=(await f.db.query(`SELECT has_table_privilege('lyra_runtime_v1','listening_rooms','SELECT,INSERT,UPDATE,DELETE') AS runtime,
+  has_column_privilege('lyra_account_v1','listening_rooms','data','UPDATE') AS cleanup,
+  has_table_privilege('lyra_account_v1','listening_rooms','INSERT') AS create,
+  has_table_privilege('lyra_account_v1','listening_commands','SELECT') AS commands`)).rows[0];
+ assert.equal(rows.runtime,true);assert.equal(rows.cleanup,true);assert.equal(rows.create,false);assert.equal(rows.commands,false);
+});
+test('history pagination is stable, bounded and account-private',async t=>{
+ const f=await fixture(t),room=(await f.create()).session,raw=await f.store.read(room.id);
+ for(let i=0;i<55;i++){
+  const id=randomUUID(),value={...raw,id,status:'ended',createdAtMS:raw.createdAtMS+i};
+  await f.db.query('INSERT INTO listening_rooms(id,environment,owner_id,status,invite_hash,code_hash,data) VALUES($1,$2,$3,$4,$5,$6,$7)',[id,'development',host.id,'ended','invite-'+id,'code-'+id,JSON.stringify(value)]);
+ }
+ const first=await f.service.send(host,{action:'list'});assert.equal(first.summaries.length,51);assert(first.nextCursor);
+ const last=await f.service.send(host,{action:'list',cursor:first.nextCursor});assert.equal(last.summaries.length,5);assert.equal(last.nextCursor,null);
+ assert.equal(new Set([...first.summaries,...last.summaries].map(r=>r.id)).size,56);
+ assert.equal((await f.service.send(guest,{action:'list'})).summaries.length,0);
 });

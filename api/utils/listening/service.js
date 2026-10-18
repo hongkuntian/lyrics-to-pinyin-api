@@ -122,7 +122,7 @@ export class ListeningService {
     await this.spotify.request(token,'PUT','/v1/me/player/repeat',undefined,{...device,state:'off'});
     const index=Math.max(0,r.entries.findIndex(e=>e.id===r.playback.entryID));
     await this.spotify.request(token,'PUT','/v1/me/player/play',{context_uri:'spotify:playlist:'+r.providerState.playlistID,offset:{position:index},position_ms:0},device);
-    r.providerState.appliedRevision=r.revision;r.providerState.appliedOrder=r.entries.map(e=>e.id);r.providerState.syncPending=false;r.providerState.syncError=null;
+    r.providerState.appliedRevision=r.revision;r.providerState.appliedOrder=r.entries.map(e=>e.id);r.providerState.syncPending=false;r.providerState.nativeQueuePending=true;r.providerState.syncError=null;
    });
   }catch(error){await this.recordProviderError(id,error);}
  }
@@ -134,7 +134,7 @@ export class ListeningService {
     if(r.status!=='active'||!r.providerState.playlistID)fail('spotify_session_setup_uncertain');
     const desired=r.entries.map(e=>e.track.id),saved=await this.spotify.order(r,token);
     if(!same(saved,desired)){if(observeOnly)fail('spotify_session_queue_unconfirmed');await this.spotify.replace(r,token);}
-    r.providerState.appliedRevision=r.revision;r.providerState.appliedOrder=r.entries.map(e=>e.id);r.providerState.syncPending=false;r.providerState.syncError=null;
+    r.providerState.appliedRevision=r.revision;r.providerState.appliedOrder=r.entries.map(e=>e.id);r.providerState.syncPending=false;r.providerState.nativeQueuePending=true;r.providerState.syncError=null;
    });
   }catch(error){await this.recordProviderError(id,error);}
  }
@@ -150,7 +150,7 @@ export class ListeningService {
     if(['off','context','track'].includes(o?.repeat))await this.spotify.request(token,'PUT','/v1/me/player/repeat',undefined,{device_id:room.providerState.deviceID,state:o.repeat});
    }
    await this.spotify.request(token,'DELETE',`/v1/playlists/${room.providerState.playlistID}/followers`);
-   await this.store.mutate(id,r=>{r.providerState.cleanupComplete=true;r.providerState.syncPending=false;r.providerState.syncError=null;});
+   await this.store.mutate(id,r=>{r.providerState.cleanupComplete=true;r.providerState.syncPending=false;r.providerState.nativeQueuePending=false;r.providerState.syncError=null;});
   }catch(error){await this.recordProviderError(id,error);}
  }
  async tick(message){
@@ -169,7 +169,7 @@ export class ListeningService {
    room=await this.room(id);
    if(!await this.store.ownerValid(room))error={code:'session_owner_unavailable',terminal:true};
    else if(room.provider==='spotify'&&room.providerState.started&&room.expiresAtMS>this.now()){
-    if(room.providerState.syncPending)await this.syncSpotify(id,{observeOnly:true});
+    if(room.providerState.syncPending&&room.providerState.playlistID)await this.syncSpotify(id);
     room=await this.room(id);sampleRevision=room.revision;sampleLeaseID=room.providerState.leaseID;sample=await this.spotify.sample(room,await this.spotify.token(room));
    }
   }catch(e){error=e;}

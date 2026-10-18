@@ -39,4 +39,13 @@ CREATE TABLE IF NOT EXISTS listening_rate_windows (
  count integer NOT NULL,
  PRIMARY KEY(user_id,bucket)
 );
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='lyra_runtime_v1') THEN
+  GRANT SELECT,INSERT,UPDATE,DELETE ON listening_rooms,listening_commands,listening_outbox,listening_rate_windows TO lyra_runtime_v1;
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='lyra_account_v1') THEN
+  GRANT SELECT(owner_id,data),UPDATE(data,updated_at),DELETE ON listening_rooms TO lyra_account_v1;
+  GRANT DELETE ON listening_rate_windows TO lyra_account_v1;
+ END IF;
+END $$;
 COMMIT;

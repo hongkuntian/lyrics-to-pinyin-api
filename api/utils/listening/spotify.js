@@ -17,9 +17,11 @@ export class ListeningSpotify {
  async token(room){return this.authorize({id:room.host.userID,keyID:room.host.keyID,credentialDigest:room.host.credentialDigest},room.providerState.connectionID,room.providerState.connectionEpoch);}
  async request(token,method,path,body,query){
   if(!path.startsWith('/v1/')||path.includes('..')||!token)fail('invalid_request',400);
+  const store=this.broker?.store,bucket=this.broker?.config?.rateBucket;
+  if(bucket&&store?.circuit){const until=await store.circuit(bucket);if(until>this.now())throw Object.assign(new LibraryError('spotify_rate_limited',429),{notBefore:until});}
   const url=new URL('https://api.spotify.com'+path);for(const [key,value] of Object.entries(query??{}))url.searchParams.set(key,String(value));
   let response;try{response=await this.fetchFn(url.href,{method,headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),redirect:'error',signal:AbortSignal.timeout(4000)});}catch{fail('spotify_session_unavailable',503);}
-  if(response.status===429){const delay=Number(response.headers.get('retry-after'));throw Object.assign(new LibraryError('spotify_rate_limited',429),{notBefore:this.now()+Math.max(1000,Number.isFinite(delay)?delay*1000:30000)});}
+  if(response.status===429){const raw=response.headers.get('retry-after'),delay=Number(raw),date=Date.parse(raw),notBefore=this.now()+Math.max(1000,raw&&Number.isFinite(delay)?delay*1000:Number.isFinite(date)?date-this.now():30000);if(bucket&&store?.circuit)await store.circuit(bucket,notBefore,'spotify_rate_limited');throw Object.assign(new LibraryError('spotify_rate_limited',429),{notBefore});}
   if(!response.ok)fail(response.status===403?'spotify_session_playback_restricted':response.status===401?'spotify_reconnect_required':'spotify_session_unavailable',response.status===403?403:503);
   const bytes=await response.text();if(bytes.length>1_000_000)fail('spotify_session_invalid_response',503);
   if(method!=='GET'&&!(method==='POST'&&path==='/v1/me/playlists'))return {};

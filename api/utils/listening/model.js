@@ -86,7 +86,7 @@ export function observeApple(room,user,input,now){
 export function observeSpotify(room,sample,ordinal,now){
  if(room.status!=='active'||!room.providerState.started||ordinal<=room.providerState.lastSpotifyOrdinal)return;
  room.providerState.lastSpotifyOrdinal=ordinal;
- if(sample?.contextURI!=='spotify:playlist:'+room.providerState.playlistID||sample?.deviceID!==room.providerState.deviceID){room.playback.state='detached';room.playback.playing=false;return;}
+ if(sample?.contextURI!=='spotify:playlist:'+room.providerState.playlistID||sample?.deviceID!==room.providerState.deviceID){room.playback.state='detached';room.playback.playing=false;room.playback.observedAtMS=now;return;}
  if(room.providerState.syncPending||room.providerState.appliedRevision!==room.revision||!Array.isArray(sample.queue))return;
  const order=room.providerState.appliedOrder.map(id=>room.entries.find(e=>e.id===id));
  if(order.some(e=>!e))return;
@@ -102,7 +102,7 @@ export function observeSpotify(room,sample,ordinal,now){
  if(candidate.index<previous){room.playback.state='unconfirmed';return;}
  if(candidate.index>previous&&previous>=0&&order[previous].track.id===candidate.entry.track.id&&
     (candidate.tail.length===0||sample.positionMS+1500>=room.playback.positionMS)){room.playback.state='unconfirmed';return;}
- capture(room,candidate.entry,sample.positionMS,sample.playing,now);
+ room.providerState.nativeQueuePending=false;capture(room,candidate.entry,sample.positionMS,sample.playing,now);
 }
 export function roomDTO(room,user,{publicRecap=false,inviteCode,inviteURL,shareURL}={}){
  if(publicRecap&&(!room.shared||room.status!=='ended'))fail('session_not_shared',404);
@@ -114,6 +114,6 @@ export function roomDTO(room,user,{publicRecap=false,inviteCode,inviteURL,shareU
  return {...base,viewerID:viewer.id,isHost:room.host.userID===user.id,isHostDevice:room.host.userID===user.id&&room.host.keyID===user.keyID,storefront:room.storefront,
   members:room.members.map(({userID,...m})=>({...m,isHost:m.id===room.host.memberID})),queue:room.entries.map(attributed),upcomingIDs:upcoming(room).map(e=>e.id),playback:room.playback,
   playbackLeaseID:room.providerState.leaseID,observationSequence:room.providerState.lastSequence,started:room.providerState.started,
-  appliedRevision:room.providerState.appliedRevision,syncPending:Boolean(room.providerState.syncPending),syncError:room.providerState.syncError??null,
+  appliedRevision:room.providerState.appliedRevision,syncPending:Boolean(room.providerState.syncPending||room.providerState.nativeQueuePending),syncError:room.providerState.syncError??null,
   playlistURI:room.providerState.playlistID?'spotify:playlist:'+room.providerState.playlistID:null,inviteCode,inviteURL,shareURL:room.shared?shareURL:null};
 }

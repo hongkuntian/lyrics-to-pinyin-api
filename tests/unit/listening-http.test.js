@@ -26,3 +26,12 @@ test('Sessions uses its bounded polling budget and requires app session authorit
  const response=createMockRes();await handler({method:'POST',body:{version:1,action:'list'},headers:{authorization:'Bearer lyra_s_fixture'}},response);assert.equal(response.statusCode,200);assert.equal(used,1);
  const denied=createMockRes();await handler({method:'POST',body:{version:1,action:'list'},headers:{authorization:'Bearer lyra_w_fixture'}},denied);assert.equal(denied.statusCode,401);
 });
+test('public recap uses escaped consent-filtered text and useful exact provider links',async()=>{
+ const {newRoom,applyCommand}=await import('../../api/utils/listening/model.js');
+ const host={id:'h',keyID:'k',credentialDigest:'secret'},room=newRoom(host,{sessionID:randomUUID(),provider:'appleMusic',title:'<script>alert(1)</script>',name:'Private name',shareName:false},1000);
+ applyCommand(room,host,{action:'add',revision:0,entryID:randomUUID(),track:{provider:'appleMusic',id:'123',title:'<img src=x onerror=1>',artist:'A&B',album:'',durationMS:1000}},1000);
+ room.status='ended';room.shared=true;room.history=[{...room.entries[0],entryID:room.entries[0].id,startedAtMS:1000,lastObservedAtMS:1001}];
+ const handler=createSessionsHandler({runtime:{store:{byShare:async()=>room,ownerAccountActive:async()=>true}}}),res=createMockRes();res.send=value=>{res.body=value;return res;};
+ await handler({method:'GET',query:{recap:'a'.repeat(32)}},res);
+ assert.equal(res.statusCode,200);assert(res.body.includes('&lt;script&gt;'));assert(!res.body.includes('Private name'));assert(res.body.includes('Added by Friend'));assert(res.body.includes('https://music.apple.com/us/song/123'));assert(!res.body.includes('<img src=x'));assert(!res.body.includes('secret'));
+});
