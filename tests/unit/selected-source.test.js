@@ -46,3 +46,10 @@ test('changed preview text fails closed; forged labels/revisions/rows cannot adm
   }
   assert.doesNotThrow(()=>validateSelectedDocument(JSON.parse(JSON.stringify(doc))));
 });
+test('selected pronunciation resolves the existing registry after its module initializes',async()=>{
+  const source={...candidate,lines:[{text:'君が好き',timestamp:1},{text:'今日は学校へ行く',timestamp:3}]};
+  const doc=await makeSelectedDocument(source,{...request(),expectedTextHash:selectedTextHash(source.lines)});
+  assert.equal(doc.response.song.language,'ja');assert.equal(doc.response.song.romanization_system,'hepburn');
+  assert.equal(doc.response.lines[0].original,'君が好き');assert.notEqual(doc.response.lines[0].romanized,'君が好き');
+  assert.doesNotThrow(()=>validateSelectedDocument(doc));
+});

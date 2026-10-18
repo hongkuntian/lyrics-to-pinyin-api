@@ -3,7 +3,6 @@ import {LibraryError} from './store.js';
 import {canonicalJSON,spotifyHash} from './spotify-recording.js';
 import {analyzeLyricLanguage} from '../lyric-language.js';
 import {getDefaultRomanizationSystem} from '../language-detection.js';
-import {getProcessor} from '../../processors/index.js';
 import {validVocalTiming} from '../vocal-timing.js';
 
 export const SELECTED_SOURCE_REVISION='selected-lyrics-learning-1';
@@ -44,7 +43,7 @@ function hashes(s) {
     timingRevision:spotifyHash(['selected-lyrics-timing-1',textRevision,s.sourceTiming]),
     readingRevision:spotifyHash(['selected-lyrics-reading-1',textRevision,s.romanizationSystem,s.lines.map(l=>l.romanized)])};
 }
-export async function makeSelectedDocument(candidate,request,{analyzeLanguageFn=analyzeLyricLanguage,getProcessorFn=getProcessor}={}) {
+export async function makeSelectedDocument(candidate,request,{analyzeLanguageFn=analyzeLyricLanguage,getProcessorFn}={}) {
   request=selectedSourceRequest(request);
   if(!candidate||candidate.provider!==request.provider||candidate.itemID!==request.itemID
     ||!text(candidate.title,500)||!text(candidate.artist)||candidate.album!==undefined&&!text(candidate.album)
@@ -54,7 +53,11 @@ export async function makeSelectedDocument(candidate,request,{analyzeLanguageFn=
     throw new LibraryError('invalid_source',502);
   if(selectedTextHash(candidate.lines)!==request.expectedTextHash)throw new LibraryError('selected_source_changed');
   const details=analyzeLanguageFn(candidate.lines.map(l=>l.text));
-  const system=getDefaultRomanizationSystem(details.pronunciation_language),processor=system==='none'?null:getProcessorFn(details.pronunciation_language);
+  // Processors use pronunciation aids, which in turn validate library context.
+  // Resolve the registry after module initialization rather than creating a
+  // model-context -> selected-source -> processor initialization cycle.
+  const system=getDefaultRomanizationSystem(details.pronunciation_language);
+  const processor=system==='none'?null:(getProcessorFn??(await import('../../processors/index.js')).getProcessor)(details.pronunciation_language);
   const lines=await Promise.all(candidate.lines.map(async l=>({original:l.text,romanized:processor?(await processor.romanize(l.text,system,{tone_style:'marks',separator:' ',case:'lower'})).romanized:l.text,timestamp:null})));
   if(lines.some(l=>typeof l.romanized!=='string'||l.romanized.length>16000))throw new LibraryError('invalid_source',502);
   const structure={version:'source-speakers-1',speakers:[],occurrences:lines.map((l,i)=>({sourceID:`L${String(i+1).padStart(4,'0')}`,
