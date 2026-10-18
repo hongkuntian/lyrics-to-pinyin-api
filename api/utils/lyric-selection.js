@@ -1,8 +1,9 @@
 export function timingQuality(candidate) {
  const lines=candidate?.lyrics?.lines??[],duration=candidate?.song?.duration;
- const times=lines.map(l=>l.timestamp),valid=times.filter(t=>Number.isFinite(t)&&t>=0&&(duration==null||t<=duration));
+ const bounds={duration:duration??MAX_LYRIC_SECONDS,durationResolution:sourceDurationResolution(candidate?.lyrics,candidate?.song?.id)};
+ const times=lines.map(l=>l.timestamp),valid=times.filter(t=>validTimingTimestamp(t,bounds));
  const ordered=valid.every((t,i)=>!i||t>=valid[i-1]);
- const malformed=times.some(t=>t!=null&&(!Number.isFinite(t)||t<0||(duration!=null&&t>duration)));
+ const malformed=times.some(t=>t!=null&&!validTimingTimestamp(t,bounds));
  const coverage=lines.length?valid.length/lines.length:0;
  const usable=!malformed&&ordered&&coverage>=0.8&&new Set(valid).size>=Math.min(2,lines.length);
  return {usable,coverage,alignment:candidate?.timingCorrection?.basis==='recording_listening_review'?'listening_reviewed':'provider'};
@@ -16,25 +17,33 @@ export function chooseLyricCandidate(current,candidate) {
  if(a.usable!==b.usable)return b.usable?candidate:current;
  return current;
 }
-import {validVocalTiming,MAX_LYRIC_SECONDS} from './vocal-timing.js';
-export const VOCAL_SELECTION_CAPABILITY='measured-vocal-selection-1';
+import {validVocalTiming,validSourceTiming,vocalCoverage,sourceDurationResolution,validTimingTimestamp,MAX_LYRIC_SECONDS} from './vocal-timing.js';
+export const VOCAL_SELECTION_CAPABILITY='measured-vocal-selection-3:kugou-krc-1:qq-qrc-3';
 
 // A provider capability grants a lookup opportunity, never timing authority.
 // Only validated cues from the selected source's own recording may outrank LRC.
 export function hasMeasuredVocalTiming(candidate) {
- const {song,lyrics}=candidate??{},source=lyrics?.timingSource;
- return lyrics?.source==='netease' && /^\d{1,20}$/.test(String(song?.id))
-  && String(lyrics.songId)===String(song.id) && source?.source===`netease:${song.id}:yrc`
-  && /^[a-f0-9]{64}$/.test(source.revision??'')
-  && lyrics.lines.some(line=>validVocalTiming(line,{duration:song.duration??MAX_LYRIC_SECONDS}));
+ const {song,lyrics}=candidate??{};
+ return validSourceTiming(lyrics,song?.id)
+  && lyrics.lines.some(line=>validVocalTiming(line,{duration:song.duration??MAX_LYRIC_SECONDS,durationResolution:sourceDurationResolution(lyrics,song.id)}));
 }
+export function measuredVocalCoverage(candidate) {
+ return vocalCoverage(candidate?.lyrics?.lines,{duration:candidate?.song?.duration??MAX_LYRIC_SECONDS,
+  durationResolution:sourceDurationResolution(candidate?.lyrics,candidate?.song?.id),
+  provenance:validSourceTiming(candidate?.lyrics,candidate?.song?.id)});
+}
+export const hasCompleteMeasuredVocalTiming=candidate=>measuredVocalCoverage(candidate).complete;
+export const measuredSelectionProtected=candidate=>timingQuality(candidate).alignment==='listening_reviewed'
+ ||candidate?.timingCorrection?.status==='replacement';
 
 export function chooseMeasuredLyricCandidate(current,candidate) {
  const selected=chooseLyricCandidate(current,candidate);
  if(selected!==current || !current || !candidate)return selected;
  if(current.lyrics.partial || candidate.lyrics.partial || current.lyrics.instrumental || candidate.lyrics.instrumental)return current;
  const a=timingQuality(current),b=timingQuality(candidate);
- if(a.usable&&b.usable&&a.alignment!=='listening_reviewed'&&current.timingCorrection?.status!=='replacement'
-  && !hasMeasuredVocalTiming(current)&&hasMeasuredVocalTiming(candidate))return candidate;
+ if(a.usable&&b.usable&&!measuredSelectionProtected(current)) {
+  const left=measuredVocalCoverage(current),right=measuredVocalCoverage(candidate);
+  if(right.covered*Math.max(1,left.total)>left.covered*Math.max(1,right.total))return candidate;
+ }
  return current;
 }

@@ -2,10 +2,23 @@
 // a grapheme, surrogate pair or source token is never split to manufacture cues.
 const segmenter=new Intl.Segmenter('und',{granularity:'grapheme'});
 export const MAX_LYRIC_SECONDS=7200;
-export function validVocalTiming(line,{duration=MAX_LYRIC_SECONDS}={}) {
+// QQ's authoritative interval is whole seconds. Explicit precision evidence
+// admits only the unreported fraction below the next second, never a rescale.
+export function timingDurationLimit(duration,resolution=0) {
+ if(!Number.isFinite(duration)||duration<=0||duration>MAX_LYRIC_SECONDS
+  ||![0,1].includes(resolution)||resolution===1&&!Number.isInteger(duration))return null;
+ return duration+resolution;
+}
+export function validTimingTimestamp(time,{duration=MAX_LYRIC_SECONDS,durationResolution=0}={}) {
+ const limit=timingDurationLimit(duration,durationResolution);
+ return limit!==null&&Number.isFinite(time)&&time>=0&&time<=MAX_LYRIC_SECONDS
+  &&(durationResolution===1?time<limit:time<=limit);
+}
+export function validVocalTiming(line,{duration=MAX_LYRIC_SECONDS,durationResolution=0}={}) {
  const text=line?.original??line?.text,t=line?.vocalTiming,start=line?.timestamp;
- if(typeof text!=='string'||text.length>2000||/\p{Surrogate}/u.test(text)||!t||!Number.isFinite(start)||start<0||!Number.isFinite(duration)||duration<=0
-  ||!Number.isFinite(t.end)||t.end<=start||t.end>Math.min(duration,MAX_LYRIC_SECONDS)
+ const bounds={duration,durationResolution};
+ if(typeof text!=='string'||text.length>2000||/\p{Surrogate}/u.test(text)||!t||!validTimingTimestamp(start,bounds)
+  ||!validTimingTimestamp(t.end,bounds)||t.end<=start
   ||!Array.isArray(t.segments)||!t.segments.length||t.segments.length>1024)return false;
  const boundaries=new Set([...segmenter.segment(text)].map(s=>s.index).concat(text.length));
  let previousTime=start,previousRange=0;
@@ -22,20 +35,53 @@ export function revalidatedVocalLine(line,text=line.text,options={}) {
  const {vocalTiming,...rest}=line;
  return {...rest,text,...(text===line.text&&validVocalTiming(line,options)?{vocalTiming}:{} )};
 }
-const sourcePattern=/^netease:\d{1,20}:yrc$/;
+const sourceFormats={netease:'yrc',kugou:'krc',qq:'qrc'};
+const sourcePattern=/^(?:netease:\d{1,20}:yrc|kugou:\d{1,20}:krc|qq:\d{1,20}:qrc)$/;
+const validResolution=(value,source)=>value===undefined||value===1&&/^qq:\d{1,20}:qrc$/.test(source??'');
+export function validSourceTiming(lyrics,sourceID=lyrics?.songId) {
+ return /^\d{1,20}$/.test(String(sourceID??''))&&String(lyrics?.songId)===String(sourceID)
+  &&Object.hasOwn(sourceFormats,lyrics?.source??'')
+  &&lyrics.timingSource?.source===`${lyrics.source}:${sourceID}:${sourceFormats[lyrics.source]}`
+  &&validResolution(lyrics.durationResolution,lyrics.timingSource?.source)
+  &&/^[a-f0-9]{64}$/.test(lyrics.timingSource?.revision??'');
+}
+export const sourceDurationResolution=(lyrics,sourceID=lyrics?.songId)=>
+ validSourceTiming(lyrics,sourceID)&&lyrics.durationResolution===1?1:0;
+// Count meaningful graphemes on the exact cleaned source edition. Silent
+// punctuation/space does not require a cue; every letter/number does. An
+// invalid row extension contributes no coverage, never guessed durations.
+export function vocalCoverage(lines,{duration=MAX_LYRIC_SECONDS,durationResolution=0,provenance=true}={}) {
+ let covered=0,total=0;
+ for(const line of lines??[]) {
+  const text=line?.original??line?.text;
+  if(typeof text!=='string')continue;
+  const segments=provenance&&validVocalTiming(line,{duration,durationResolution})?line.vocalTiming.segments:[];
+  let at=0;
+  for(const g of segmenter.segment(text)) {
+   if(!/[\p{L}\p{N}]/u.test(g.segment))continue;
+   total++;
+   while(at<segments.length&&segments[at].utf16Start+segments[at].utf16Length<=g.index)at++;
+   const s=segments[at];
+   if(s&&s.utf16Start<=g.index&&s.utf16Start+s.utf16Length>=g.index+g.segment.length)covered++;
+  }
+ }
+ return {covered,total,complete:total>0&&covered===total};
+}
 export function validTimingProvenance(value) {
  return value?.version===1&&['spotify','appleMusic'].includes(value.provider)
   &&(value.provider==='spotify'?/^[a-zA-Z0-9]{22}$/:/^\d{1,20}$/).test(value.recordingID??'')
-  &&sourcePattern.test(value.source??'')&&/^[a-f0-9]{64}$/.test(value.revision??'');
+  &&sourcePattern.test(value.source??'')&&/^[a-f0-9]{64}$/.test(value.revision??'')
+  &&validResolution(value.durationResolution,value.source);
 }
 export function attachVocalTiming(response,lyrics,{provider,recordingID,sourceID}) {
  const source=lyrics?.timingSource;
- const provenance={version:1,provider,recordingID,source:source?.source,revision:source?.revision};
- const accepted=lyrics?.source==='netease'&&String(lyrics.songId)===String(sourceID)
-  &&source?.source===`netease:${sourceID}:yrc`&&validTimingProvenance(provenance);
+ const provenance={version:1,provider,recordingID,source:source?.source,revision:source?.revision,
+  ...(lyrics?.durationResolution!==undefined?{durationResolution:lyrics.durationResolution}:{})};
+ const accepted=validSourceTiming(lyrics,sourceID)&&validTimingProvenance(provenance);
  response.lines=response.lines.map(line=>{
   const {vocalTiming,...rest}=line;
-  return {...rest,...(accepted&&validVocalTiming(line,{duration:response.song.duration??MAX_LYRIC_SECONDS})?{vocalTiming}:{} )};
+  return {...rest,...(accepted&&validVocalTiming(line,{duration:response.song.duration??MAX_LYRIC_SECONDS,
+   durationResolution:sourceDurationResolution(lyrics,sourceID)})?{vocalTiming}:{} )};
  });
  delete response.metadata.lyric_timing;
  if(response.lines.some(l=>l.vocalTiming))response.metadata.lyric_timing=provenance;

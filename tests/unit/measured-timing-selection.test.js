@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseYRC} from '../../api/utils/netease-yrc.js';
-import {chooseMeasuredLyricCandidate as chooseLyricCandidate} from '../../api/utils/lyric-selection.js';
+import {chooseMeasuredLyricCandidate as chooseLyricCandidate,measuredVocalCoverage} from '../../api/utils/lyric-selection.js';
 import {hedgedLookup} from '../../api/utils/hedged-lookup.js';
 
 const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:value=>resolve(value)};};
@@ -79,4 +79,38 @@ test('another line-timed result cannot reset the measured upgrade deadline',asyn
  await until(()=>published.length);t.mock.timers.tick(4);first.resolve(structuredClone(line));
  await new Promise(r=>setImmediate(r));t.mock.timers.tick(6);assert.equal(await work,line);
  second.resolve(measured);await new Promise(r=>setImmediate(r));assert.ok(!published.includes(measured));
+});
+
+test('measured selection compares exact meaningful grapheme coverage, including line-only rows',()=>{
+ const sparse=structuredClone(measured);delete sparse.lyrics.lines[1].vocalTiming;
+ assert.equal(chooseLyricCandidate(sparse,measured),measured);
+ assert.equal(chooseLyricCandidate(measured,sparse),measured);
+ assert.equal(chooseLyricCandidate(line,sparse),sparse);
+ const unicode={song:{id:42,duration:30},lyrics:parseYRC('[1000,1000](1000,0,0)! (1000,1000,0)你😀e\u0301 2\n[10000,1000]---',{songId:42,duration:30})};
+ assert.deepEqual(measuredVocalCoverage(unicode),{covered:3,total:3,complete:true});
+ const bad=structuredClone(unicode);bad.lyrics.lines[0].vocalTiming.segments[0].utf16Length=1;
+ assert.deepEqual(measuredVocalCoverage(bad),{covered:0,total:3,complete:false});
+ const punctuation=structuredClone(unicode);punctuation.lyrics.lines=punctuation.lyrics.lines.slice(1);
+ assert.deepEqual(measuredVocalCoverage(punctuation),{covered:0,total:0,complete:false});
+ const unbound=structuredClone(measured);unbound.lyrics.timingSource.source='qq:42:qrc';
+ assert.equal(measuredVocalCoverage(unbound).covered,0);
+});
+
+test('a sparse measured result stays readable while a fuller capable source is pending',async()=>{
+ const sparse=structuredClone(measured);delete sparse.lyrics.lines[1].vocalTiming;
+ const gate=deferred(),published=[];let settled=false;
+ const work=hedgedLookup([capable,{...capable}],async api=>api===capable?sparse:gate.promise,
+  {wordTimingGraceMs:1000,chooseCandidate:chooseLyricCandidate,onCandidate:c=>published.push(c)}).then(v=>{settled=true;return v;});
+ try{await until(()=>published.includes(sparse));assert.equal(settled,false);gate.resolve(measured);assert.equal(await work,measured);}
+ finally{gate.resolve(measured);await work;}
+});
+
+test('partial measured coverage survives deadline without resetting it or inventing cues',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const sparse=structuredClone(measured);delete sparse.lyrics.lines[1].vocalTiming;
+ const gate=deferred(),published=[];
+ const work=hedgedLookup([capable,{...capable}],async api=>api===capable?sparse:gate.promise,
+  {wordTimingGraceMs:10,chooseCandidate:chooseLyricCandidate,onCandidate:c=>published.push(c)});
+ await until(()=>published.length);t.mock.timers.tick(10);assert.equal(await work,sparse);
+ gate.resolve(measured);await new Promise(r=>setImmediate(r));assert.deepEqual(published,[sparse]);
 });

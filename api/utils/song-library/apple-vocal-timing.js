@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
-import {validVocalTiming,validTimingProvenance} from '../vocal-timing.js';
+import {validVocalTiming,validTimingProvenance,validSourceTiming} from '../vocal-timing.js';
+import {independentProvider} from './spotify-recording.js';
 
 // Only server-side document creation or an actual request lookup can grant this
 // evidence. JSON/structuredClone cannot transport it to a different document.
@@ -13,9 +14,10 @@ export const hasVocalTiming=response=>response?.lines?.some(l=>l.vocalTiming!=nu
 export function appleTimingOrigin(response) {
  const p=response.metadata?.lyric_timing;
  if(!hasVocalTiming(response))return null;
- if(!validTimingProvenance(p)||p.provider!=='appleMusic'||!['netease','NeteaseAPI'].includes(response.metadata.source)||p.source!==`netease:${response.song.id}:yrc`
-  ||response.lines.some(l=>l.vocalTiming&&!validVocalTiming(l,{duration:response.song.duration})))throw new Error('invalid_vocal_timing');
- return {source:p.source,revision:p.revision};
+ if(!validTimingProvenance(p)||p.provider!=='appleMusic'||!validSourceTiming({source:independentProvider(response.metadata.source),songId:response.song.id,
+   timingSource:{source:p.source,revision:p.revision},...(p.durationResolution!==undefined?{durationResolution:p.durationResolution}:{})})
+  ||response.lines.some(l=>l.vocalTiming&&!validVocalTiming(l,{duration:response.song.duration,durationResolution:p.durationResolution??0})))throw new Error('invalid_vocal_timing');
+ return {source:p.source,revision:p.revision,...(p.durationResolution!==undefined?{durationResolution:p.durationResolution}:{})};
 }
 // This new branch uses canonical JSON so JSONB key order cannot change an
 // immutable identity. The legacy Apple digest recipes remain in document.js.

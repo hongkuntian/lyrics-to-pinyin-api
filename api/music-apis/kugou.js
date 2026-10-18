@@ -4,6 +4,7 @@ import {BaseMusicAPI} from './base.js';
 import {fetchJSON} from '../utils/fetch-json.js';
 import {parseLRC} from '../utils/lrc.js';
 import {cleanLyrics} from '../utils/lyric-quality.js';
+import {decodeKRC,parseKRC} from '../utils/kugou-krc.js';
 import {sameRecordingNames,recordingScore,findRecording,RecordingMismatchError,normalizeRecordingText,searchTitle} from '../utils/recording-match.js';
 
 const origin='https://lyrics.kugou.com';
@@ -68,6 +69,12 @@ function header(text,song) {
   return (title(parts[0])===expectedTitle && artist(parts[1])===expectedArtist)
     || (artist(parts[0])===expectedArtist && title(parts[1])===expectedTitle);
 }
+function validateHeaders(raw,song) {
+  for(const match of raw.matchAll(/^\s*\[(ar|ti):([^\]\r\n]*)\]\s*$/gim)) {
+    const value=match[2].trim();
+    if(value && !sameRecordingNames({...song,[match[1].toLowerCase()==='ar' ? 'artist':'title']:value},song)) throw new RecordingMismatchError();
+  }
+}
 function lyricsBody(data,song) {
   const encoded=data.content;
   if(typeof encoded!=='string' || !encoded || encoded.length>maxBytes || encoded.length%4!==0
@@ -77,15 +84,61 @@ function lyricsBody(data,song) {
   let raw;
   try { raw=new TextDecoder('utf-8',{fatal:true}).decode(bytes); } catch { throw providerError(); }
   if(raw.includes('\u0000')) throw providerError();
-  for(const match of raw.matchAll(/^\s*\[(ar|ti):([^\]\r\n]*)\]\s*$/gim)) {
-    const value=match[2].trim();
-    if(value && !sameRecordingNames({...song,[match[1].toLowerCase()==='ar' ? 'artist':'title']:value},song)) throw new RecordingMismatchError();
-  }
+  validateHeaders(raw,song);
   const parsed=parseLRC(raw);
   if(parsed.some(line=>line.timestamp!=null && (!Number.isFinite(line.timestamp) || line.timestamp<0 || line.timestamp>song.duration))) throw new RecordingMismatchError();
   const result=cleanLyrics({lines:parsed.filter(line=>!header(line.text,song)),source:'kugou',songId:song.id},{duration:song.duration});
   if(!result?.lines.length) throw new RecordingMismatchError();
   return result;
+}
+
+async function fetchLyrics(entry,context) {
+  const params={ver:1,client:'pc',id:entry.song.id,accesskey:entry.key,charset:'utf8'};
+  try {
+    const data=await requestJSON('/download',{...params,fmt:'krc'},context);
+    // An explicitly returned readable sibling needs no duplicate download.
+    if(data.fmt==='lrc')return lyricsBody(data,entry.song);
+    const raw=decodeKRC(data.content);
+    if(raw!==null) {
+      validateHeaders(raw,entry.song);
+      const parsed=parseKRC(raw,{songId:entry.song.id,duration:entry.song.duration});
+      if(parsed) {
+        const result=cleanLyrics({...parsed,lines:parsed.lines.filter(l=>!header(l.text,entry.song))},
+          {duration:entry.song.duration,title:entry.song.title,artist:entry.song.artist});
+        if(result?.lines.length)return result;
+      }
+    }
+  }catch(error){
+    if(error.name==='AbortError'||context.signal?.aborted||error.code==='recording_mismatch')throw error;
+  }
+  cancelled(context.signal);
+  return lyricsBody(await requestJSON('/download',{...params,fmt:'lrc'},context),entry.song);
+}
+
+// Every best-ranked metadata tie must be inspected before admitting a source.
+// A small worker pool avoids the old >3 duplicate rejection without issuing an
+// unbounded burst. Caller cancellation/deadline covers the complete operation.
+async function hydrateEquivalent(entries,context) {
+  cancelled(context.signal);
+  let next=0,failure=null,signature=null,rejectFailure;
+  const controller=new AbortController(),abort=()=>controller.abort();
+  context.signal?.addEventListener('abort',abort,{once:true});
+  const failed=new Promise((_,reject)=>{rejectFailure=reject;});
+  const local={...context,signal:controller.signal};
+  const workers=Array.from({length:Math.min(3,entries.length)},async()=>{
+    while(next<entries.length&&!failure) {
+      const entry=entries[next++];
+      try {
+        cancelled(local.signal);
+        entry.song.lyricsData=await fetchLyrics(entry,local);
+        const current=JSON.stringify(entry.song.lyricsData.lines.map(l=>[l.timestamp??null,l.text,l.vocalTiming??null]));
+        if(signature!==null&&signature!==current)throw new RecordingMismatchError();
+        signature=current;
+      }catch(error){if(!failure){failure=error;rejectFailure(error);controller.abort();}}
+    }
+  });
+  try { await Promise.race([Promise.all(workers),failed]); }
+  finally { context.signal?.removeEventListener('abort',abort); }
 }
 
 // Manual discovery deliberately does not claim recording equivalence. Provider
@@ -111,7 +164,8 @@ async function lyricCandidates(query,context={}) {
 }
 
 export class KugouAPI extends BaseMusicAPI {
-  constructor() { super('KugouAPI',['zh','en','yue']); }
+  constructor() { super('KugouAPI',['zh','en','yue','ja','ko','ru']); this.supportsVocalTiming=true; this.languageAgnosticDiscovery=true; }
+  supportsLanguage(language) { return typeof language==='string'&&/^[a-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(language); }
   async searchLyrics(query,context={}) {
     return [...(await lyricCandidates(query,context)).values()].map(entry=>entry.song);
   }
@@ -119,8 +173,7 @@ export class KugouAPI extends BaseMusicAPI {
     if(!/^[1-9]\d{0,19}$/.test(String(id)))throw providerError();
     const entry=(await lyricCandidates(query,context)).get(String(id));
     if(!entry)return null;
-    const raw=await requestJSON('/download',{ver:1,client:'pc',id:entry.song.id,accesskey:entry.key,fmt:'lrc',charset:'utf8'},context);
-    return {...entry.song,lyricsData:lyricsBody(raw,entry.song)};
+    return {...entry.song,lyricsData:await fetchLyrics(entry,context)};
   }
   async searchSong(artist,title,context={}) {
     cancelled(context.signal);
@@ -146,15 +199,7 @@ export class KugouAPI extends BaseMusicAPI {
     const ranked=[...records.values()].sort((a,b)=>b.score-a.score);
     if(!ranked.length) throw new RecordingMismatchError();
     const best=ranked.filter(entry=>Math.abs(entry.score-ranked[0].score)<1e-9);
-    // Inspect every tied candidate or fail closed; selecting a truncated subset
-    // can hide a conflicting timeline. Provider rank is not identity evidence.
-    if(best.length>3) throw new RecordingMismatchError();
-    await Promise.all(best.map(async entry=> {
-      const response=await requestJSON('/download',{ver:1,client:'pc',id:entry.song.id,accesskey:entry.key,fmt:'lrc',charset:'utf8'},context);
-      entry.song.lyricsData=lyricsBody(response,entry.song);
-    }));
-    const signature=song=>JSON.stringify(song.lyricsData.lines.map(line=>[line.timestamp ?? null,line.text]));
-    if(best.some(entry=>signature(entry.song)!==signature(best[0].song))) throw new RecordingMismatchError();
+    await hydrateEquivalent(best,context);
     return findRecording(best.map(entry=>entry.song),request);
   }
   async getLyrics(id,context={}) {

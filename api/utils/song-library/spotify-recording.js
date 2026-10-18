@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {LibraryError} from './store.js';
 import {validLyricStructure} from '../lyric-annotations.js';
 import {timingQuality} from '../lyric-selection.js';
+import {validTimingProvenance} from '../vocal-timing.js';
 
 const matchEvidence=new WeakMap();
 export function attachSpotifyMatchEvidence(response,candidate) {matchEvidence.set(response,structuredClone(candidate));return response;}
@@ -60,7 +61,7 @@ export function spotifySearchRequest(value) {
   return {recordingProvider:'spotify',recordingItemID:r.item_id,creditedArtistNames:[...m.artists],artist:m.artists.join(' & '),title:m.title,
     ...(m.album!==undefined?{album:m.album}:{}),duration:m.duration_ms/1000,...(m.isrc?{isrc:m.isrc}:{}),...(m.explicit!==undefined?{explicit:m.explicit}:{})};
 }
-const providers=new Map([['lrclib','lrclib'],['LRCAPI','lrclib'],['netease','netease'],['NeteaseAPI','netease'],['kugou','kugou'],['KugouAPI','kugou']]);
+const providers=new Map([['lrclib','lrclib'],['LRCAPI','lrclib'],['netease','netease'],['NeteaseAPI','netease'],['kugou','kugou'],['KugouAPI','kugou'],['qq','qq'],['QQMusicAPI','qq']]);
 export const independentProvider=value=>providers.get(value)??null;
 export function sourceCapsule(response) {
   const provider=independentProvider(response?.metadata?.source),rawID=response?.song?.id;
@@ -95,9 +96,13 @@ export function spotifyHashes(r,s,selectionRevision) {
   return {recordingKey,requestHash,contextHash,textRevision,timingRevision,readingRevision,sourceHash,documentID};
 }
 export function synchronizationEligible(response) {
+  const p=response.metadata?.lyric_timing;
+  const lyrics={lines:response.lines,...(validTimingProvenance(p)?{
+    source:independentProvider(response.metadata.source),songId:response.song.id,timingSource:{source:p.source,revision:p.revision},
+    ...(p.durationResolution!==undefined?{durationResolution:p.durationResolution}:{})}:{})};
   return response.quality?.synced===true&&!response.quality.partial&&!response.quality.instrumental&&response.lines.length>0
     &&response.lines.every(l=>Number.isFinite(l.timestamp)&&l.timestamp>=0)
-    &&timingQuality({song:{duration:response.song.duration},lyrics:{lines:response.lines}}).usable;
+    &&timingQuality({song:{id:response.song.id,duration:response.song.duration},lyrics}).usable;
 }
 export function spotifyBinding(r,s,selectionRevision,response,{durable=false}={}) {
   const h=spotifyHashes(r,s,selectionRevision);

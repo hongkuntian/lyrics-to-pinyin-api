@@ -1,14 +1,15 @@
 import {normalizeLyricAnnotations} from './lyric-annotations.js';
-import {revalidatedVocalLine} from './vocal-timing.js';
+import {revalidatedVocalLine,sourceDurationResolution,validTimingTimestamp} from './vocal-timing.js';
 
 export function cleanLyrics(data, options = {}) {
   if (!data) return null;
   const {duration}=options;
+  const durationResolution=sourceDurationResolution(data);
   const normalized=normalizeLyricAnnotations(data,options);
   const lines = normalized.lines
     .map(line => revalidatedVocalLine({...line, timestamp: Number.isFinite(line.timestamp) && line.timestamp >= 0
-      && (!Number.isFinite(duration) || line.timestamp <= duration) ? line.timestamp : null},line.text,
-      Number.isFinite(duration)?{duration}:{}));
+      && (!Number.isFinite(duration) || validTimingTimestamp(line.timestamp,{duration,durationResolution})) ? line.timestamp : null},line.text,
+      Number.isFinite(duration)?{duration,durationResolution}:{}));
   // NetEase encodes its explicit instrumental flag as this fixed full phrase.
   // Only accept it from that provider and only when no vocal text remains.
   const markedInstrumental=data.source==='netease' && (data.lines || []).some(line=>
