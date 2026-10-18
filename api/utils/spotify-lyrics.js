@@ -21,6 +21,7 @@ import {LYRIC_SELECTION_REVISION,LYRIC_NORMALIZATION_VERSION,hasEmbeddedLyricCre
 import {BoundedCache} from './bounded-cache.js';
 import {waitUntil} from '@vercel/functions';
 import {LibraryError} from './song-library/store.js';
+import {NETEASE_TITLE_CAPABILITY} from './netease-title-evidence.js';
 import {spotifyRecording,spotifyRequestHash,spotifySearchRequest,independentProvider,sourceCapsule,spotifyBinding,verifySpotifyBinding,attachSpotifyMatchEvidence} from './song-library/spotify-recording.js';
 
 // The same independent provider path serves durable acquisition and readable
@@ -30,12 +31,14 @@ export function createSpotifyLyricsService(dependencies={}) {
     getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,
     getCachedFn=getCached,setCachedFn=setLyricsCached,providerTimeoutMs=6000,cacheTimeoutMs=300,hedgeDelayMs=350,untimedGraceMs=2500,wordTimingGraceMs=providerTimeoutMs,
     rejectRecordingLyricsFn=isRejectedRecordingLyrics,analyzeLyricLanguageFn=analyzeLyricLanguage,waitUntilFn=waitUntil,logger=console,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800,neteaseSourceHintBudgetMs=2500}=dependencies;
-  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION}});
+  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,sourceNames:NETEASE_TITLE_CAPABILITY}});
   const cache=new BoundedCache(),inflight=new Map();let latestStart=0;
   const validCached=(entry,r)=>{
     const response=entry?.response,candidate=entry?.candidate;
     try {
       if(!candidate||String(candidate.id)!==String(response?.song?.id)||recordingScore(candidate,spotifySearchRequest(r))<0)return false;
+      if(candidate.neteaseTitleEvidence&&(candidate.source!=='netease'||independentProvider(response.metadata?.source)!=='netease'
+        ||candidate.title!==response.song?.title?.original||candidate.artist!==response.song?.artist?.original))return false;
       if(rejectRecordingLyricsFn(response.lines.map(l=>({text:l.original})),spotifySearchRequest(r)))return false;
       if(hasEmbeddedLyricCredits(response,spotifySearchRequest(r)))return false;
       if(response.metadata.selection_revision!==LYRIC_SELECTION_REVISION||response.metadata.spotify_response_version!==1)return false;
@@ -60,7 +63,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         ||('tone_style' in options&&options.tone_style!=='marks')||('separator' in options&&options.separator!==' ')
         ||('case' in options&&options.case!=='lower')||('refresh' in options&&typeof options.refresh!=='boolean'))throw new LibraryError('invalid_recording',400);
       const r=spotifyRecording(body.recording),target=spotifySearchRequest(r),requestHash=spotifyRequestHash(r);
-      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
+      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}:${NETEASE_TITLE_CAPABILITY}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const send=result=>{if(result.candidate)attachSpotifyMatchEvidence(result.body,result.candidate);res.setHeader('X-Lyrics-Cache',result.cache??'MISS');return reply(result.status,result.body);};
       const cached=!options.refresh&&cache.get(key);
       if(cached&&validate('cache_validation',()=>validCached(cached,r)))return send({status:200,body:cached.response,candidate:cached.candidate,cache:'MEMORY'});
@@ -181,6 +184,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         const ttlMs=response.quality.partial||!response.quality.synced?300000:86400000;
         // Late ordinary work cannot replace a newer explicit refresh in memory.
         const candidate={id:String(song.id),title:song.title,artist:song.artist,duration:song.duration,
+          ...(song.neteaseTitleEvidence?{source:'netease',neteaseTitleEvidence:structuredClone(song.neteaseTitleEvidence)}:{}),
           ...Object.fromEntries(['album','creditedArtistNames','isrc','explicit'].filter(k=>song[k]!==undefined).map(k=>[k,song[k]]))};
         const entry={response,candidate,metadata:{acquisition_started_at:acquisitionStartedAt}};
         if(canHint)verifiedContext=verifiedContext??contexts.spotify(r,response,acquisitionStartedAt);

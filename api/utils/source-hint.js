@@ -1,6 +1,7 @@
 import {normalizeRecordingText,normalizedAlbum,recordingScore} from './recording-match.js';
 import {withDeadline} from './fetch-json.js';
 import {sourceTarget} from './verified-lyric-context.js';
+import {sameNetEaseTitleEvidence} from './netease-title-evidence.js';
 const sameTarget=(a,b)=>JSON.stringify(sourceTarget(a))===JSON.stringify(sourceTarget(b));
 // Ordering only: the hint cannot add a target or supply catalog proof.
 export function prioritizeHintedTargets(targets,context) {
@@ -16,6 +17,7 @@ export function freshHintMatches(hint,fresh,target){
   &&(previous.album==null?song.album==null:typeof song.album==='string'&&normalizedAlbum(song.album)===normalizedAlbum(previous.album))
   &&Number.isFinite(song.duration)&&Number.isFinite(previous.duration)&&Math.abs(song.duration-previous.duration)<=0.5
   &&['isrc','explicit','creditedArtistNames'].every(k=>previous[k]===undefined||JSON.stringify(previous[k])===JSON.stringify(song[k]))
+  &&sameNetEaseTitleEvidence(previous.neteaseTitleEvidence,song.neteaseTitleEvidence)
   &&recordingScore(song,target)>=0);
 }
 export async function hintedRecording(api,target,context,{signal,deadline,budgetMs=800,neteaseBudgetMs=2500,measure=async(_,fn)=>fn()}={}){

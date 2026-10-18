@@ -2,9 +2,15 @@ import {BaseMusicAPI} from './base.js';
 import {fetchJSON} from '../utils/fetch-json.js';
 import {parseLRC} from '../utils/lrc.js';
 import {parseYRC} from '../utils/netease-yrc.js';
-import {findRecording,searchTitle,recordingNames,recordingScore,normalizeRecordingText} from '../utils/recording-match.js';
+import {findRecording,searchTitle,recordingNames,recordingScore,normalizeRecordingText,RecordingMismatchError} from '../utils/recording-match.js';
 import {BoundedCache} from '../utils/bounded-cache.js';
+import {neteaseTitleEvidence,neteaseDescriptiveTitleMatches} from '../utils/netease-title-evidence.js';
 import chinese from 'chinese-conv';
+const withTitleEvidence=(song,raw,field,request)=>{
+  if(request.recordingProvider!=='spotify')return song;
+  const evidence=neteaseTitleEvidence(raw,field),candidate={...song,neteaseTitleEvidence:evidence};
+  return evidence&&neteaseDescriptiveTitleMatches(candidate,request,normalizeRecordingText)?candidate:song;
+};
 export class NeteaseAPI extends BaseMusicAPI {
   constructor() { super('NeteaseAPI',['zh','yue','en']); this.supportsVocalTiming=true; this.baseURL='https://netease-cloud-music-api-gules-mu.vercel.app'; this.artistAliases=new BoundedCache({limit:128,ttlMs:86400000}); }
   async searchSong(artist,title,context={}) {
@@ -12,13 +18,20 @@ export class NeteaseAPI extends BaseMusicAPI {
     let lastMismatch;
     const select=async()=> {
       const songs=[...records.values()].map(entry=>entry.song);
+      const spotify=context.recordingProvider==='spotify';
+      const described=spotify?songs.filter(song=>neteaseDescriptiveTitleMatches(song,request,normalizeRecordingText)
+        &&Number.isFinite(song.duration)&&Number.isFinite(request.duration)
+        &&recordingScore({...song,title,artist,creditedArtistNames:request.creditedArtistNames},request)>=0):[];
+      // Do not turn an arbitrary verified prefix into a unique winner. Resolve
+      // every eligible descriptor candidate before the first ranking decision.
+      if(described.length>3){lastMismatch=new RecordingMismatchError('duplicate_candidates');return null;}
+      for(const song of described)await this.resolveArtistAliases(song,records.get(song.id).raw.artists||[],request,context,profiles);
       try { return findRecording(songs,request); }
       catch(error) { if(error.code!=='recording_mismatch') throw error;lastMismatch=error; }
       const expected=recordingNames(request);
-      const spotify=context.recordingProvider==='spotify';
       // Resolve authoritative artist aliases only for plausible recordings.
       // The profile promises are shared between the shallow and deeper pages.
-      const plausible=songs.filter(song=>recordingNames(song).title===expected.title && Number.isFinite(song.duration) && Number.isFinite(request.duration)
+      const plausible=songs.filter(song=>(recordingNames(song).title===expected.title||(spotify&&neteaseDescriptiveTitleMatches(song,request,normalizeRecordingText))) && Number.isFinite(song.duration) && Number.isFinite(request.duration)
         && recordingScore({...song,title,artist,...(spotify?{creditedArtistNames:request.creditedArtistNames}:{})},request)>=0).slice(0,3);
       for(const song of plausible)
         await this.resolveArtistAliases(song,records.get(song.id).raw.artists||[],request,context,profiles);
@@ -42,7 +55,10 @@ export class NeteaseAPI extends BaseMusicAPI {
     for(const limit of [30,100]) {
       const data=await fetchJSON(`${this.baseURL}/search?limit=${limit}&keywords=${encodeURIComponent(chinese.sify(`${artist} ${searchTitle(title)}`))}`,context);
       if(data.code!==200) throw new Error('NetEase search unavailable');
-      for(const raw of data.result?.songs || []) if(!records.has(raw.id)) records.set(raw.id,{raw,song:{id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease',...(context.recordingProvider==='spotify'?{creditedArtistNames:raw.artists?.map(x=>x.name),...(raw.isrc?{isrc:raw.isrc}:{}),...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{})}:{})}});
+      for(const raw of data.result?.songs || []) if(!records.has(raw.id)) {
+        const song={id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease',...(context.recordingProvider==='spotify'?{creditedArtistNames:raw.artists?.map(x=>x.name),...(raw.isrc?{isrc:raw.isrc}:{}),...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{})}:{})};
+        records.set(raw.id,{raw,song:withTitleEvidence(song,raw,'alias',request)});
+      }
       const song=await select();if(song) return song;
       if(context.signal?.aborted) throw Object.assign(new Error('Lookup cancelled'),{name:'AbortError'});
     }
@@ -82,8 +98,8 @@ export class NeteaseAPI extends BaseMusicAPI {
     if(!Array.isArray(performers)||!performers.length||performers.some(p=>!p||!/^\d{1,20}$/.test(String(p.id))||typeof p.name!=='string'||!p.name.trim())
       ||typeof raw.name!=='string'||!raw.name.trim()||!Number.isFinite(raw.dt)||raw.dt<=0)
       throw Object.assign(new Error('Invalid NetEase source metadata'),{code:'recording_mismatch'});
-    const song={id:raw.id,title:raw.name,artist:performers.map(p=>p.name).join(' & '),album:raw.al?.name,duration:raw.dt/1000,source:'netease',
-      ...(context.recordingProvider==='spotify'?{creditedArtistNames:performers.map(p=>p.name),...(raw.isrc?{isrc:raw.isrc}:{}),...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{})}:{})};
+    const song=withTitleEvidence({id:raw.id,title:raw.name,artist:performers.map(p=>p.name).join(' & '),album:raw.al?.name,duration:raw.dt/1000,source:'netease',
+      ...(context.recordingProvider==='spotify'?{creditedArtistNames:performers.map(p=>p.name),...(raw.isrc?{isrc:raw.isrc}:{}),...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{})}:{})},raw,'alia',context);
     if(recordingScore(song,context)<0)await this.resolveArtistAliases(song,performers,context,context);
     findRecording([song],context);
     context.signal?.throwIfAborted();

@@ -16,7 +16,7 @@ export function verifiedCatalogProof(proof,request){
   &&Array.isArray(proof.searches)&&proof.searches.length>0&&proof.searches.length<=8
   &&proof.searches.every(s=>s&&typeof s.artist==='string'&&s.artist&&typeof s.title==='string'&&s.title&&Number.isFinite(s.duration));
 }
-const songFields=['id','artist','title','album','duration','source','isrc','explicit','creditedArtistNames'];
+const songFields=['id','artist','title','album','duration','source','isrc','explicit','creditedArtistNames','neteaseTitleEvidence'];
 export const sourceSignature=song=>Object.fromEntries(songFields.filter(k=>song[k]!==undefined).map(k=>[k,structuredClone(song[k])]));
 const targetFields=['artist','title','album','duration','catalog_id','artist_entities','recordingProvider','recordingItemID','recordingKey','creditedArtistNames','isrc','explicit'];
 export const sourceTarget=(target={})=>Object.fromEntries(targetFields.filter(k=>target[k]!==undefined).map(k=>[k,structuredClone(target[k])]));

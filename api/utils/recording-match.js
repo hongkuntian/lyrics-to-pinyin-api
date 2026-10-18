@@ -1,6 +1,7 @@
 import chinese from 'chinese-conv';
 import {createRequire} from 'node:module';
 import {cleanLyrics} from './lyric-quality.js';
+import {neteaseDescriptiveTitleMatches} from './netease-title-evidence.js';
 const require=createRequire(import.meta.url);
 const {artists:reviewedArtists}=require('../data/lyric-performers.json');
 const escapePattern=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -253,7 +254,7 @@ export function sameSpotifyRecordingNames(song,request) {
   // An explicitly supplied invalid source array cannot fall back to flat text.
   if(song.creditedArtistNames!==undefined&&!structuredNames(song))return false;
   const source=structuredNames(song),left=spotifyTitle(song.title),right=spotifyTitle(request.title);
-  if(left.title!==right.title)return false;
+  if(left.title!==right.title&&!neteaseDescriptiveTitleMatches(song,request,normalizeRecordingText))return false;
   const known=[...requested,...(source??[])];
   // Protect complete known names before interpreting feature separators. New
   // printed guests remain material even if omitted from a catalog artist list.
