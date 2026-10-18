@@ -83,6 +83,7 @@ test('the separate account login can enroll and sign in but cannot change genera
   await f.db.query('CREATE ROLE lyra_account_v1');
   const sql=await readFile(new URL('../../db/025-memberships.sql',import.meta.url),'utf8');
   await f.db.query(sql.slice(sql.indexOf('DO $$ BEGIN'),sql.lastIndexOf('COMMIT;')));
+  await f.db.exec(await readFile(new URL('../../db/028-selected-lyrics-learning.sql',import.meta.url),'utf8'));
   await f.db.query('SET ROLE lyra_account_v1');
   const g=await guest(f);
   await assert.rejects(f.db.query("UPDATE library_users SET unlimited_generation=true"),e=>e.code==='42501');

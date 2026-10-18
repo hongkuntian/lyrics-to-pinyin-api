@@ -10,6 +10,11 @@ const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex
 // complete ordered source and speaker semantics; names alone never establish reuse.
 export function translationIdentity(doc,{omitContext=false}={}) {
   const song=doc.response?.song,structure=doc.structure;
+  if(doc.selectedSourceCapsule||doc.selectedSource){
+    const c=independentModelContext(doc);
+    return spotifyHash(['selected-lyrics-meaning-1',c.source.provider,c.source.itemID,
+      {title:c.title,artist:c.artist,album:c.album??null},song.language,structure]);
+  }
   if(hasIndependentContext(doc)) {
     const context=independentModelContext(doc);
     if(!song?.language||!structure?.occurrences?.length)return null;
@@ -31,6 +36,7 @@ export function translationIdentity(doc,{omitContext=false}={}) {
 // This is a cryptographic reconstruction check, not a guess that a similar song
 // has the same lyrics. Exact legacy hashes also retain original timing/readings.
 export function legacySourceCandidates(doc) {
+  if(doc.selectedSourceCapsule||doc.selectedSource)return [];
   const lines=doc.response.lines.map(l=>({original:l.original,romanized:l.romanized,timestamp:l.timestamp??null}));
   const speakers=(doc.structure.speakers??[]).map(s=>({id:s.id,sourceLabel:s.sourceLabel,displayName:s.displayName}));
   const occurrences=doc.structure.occurrences;

@@ -60,6 +60,7 @@ export async function reusableTranslation(db,doc,target) {
 }
 
 async function reusableIndependentTranslation(db,doc,target) {
+  if(doc.selectedSourceCapsule||doc.selectedSource)return null;
   // One side must carry a verified independent source capsule. A matching
   // title, ISRC or legacy context hash never establishes this bridge alone.
   const spotify=hasIndependentContext(doc);
@@ -74,7 +75,7 @@ async function reusableIndependentTranslation(db,doc,target) {
     FROM song_translations t JOIN translation_heads h ON h.translation_id=t.id
     JOIN translation_revisions r ON r.id=h.revision_id JOIN lyric_documents d ON d.id=t.document_id
     LEFT JOIN translation_jobs j ON j.id=t.id
-    WHERE t.target=$1 AND r.recipe=$2 AND d.superseded_by IS NULL
+    WHERE t.target=$1 AND r.recipe=$2 AND d.superseded_by IS NULL AND d.selected_source IS NULL
       AND (d.source_capsule IS NULL)=$6
       AND ((d.source_capsule->>'provider'=$3 AND d.source_capsule->>'itemID'=$4)
         OR (d.source_capsule IS NULL AND d.response->'metadata'->>'source'=ANY($5::text[])

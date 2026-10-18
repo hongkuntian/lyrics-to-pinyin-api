@@ -18,10 +18,13 @@ import {canonicalTarget,environmentLanguagePolicy,requireDirection,capabilities}
 import {selectionV2,explanationRecipe,selectionFor,explanationBody,explanationKey,generateExplanation} from './utils/song-library/study-explanation.js';
 import {reserveExplanation,claimExplanation,finishExplanation,publicExplanation,existingExplanation} from './utils/song-library/study-store.js';
 
+import {createLyricSourceLoader} from './utils/lyric-search.js';
+import {withDeadline} from './utils/fetch-json.js';
+import {selectedSourceRequest,makeSelectedDocument} from './utils/song-library/selected-source.js';
 import {annotationFor,pronunciationKey,enabledProfiles} from './utils/pronunciation-aids.js';
 
 export const config={maxDuration:300,supportsResponseStreaming:true};
-const actions={capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
+const actions={selected_source:['provider','itemID','query','expectedTextHash'],capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeService()) {
   return async (recording,{refresh=false,delivery}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
@@ -32,7 +35,7 @@ export function lyricLoader(handler=createMusicRomanizeService()) {
 }
 export function createSongLibraryService({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,apiKey=process.env.OPENAI_API_KEY,
   selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null,pronunciationFn=annotationFor,pronunciationProfiles=enabledProfiles,
-  lyricSourceNeedsRefreshFn=lyricSourceNeedsRefresh}={}) {
+  lyricSourceNeedsRefreshFn=lyricSourceNeedsRefresh,loadSelectedSource=createLyricSourceLoader(),selectedSourceTimeoutMs=6000}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
   const execute=(db,id,doc)=>executeTranslationJob(db,id,{apiKey,generateFn,doc});
   return withLyricsDelivery(async(req,res)=> {
@@ -55,11 +58,25 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       if(input.readOnly!==undefined&&input.readOnly!==true)throw new LibraryError('invalid_request',400);
       if(input.resumeOnly!==undefined&&input.resumeOnly!==true&&input.resumeOnly!=='true')throw new LibraryError('invalid_request',400);
       if(input.allowGeneration&&(input.readOnly||input.resumeOnly)||input.readOnly&&input.resumeOnly)throw new LibraryError('invalid_request',400);
+      const checkAccess=async doc=>{if(doc.selectedSourceCapsule||doc.selectedSource)await db.assertDocumentAccess(user.id,doc);};
+      const generationCurrent=doc=>db.isGenerationDocumentCurrent?db.isGenerationDocumentCurrent(doc,selectionRevision):db.isCurrentDocument(doc.id,selectionRevision);
       const policy=languagePolicy??environmentLanguagePolicy();
+      if(input.action==='selected_source') {
+        const {action,...fields}=input,request=selectedSourceRequest(fields);
+        let candidate;
+        try {candidate=await measure('selected_lookup',()=>withDeadline(signal=>loadSelectedSource(request,signal),selectedSourceTimeoutMs,req.lyricDelivery?.signal));}
+        catch {throw new LibraryError('provider_unavailable',502);}
+        if(!candidate)throw new LibraryError('lyrics_absent',404);
+        const value=await makeSelectedDocument(candidate,request);
+        req.lyricDelivery?.signal.throwIfAborted();
+        const doc=await db.saveSelectedDocument(value,user.id);
+        return send(200,{state:'ready',document:publicDocument(doc)});
+      }
       if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
       if(input.action==='pronunciation') {
         if(typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string'||typeof input.profileID!=='string')throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
+        await checkAccess(doc);
         if(doc.sourceHash!==input.sourceHash)throw new LibraryError('source_changed');
         const key=pronunciationKey(doc,input.profileID);
         // A disabled profile remains cached offline; no new server work is admitted.
@@ -113,6 +130,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       if(input.action==='translate'||input.action==='current') {
         if(typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string') throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
+        await checkAccess(doc);
         if(doc.sourceHash!==input.sourceHash)throw new LibraryError('source_changed');
         const target=canonicalTarget(input.target);
         const saved=await db.translation(doc.id,target);
@@ -142,7 +160,8 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         if(input.resumeOnly)return send(200,{state:'missing'});
         // Old immutable sources remain readable, but must refresh before any
         // new model input can include their embedded production credits.
-        if(hasEmbeddedLyricCredits(doc.response)||!await db.isCurrentDocument(doc.id,selectionRevision))throw new LibraryError('source_revision_superseded');
+        if(hasEmbeddedLyricCredits(doc.response)||!await generationCurrent(doc))throw new LibraryError('source_revision_superseded');
+        if(doc.selectedSourceCapsule&&!input.allowGeneration)throw new LibraryError('generation_required');
         if(!apiKey)throw new LibraryError('generation_not_configured',503);
         requireDirection(policy,'translation',doc.response.song.language,target);
         const body=requestBody(doc,target);
@@ -159,6 +178,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
           ['action','documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion']).concat(['allowGeneration','readOnly','resumeOnly']);
         if(Object.keys(input).some(k=>!allowed.includes(k))||typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string')throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
+        await checkAccess(doc);
         if(doc.sourceHash!==input.sourceHash)throw new LibraryError('source_changed');
         const language=canonicalTarget(v2?input.explanationLanguage:'en');
         let saved=null;
@@ -188,7 +208,8 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         let row=prior;
         if(!row) {
           requireDirection(policy,'explanation',selection.studyText?.layer==='translation'?saved.target:doc.response.song.language,language);
-          if(hasEmbeddedLyricCredits(doc.response)||!await db.isCurrentDocument(doc.id,selectionRevision))throw new LibraryError('source_revision_superseded');
+          if(hasEmbeddedLyricCredits(doc.response)||!await generationCurrent(doc))throw new LibraryError('source_revision_superseded');
+          if(doc.selectedSourceCapsule&&!input.allowGeneration)throw new LibraryError('generation_required');
           if(!apiKey)throw new LibraryError('generation_not_configured',503);
           const body=explanationBody(doc,saved,selection,language);
           row=(await reserveExplanation(db.db,{key,doc,translation:saved,selection,recipe,userID:user.id,explanationLanguage:language,
@@ -207,12 +228,17 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       }
       if(input.action==='status') {
         if(typeof input.jobID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(input.jobID))throw new LibraryError('invalid_request',400);
+        if(db.jobDocumentID){
+          const id=await db.jobDocumentID(input.jobID);
+          if(id){const source=await db.document(id);if(!source)throw new LibraryError('document_not_found',404);await checkAccess(source);}
+        }
         const job=await db.job(input.jobID);if(!job)throw new LibraryError('job_not_found',404);
         const saved=job.state==='ready'?await db.translation(job.documentID,job.target):null;
         const doc=saved?await db.document(job.documentID):null;
         if(saved&&!doc)throw new LibraryError('document_not_found',404);
         return send(200,{state:job.state,job,...(saved?{translation:publicTranslation(saved,doc)}:{})});
       }
+      if(typeof input.documentID==='string'){const source=await db.document(input.documentID);if(source)await checkAccess(source);}
       const report=await db.report({userID:user.id,documentID:input.documentID,translationID:input.translationID,
         sourceID:input.sourceID,category:input.category,detail:input.detail});
       // v1 acknowledges receipt with "pending" even when a duplicate report has since been

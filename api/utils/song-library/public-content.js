@@ -4,6 +4,7 @@ import {digest,LibraryError} from './store.js';
 import {isRejectedRecordingLyrics} from '../rejected-lyrics.js';
 import {appleVocalHashes,appleTimingRequest,hasVocalTiming} from './apple-vocal-timing.js';
 import {requestKey} from './document.js';
+import {validateSelectedDocument} from './selected-source.js';
 
 const normalizedVersions=new Set(['lyric-annotations-1','lyric-annotations-2',LYRIC_NORMALIZATION_VERSION]);
 const normalized=doc=>normalizedVersions.has(doc.structure.version);
@@ -12,6 +13,12 @@ const normalized=doc=>normalizedVersions.has(doc.structure.version);
 // prefix. Keep that wire contract while canonical documents retain raw rows,
 // performer turns and clean-to-source indices for translation and provenance.
 export function publicDocument(doc,request=null) {
+  if(doc.selectedSourceCapsule||doc.selectedSource){
+    if(request)throw new LibraryError('recording_mismatch');
+    validateSelectedDocument(doc);
+    const {selectedSourceCapsule,modelContext,...value}=doc;
+    return {...value,response:{...value.response,lyric_structure:value.structure}};
+  }
   if(!doc.sourceCapsule&&hasVocalTiming(doc.response)){
     let hashes;
     try{hashes=appleVocalHashes(doc.response,doc.structure,doc);}catch{throw new LibraryError('recording_mismatch');}

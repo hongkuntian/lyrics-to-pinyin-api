@@ -5,6 +5,7 @@ import {requestBody,reservationMicros,translationRecipe} from './translation.js'
 import {budget,checkBudget,checkEmergencyBudget} from './spending.js';
 import {reusableTranslation} from './translation-reuse.js';
 import {reserveMemberUsage} from '../membership/store.js';
+import {selectedDocumentFromRow,validateSelectedDocument} from './selected-source.js';
 const first=async(db,sql,args=[])=>(await db.query(sql,args)).rows[0]??null;
 export async function retryTranslation(database,{jobID,expectedAttempt,requestKey,actor,reason,dryRun=false}) {
   if(typeof jobID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(jobID)||!Number.isSafeInteger(expectedAttempt)||expectedAttempt<1||
@@ -14,19 +15,28 @@ export async function retryTranslation(database,{jobID,expectedAttempt,requestKe
   return database.transaction(async db=>{
     const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
     const prior=await first(db,'SELECT * FROM translation_retry_requests WHERE request_key=$1',[requestKey]);
-    if(prior){if(prior.request_hash!==requestHash)throw new LibraryError('retry_key_conflict');return {jobID:prior.job_id,attempt:prior.attempt};}
+    if(prior&&prior.request_hash!==requestHash)throw new LibraryError('retry_key_conflict');
     const job=await first(db,'SELECT * FROM translation_jobs WHERE id=$1 FOR UPDATE',[jobID]);if(!job)throw new LibraryError('job_not_found',404);
+    const selectedRow=await first(db,'SELECT * FROM lyric_documents WHERE id=$1 AND selected_source IS NOT NULL',[job.document_id]);
+    if(selectedRow){
+      const user=await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled FOR UPDATE',[job.user_id]);
+      if(!user||!await first(db,'SELECT 1 FROM selected_source_access WHERE user_id=$1 AND document_id=$2',[job.user_id,job.document_id]))throw new LibraryError('selected_source_unavailable',404);
+    }
+    if(prior)return {jobID:prior.job_id,attempt:prior.attempt};
     if(job.attempt!==expectedAttempt)throw new LibraryError('retry_attempt_superseded');
     const operation=await first(db,'SELECT state FROM library_spend_operations WHERE generation_job_id=$1 AND generation_attempt=$2',[jobID,expectedAttempt]);
     if(job.state!=='failed'||operation?.state!=='settled')throw new LibraryError('retry_requires_known_failure');
     const row=await first(db,'SELECT * FROM lyric_documents WHERE id=$1 AND superseded_by IS NULL',[job.document_id]);
     if(!row)throw new LibraryError('source_revision_superseded');
-    const doc={id:row.id,sourceHash:row.source_hash,response:row.response,structure:row.structure,...(row.source_capsule?{sourceCapsule:row.source_capsule,modelContext:row.model_context,recordingKey:row.recording_key}:{})};
-    if(!await first(db,'SELECT 1 FROM lyric_requests WHERE document_id=$1 LIMIT 1',[doc.id]))throw new LibraryError('source_revision_superseded');
+    const doc=selectedDocumentFromRow(row)??{id:row.id,sourceHash:row.source_hash,response:row.response,structure:row.structure,...(row.source_capsule?{sourceCapsule:row.source_capsule,modelContext:row.model_context,recordingKey:row.recording_key}:{})};
+    if(row.selected_source){
+      validateSelectedDocument(doc);
+      if(!await first(db,'SELECT 1 FROM selected_source_access WHERE user_id=$1 AND document_id=$2',[job.user_id,doc.id]))throw new LibraryError('selected_source_unavailable',404);
+    } else if(!await first(db,'SELECT 1 FROM lyric_requests WHERE document_id=$1 LIMIT 1',[doc.id]))throw new LibraryError('source_revision_superseded');
     // Dry runs perform no binding writes. Actual admission checks saved content first.
     if(!dryRun&&await reusableTranslation(db,doc,job.target))throw new LibraryError('translation_already_available');
     if(!settings?.enabled)throw new LibraryError('generation_disabled',503);
-    const user=await first(db,'SELECT * FROM library_users WHERE id=$1 AND NOT disabled',[job.user_id]);if(!user)throw new LibraryError('unauthorized',401);
+    const user=await first(db,'SELECT * FROM library_users WHERE id=$1 AND NOT disabled FOR UPDATE',[job.user_id]);if(!user)throw new LibraryError('unauthorized',401);
     if(await first(db,"SELECT id FROM translation_jobs WHERE user_id=$1 AND state IN ('queued','running','unknown') UNION ALL SELECT id FROM study_explanations WHERE user_id=$1 AND state IN ('queued','running','unknown') LIMIT 1",[job.user_id]))throw new LibraryError('user_busy',429);
     const generationRequest=requestBody(doc,job.target),amount=reservationMicros(generationRequest);
     checkEmergencyBudget(settings,await budget(db),amount);

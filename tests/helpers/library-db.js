@@ -37,6 +37,7 @@ export async function libraryDB(path) {
     await db.exec(await readFile(new URL('../../db/024-live-lyrics-cleanup.sql',import.meta.url),'utf8'));
   if(!(await db.query("SELECT 1 FROM information_schema.columns WHERE table_name='lyric_documents' AND column_name='source_capsule'")).rows.length)
     await db.exec(await readFile(new URL('../../db/026-spotify-recordings.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../../db/028-selected-lyrics-learning.sql',import.meta.url),'utf8'));
   const store=new SongLibraryStore({query:(...args)=>db.query(...args),transaction:fn=>db.transaction(fn)});
   if(!(await db.query("SELECT to_regclass('membership_settings') AS name")).rows[0].name)
     await db.exec(await readFile(new URL('../../db/025-memberships.sql',import.meta.url),'utf8'));

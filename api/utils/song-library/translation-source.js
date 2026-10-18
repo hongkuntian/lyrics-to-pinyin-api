@@ -1,10 +1,13 @@
 // Correction history remains anchored to the immutable original source. A
 // verified binding supplies song context when a reconstructed archive lacks it.
+import {selectedDocumentFromRow} from './selected-source.js';
 export async function translationSource(db,translationID) {
   const row=(await db.query(`SELECT d.*,a.response AS archived_response,a.structure AS archived_structure,a.source_hash AS archived_hash
     FROM song_translations t JOIN lyric_documents d ON d.id=t.document_id
     LEFT JOIN lyric_source_archives a ON a.document_id=d.id WHERE t.id=$1`,[translationID])).rows[0];
   if(!row)return null;
+  if(row.selected_source)return selectedDocumentFromRow(row.superseded_by
+    ?{...row,response:row.archived_response,structure:row.archived_structure}:row);
   const sourceContext=row.source_capsule?{sourceCapsule:row.source_capsule,modelContext:row.model_context,recordingKey:row.recording_key}:{};
   if(!row.superseded_by)return {id:row.id,sourceHash:row.source_hash,response:row.response,structure:row.structure,...sourceContext};
   if(!row.archived_response||row.archived_hash!==row.source_hash)return null;
