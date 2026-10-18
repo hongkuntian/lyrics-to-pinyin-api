@@ -1,5 +1,6 @@
 import {randomUUID} from 'node:crypto';
-import {LibraryError} from './store.js';
+import {LibraryError,SongLibraryStore} from './store.js';
+import {selectedDocumentFromRow} from './selected-source.js';
 import {budget,checkBudget,checkEmergencyBudget,finishReviewOperation} from './spending.js';
 import {reserveMemberUsage,settleMemberUsage} from '../membership/store.js';
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??null;
@@ -24,13 +25,23 @@ export async function existingExplanation(database,key) {
 export async function reserveExplanation(database,{key,doc,translation,selection,recipe,userID,amount,explanationLanguage='en',generationRequest=null,allowGeneration=false}) {
   return database.transaction(async db=>{
     const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
-    if(await first(db,'SELECT 1 FROM lyric_documents WHERE id=$1 AND superseded_by IS NOT NULL',[doc.id]))throw new LibraryError('source_revision_superseded');
+    const stored=await first(db,'SELECT * FROM lyric_documents WHERE id=$1',[doc.id]),selected=Boolean(stored?.selected_source);
+    let user;
+    if(selected) {
+      // Access precedes every prior/cache path and remains fenced against
+      // account deletion through the rest of this admission transaction.
+      user=await first(db,'SELECT id,unlimited_generation,access_kind FROM library_users WHERE id=$1 AND NOT disabled FOR UPDATE',[userID]);
+      const tx=new SongLibraryStore(db);doc=selectedDocumentFromRow(stored);
+      await tx.assertDocumentAccess(userID,doc);
+      if(!await tx.isGenerationDocumentCurrent(doc))throw new LibraryError('source_revision_superseded');
+    }
+    if(stored?.superseded_by)throw new LibraryError('source_revision_superseded');
     const prior=await first(db,'SELECT * FROM study_explanations WHERE cache_key=$1',[key]);
     if(prior)return {created:false,row:prior};
     if(!settings?.enabled)throw new LibraryError('generation_disabled',503);
-    const user=await first(db,'SELECT id,unlimited_generation,access_kind FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
+    user??=await first(db,'SELECT id,unlimited_generation,access_kind FROM library_users WHERE id=$1 AND NOT disabled FOR UPDATE',[userID]);
     if(!user)throw new LibraryError('unauthorized',401);
-    if(user.access_kind!=='beta'&&!allowGeneration)throw new LibraryError('generation_required');
+    if(selected?allowGeneration!==true:user.access_kind!=='beta'&&!allowGeneration)throw new LibraryError('generation_required');
     if(translation) {
       const head=await first(db,`SELECT h.revision_id FROM translation_heads h JOIN song_translations t ON t.id=h.translation_id
         JOIN translation_document_bindings b ON b.translation_id=t.id WHERE b.document_id=$1 AND t.target=$2 FOR UPDATE OF t`,[doc.id,translation.target??'en']);
@@ -60,6 +71,16 @@ export async function claimExplanation(database,id) {
   return database.transaction(async db=>{
     const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');if(!settings?.enabled)return false;
     checkEmergencyBudget(settings,await budget(db));
+    const explanation=await first(db,'SELECT * FROM study_explanations WHERE id=$1',[id]);
+    if(!explanation||explanation.state!=='queued')return false;
+    const stored=await first(db,'SELECT * FROM lyric_documents WHERE id=$1',[explanation.document_id]);
+    if(stored?.selected_source) {
+      const user=await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled FOR UPDATE',[explanation.user_id]);
+      if(!user)return false;
+      const tx=new SongLibraryStore(db),doc=selectedDocumentFromRow(stored);
+      try {await tx.assertDocumentAccess(explanation.user_id,doc);}catch(error){if(error.code==='selected_source_unavailable')return false;throw error;}
+      if(!await tx.isGenerationDocumentCurrent(doc))return false;
+    }
     const row=await first(db,"UPDATE study_explanations SET state='running' WHERE id=$1 AND state='queued' AND EXISTS(SELECT 1 FROM library_users u WHERE u.id=study_explanations.user_id AND NOT u.disabled) RETURNING id",[id]);if(!row)return false;
     await db.query("UPDATE library_spend_operations SET state='submitted',submitted_at=now() WHERE id=$1 AND state='reserved'",[id]);return true;
   });

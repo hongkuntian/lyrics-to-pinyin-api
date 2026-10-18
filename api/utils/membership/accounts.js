@@ -126,6 +126,7 @@ export class AccountStore {
       await this.nonce(db,input,'delete',user.id,true);
       spotifyCleanup=await revokeSpotifyInTransaction(db,{ownerID:user.id},'accountDeleted');
       await db.query('UPDATE library_users SET disabled=true WHERE id=$1',[user.id]);
+      await db.query('DELETE FROM selected_source_access WHERE user_id=$1',[user.id]);
       await db.query('UPDATE library_tokens SET revoked=true WHERE user_id=$1',[user.id]);
       await db.query("UPDATE app_attest_keys SET revoked=true,receipt=''::bytea,public_key='' WHERE user_id=$1",[user.id]);
       await db.query('DELETE FROM app_auth_sessions WHERE key_id IN (SELECT key_id FROM app_attest_keys WHERE user_id=$1)',[user.id]);

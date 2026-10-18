@@ -7,17 +7,18 @@ import {translationIdentity} from './translation-identity.js';
 import {reusableTranslation,jobForDocument} from './translation-reuse.js';
 import {reserveMemberUsage,settleMemberUsage} from '../membership/store.js';
 import {hasVocalTiming,bindAppleTimingRequest} from './apple-vocal-timing.js';
+import {selectedDocumentFromRow,validateSelectedDocument,SELECTED_SOURCE_REVISION} from './selected-source.js';
 
 export class LibraryError extends Error {
   constructor(code,status=409) { super(code);this.code=code;this.status=status; }
 }
 export const digest=value=>createHash('sha256').update(typeof value==='string'?value:JSON.stringify(value)).digest('hex');
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0] ?? null;
-const document=row=>row && bindAppleTimingRequest({id:row.id,recordingKey:row.recording_key,sourceHash:row.source_hash,
+const document=row=>row && (selectedDocumentFromRow(row)??bindAppleTimingRequest({id:row.id,recordingKey:row.recording_key,sourceHash:row.source_hash,
   canonicalRecordingID:row.canonical_recording_id??null,textRevision:row.text_revision??null,timingRevision:row.timing_revision??null,readingRevision:row.reading_revision??null,
   ...(row.source_capsule?{sourceCapsule:row.source_capsule,modelContext:row.model_context,
     ...(row.request_recording?{requestRecording:row.request_recording,requestEvidence:row.request_evidence,requestKey:row.request_key}:{})}:{}),
-  selectionRevision:row.selection_revision,checkedAt:row.checked_at??null,response:{...row.response,...(row.song_details?{song_details:row.song_details}:{}),...(row.provider_translation?{provider_translation:row.provider_translation}:{})},structure:row.structure},row.request_key);
+  selectionRevision:row.selection_revision,checkedAt:row.checked_at??null,response:{...row.response,...(row.song_details?{song_details:row.song_details}:{}),...(row.provider_translation?{provider_translation:row.provider_translation}:{})},structure:row.structure},row.request_key));
 const publicJob=row=>({id:row.id,state:row.state,documentID:row.document_id,target:row.target,errorCode:row.error_code});
 
 export class SongLibraryStore {
@@ -56,7 +57,44 @@ export class SongLibraryStore {
       DO UPDATE SET count=library_rate_windows.count+1 RETURNING count`,[userID]);
     if(row.count>60) throw new LibraryError('rate_limited',429);
   }
+  async saveSelectedDocument(value,userID) {
+    validateSelectedDocument(value);
+    return this.db.transaction(async db=>{
+      // Account deletion/disable cannot cross registration. Source documents
+      // are shared immutably; only this caller's private access is added.
+      const user=await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled FOR SHARE',[userID]);
+      if(!user)throw new LibraryError('selected_source_unavailable',404);
+      await db.query(`INSERT INTO lyric_documents(id,recording_key,source_hash,selection_revision,response,structure,
+        selected_source,model_context,text_revision,timing_revision,reading_revision,translation_identity)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(id) DO NOTHING`,
+        [value.id,value.recordingKey,value.sourceHash,value.selectionRevision,JSON.stringify(value.response),JSON.stringify(value.structure),
+          JSON.stringify(value.selectedSourceCapsule),JSON.stringify(value.modelContext),value.textRevision,value.timingRevision,value.readingRevision,translationIdentity(value)]);
+      const row=await first(db,'SELECT * FROM lyric_documents WHERE id=$1',[value.id]);
+      if(row.source_hash!==value.sourceHash||canonicalJSON(row.selected_source)!==canonicalJSON(value.selectedSourceCapsule))
+        throw new LibraryError('selected_source_collision');
+      const saved=document(row);validateSelectedDocument(saved);
+      await db.query('INSERT INTO selected_source_access(user_id,document_id) VALUES($1,$2) ON CONFLICT(user_id,document_id) DO NOTHING',[userID,value.id]);
+      return saved;
+    });
+  }
+  async assertDocumentAccess(userID,doc) {
+    if(!doc?.selectedSourceCapsule&&!doc?.selectedSource)return;
+    const access=await first(this.db,`SELECT u.id FROM library_users u WHERE u.id=$1 AND NOT u.disabled
+      AND EXISTS(SELECT 1 FROM selected_source_access a WHERE a.user_id=u.id AND a.document_id=$2)`,[userID,doc.id]);
+    if(!access)throw new LibraryError('selected_source_unavailable',404);
+  }
+  async isGenerationDocumentCurrent(doc,automaticRevision) {
+    if(!doc?.selectedSourceCapsule&&!doc?.selectedSource)return this.isCurrentDocument(doc.id,automaticRevision);
+    try {validateSelectedDocument(doc);}catch {return false;}
+    const row=await first(this.db,'SELECT * FROM lyric_documents WHERE id=$1 AND superseded_by IS NULL AND selection_revision=$2',[doc.id,SELECTED_SOURCE_REVISION]);
+    try {
+      const stored=selectedDocumentFromRow(row);if(!stored)return false;
+      validateSelectedDocument(stored);return stored.sourceHash===doc.sourceHash;
+    } catch {return false;}
+  }
   async saveDocument(value,{replaceID=null,lookupOwner=null}={}) {
+    // Selected sources use private registration, never automatic request maps.
+    if(value.selectedSourceCapsule||value.selectedSource)throw new LibraryError('invalid_source',400);
     const spotify=Boolean(value.sourceCapsule);
     if(spotify) {
       if(!lookupOwner)throw new LibraryError('lookup_superseded');
@@ -206,11 +244,18 @@ export class SongLibraryStore {
       // therefore agree across instances. The lock is released BEFORE contacting any provider.
       const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');
       if(!settings) throw new LibraryError('store_unavailable',503);
-      if(await first(db,'SELECT 1 FROM lyric_documents WHERE id=$1 AND superseded_by IS NOT NULL',[documentID])) throw new LibraryError('source_revision_superseded');
-      const user=await first(db,'SELECT id,unlimited_generation,access_kind FROM library_users WHERE id=$1 AND NOT disabled',[userID]);
+      const sourceRow=await first(db,'SELECT * FROM lyric_documents WHERE id=$1',[documentID]);
+      const doc=document(sourceRow),selected=Boolean(sourceRow?.selected_source);
+      // Lock order is settings -> account. Membership admission reuses this
+      // account lock and never acquires membership_settings, avoiding deletion's
+      // membership_settings -> account order becoming a cycle.
+      const user=await first(db,'SELECT id,unlimited_generation,access_kind FROM library_users WHERE id=$1 AND NOT disabled FOR UPDATE',[userID]);
+      const tx=new SongLibraryStore(db);
+      if(selected)await tx.assertDocumentAccess(userID,doc);
+      if(sourceRow?.superseded_by)throw new LibraryError('source_revision_superseded');
       if(!user) throw new LibraryError('unauthorized',401);
-      const doc=document(await first(db,'SELECT * FROM lyric_documents WHERE id=$1 AND superseded_by IS NULL',[documentID]));
       if(!doc)throw new LibraryError('document_not_found',404);
+      if(selected&&!await tx.isGenerationDocumentCurrent(doc))throw new LibraryError('source_revision_superseded');
       const identity=translationIdentity(doc);
       const saved=await reusableTranslation(db,doc,target);
       if(saved) return {kind:'ready',translation:{...saved.content,id:saved.id,recipe:saved.recipe,target:saved.target,documentID:saved.document_id,sourceHash:saved.source_hash,notesLanguage:saved.target}};
@@ -218,7 +263,7 @@ export class SongLibraryStore {
         UNION ALL SELECT j.* FROM translation_generation_keys k JOIN translation_jobs j ON j.id=k.job_id
         WHERE k.identity=$3 AND k.target=$2 LIMIT 1`,[documentID,target,identity]);
       if(prior) return {kind:prior.state==='queued'||prior.state==='running'?'pending':prior.state,job:await jobForDocument(db,prior,documentID)};
-      if(user.access_kind!=='beta'&&!allowGeneration)throw new LibraryError('generation_required');
+      if(selected?allowGeneration!==true:user.access_kind!=='beta'&&!allowGeneration)throw new LibraryError('generation_required');
       if(!settings.enabled) throw new LibraryError('generation_disabled',503);
       // An uncertain completed attempt retains its spending reservation and can
       // never redispatch, but must not block unrelated learning forever.
@@ -244,6 +289,16 @@ export class SongLibraryStore {
     return this.db.transaction(async db=>{
       const settings=await first(db,'SELECT * FROM library_settings WHERE id=1 FOR UPDATE');if(!settings?.enabled)return null;
       checkEmergencyBudget(settings,await budget(db));
+      const job=await first(db,'SELECT * FROM translation_jobs WHERE id=coalesce((SELECT job_id FROM translation_job_aliases WHERE id=$1),$1)',[id]);
+      if(!job||job.state!=='queued')return null;
+      const doc=document(await first(db,'SELECT * FROM lyric_documents WHERE id=$1',[job.document_id]));
+      if(doc?.selectedSourceCapsule||doc?.selectedSource) {
+        const user=await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled FOR UPDATE',[job.user_id]);
+        if(!user)return null;
+        const tx=new SongLibraryStore(db);
+        try {await tx.assertDocumentAccess(job.user_id,doc);}catch(error){if(error.code==='selected_source_unavailable')return null;throw error;}
+        if(!await tx.isGenerationDocumentCurrent(doc))return null;
+      }
       return first(db,`UPDATE translation_jobs SET state='running',started_at=now()
         WHERE id=coalesce((SELECT job_id FROM translation_job_aliases WHERE id=$1),$1) AND state='queued'
         AND EXISTS(SELECT 1 FROM library_users u WHERE u.id=translation_jobs.user_id AND NOT u.disabled) RETURNING *`,[id]);
@@ -281,6 +336,11 @@ export class SongLibraryStore {
     if(row?.state==='unknown')await settleMemberUsage(this.db,jobID,false);
     return row && {...publicJob(row),id,documentID:alias?.document_id??row.document_id};
   }
+  async jobDocumentID(id) {
+    const row=await first(this.db,`SELECT document_id FROM translation_job_aliases WHERE id=$1
+      UNION ALL SELECT document_id FROM translation_jobs WHERE id=$1 LIMIT 1`,[id]);
+    return row?.document_id??null;
+  }
   async usage() { return first(this.db,`SELECT coalesce(sum(accounted_micros),0) AS accounted_micros,
     count(*) FILTER(WHERE kind='generation') AS jobs,count(*) FILTER(WHERE kind<>'generation') AS review_operations FROM library_spend_operations`); }
   async report({userID,documentID,translationID=null,sourceID,category,detail}) {
@@ -297,6 +357,7 @@ export class SongLibraryStore {
     const fingerprint=digest([userID,documentID,translationID,sourceID,category,detail.trim()]);
     return this.db.transaction(async db=> {
       await db.query('SELECT id FROM library_users WHERE id=$1 FOR UPDATE',[userID]);
+      await new SongLibraryStore(db).assertDocumentAccess(userID,doc);
       const prior=await first(db,'SELECT id,status FROM correction_reports WHERE fingerprint=$1',[fingerprint]);
       if(prior) return prior;
       const count=await first(db,"SELECT count(*) AS n FROM correction_reports WHERE user_id=$1 AND created_at>=now()-interval '1 day'",[userID]);
