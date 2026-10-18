@@ -6,6 +6,7 @@ import {randomBytes} from 'node:crypto';
 import {parseArgs} from 'node:util';
 import pg from 'pg';
 import {migrateLibrary} from './library-migrations.js';
+import {replayMembershipRoleGrants} from './membership-role-grants.js';
 
 const {values,positionals}=parseArgs({allowPositionals:true,options:{
   'database-config-file':{type:'string'},'account-config-file':{type:'string'},set:{type:'string',multiple:true}
@@ -37,8 +38,7 @@ try {
       await client.query("ALTER ROLE lyra_account_v1 SET idle_in_transaction_session_timeout='10s'");
       await migrateLibrary({transaction:fn=>fn(client)});
       // Also grant if a previous migration ran before this login existed.
-      const sql=await readFile(new URL('../db/025-memberships.sql',import.meta.url),'utf8');
-      await client.query(sql.slice(sql.indexOf('DO $$ BEGIN'),sql.lastIndexOf('COMMIT;')));
+      await replayMembershipRoleGrants(client);
       await client.query('COMMIT');
     }catch(error){await client.query('ROLLBACK');throw error;}
     console.log('Account role provisioned. Retain the private configuration file; add its two values as production secrets.');

@@ -7,7 +7,7 @@ import {AppAuthStore} from '../../api/utils/app-auth/store.js';
 import {createAccountHandler} from '../../api/account.js';
 import {createMockRes} from '../helpers/mock-http.js';
 import {digest} from '../../api/utils/song-library/store.js';
-import {readFile} from 'node:fs/promises';
+import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.js';
 const policy={audience:'test',environment:'production',prefix:'9ESZX68J8U',bundles:['com.test.Lyrica']};
 const bundleID=policy.bundles[0],credential='lyra_g_'+'a'.repeat(43),keyID=Buffer.alloc(32,3).toString('base64');
 async function fixture(t){
@@ -81,9 +81,8 @@ test('public account HTTP rejects anonymous identity operations, surplus fields 
 test('the separate account login can enroll and sign in but cannot change generation budgets or grants',async t=>{
   const f=await fixture(t);
   await f.db.query('CREATE ROLE lyra_account_v1');
-  const sql=await readFile(new URL('../../db/025-memberships.sql',import.meta.url),'utf8');
-  await f.db.query(sql.slice(sql.indexOf('DO $$ BEGIN'),sql.lastIndexOf('COMMIT;')));
-  await f.db.exec(await readFile(new URL('../../db/028-selected-lyrics-learning.sql',import.meta.url),'utf8'));
+  await replayMembershipRoleGrants(f.db);
+  await replayMembershipRoleGrants(f.db); // Late provisioning is idempotent.
   await f.db.query('SET ROLE lyra_account_v1');
   const g=await guest(f);
   await assert.rejects(f.db.query("UPDATE library_users SET unlimited_generation=true"),e=>e.code==='42501');
