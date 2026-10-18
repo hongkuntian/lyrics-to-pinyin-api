@@ -14,6 +14,17 @@ to the group, not one song. Complete combined labels require every member to
 match. Generic chorus/gender cues require a confirmed named-performer cue in
 the same document. Unknown names and bracketed sung words remain unchanged.
 
+Instrument and engineering roles also accept bounded production modifiers:
+numbered sections such as `1st Violin` and `3rd Violins`, principal/lead/solo
+instruments, assistants, recording engineers, technicians and contractors.
+Chinese instrument roles compose with production duties such as `弦乐 助理`
+and `弦乐录音助理`. The complete label must match this grammar; an unknown
+colon label, a name-like body or proximity to credits alone is insufficient.
+`C.Bass` is accepted as a contrabass label. An anchored ISRC row retains the
+12-character code even when the provider splits its final five digits with
+extra hyphens, as in `ISRC：TW-C23-04-007-06`. Credit extraction never edits
+the retained lyric text, timestamps, or measured YRC segments.
+
 `metadata.lyric_structure` is an additive response field containing the
 normalization version, performed source rows, performer cue annotations, performer
 identities, and one occurrence per visible lyric row. Each occurrence preserves

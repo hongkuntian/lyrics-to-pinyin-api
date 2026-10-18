@@ -99,6 +99,10 @@ const roles=[
 const roleLabels=new Set(roles.flatMap(([zh,en])=>[
   ...zh,...en,...zh.flatMap(a=>en.flatMap(b=>[a+b,b+a,a+'('+b+')',b+'('+a+')']))
 ]).map(labelKey));
+// Match complete instrument/engineering roles with bounded production
+// modifiers. A colon or an arbitrary suffix never establishes a credit.
+const composedRole=/^(?:(?:(?:[1-9][0-9]?(?:st|nd|rd|th)|first|second|third|principal|lead|solo|assistant))?(?:strings?|violins?|violas?|cellos?|doublebass|contrabass|c\.?bass|guitars?|bass|drums?|piano|keyboards?|percussion|flute|saxophone|trumpet|trombone|horn|orchestra)(?:assistant|arrangement|arranger|recording(?:engineer|assistant)?|engineer|technician|contractor|director|conductor)?|(?:assistant|additional|chief|head)?(?:recording|mixing|mastering)(?:engineer|assistant|studio)?|(?:第?[一二三四五六七八九十0-9]+|首席|助理)?(?:弦乐|管弦乐|小提琴|中提琴|大提琴|低音提琴|倍低音提琴|吉他|贝斯|鼓|钢琴|键盘|打击乐|长笛|萨克斯|小号|长号|圆号|二胡|古筝|琵琶)(?:编写|编曲|录音|录音师|录音助理|助理|技师|统筹|监制|指挥|团)?)$/u;
+const isrcPattern=/^\s*ISRC\s*[:：]?\s*([A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9](?:-?[0-9]){4})\s*$/iu;
 const ambiguousRoles=new Set(['chorus','和声','和音','合声','backingvocal','backingvocals']);
 const sourceCredit=/^取材自歌曲[《〈].+[》〉]\s*[（(]\s*[词詞]\s*[:：].+曲\s*[:：].+[）)]$/u;
 const instrumental=/^(?:纯音乐[，,。\s]*(?:请欣赏)?|純音樂[，,。\s]*(?:請欣賞)?|instrumental)[。.!\s]*$/iu;
@@ -137,8 +141,9 @@ function namedPerformers(label,aliases) {
 }
 function creditRole(text,aliases) {
   if(sourceCredit.test(text)) return 'source_credit';
+  if(isrcPattern.test(text)) return 'production_credit';
   const parts=text.match(/^([^:：]+)[:：](.*)$/u);
-  if(!parts || !parts[2].trim()) return null;
+  if(!parts || parts[1].length>120 || !parts[2].trim()) return null;
   const key=labelKey(parts[1]);
   if(ambiguousRoles.has(key)) {
     // Explicit Chinese/English backing-vocal role plus a compact roster; an
@@ -147,7 +152,7 @@ function creditRole(text,aliases) {
     const compactNames=/^[\p{Script=Han}]{2,4}(?:[ 、/／&,，]+[\p{Script=Han}]{2,4})+$/u.test(roster);
     return namedPerformers(roster,aliases) || (key!=='chorus' && compactNames)?'production_credit':null;
   }
-  return roleLabels.has(key)?'production_credit':null;
+  return roleLabels.has(key)||composedRole.test(key)?'production_credit':null;
 }
 
 const performanceRoles=new Set(['男声','女声','戏腔']);
@@ -241,7 +246,7 @@ export function normalizeLyricAnnotations(data,options={}) {
     if(!speaker) {speaker={id:`S${speakers.length+1}`,sourceLabel:label,displayName};speakers.push(speaker);}
     return speaker.id;
   };
-  const lines=[],occurrences=[],credits=[...(data.credits??[])],removed=new Set();
+  const lines=[],occurrences=[],translationInputs=[],credits=[...(data.credits??[])],removed=new Set();
   let active=null,pendingTurn=false;
   input.forEach((line,i)=>{
     const original=reusable?previous.occurrences[i]:null;
@@ -254,7 +259,8 @@ export function normalizeLyricAnnotations(data,options={}) {
     if(!text || role || (!strippedPrefix && (instrumental.test(text) || isMusicNotePlaceholder(text)))) {
       if(role) {
         const match=text.match(/^([^:：]+)[:：]\s*(.+)$/u);
-        const credit={role:role==='recording_heading'?'Recording':role==='rights_notice'?'Rights':match?.[1].trim()??'Source',contributors:match?match[2].split(/\s*[、/／&，,]\s*/u).filter(Boolean):[],
+        const isrc=text.match(isrcPattern);
+        const credit={role:role==='recording_heading'?'Recording':role==='rights_notice'?'Rights':isrc?'ISRC':match?.[1].trim()??'Source',contributors:isrc?[isrc[1]]:match?match[2].split(/\s*[、/／&，,]\s*/u).filter(Boolean):[],
           source:data.source??'unknown',original:text};
         if(!credits.some(c=>c.original===text && c.source===credit.source)) credits.push(credit);
       }
@@ -272,6 +278,7 @@ export function normalizeLyricAnnotations(data,options={}) {
     } else if(original?.speakerID) active=original.speakerID;
     startsTurn=startsTurn||pendingTurn;pendingTurn=false;
     lines.push(revalidatedVocalLine(line,lyricText));
+    translationInputs.push(i);
     occurrences.push({sourceID:`L${String(lines.length).padStart(4,'0')}`,sourceIndex,sourceText,
       lyricText,sourcePrefix,speakerID:active,startsTurn});
   });
@@ -280,12 +287,14 @@ export function normalizeLyricAnnotations(data,options={}) {
   const retained=sourceRows.map((row,index)=>({row,index})).filter(({index})=>!removed.has(index));
   const positions=new Map(retained.map(({index},i)=>[index,i]));
   const translationByInput=new Map((paired.providerTranslation?.lines??[]).map(row=>[row.sourceID,row]));
-  const providerLines=occurrences.flatMap(o=>{
-    const row=translationByInput.get(`L${String(o.sourceIndex+1).padStart(4,'0')}`);
+  const providerLines=occurrences.flatMap((o,i)=>{
+    // Translations address the current visible input, including on a repair
+    // pass whose canonical source indices still contain hidden speaker rows.
+    const row=translationByInput.get(`L${String(translationInputs[i]+1).padStart(4,'0')}`);
     return row?[{...row,sourceID:o.sourceID,sourceText:o.lyricText}]:[];
   });
-  const providerTranslation=reusable?data.providerTranslation:providerLines.length?{...paired.providerTranslation,lines:providerLines}:undefined;
-  return {...data,lines,credits,...(providerTranslation?{providerTranslation}:{}),lyricStructure:{version:LYRIC_NORMALIZATION_VERSION,
+  const providerTranslation=providerLines.length?{...paired.providerTranslation,lines:providerLines}:undefined;
+  return {...data,lines,credits,...(paired.providerTranslation?{providerTranslation}:{}),lyricStructure:{version:LYRIC_NORMALIZATION_VERSION,
     sourceRows:retained.map(({row})=>row),annotations:annotations.filter(a=>positions.has(a.sourceIndex)).map(a=>({...a,sourceIndex:positions.get(a.sourceIndex)})),
     speakers,occurrences:occurrences.map(o=>({...o,sourceIndex:positions.get(o.sourceIndex)}))}};
 }

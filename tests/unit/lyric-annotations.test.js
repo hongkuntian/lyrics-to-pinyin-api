@@ -2,9 +2,58 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {cleanLyrics} from '../../api/utils/lyric-quality.js';
-import {LYRIC_NORMALIZATION_VERSION,hasEmbeddedLyricCredits} from '../../api/utils/lyric-annotations.js';
+import {LYRIC_NORMALIZATION_VERSION,hasEmbeddedLyricCredits,normalizeLyricAnnotations} from '../../api/utils/lyric-annotations.js';
 const top={artist:'TOP Debut Boy Group',duration:271.291};
 const rows=texts=>texts.map((text,i)=>({text,timestamp:i*4+1}));
+
+const composedCredits=['弦乐 助理：杨波(北京)','1st Violin：陈允、曾诚、王洋','2nd Violin：李博彦、严柯、史丹',
+  'C.Bass：邵士玫、张小迪','ISRC：TW-C23-04-007-06','3rd Violins: Ensemble','Principal cello: Musician',
+  'Assistant recording engineer: Engineer','弦樂錄音助理：楊波','Guitar technician: Musician',
+  'Strings contractor: Ensemble','Recording assistant: Engineer'];
+test('composed production roles and split ISRC leave performed text and measured cues intact',()=>{
+  const vocal={text:'一起唱',timestamp:20,vocalTiming:{end:22,segments:[
+    {text:'一起',start:20,end:21,utf16Start:0,utf16Length:2},
+    {text:'唱',start:21,end:22,utf16Start:2,utf16Length:1}]}};
+  for(const credit of composedCredits) {
+    const data={source:'netease',lines:[{text:credit,timestamp:0},vocal,{text:credit,timestamp:23}]};
+    const result=cleanLyrics(data);
+    assert.deepEqual(result.lines,[vocal]);
+    assert.deepEqual(result.lines[0].vocalTiming,vocal.vocalTiming);
+    assert.equal(result.credits.length,1);
+    assert.equal(result.credits[0].original,credit);
+    assert.deepEqual(cleanLyrics(result),result);
+    assert.equal(hasEmbeddedLyricCredits({lines:[{original:credit}]}),true);
+  }
+});
+test('ordinary colon text survives even when surrounded by confirmed credits',()=>{
+  const vocals=['我说：别哭','Unknown: 张三、李四','1st Violin sings: stay','弦乐助理在唱：一起唱',
+    'Assistant to my heart: you','3rd time: I love you','Guitar hero: sing with me','Strings attached: stay',
+    'ISRC：TW-C23-04-007-06 是我的暗号','ISRC: TW-C23-04-007-060','凌晨3:30','https://example.com',
+    'Chorus: sing with me','和声：一起唱'];
+  for(const text of vocals) {
+    const data={lines:rows(['编曲：制作人','混音：工程师',text,'录音室：Studio','作曲：作曲家'])};
+    assert.deepEqual(cleanLyrics(data).lines,[data.lines[2]]);
+  }
+});
+test('repairing a previously normalized source remaps provider translations by visible occurrence',()=>{
+  const sourceRows=rows(['[Singer]','1st Violin: Ensemble','一起唱','一起唱']);
+  const input={source:'netease',lines:sourceRows.slice(1),lyricStructure:{version:LYRIC_NORMALIZATION_VERSION,
+    sourceRows,speakers:[],annotations:[],occurrences:sourceRows.slice(1).map((line,i)=>({
+      sourceID:`L000${i+1}`,sourceIndex:i+1,sourceText:line.text,lyricText:line.text,sourcePrefix:'',speakerID:null,startsTurn:false}))},
+    providerTranslation:{source:'netease',language:'en',kind:'provider',lines:[
+      {sourceID:'L0001',sourceText:'1st Violin: Ensemble',text:'Credit translation'},
+      {sourceID:'L0002',sourceText:'一起唱',text:'First sung occurrence'},
+      {sourceID:'L0003',sourceText:'一起唱',text:'Repeated sung occurrence'}]}};
+  const result=normalizeLyricAnnotations(input);
+  assert.deepEqual(result.lines,input.lines.slice(1));
+  assert.deepEqual(result.providerTranslation.lines,[
+    {sourceID:'L0001',sourceText:'一起唱',text:'First sung occurrence'},
+    {sourceID:'L0002',sourceText:'一起唱',text:'Repeated sung occurrence'}]);
+  assert.deepEqual(normalizeLyricAnnotations(result),result);
+  const creditOnly=normalizeLyricAnnotations({lines:[{text:'1st Violin: Ensemble'}],providerTranslation:{
+    lines:[{sourceID:'L0001',sourceText:'1st Violin: Ensemble',text:'Credit translation'}]}});
+  assert.equal(creditOnly.providerTranslation,undefined);
+});
 
 test('corroborated performance credits leave every source array at header, middle and footer',()=>{
   const credits=['男声：单色凌','戏腔：单色凌','和声：曾婕'];
