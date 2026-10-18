@@ -16,6 +16,8 @@ export function isolatedBuilderPackage(packageJSON){return {...packageJSON,scrip
 export function runtimeConfiguration(lambda){
  return {runtime:lambda.runtime,handler:lambda.handler,launcherType:lambda.launcherType,shouldAddHelpers:lambda.shouldAddHelpers,shouldAddSourcemapSupport:lambda.shouldAddSourcemapSupport,supportsResponseStreaming:lambda.supportsResponseStreaming,maxDuration:lambda.maxDuration,regions:lambda.regions,experimentalTriggers:lambda.experimentalTriggers};
 }
+export const notFoundPath='/_lyrica-not-found.json';
+export function deploymentRoutes(routes){return [...routes,{src:'/.*',dest:notFoundPath,status:404}];}
 export async function packageFunctions({workPath=root,output=path.join(workPath,'.vercel/output'),preflight=true}={}){
  if(process.versions.node.split('.')[0]!=='24')throw new Error('node24_required');
  if(preflight)await execute(process.execPath,[path.join(workPath,'scripts/vercel-library-build.js')],{cwd:workPath});
@@ -52,7 +54,11 @@ export async function packageFunctions({workPath=root,output=path.join(workPath,
   if(entry.includes('_spotify-')&&!(vc.experimentalTriggers?.length))throw new Error('private_trigger_required');
   inventory.push({entry,output:name+'.func',...vc,files:Object.keys(lambda.files).length,includes:required});
  }
- const config={version:3,routes:[...manifest.routes,{src:'/.*',status:404}],crons:manifest.crons};
+ // A status-only fallback may still execute a public function at the incoming
+ // path. Resolve unknown URLs to inert static bytes instead.
+ await fs.mkdir(path.join(output,'static'),{recursive:true});
+ await fs.writeFile(path.join(output,'static',notFoundPath),JSON.stringify({version:1,code:'not_found'})+'\n');
+ const config={version:3,routes:deploymentRoutes(manifest.routes),crons:manifest.crons};
  await fs.writeFile(path.join(output,'config.json'),JSON.stringify(config,null,2)+'\n');
  const receipt={node:process.version,builder:require('@vercel/node/package.json').version,mode:'non-development meta:{}',preflightRuns:preflight?1:0,functionCount:inventory.length,publicRoutes:manifest.routes,privateConsumers:inventory.filter(x=>x.experimentalTriggers),terminal404:true,crons:config.crons,functions:inventory,deployed:false};
  await fs.writeFile(path.join(output,'packaging-receipt.json'),JSON.stringify(receipt,null,2)+'\n');

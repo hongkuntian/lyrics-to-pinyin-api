@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createProviderGateway} from '../../api/provider-gateway.js';
 import {createBillingGateway} from '../../api/billing-gateway.js';
 import {createMockRes} from '../helpers/mock-http.js';
-import {manifest} from '../../scripts/build-output.mjs';
+import {manifest,deploymentRoutes} from '../../scripts/build-output.mjs';
 test('canonical rewrites preserve provider and billing endpoint identity',async()=>{
  const calls=[];
  const gateways={
@@ -34,4 +34,14 @@ test('deployment fits twelve functions with three isolated private queue consume
  assert.deepEqual(new Set(consumers.flatMap(e=>e.experimentalTriggers.map(t=>t.topic))),new Set(['spotify-background-tick-v1','spotify-background-acquire-v1','lyrica-listening-session-v1']));
  for(const consumer of consumers)assert.equal(consumer.experimentalTriggers.length,1);
  for(const privatePath of ['/api/provider-gateway','/api/billing-gateway','/api/_spotify-tick','/api/_spotify-acquire','/api/_listening-tick'])assert(!manifest.routes.some(r=>r.src===privatePath));
+});
+
+test('unknown and direct gateway paths resolve to static404 bytes rather than running an entry function',()=>{
+ const routes=deploymentRoutes(manifest.routes);
+ for(const pathname of ['/api/provider-gateway','/api/billing-gateway','/api/_listening-tick','/api/sessions.js','/api/membership.js','/unknown']){
+  const selected=routes.find(route=>new RegExp('^(?:'+route.src+')$').test(pathname));
+  assert.equal(selected.status,404);assert.equal(selected.dest,'/_lyrica-not-found.json');
+  assert(!manifest.entries.some(e=>'/'+e.entry.replace(/\.js$/,'')===selected.dest));
+ }
+ for(const route of manifest.routes)assert.deepEqual(routes.find(r=>new RegExp('^(?:'+r.src+')$').test(route.src)),route);
 });

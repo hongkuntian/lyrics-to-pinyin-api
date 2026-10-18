@@ -5,11 +5,11 @@ import {createHash} from 'node:crypto';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {manifest} from './build-output.mjs';
+import {manifest,deploymentRoutes,notFoundPath} from './build-output.mjs';
 const execute=promisify(execFile),root=path.resolve(fileURLToPath(new URL('..',import.meta.url))),out=path.join(root,'.vercel/output');
 const config=JSON.parse(await fs.readFile(path.join(out,'config.json'))),receipt=JSON.parse(await fs.readFile(path.join(out,'packaging-receipt.json')));
 assert.equal(config.version,3);assert.equal(receipt.functionCount,12);assert.equal(receipt.preflightRuns,1);assert.equal(receipt.mode,'non-development meta:{}');assert.equal(receipt.builder,'24.0.2');
-assert.deepEqual(config.routes,[...manifest.routes,{src:'/.*',status:404}]);assert.deepEqual(config.crons,manifest.crons);
+assert.deepEqual(config.routes,deploymentRoutes(manifest.routes));assert.deepEqual(JSON.parse(await fs.readFile(path.join(out,'static',notFoundPath))),{version:1,code:'not_found'});assert.deepEqual(config.crons,manifest.crons);
 assert.equal(manifest.routes.length,11);assert.equal(receipt.privateConsumers.length,3);assert.equal(receipt.privateConsumers.flatMap(x=>x.experimentalTriggers).length,3);
 const functions=await fs.readdir(path.join(out,'functions/api'));assert.deepEqual(functions.sort(),manifest.entries.map(x=>path.basename(x.entry,'.js')+'.func').sort());
 const includes=[],runtime=[];
@@ -43,7 +43,7 @@ await invoke(sessions,{method:'POST',body:{version:1,action:'list'},expected:401
 await invoke(manifest.routes.find(x=>x.src==='/api/store-notifications'),{method:'POST',body:{signedPayload:'not-a-jws'},expected:403});
 
 const blocked=['/api/_spotify-tick','/api/_spotify-acquire','/api/_listening-tick','/api/provider-gateway','/api/billing-gateway','/api/sessions.js','/api/utils/spotify/service.js','/api/data/lyric-performers.json','/api/song-library.js'];
-for(const url of blocked){const matched=config.routes.find(route=>new RegExp('^(?:'+route.src+')$').test(url));assert.equal(matched.status,404);}
+for(const url of blocked){const matched=config.routes.find(route=>new RegExp('^(?:'+route.src+')$').test(url));assert.equal(matched.status,404);assert.equal(matched.dest,notFoundPath);}
 const proof={node:process.version,functionCount:12,publicRoutes:11,privateConsumers:3,sourceBytesMatch:true,includes,nonMutatingRuntimeImports:runtime,blocked,terminal404:true,deployed:false,queueRegistration:false,platformWaitUntil:false};
 await fs.writeFile(path.join(out,'verification-receipt.json'),JSON.stringify(proof,null,2)+'\n');
 console.log(JSON.stringify({functions:12,publicRoutes:11,privateConsumers:3,actualIncludeChecks:includes.length,runtimeImports:runtime.length,terminal404:true,deployed:false}));
