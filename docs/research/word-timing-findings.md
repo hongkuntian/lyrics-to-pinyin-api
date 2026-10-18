@@ -125,6 +125,13 @@ from 2/5 to 5/5. drivers license remains readable without an admitted measured
 source. No original complete-measured positive was lost. These are source
 metadata checks, not independent audio-alignment or stock-app acceptance.
 
+The final paired source-adapter runs returned complete measured timing three
+times each for Viva la Vida and Shape of You. Median lookup time was 831 ms
+(range 750–2982 ms) and 129 ms (67–238 ms), respectively. Fresh known-ID QQ
+revalidation medians were 305 and 523 ms. These small samples are observations,
+not p95 guarantees or a controlled stock-app comparison. Readable-first and
+measured-completion timings are different metrics.
+
 The local production service with the real Japanese processor preserved all
 769 supplied Idol cues (773/773 meaningful graphemes); Shape of You preserved
 655 cues (2224/2224), and Despacito 510 (2052/2052). Acquisition DTOs were
