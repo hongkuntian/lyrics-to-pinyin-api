@@ -14,6 +14,10 @@ const bilingualQRC={
 const request={artist:'Test',title:'Synthetic',duration:120,album:'Example'};
 // Material edition descriptors, with synthetic First/Second source rows.
 const editionQRC={
+  "badAwardCaption": "ee7befb746f93831d42dcdf2e21f0d5dd9fd95a45509a645c457a4c6b1f25e151e8cad1e55389e4864eb076a798a526b819f34df40ae0b36fdd4984b94688c566e0625fd14db0d87663f4cc2aa2798bb20a8f0d0a4e9a921e40eaafc0507e7394812dee6cf2f207a69663d980417598914ecbfd84cd99cbb2d8f0c3a4f7527eb7c0082995b76ac7b39ed326fe67ad9bc5d25ce778a092d365de3f076f4bd738191d61c0b996a48b2b9c3e7dc58fd262e4e9fd765918fc244",
+  "badExplicitCaption": "e278b9763b68244eadfad7ce9df4bda6db36aed72c7cb4a3ac4cb8bed1357f0c87e5a92773143681a0ddf77f9fc9c6b711db131deaaeb07cdf3dfaec5ca87155ec847694f615c49b1ff545b9cc14e663694bd3c497825d5fe042533c779dba704801b86ba64ca4ddb37df37339f41e33c73640ecf9871279803986509ab37c2d91dfb37225196afda5cd5641a6b34c2eb490002b15b6d33aef99c84f6cab3ff5",
+  "benignAwardCaption": "ee7befb746f93831d42dcdf2e21f0d5dd9fd95a45509a645c457a4c6b1f25e151e8cad1e55389e4864eb076a798a526b819f34df40ae0b36fdd4984b94688c5681c21f4eb60a7319bf53adff1fb076f8030079109169b482c37bbfcb276fa0c6b0eacdfce51482c86da7487b4a539a1e22474b7dea0ff9c1272d9460b5ffa1976682504dae730bcecc2e5a687e003599e260b803ceae7779bd13cf6ea653f27e5f996c5fff1de95ad0d8f1cda43879bc",
+  "benignExplicitCaption": "ee7befb746f93831d42dcdf2e21f0d5dd9fd95a45509a645c457a4c6b1f25e151e8cad1e55389e4864eb076a798a526b819f34df40ae0b36fdd4984b94688c5681c21f4eb60a731954a4c9d505b2eed6ca9997f0e1da59f153d6ccd705879277798eaa19968011e8d81fd7734c8cd486d61e89df281a1f0522a21995f1523198a3533d1648cf9189bb376b1fe64a5eb619671381d76f2995",
   "opaque": "ee7befb746f93831d42dcdf2e21f0d5dd9fd95a45509a645c457a4c6b1f25e151e8cad1e55389e4864eb076a798a526b819f34df40ae0b36fdd4984b94688c564e9d16a5f1726d3a0e89c80296ae7683916dacccb3f3b9b6e0396a06cdd95dfe82c56fd602227302c5fb217554c32ecea41c21461a1fea1ae731f9db972be9374b2c49600a56aeabd4450e4dd7975651ae6c3d9aaed629ce",
   "caption": "4c8e63086c537f1dd5f809ab8bdf9d49856c7fd798cd6b5daf7ce698547da00c1c925b19479198605876e50cd348dda70540e8c667278adccd33aa980f94c7c3c4da4a2bec8ee669bd55dde28837141259b0bbd93722720f58fddb4709c38b2fe3afb357c08b7536b67aed41ba618d7df1006d23f8199452942e279a178e70bf5b9e8c5bd40c6cbad28b0a861a21f112c403667125a51622",
   "remaster": "ee7befb746f93831d42dcdf2e21f0d5dd9fd95a45509a645c457a4c6b1f25e151e8cad1e55389e4864eb076a798a526b819f34df40ae0b36fdd4984b94688c567db1400a5842b1b2c8161cf2ac409a3ae0396a06cdd95dfe82c56fd602227302c5fb217554c32ecea41c21461a1fea1ae731f9db972be9374b2c49600a56aeabdd81f508cc44f7dbe06af8010ed7b5b3",
@@ -51,13 +55,82 @@ function context(rows=[candidate()],lyrics={},extra={}) {
    if(entry.method==='get_song_detail_yqq') {
     const raw=(extra.fastRows??rows).find(r=>r.songid===param.song_id)??rows[0];
     result[key]={code:0,data:{track_info:{id:raw.detailID??raw.songid,mid:raw.detailMID??raw.songmid,name:raw.songname,title:raw.detailTitle??raw.songname,subtitle:raw.subtitle??'',interval:raw.interval,
-     album:{id:raw.albumid,mid:raw.albummid,name:raw.albumname},singer:raw.singer,...(raw.explicit!==undefined?{explicit:raw.explicit}:{})}}};
+     album:{id:raw.albumid,mid:raw.albummid,name:raw.albumname,...(raw.detailAlbumTitle!==undefined?{title:raw.detailAlbumTitle}:{})},singer:raw.singer,...(raw.explicit!==undefined?{explicit:raw.explicit}:{})}}};
    }else result[key]=lyric(param);
   }
   return answer(result,url);
  }};
 }
 const search=ctx=>new QQMusicAPI().searchSong(ctx.artist,ctx.title,ctx);
+
+test('QQ allowed outer sheet suffixes revalidate the entire remaining caption against the strict source core',async()=>{
+ for(const [key,explicit] of [['badAwardCaption',undefined],['badExplicitCaption',true]]) {
+  const ctx=context([candidate()],{123:{hex:editionQRC[key]}},{explicit});
+  await assert.rejects(new QQMusicAPI().getRecording('123',ctx),{code:'recording_mismatch'});
+ }
+ const echo=context([candidate()],{123:{hex:f.providerQRC,fields:{songName:'Synthetic (from The Mono Edition) (65届格莱美获奖歌曲)'}}});
+ await assert.rejects(new QQMusicAPI().getRecording('123',echo),{code:'recording_mismatch'});
+ for(const [key,explicit] of [['benignAwardCaption',undefined],['benignExplicitCaption',true]]) {
+  const ctx=context([candidate()],{123:{hex:editionQRC[key]}},{explicit}),fresh=await new QQMusicAPI().getRecording('123',ctx);
+  assert.equal(fresh.song.title,'Synthetic');assert.ok(fresh.lyrics.lines.every(l=>l.vocalTiming));
+ }
+});
+test('QQ equivalent full album text survives annotation boundaries without weakening other edition checks',async()=>{
+ for(const [left,right,title,hex] of [
+  ['Example (Live at Paris)','Example Live at Paris','Synthetic',f.providerQRC],
+  ['Example (Acoustic Sessions)','Example Acoustic Sessions','Synthetic',f.providerQRC],
+  ['Example (2011 Remaster)','Example 2011 Remaster','Synthetic (2011 Remaster)',editionQRC.matching]
+ ])for(const [album,sourceAlbum] of [[left,right],[right,left]])for(const provider of ['apple','spotify']) {
+  const row=candidate('123',{songname:title,albumname:sourceAlbum}),lyrics={123:{hex,fields:{songName:''}}};
+  const target={title,album,...(provider==='spotify'?{recordingProvider:'spotify',creditedArtistNames:['Test']}:{})};
+  const fresh=await new QQMusicAPI().getRecording('123',context([row],lyrics,target));assert.equal(fresh.song.album,sourceAlbum);assert.ok(fresh.lyrics.lines.every(l=>l.vocalTiming));
+ }
+ for(const [album,sourceAlbum] of [['Example (Live at Paris)','Example Live at Tokyo'],['Example (2011 Remaster)','Example 2015 Remaster']]) {
+  await assert.rejects(new QQMusicAPI().getRecording('123',context([candidate('123',{albumname:sourceAlbum})],{}, {album})),{code:'recording_mismatch'});
+ }
+});
+test('QQ authoritative duration exclusions survive readable-only fast results and misleading legacy recovery',async()=>{
+ const valid=candidate('123',{albumname:'Other'}),unqualified=candidate('124',{songname:'Synthetic - Test',detailTitle:'Synthetic - Test (Cover)',interval:90});
+ const legacy=candidate('124'),lyrics={123:{hex:'00'}};
+ const ctx=context([valid,legacy],lyrics,{fastRows:[valid,unqualified]}),song=await search(ctx);
+ assert.equal(song.id,'123');assert.equal(song.lyricsData.lines.some(l=>l.vocalTiming),false);
+ assert.equal(ctx.calls.length,4);assert.equal(ctx.calls.some(c=>c.payload?.req?.param?.songId===124),false);
+});
+
+test('QQ Viva discovery excludes a fresh verified unrelated cover only by its authoritative out-of-bound interval',async()=>{
+ const valid=candidate('2166066',{songname:'Viva La Vida',albumname:'Viva La Vida or Death and All His Friends',interval:241,
+  singer:[{id:1,mid:'00000000000001',name:'Coldplay'}]});
+ const cover=candidate('499819215',{songmid:'002j7vDt23godF',songname:'Viva La Vida - Coldplay',detailTitle:'Viva La Vida - Coldplay (Violin Cover)',
+  albumname:'Viva La Vida - Coldplay (Violin Cover)',interval:192,singer:[{id:973775,mid:'00000000973775',name:'Filip Jancik'}]});
+ const lyrics={2166066:{hex:f.providerAwardQRC,fields:{songName:'',singerName:''}}};
+ const target={title:'Viva La Vida',artist:'Coldplay',album:valid.albumname,duration:241};
+ const ctx=context([valid],lyrics,{...target,fastRows:[valid,cover]}),song=await search(ctx);
+ assert.equal(song.id,'2166066');assert.ok(song.lyricsData.lines.every(l=>l.vocalTiming));assert.equal(ctx.calls.length,2);
+ assert.ok(ctx.calls[1].payload.details_499819215);assert.equal(ctx.calls[1].payload.details_499819215.param.song_id,499819215);
+ // A smaller legacy subset cannot hide a possible contender or an untrusted
+ // source identity/interval. The exact existing three-second edge is retained.
+ for(const changes of [{interval:238},{interval:244},{interval:'192'},{interval:0},{interval:7201},{detailID:999},{detailMID:'00000000000999'}]) {
+  const unresolved=context([valid],lyrics,{...target,fastRows:[valid,{...cover,...changes}]});
+  await assert.rejects(search(unresolved),{code:'recording_mismatch'});assert.equal(unresolved.calls.length,3);
+ }
+});
+test('QQ reviewed Idol raw display semantics survive the actual informational TV subtitle and formatting',async()=>{
+ const caption='《【我推的孩子】》TV动画片头曲|第1话片尾曲';
+ const base=candidate('403181955',{songname:'アイドル',detailTitle:'アイドル (偶像)',subtitle:caption,albumname:'アイドル',detailAlbumTitle:'アイドル (偶像)',interval:213,
+  singer:[{id:1,mid:'00000000000001',name:'YOASOBI',title:'YOASOBI (ヨアソビ)'}]});
+ const lyrics={403181955:{hex:bilingualQRC.idol,fields:{songName:'',singerName:''}}};
+ const target={artist:'YOASOBI',title:'アイドル',album:'アイドル - Single',duration:213.234};
+ for(const detailTitle of ['アイドル (偶像)','アイドル(偶像)','アイドル（偶像）']) {
+  const row={...base,detailTitle},ctx=context([row],lyrics,{...target,fastRows:[row]}),song=await search(ctx);
+  assert.equal(song.id,'403181955');assert.equal(song.title,'アイドル');assert.equal(song.subtitle,caption);assert.ok(song.lyricsData.lines.every(l=>l.vocalTiming));assert.equal(ctx.calls.length,2);
+  const fresh=await new QQMusicAPI().getRecording('403181955',context([row],lyrics,target));assert.equal(fresh.song.title,'アイドル');assert.equal(fresh.song.subtitle,caption);
+  await assert.rejects(search(context([row],lyrics,{...target,title:detailTitle,fastRows:[row]})),{code:'recording_mismatch'});
+ }
+ for(const subtitle of ['Original Version','Original Mix','Mono','2015 Remaster','Tokyo Live','feat. Guest',caption+' (Original Mix)']) {
+  const row={...base,subtitle};
+  await assert.rejects(new QQMusicAPI().getRecording('403181955',context([row],lyrics,target)),{code:'recording_mismatch'});
+ }
+});
 
 test('QQ full display-edition authority rejects mixes, versions, channels and unclassified qualifiers',async()=>{
  for(const [primary,display,hex] of [

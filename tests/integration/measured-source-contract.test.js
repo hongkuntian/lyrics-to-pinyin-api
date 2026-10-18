@@ -20,8 +20,17 @@ test('cold Apple and Spotify handlers reject contradictory QQ title and album ed
   {title:'Synthetic (Original Version)',display:'Synthetic (Re-recorded Version)'},
   {title:'Synthetic (Mono)',display:'Synthetic (Stereo)'},
   {title:'Synthetic',display:'Synthetic',album:'Example (2011 Remaster)',sourceAlbum:'Example (2015 Remaster)'},
+  {title:'Synthetic',display:'Synthetic',caption:'Synthetic (from The Mono Edition) (65届格莱美获奖歌曲)'},
+  {title:'Synthetic',display:'Synthetic',caption:'Synthetic (from The Mono Edition) (65届格莱美获奖歌曲)',echo:true},
+  {title:'Synthetic',display:'Synthetic',caption:'Synthetic (from The Mono Edition) (Explicit)',explicit:true},
+  {title:'Synthetic',display:'Synthetic',caption:'Synthetic (65届格莱美获奖歌曲)',accepted:true},
+  {title:'Synthetic',display:'Synthetic',caption:'Synthetic (Explicit)',explicit:true,accepted:'spotify'},
   {title:'Synthetic (Original Mix)',display:'Synthetic (Original Mix)',accepted:true},
   {title:'Synthetic',display:'Synthetic',album:'Example (2011 Remaster)',sourceAlbum:'Example (2011 Remaster)',accepted:true},
+  {title:'Synthetic',display:'Synthetic',album:'Example (Live at Paris)',sourceAlbum:'Example Live at Paris',accepted:true},
+  {title:'Synthetic',display:'Synthetic',album:'Example Live at Paris',sourceAlbum:'Example (Live at Paris)',accepted:true},
+  {title:'Synthetic',display:'Synthetic',album:'Example (Acoustic Sessions)',sourceAlbum:'Example Acoustic Sessions',accepted:true},
+  {title:'Synthetic (2011 Remaster)',display:'Synthetic (2011 Remaster)',album:'Example (2011 Remaster)',sourceAlbum:'Example 2011 Remaster',accepted:true},
  ];
  for(const provider of ['apple','spotify'])for(const c of cases) {
   const album=c.album??'Example',sourceAlbum=c.sourceAlbum??album;
@@ -37,8 +46,8 @@ test('cold Apple and Spotify handlers reject contradictory QQ title and album ed
    const result={code:0};for(const [key,entry] of Object.entries(JSON.parse(init.body))) {
     if(key==='comm')continue;
     result[key]=entry.method==='get_song_detail_yqq'?{code:0,data:{track_info:detail}}:
-     {code:0,data:{songID:123,songName:c.display,singerName:'Test',qrc:1,crypt:1,
-      lyric:fixtures.providerEditionQRC[c.display]??fixtures.providerQRC}};
+     {code:0,data:{songID:123,songName:c.echo?c.caption:c.display,singerName:'Test',qrc:1,crypt:1,
+      lyric:fixtures.providerEditionQRC[c.caption??c.display]??fixtures.providerQRC}};
    }return answer(result,url);
   };
   const api=new QQMusicAPI();for(const method of ['searchSong','getLyrics','getRecording']) {
@@ -46,10 +55,11 @@ test('cold Apple and Spotify handlers reject contradictory QQ title and album ed
   }
   const f=yrcService({resolution:false,speculativeDiscovery:false,getAvailableAPIsFn:()=>[api],getContextFn:async()=>null});
   const target=provider==='apple'?{catalog_id:'123',title:c.title,artist:'Test',album,duration:120}:
-   {recording:{version:2,provider:'spotify',item_id:spotifyRequest.item_id,metadata:{origin:'spotify',title:c.title,artists:['Test'],album,duration_ms:120000}}};
+   {recording:{version:2,provider:'spotify',item_id:spotifyRequest.item_id,metadata:{origin:'spotify',title:c.title,artists:['Test'],album,duration_ms:120000,...(c.explicit!==undefined?{explicit:c.explicit}:{})}}};
   const r=await f.call({...target,options:{lyric_sources_version:2}});
-  assert.equal(r.statusCode,c.accepted?200:409,`${provider}: ${JSON.stringify(c)} / ${JSON.stringify(r.body)}`);
-  if(c.accepted)assert.ok(r.body.lines.every(l=>l.vocalTiming));else assert.equal(r.body.code,'recording_mismatch');
+  const accepted=c.accepted===true||c.accepted===provider;
+  assert.equal(r.statusCode,accepted?200:409,`${provider}: ${JSON.stringify(c)} / ${JSON.stringify(r.body)}`);
+  if(accepted)assert.ok(r.body.lines.every(l=>l.vocalTiming));else assert.equal(r.body.code,'recording_mismatch');
  }
 });
 

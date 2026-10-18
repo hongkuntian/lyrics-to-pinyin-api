@@ -4,7 +4,7 @@ import {cleanLyrics} from '../utils/lyric-quality.js';
 import {parseLRC} from '../utils/lrc.js';
 import {decryptQRC} from '../utils/vendor/qq-qrc-codec.js';
 import {parseQRC,qrcBody} from '../utils/qq-qrc.js';
-import {sameRecordingNames,sameRecordingVersions,recordingNames,normalizeRecordingText,stripTitleDescription,recordingScore,findRecording,RecordingMismatchError,searchTitle} from '../utils/recording-match.js';
+import {sameRecordingNames,sameRecordingVersions,recordingNames,normalizeRecordingText,normalizedAlbum,stripTitleDescription,recordingScore,findRecording,RecordingMismatchError,searchTitle} from '../utils/recording-match.js';
 
 const maxBytes=512*1024,legacyOrigin='https://c.y.qq.com',musicuOrigin='https://u.y.qq.com';
 const comm={ct:24,cv:4747474,format:'json',inCharset:'utf-8',outCharset:'utf-8',notice:0,platform:'yqq.json',needNewCode:1,g_tk:5381,chid:'0'};
@@ -124,7 +124,7 @@ function metadata(raw,detail=false,allowMissingAlbum=false) {
  const artist=names.join(' & '),entities=raw.singer.map(s=>({id:id(s.id),name:s.name}));
  // Reviewed sheet-label semantics only; this never rewrites a request or
  // equates catalog names. Unknown appended translations fail closed.
- const information=detail&&primary==='アイドル'&&fullTitle.normalize('NFKC')==='アイドル (偶像)'&&names.length===1&&names[0]==='YOASOBI'
+ const information=detail&&primary==='アイドル'&&normalizeRecordingText(display)===normalizeRecordingText('アイドル (偶像)')&&names.length===1&&names[0]==='YOASOBI'
   ?[{base:normalizeRecordingText('アイドル'),label:normalizeRecordingText('偶像')}]:[];
  let displayAuthority=false;
  if(detail) {
@@ -160,21 +160,21 @@ function matchesArtistLabel(value,song) {
  const artists=boundLabels.get(song)?.artists;
  return !!artists&&sameRecordingNames({...song,artist:value},{...song,artist:artists.join(' & ')});
 }
-function matchesTitleLabel(value,song) {
+function matchesCoreTitle(value,song,reference=song.title) {
  const information=boundLabels.get(song)?.information;
- const equivalent=reference=>{
-  const a=editionDetails(value,{information}),b=editionDetails(reference,{information});
-  return !!a&&!!b&&sameRecordingNames({...song,title:value},{...song,title:reference})
-   &&(a.canonical===b.canonical||sameDescriptors(a.descriptors,b.descriptors));
- };
- if(equivalent(song.title))return true;
+ const a=editionDetails(value,{information}),b=editionDetails(reference,{information});
+ return !!a&&!!b&&sameRecordingNames({...song,title:value},{...song,title:reference})
+  &&(a.canonical===b.canonical||sameDescriptors(a.descriptors,b.descriptors));
+}
+function matchesTitleLabel(value,song) {
+ if(matchesCoreTitle(value,song))return true;
  const display=boundLabels.get(song)?.title;
- if(display&&equivalent(display))return true;
+ if(display&&matchesCoreTitle(value,song,display))return true;
  // QQ's source-owned sheet may append an informational Grammy award label.
  // This closed descriptor grammar excludes guests and recording versions;
  // its remaining base must still exactly match the selected catalog source.
  const award=/^(.+?)\s*(?:\([0-9]{1,3}届格莱美获奖歌曲\)|（[0-9]{1,3}届格莱美获奖歌曲）)$/u.exec(value);
- return !!award&&sameRecordingNames({...song,title:award[1].trim()},song);
+ return !!award&&matchesCoreTitle(award[1].trim(),song);
 }
 function matchesSheetTitle(value,song,context) {
  if(matchesTitleLabel(value,song))return true;
@@ -183,7 +183,7 @@ function matchesSheetTitle(value,song,context) {
  // serialized DTO fields cannot grant permission or change catalog matching.
  if(!explicitSheets.has(song)||context.explicit!==true||song.explicit===false||!compatible(song,context))return false;
  const label=/^(.+?)\s*(?:\(Explicit\)|（Explicit）)$/u.exec(value);
- return !!label&&sameRecordingNames({...song,title:label[1].trim()},song);
+ return !!label&&matchesCoreTitle(label[1].trim(),song);
 }
 function validateHeaders(raw,song,context) {
  const labels=[];
@@ -209,7 +209,8 @@ function compatibleVersions(song,request) {
  const a=editionDetails(song.title,{information}),b=editionDetails(request.title);
  if(!left||!right||!a||!b)return false;
  const qualified=parts=>descriptorSet(parts.descriptors.filter(label=>request.explicit!==true||label!=='explicit'));
- return sameDescriptors(qualified(left),qualified(right))
+ const sameAlbum=typeof song.album==='string'&&typeof request.album==='string'&&normalizedAlbum(song.album)===normalizedAlbum(request.album);
+ return (sameAlbum||sameDescriptors(qualified(left),qualified(right)))
   &&(a.canonical===b.canonical||sameDescriptors(qualified(a),qualified(b)));
 }
 const compatible=(song,request)=>sameRecordingNames(song,request)&&recordingScore(song,request)>=0
@@ -277,7 +278,13 @@ async function fastDiscover(query,request,context,records,responses,state) {
   const detail=batch[`details_${value}`],raw=detail?.data?.track_info;
   if(detail?.code!==0||!object(raw)||id(raw.id)!==value||raw.mid!==hint.mid){state.unresolved=true;continue;}
   const song=metadata(raw,true),core=song??metadata(raw,true,true);
-  if(!core){state.unresolved=true;continue;}
+  if(!core){
+   // ID and MID above are fresh exact echoes. A valid source interval outside
+   // the unchanged recording bound independently excludes an unusable title;
+   // potentially eligible or malformed intervals must remain unresolved.
+   if(Number.isSafeInteger(raw.interval)&&raw.interval>0&&raw.interval<=7200&&Math.abs(raw.interval-request.duration)>3){state.excluded.add(value);continue;}
+   state.unresolved=true;continue;
+  }
   records.set(value,core);
   if(!song&&compatible(core,request))state.unresolved=true;
   responses.set(value,batch[`lyric_${value}`]??null);
@@ -320,13 +327,14 @@ export class QQMusicAPI extends BaseMusicAPI {
  supportsLanguage(language){return typeof language==='string'&&/^[a-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(language);}
  async searchSong(artist,title,context={}) {
   cancelled(context.signal);if(!scalar(artist,2048)||!scalar(title,1000)||!Number.isFinite(context.duration)||context.duration<=0||context.duration>7200)return null;
-  const request={...context,artist,title},records=new Map(),responses=new Map(),failures=new Map(),state={unresolved:false};
+  const request={...context,artist,title},records=new Map(),responses=new Map(),failures=new Map(),state={unresolved:false,excluded:new Set()};
   try {
    await fastDiscover(`${title} ${artist}`,request,context,records,responses,state);
    if(!state.unresolved){const selected=await selectRecording(records,request,context,responses,failures,{measured:true});if(selected)return selected;}
   }catch(error){if(error.name==='AbortError'||context.signal?.aborted)throw error;}
   cancelled(context.signal);const songs=await discover(`${artist} ${searchTitle(title)}`,context);
   for(const song of songs) {
+   if(state.excluded.has(song.id))continue;
    const known=records.get(song.id);
    if(known){if(known.qqMID!==song.qqMID)failures.set(song.id,mismatch());}
    else records.set(song.id,song);
