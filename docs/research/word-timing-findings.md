@@ -29,6 +29,12 @@ must not be presented as a reproduction of their exact recording or stock app.
 - QQ searches public suggestions, then batches fresh structured song details and
   QRC reads for all bounded suggestions. Numeric ID and MID, complete credits,
   version labels, duration and best-candidate consensus remain admission gates.
+  Complete edition annotations and suffixes remain material, including unknown
+  qualifiers. Allowed award/Explicit caption suffixes revalidate their remaining
+  base. Identical complete album text can survive punctuation differences without
+  equating different years or venues. A rejected suggestion can be excluded by a
+  freshly ID/MID-verified duration outside the existing bound; that proof remains
+  authoritative during legacy fallback.
   Fresh ID revalidation avoids rediscovery when verified source context exists.
 - Provider display translations may be accepted only when freshly bound to the
   same QQ entity. A translation cannot erase a version or a printed guest.
@@ -126,9 +132,9 @@ source. No original complete-measured positive was lost. These are source
 metadata checks, not independent audio-alignment or stock-app acceptance.
 
 The final paired source-adapter runs returned complete measured timing three
-times each for Viva la Vida and Shape of You. Median lookup time was 831 ms
-(range 750–2982 ms) and 129 ms (67–238 ms), respectively. Fresh known-ID QQ
-revalidation medians were 305 and 523 ms. These small samples are observations,
+times each for Viva la Vida and Shape of You. Median lookup time was 758 ms
+(range 725–2118 ms) and 77 ms (74–207 ms), respectively. Fresh known-ID QQ
+revalidation medians were 364 and 408 ms. These small samples are observations,
 not p95 guarantees or a controlled stock-app comparison. Readable-first and
 measured-completion timings are different metrics.
 
