@@ -203,7 +203,12 @@ export function createMusicRomanizeService(dependencies={}) {
         const canonicalWorkKey=canonicalKey&&(options.refresh===true?canonicalKey+':refresh:'+acquisitionStartedAt:canonicalKey);
         const bind=body=>{
           const bound={...body,metadata:{...body.metadata,catalog_resolution:proof},song_details:{...body.song_details,catalog_id:catalog_id??null}};
-          if(bound.metadata.lyric_timing){
+          // An omitted optional storefront is not an alias. These cues were
+          // validated and bound to this exact catalog ID during formatting.
+          // Actual ID rebindings and explicit storefronts keep the full proof.
+          const exactUnspecifiedStorefront=storefront==null&&bound.metadata.lyric_timing?.provider==='appleMusic'
+            &&bound.metadata.lyric_timing.recordingID===catalog_id;
+          if(bound.metadata.lyric_timing&&!exactUnspecifiedStorefront){
             if(verifiedTimingAlias(resolution,request,resolution?.canonical_recording_id))bound.metadata.lyric_timing={...bound.metadata.lyric_timing,recordingID:catalog_id};
             else stripVocalTiming(bound);
           }
