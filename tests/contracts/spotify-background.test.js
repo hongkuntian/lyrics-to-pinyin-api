@@ -19,10 +19,11 @@ test('narrow snapshot token cannot call account, enrollment or arbitrary widget 
  assert.equal(res.statusCode,200);assert.deepEqual(res.body,{version:1,status:'registered',tokenVersion:3});assert.equal(calls,1);
  for(const body of [{version:1,action:'snapshot.token',widgetToken:'ab'.repeat(32),tokenVersion:3,sessionID:randomUUID()},{version:1,action:'connection.status',enrollmentID:randomUUID()}]){const r=createMockRes();await handler({method:'POST',headers:{authorization:'Bearer lyra_w_fixturecapability'},body},r);assert([400,401].includes(r.statusCode));}
 });
-test('explicit packaging lists eleven public routes and three private queue consumers',()=>{
- assert.equal(manifest.entries.length,14);assert.equal(manifest.routes.length,11);assert.deepEqual(manifest.crons,[{path:'/api/review-reports',schedule:'0 8 * * *'}]);
+test('explicit packaging lists eleven canonical routes and three private topic subscriptions within twelve functions',()=>{
+ assert.equal(manifest.entries.length,12);assert.equal(manifest.routes.length,11);assert.deepEqual(manifest.crons,[{path:'/api/review-reports',schedule:'0 8 * * *'}]);
  assert.equal(manifest.entries.filter(x=>x.experimentalTriggers).length,3);
  for(const entry of manifest.entries.filter(x=>x.experimentalTriggers))assert(!manifest.routes.some(r=>r.dest===entry.entry.replace(/\.js$/,'')));
+ assert.equal(manifest.entries.flatMap(x=>x.experimentalTriggers??[]).length,3);
  assert.equal(manifest.entries.find(x=>x.entry==='api/song-library.js').maxDuration,300);assert.equal(manifest.entries.find(x=>x.entry==='api/live-lyrics.js').maxDuration,15);
 });
 test('arm requires persisted actual activity creation time, rejecting missing/future/expired values',()=>{

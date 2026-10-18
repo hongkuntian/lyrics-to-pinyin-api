@@ -18,7 +18,7 @@ The service edits and reads back that private playlist. A durable Vercel Queues 
 
 `GET /api/sessions?join=<invitation>` is a generic invitation page and discloses no room metadata. Ended rooms remain private until the host shares. `GET /api/sessions?recap=<opaque-token>` provides a recipient page with exact provider song links; `&format=json` supplies the same public recap to the native image/QR share sheet. Names appear publicly only with each member's explicit consent. Members can change that preference in People. The host may revoke a link. Responses are not cached; pages contain no scripts or external tracking assets. Deleting an account removes its hosted rooms and anonymizes its contributor names in other rooms.
 
-Migration `029-listening-sessions.sql` grants runtime data access and narrow account cleanup rights. `/api/_listening-tick` is a private queue consumer and is excluded from public routes. Existing provider credentials, app-auth identity and account gates are reused.
+Migration `029-listening-sessions.sql` grants runtime data access and narrow account cleanup rights. `lyrica-listening-session-v1` has a separate private queue consumer, alongside the two existing Spotify workers. Spotify and Sessions keep separate canonical public routes through one provider gateway; membership and Store notifications retain their existing authentication/signature checks through one billing gateway. Twelve packaged functions support eleven canonical routes and three isolated private topic subscriptions; helper module paths remain blocked. Existing provider credentials, app-auth identity and account gates are reused.
 
 ## Evidence boundaries
 
