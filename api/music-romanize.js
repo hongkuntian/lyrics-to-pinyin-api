@@ -85,12 +85,14 @@ export function createMusicRomanizeService(dependencies={}) {
     if((account_storefront!=null&&(typeof account_storefront!=='string'||!/^[a-z]{2}$/.test(account_storefront)))||
       (isrc!=null&&(typeof isrc!=='string'||!/^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$/.test(isrc)))) return send({status:400,body:{error:'Invalid recording hints',code:'invalid_recording'}});
     if(typeof artist!=='string' || !artist.trim() || typeof title!=='string' || !title.trim()) return res.status(400).json({error:"Missing 'artist' or 'title' parameter"});
-    if((catalog_id!=null && (typeof catalog_id!=='string' || !/^\d{1,20}$/.test(catalog_id))) || (storefront!=null && (typeof storefront!=='string' || !/^[a-z]{2}$/.test(storefront))) || artist.length>1024 || title.length>500 || (album!=null && (typeof album!=='string'||album.length>1024)) || (duration!=null && (!Number.isFinite(duration) || duration<=0)) || (language!=null && typeof language!=='string') || (romanization_system!=null && typeof romanization_system!=='string') || (music_platform!=null && typeof music_platform!=='string') || !options || typeof options!=='object' || Array.isArray(options) || Object.keys(options).some(k=>!['tone_style','separator','case','refresh','include_metadata'].includes(k)) || Object.values(options).some(v=>typeof v==='string'&&v.length>32)) return res.status(400).json({error:'Invalid request fields'});
+    if((catalog_id!=null && (typeof catalog_id!=='string' || !/^\d{1,20}$/.test(catalog_id))) || (storefront!=null && (typeof storefront!=='string' || !/^[a-z]{2}$/.test(storefront))) || artist.length>1024 || title.length>500 || (album!=null && (typeof album!=='string'||album.length>1024)) || (duration!=null && (!Number.isFinite(duration) || duration<=0)) || (language!=null && typeof language!=='string') || (romanization_system!=null && typeof romanization_system!=='string') || (music_platform!=null && typeof music_platform!=='string') || !options || typeof options!=='object' || Array.isArray(options) || Object.keys(options).some(k=>!['tone_style','separator','case','refresh','include_metadata','lyric_sources_version'].includes(k)) || Object.values(options).some(v=>typeof v==='string'&&v.length>32) || ('lyric_sources_version' in options&&![1,2].includes(options.lyric_sources_version))) return res.status(400).json({error:'Invalid request fields'});
     try {
       const searchScript=language || await detectLanguageFn(`${artist} ${title}`);
       const searchSystem=romanization_system || getDefaultRomanizationSystemFn(searchScript);
-      const available=getAvailableAPIsFn(searchScript);
-      const preferred=music_platform ? getMusicAPIFn(searchScript,music_platform):null;
+      const acceptsSource=api=>(options.lyric_sources_version??1)>=2||!['qq','QQMusicAPI'].includes(api?.name);
+      const available=getAvailableAPIsFn(searchScript).filter(acceptsSource);
+      const requested=music_platform ? getMusicAPIFn(searchScript,music_platform):null;
+      const preferred=requested&&acceptsSource(requested)?requested:null;
       if(music_platform && !preferred) return send({status:400,body:{error:`Platform '${music_platform}' not available for script '${searchScript}'`,supported_combinations:getSupportedMusicAPIsFn()}});
       const apis=preferred ? [preferred,...available.filter(api=>api!==preferred)]:available;
       if(!apis.length) return send({status:400,body:{error:`No music API available for script '${searchScript}' and platform '${music_platform}'`,code:'provider_coverage_unsupported',supported_combinations:getSupportedMusicAPIsFn()}});
@@ -123,11 +125,11 @@ export function createMusicRomanizeService(dependencies={}) {
           else if(error.code==='provider_timeout'||error.name==='AbortError'){timedOut=true;diagnose(api.name,'provider_timeout');}
           else{unavailable=true;logger.error('Lyrics provider failed',api.name,error.message);}
         };
-        const sourceContext=await measure('verified_context_read',()=>options.refresh===true&&!apis.some(a=>a.name==='NeteaseAPI'&&typeof a.getRecording==='function')?null:contexts.read(request));
+        const sourceContext=await measure('verified_context_read',()=>options.refresh===true&&!apis.some(a=>['NeteaseAPI','QQMusicAPI'].includes(a.name)&&typeof a.getRecording==='function')?null:contexts.read(request));
         // Explicit refresh still resolves Apple catalog evidence afresh. An old
         // NetEase ID may only route fresh source validation for the new target.
         let verifiedContext=options.refresh===true?null:sourceContext;
-        const hintContext=options.refresh===true&&sourceContext?{hints:sourceContext.hints.filter(h=>h.provider==='NeteaseAPI')}:sourceContext;
+        const hintContext=options.refresh===true&&sourceContext?{hints:sourceContext.hints.filter(h=>['NeteaseAPI','QQMusicAPI'].includes(h.provider))}:sourceContext;
         const {storefront:routeStorefront,account_storefront:routeAccount,...routeRequest}=JSON.parse(contextSignature(request)),routeKey=JSON.stringify(routeRequest);
         if(speculativeDiscovery&&!verifiedContext&&!hintContext?.hints?.some(h=>h.provider==='NeteaseAPI')&&!verifiedRouting.get(routeKey)&&!preferred&&!hasReviewedCatalogSource(request)&&!hasOfficialCatalogSource(request)&&!hasListeningCatalogSource(request)&&(catalog_id||(album&&duration))&&!/[&,/、]|\b(?:feat|featuring|with)\b/iu.test(artist+' '+title))speculation=startSpeculativeDiscovery(apis[0],request,{deadline,timeoutMs:providerTimeoutMs,signal:scope?.signal,measure});
         const knownAliases=verifiedContext?Object.assign([...verifiedContext.aliases],{resolution:verifiedContext.resolution}):null;
@@ -159,7 +161,7 @@ export function createMusicRomanizeService(dependencies={}) {
                   if(!song)return null;
                   if(recordingScore(song,target)<0||(duration!=null&&song.duration!=null&&Math.abs(duration-song.duration)>3))throw new RecordingMismatchError();
                   if(ordinary)matched=true;
-                  let lyrics=cleanLyrics(raw??await measure(`${label}_lyrics`,()=>api.getLyrics(song.id,{signal,song})),{duration:song.duration,title:song.title,artist:song.artist,catalogID:catalog_id});
+                  let lyrics=cleanLyrics(raw??await measure(`${label}_lyrics`,()=>api.getLyrics(song.id,{...target,signal,song})),{duration:song.duration,title:song.title,artist:song.artist,catalogID:catalog_id});
                   if(rejectRecordingLyricsFn(lyrics?.lines??[],request))throw new RecordingMismatchError('lyric_version_conflict');
                   const candidate=await applyTimingCorrectionFn({song,lyrics,api,target},request,{signal,deadline:providerDeadline});
                   return hasUsableLyrics(candidate.lyrics,{duration:candidate.song.duration})?candidate:null;
@@ -184,7 +186,7 @@ export function createMusicRomanizeService(dependencies={}) {
           // timed candidate after just 350 ms. The extra wait applies only
           // when the current fallback has no timestamps, and remains bounded.
           const targetScript=await detectLanguageFn(`${target.artist} ${target.title}`);
-          const targetAPIs=target===request || preferred ? apis : [...new Set([...getAvailableAPIsFn(targetScript),...apis])];
+          const targetAPIs=target===request || preferred ? apis : [...new Set([...getAvailableAPIsFn(targetScript).filter(acceptsSource),...apis])];
           return hedgedLookup(targetAPIs,lookup,{delayMs:hedgeDelayMs,untimedGraceMs:Math.min(untimedGraceMs,Math.max(0,deadline-Date.now())),wordTimingGraceMs:Math.min(wordTimingGraceMs,Math.max(0,deadline-Date.now())),chooseCandidate:chooseLyricCandidate,signal:scope?.signal,onCandidate:publishCandidate});
         };
         // Reuse previously verified localizations first on repeated catalog requests.
@@ -258,6 +260,7 @@ export function createMusicRomanizeService(dependencies={}) {
           response.quality.synced=response.quality.synced && timingQuality(result).usable;
           response.metadata.word_timing_upgrade_supported=!lyrics.instrumental&&!lyrics.partial&&result.timingCorrection?.status!=='replacement'
             &&(preferred?preferred.supportsVocalTiming===true:apis.some(a=>a.supportsVocalTiming===true));
+          response.metadata.word_timing_upgrade_version=2;
           if(result.timingCorrection) response.metadata.timing_correction=result.timingCorrection;
           if(result.reviewedIdentity) response.metadata.reviewed_recording=result.reviewedIdentity;
           if(target!==request) response.metadata.recording_match={method:catalog_id ? 'catalog_alias':'metadata_alias',catalog_id:catalog_id || target.catalog_id,artist,title,duration,...(!catalog_id ? {album}:{})};

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {KugouAPI} from '../../api/music-apis/kugou.js';
+import {encodeKRC} from '../helpers/kugou-krc.js';
 
 const request={artist:'林小雨',title:'窗前',duration:120,album:'清晨'};
 const raw='[ar:林小雨]\n[ti:窗前]\n[00:00.00]窗前 - 林小雨\n[00:12.00]今天窗前有只猫\n[01:40.00]它在等清晨';
@@ -11,7 +12,7 @@ function context(candidates,lyrics={},extra={}) {
     const parsed=new URL(url);calls.push({url:parsed,init});
     return {ok:true,status:200,url:String(url),json:async()=>parsed.pathname==='/search'
       ? {status:200,candidates}
-      : (lyrics[parsed.searchParams.get('id')] ?? {status:200,content:Buffer.from(raw).toString('base64')})};
+      : {fmt:'lrc',...(lyrics[parsed.searchParams.get('id')] ?? {status:200,content:Buffer.from(raw).toString('base64')})}};
   }};
 }
 const search=(ctx,values={})=>new KugouAPI().searchSong(values.artist ?? request.artist,values.title ?? request.title,ctx);
@@ -45,7 +46,8 @@ test('fetches only official exact recordings and returns cleaned lyrics without 
   assert.equal(song.id,'9');assert.equal(song.source,'kugou');assert.equal(song.album,undefined);assert.equal(song.duration,120);
   assert.equal(song.lyricsData.lines.length,2);assert.equal(song.lyricsData.lines[0].timestamp,12);
   assert.equal(JSON.stringify(song).includes('public-candidate-key'),false);
-  assert.equal(ctx.calls.length,3);assert.ok(ctx.calls.every(x=>x.init.signal===controller.signal && x.init.redirect==='error' && x.init.size===524288 && x.init.headers['X-Test']==='safe'));
+  assert.equal(ctx.calls.length,3);assert.equal(ctx.calls[0].init.signal,controller.signal);
+  assert.ok(ctx.calls.every(x=>x.init.signal instanceof AbortSignal && !x.init.signal.aborted && x.init.redirect==='error' && x.init.size===524288 && x.init.headers['X-Test']==='safe'));
   const api=new KugouAPI();assert.equal(await api.getLyrics(song.id,{song}),song.lyricsData);assert.equal(await api.getLyrics('other',{song}),null);
 });
 
@@ -61,8 +63,12 @@ test('normalizes traditional title names but never invents an English artist ali
   await assert.rejects(search(context([candidate()]),{artist:'Xiao Yu Lin'}),{code:'recording_mismatch'});
 });
 
-test('fails closed on more than three tied candidates without downloading a subset',async()=>{
-  const ctx=context(['1','2','3','4'].map(id=>candidate(id)));await assert.rejects(search(ctx),{code:'recording_mismatch'});assert.equal(ctx.calls.length,1);
+test('validates every duplicate lyric before accepting more than three metadata ties',async()=>{
+  const ctx=context(Array.from({length:8},(_,i)=>candidate(String(i+1))));
+  assert.equal((await search(ctx)).id,'1');assert.equal(ctx.calls.length,9);
+  assert.deepEqual(new Set(ctx.calls.slice(1).map(c=>c.url.searchParams.get('id'))),new Set(['1','2','3','4','5','6','7','8']));
+  const conflict=context(Array.from({length:8},(_,i)=>candidate(String(i+1))),{'8':{status:200,content:Buffer.from(raw.replace('00:12.00','00:13.00')).toString('base64')}});
+  await assert.rejects(search(conflict),{code:'recording_mismatch'});
 });
 
 test('does not accept distinct lyric words or timing as equivalent metadata ties',async()=>{
@@ -70,6 +76,40 @@ test('does not accept distinct lyric words or timing as equivalent metadata ties
     const ctx=context([candidate('1'),candidate('2')],{'2':{status:200,content:Buffer.from(changed).toString('base64')}});
     await assert.rejects(search(ctx),{code:'recording_mismatch'});
   }
+});
+
+const timed='[ar:林小雨]\n[ti:窗前]\n[12000,2000]<0,700,0>今天<700,1300,0>窗前有只猫\n[100000,2000]<0,2000,0>它在等清晨';
+test('requests KRC first and keeps real relative word cues from its own complete source',async()=>{
+ const ctx=context([candidate()],{'10':{status:200,fmt:'krc',content:encodeKRC(timed)}});
+ const song=await search(ctx);assert.equal(ctx.calls.length,2);
+ assert.equal(ctx.calls[1].url.searchParams.get('fmt'),'krc');
+ assert.equal(song.lyricsData.timingSource.source,'kugou:10:krc');
+ assert.equal(song.lyricsData.lines[0].vocalTiming.segments[1].start,12.7);
+ assert.equal(song.lyricsData.lines[0].text,'今天窗前有只猫');
+});
+test('unusable KRC falls back once to readable LRC under the same deadline signal',async()=>{
+ const ctx=context([candidate()]),base=ctx.fetchFn;
+ ctx.fetchFn=async(url,init)=>{
+  if(new URL(url).searchParams.get('fmt')==='krc'){ctx.calls.push({url:new URL(url),init});return {ok:true,json:async()=>({status:200,fmt:'krc',content:'invalid'})};}
+  return base(url,init);
+ };
+ const song=await search(ctx);assert.equal(song.lyricsData.lines.length,2);assert.equal(song.lyricsData.timingSource,undefined);
+ assert.deepEqual(ctx.calls.slice(1).map(c=>c.url.searchParams.get('fmt')),['krc','lrc']);
+ assert.equal(ctx.calls[1].init.signal,ctx.calls[2].init.signal);
+});
+test('cue-only tie conflicts cancel locally owned peers promptly and never pick a subset',async()=>{
+ const ctx=context(Array.from({length:6},(_,i)=>candidate(String(i+1))));let aborted=false;
+ const base=ctx.fetchFn;
+ ctx.fetchFn=async(url,init)=>{
+  const u=new URL(url);if(u.pathname==='/search')return base(url,init);
+  ctx.calls.push({url:u,init});
+  if(Number(u.searchParams.get('id'))>=3)return new Promise((_,reject)=>init.signal.addEventListener('abort',()=>{
+   aborted=true;reject(Object.assign(new Error('cancelled'),{name:'AbortError'}));
+  },{once:true}));
+  return {ok:true,json:async()=>({status:200,fmt:'krc',content:encodeKRC(u.searchParams.get('id')==='2'?timed.replace('700,1300','700,1200'):timed)})};
+ };
+ await assert.rejects(search(ctx),{code:'recording_mismatch'});assert.ok(aborted);
+ assert.equal(ctx.calls.some(c=>c.url.searchParams.get('id')==='5'),false);
 });
 
 test('selects best metadata duration before hydration and ignores provider score',async()=>{

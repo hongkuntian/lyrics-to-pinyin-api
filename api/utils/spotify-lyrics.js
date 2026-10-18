@@ -59,11 +59,16 @@ export function createSpotifyLyricsService(dependencies={}) {
       const body=req.body,options=body?.options??{};
       if(!body||typeof body!=='object'||Array.isArray(body)||Buffer.byteLength(JSON.stringify(body))>8192
         ||Object.keys(body).some(k=>!['recording','options'].includes(k))||!options||typeof options!=='object'||Array.isArray(options)
-        ||Object.keys(options).some(k=>!['tone_style','separator','case','refresh'].includes(k))
+        ||Object.keys(options).some(k=>!['tone_style','separator','case','refresh','lyric_sources_version'].includes(k))
         ||('tone_style' in options&&options.tone_style!=='marks')||('separator' in options&&options.separator!==' ')
-        ||('case' in options&&options.case!=='lower')||('refresh' in options&&typeof options.refresh!=='boolean'))throw new LibraryError('invalid_recording',400);
+        ||('case' in options&&options.case!=='lower')||('refresh' in options&&typeof options.refresh!=='boolean')
+        ||('lyric_sources_version' in options&&![1,2].includes(options.lyric_sources_version)))throw new LibraryError('invalid_recording',400);
       const r=spotifyRecording(body.recording),target=spotifySearchRequest(r),requestHash=spotifyRequestHash(r);
-      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}:${NETEASE_TITLE_CAPABILITY}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
+      // Older native bindings have a closed provider set. QQ is opt-in on the
+      // ephemeral acquisition path; saved library sources keep their existing
+      // contract until that route negotiates the expanded source set too.
+      const sourceVersion=options.lyric_sources_version??1;
+      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}:${NETEASE_TITLE_CAPABILITY}:sources-${sourceVersion}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const send=result=>{if(result.candidate)attachSpotifyMatchEvidence(result.body,result.candidate);res.setHeader('X-Lyrics-Cache',result.cache??'MISS');return reply(result.status,result.body);};
       const cached=!options.refresh&&cache.get(key);
       if(cached&&validate('cache_validation',()=>validCached(cached,r)))return send({status:200,body:cached.response,candidate:cached.candidate,cache:'MEMORY'});
@@ -75,11 +80,11 @@ export function createSpotifyLyricsService(dependencies={}) {
           if(saved&&validate('cache_validation',()=>validCached(saved,r))){cache.set(key,saved);return {status:200,body:saved.response,candidate:saved.candidate,cache:'REDIS'};}
         }
         const script=await detectLanguageFn(`${target.artist} ${target.title}`);
-        const apis=getAvailableAPIsFn(script).filter(api=>independentProvider(api.name));
-        const canHint=apis.some(api=>['LRCAPI','NeteaseAPI'].includes(api.name)&&typeof api.getRecording==='function');
-        const sourceContext=!canHint||(options.refresh&&!apis.some(api=>api.name==='NeteaseAPI'&&typeof api.getRecording==='function'))?null:await measure('verified_context_read',()=>contexts.read(r,'spotify'));
+        const apis=getAvailableAPIsFn(script).filter(api=>independentProvider(api.name)&&(sourceVersion>=2||independentProvider(api.name)!=='qq'));
+        const canHint=apis.some(api=>['LRCAPI','NeteaseAPI','QQMusicAPI'].includes(api.name)&&typeof api.getRecording==='function');
+        const sourceContext=!canHint||(options.refresh&&!apis.some(api=>['NeteaseAPI','QQMusicAPI'].includes(api.name)&&typeof api.getRecording==='function'))?null:await measure('verified_context_read',()=>contexts.read(r,'spotify'));
         let verifiedContext=options.refresh?null:sourceContext;
-        const hintContext=options.refresh&&sourceContext?{hints:sourceContext.hints.filter(h=>h.provider==='NeteaseAPI')}:sourceContext;
+        const hintContext=options.refresh&&sourceContext?{hints:sourceContext.hints.filter(h=>['NeteaseAPI','QQMusicAPI'].includes(h.provider))}:sourceContext;
         if(!apis.length)return {status:404,body:{code:'lyrics_absent'}};
         let mismatch=null,timedOut=false,unavailable=false;
         const deadline=Math.min(Date.now()+16000,req.lyricDelivery?.deadlineAtMS??Infinity),localizations=[];
@@ -99,6 +104,7 @@ export function createSpotifyLyricsService(dependencies={}) {
               const {artist,title,...context}=searchTarget;
               const validateSource=async(song,raw)=>{
                 if(!song)return null;
+                const sourceSong=song;
                 song=validate(`${label}_validation`,()=>{
                   if(recordingScore(song,searchTarget)<0)findRecording([song],searchTarget);
                   // Native aliases are accepted only through server-verified
@@ -107,7 +113,7 @@ export function createSpotifyLyricsService(dependencies={}) {
                   if(recordingScore(song,target)<0)findRecording([song],target);
                   return song;
                 });
-                raw=raw??await measure(`${label}_lyrics`,()=>api.getLyrics(song.id,{signal,song}));
+                raw=raw??await measure(`${label}_lyrics`,()=>api.getLyrics(sourceSong.id,{...searchTarget,signal,song:sourceSong}));
                 return validate(`${label}_validation`,()=>{
                   const lyrics=cleanLyrics(raw,{duration:song.duration,title:song.title,artist:song.artist});
                   if(rejectRecordingLyricsFn(lyrics?.lines??[],target))throw new RecordingMismatchError('version_conflict');
@@ -150,6 +156,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         response.quality={...response.quality,partial:lyrics.partial===true,instrumental:lyrics.instrumental===true,synced:response.quality.synced&&timingQuality(selected).usable};
         response.song_details={catalog_id:null,source_id:String(song.id),source:independentProvider(api.name),credits:lyrics.credits??[]};
         response.metadata.word_timing_upgrade_supported=!lyrics.instrumental&&!lyrics.partial&&apis.some(a=>a.supportsVocalTiming===true);
+        response.metadata.word_timing_upgrade_version=2;
         if(lyrics.providerTranslation)response.provider_translation=lyrics.providerTranslation;
         if(lyrics.timingSource)publicRawLyrics(response);
         attachVocalTiming(response,lyrics,{provider:'spotify',recordingID:r.item_id,sourceID:song.id});

@@ -2,6 +2,7 @@ import chinese from 'chinese-conv';
 import {createRequire} from 'node:module';
 import {cleanLyrics} from './lyric-quality.js';
 import {neteaseDescriptiveTitleMatches} from './netease-title-evidence.js';
+import {validTimingTimestamp,sourceDurationResolution} from './vocal-timing.js';
 const require=createRequire(import.meta.url);
 const {artists:reviewedArtists}=require('../data/lyric-performers.json');
 const escapePattern=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -144,7 +145,8 @@ function equivalentLyrics(a,b) {
     && normalizedAlbum(a.album)===normalizedAlbum(b.album) && sameRecordingNames(a,b);
   const canonical=song=> {
     const data=song.lyricsData;
-    if(data?.lines?.some(line=>line.timestamp!=null && (!Number.isFinite(line.timestamp) || line.timestamp<0 || line.timestamp>song.duration))) return null;
+    const bounds={duration:song.duration,durationResolution:sourceDurationResolution(data,song.id)};
+    if(data?.lines?.some(line=>line.timestamp!=null && !validTimingTimestamp(line.timestamp,bounds))) return null;
     const lines=cleanLyrics(data,{duration:song.duration})?.lines;
     if (!lines?.length) return null;
     return JSON.stringify(lines.map(line=>[line.timestamp ?? null,normalizeRecordingText(line.text)]));
@@ -299,6 +301,9 @@ const spotifyVersions=song=>{
   const title=chinese.sify(song.title??'').normalize('NFKC'),album=spotifyAlbumVersionText(song.album);
   return spotifyVersionMarkers.map(re=>re.test(title)||re.test(album));
 };
+// Provider display labels may add translations, but they must never erase a
+// rendition or clean/explicit marker carried only in another structured field.
+export const sameRecordingVersions=(a,b)=>JSON.stringify(spotifyVersions(a))===JSON.stringify(spotifyVersions(b));
 function spotifyFailure(song,request) {
   if(JSON.stringify(spotifyVersions(song))!==JSON.stringify(spotifyVersions(request)))return 'version_conflict';
   if(song.isrc&&request.isrc&&song.isrc!==request.isrc)return 'isrc_conflict';

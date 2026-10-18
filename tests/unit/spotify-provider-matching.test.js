@@ -29,5 +29,5 @@ test('Kugou complete-name comparison runs before flat-name filtering and rejects
 });
 test('the invented Spotify sample remains disabled and independent sources stay registered',()=>{
   assert.equal(getMusicAPI('en','spotify'),null);
-  for(const script of ['en','zh','ja'])assert.ok(getAvailableAPIs(script).every(api=>['LRCAPI','NeteaseAPI','KugouAPI'].includes(api.name)));
+  for(const script of ['en','zh','ja'])assert.ok(getAvailableAPIs(script).every(api=>['LRCAPI','NeteaseAPI','KugouAPI','QQMusicAPI'].includes(api.name)));
 });

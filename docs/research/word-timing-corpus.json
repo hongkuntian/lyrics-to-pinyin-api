@@ -1,0 +1,317 @@
+{
+  "version": 1,
+  "capturedAtUTC": "2026-10-18T07:28:41.093255+00:00",
+  "kind": "frozen_metadata_source_path_corpus",
+  "limitations": [
+    "No stock Dynamic Lyrics runtime results. No exact user Spotify track ID captured.",
+    "Apple metadata and song duration do not authorize cross-provider recording equivalence.",
+    "Expectation is language/version identity; measured coverage remains an observed result, never assumed.",
+    "Established direct IDs are fresh metadata checked at benchmark time; fixed-ID route success does not pass production discovery or tie consensus."
+  ],
+  "reportedSpotifyRegression": {
+    "caseID": "spotify-viva-user-report",
+    "provider": "spotify",
+    "spotifyItemID": null,
+    "identityStatus": "exact user itemID missing; do not substitute Apple ID",
+    "artist": "Coldplay",
+    "title": "Viva La Vida",
+    "requestUsedByExistingAdapterProbe": {
+      "album": "Viva La Vida or Death and All His Friends",
+      "duration": 242.373
+    },
+    "evidence": "../adapter-probe-summary.json; user reports Spotify + Dynamic Lyrics visible word timing; no source label"
+  },
+  "recordings": [
+    {
+      "caseID": "en-viva-album",
+      "artist": "Coldplay",
+      "title": "Viva La Vida",
+      "album": "Viva La Vida or Death and All His Friends",
+      "duration": 241.445,
+      "catalog_id": "1122773680",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/viva-la-vida/1122773394?i=1122773680&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1122773680&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "directSources": [
+        {
+          "provider": "kugou",
+          "id": "774298045"
+        },
+        {
+          "provider": "qq",
+          "id": "203320056"
+        }
+      ],
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "en-shape",
+      "artist": "Ed Sheeran",
+      "title": "Shape of You",
+      "album": "÷ (Deluxe)",
+      "duration": 233.713,
+      "catalog_id": "1193701392",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/shape-of-you/1193701079?i=1193701392&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1193701392&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "directSources": [
+        {
+          "provider": "kugou",
+          "id": "510757620"
+        },
+        {
+          "provider": "qq",
+          "id": "200369396"
+        }
+      ],
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "en-hello",
+      "artist": "Adele",
+      "title": "Hello",
+      "album": "25",
+      "duration": 295.502,
+      "catalog_id": "1544494392",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/hello/1544494115?i=1544494392&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1544494392&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "directSources": [
+        {
+          "provider": "qq",
+          "id": "105738437"
+        }
+      ],
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "en-love-original",
+      "artist": "Taylor Swift",
+      "title": "Love Story",
+      "album": "Fearless",
+      "duration": 235.267,
+      "catalog_id": "1440924808",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/love-story/1440924803?i=1440924808&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1440924808&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "en-blinding",
+      "artist": "The Weeknd",
+      "title": "Blinding Lights",
+      "album": "After Hours",
+      "duration": 200.046,
+      "catalog_id": "1499378607",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/blinding-lights/1499378108?i=1499378607&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1499378607&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "en-bad-guy",
+      "artist": "Billie Eilish",
+      "title": "bad guy",
+      "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+      "duration": 194.088,
+      "catalog_id": "1450695739",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/bad-guy/1450695723?i=1450695739&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1450695739&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "en-rolling",
+      "artist": "Adele",
+      "title": "Rolling in the Deep",
+      "album": "21",
+      "duration": 228.093,
+      "catalog_id": "1544491233",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/rolling-in-the-deep/1544491232?i=1544491233&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1544491233&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "en-drivers",
+      "artist": "Olivia Rodrigo",
+      "title": "drivers license",
+      "album": "SOUR",
+      "duration": 242.014,
+      "catalog_id": "1560735480",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/drivers-license/1560734944?i=1560735480&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1560735480&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "zh-little-happiness",
+      "artist": "田馥甄",
+      "title": "小幸運 (電影《我的少女時代》主題曲)",
+      "album": "小幸運 (電影《我的少女時代》主題曲) - Single",
+      "duration": 265.522,
+      "catalog_id": "1017697311",
+      "storefront": "tw",
+      "expectedLanguage": "zh",
+      "identityURL": "https://music.apple.com/tw/album/%E5%B0%8F%E5%B9%B8%E9%81%8B-%E9%9B%BB%E5%BD%B1-%E6%88%91%E7%9A%84%E5%B0%91%E5%A5%B3%E6%99%82%E4%BB%A3-%E4%B8%BB%E9%A1%8C%E6%9B%B2/1017697307?i=1017697311&uo=4",
+      "metadataURL": "https://itunes.apple.com/search?term=%E7%94%B0%E9%A6%A5%E7%94%84+%E5%B0%8F%E5%B9%B8%E9%81%8B&entity=song&country=tw&limit=12",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "ja-idol",
+      "artist": "YOASOBI",
+      "title": "アイドル",
+      "album": "アイドル - Single",
+      "duration": 213.234,
+      "catalog_id": "1679278167",
+      "storefront": "jp",
+      "expectedLanguage": "ja",
+      "identityURL": "https://music.apple.com/jp/album/%E3%82%A2%E3%82%A4%E3%83%89%E3%83%AB/1679278166?i=1679278167&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1679278167&country=jp",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "ko-blueming",
+      "artist": "IU",
+      "title": "Blueming",
+      "album": "Love Poem - EP",
+      "duration": 217.053,
+      "catalog_id": "1488300930",
+      "storefront": "us",
+      "expectedLanguage": "ko",
+      "identityURL": "https://music.apple.com/us/album/blueming/1488300927?i=1488300930&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1488300930&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "es-despacito",
+      "artist": "Luis Fonsi & Daddy Yankee",
+      "title": "Despacito",
+      "album": "VIDA",
+      "duration": 229.387,
+      "catalog_id": "1447401620",
+      "storefront": "es",
+      "expectedLanguage": "es",
+      "identityURL": "https://music.apple.com/es/album/despacito/1447401519?i=1447401620&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1447401620&country=es",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "coverage"
+    },
+    {
+      "caseID": "control-viva-single",
+      "artist": "Coldplay",
+      "title": "Viva La Vida",
+      "album": "Viva La Vida - Single",
+      "duration": 242.373,
+      "catalog_id": "1774282354",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/viva-la-vida/1774281912?i=1774282354&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1774282354&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "directSources": [
+        {
+          "provider": "kugou",
+          "id": "774298045"
+        },
+        {
+          "provider": "qq",
+          "id": "203320056"
+        }
+      ],
+      "caseRole": "version_or_language_control"
+    },
+    {
+      "caseID": "control-viva-live",
+      "artist": "Coldplay",
+      "title": "Viva la Vida (Live)",
+      "album": "Live 2012",
+      "duration": 298.333,
+      "catalog_id": "693573514",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/viva-la-vida-live/693573205?i=693573514&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=693573514&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "version_or_language_control"
+    },
+    {
+      "caseID": "control-shape-acoustic",
+      "artist": "Ed Sheeran",
+      "title": "Shape of You (Acoustic)",
+      "album": "Shape of You (Acoustic) - Single",
+      "duration": 223.573,
+      "catalog_id": "1202046879",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/shape-of-you-acoustic/1202046656?i=1202046879&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1202046879&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "version_or_language_control"
+    },
+    {
+      "caseID": "control-love-tv",
+      "artist": "Taylor Swift",
+      "title": "Love Story (Taylor’s Version)",
+      "album": "Fearless (Taylor's Version)",
+      "duration": 235.767,
+      "catalog_id": "1552791427",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/love-story-taylors-version/1552791073?i=1552791427&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1552791427&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "version_or_language_control"
+    },
+    {
+      "caseID": "control-idol-english",
+      "artist": "YOASOBI",
+      "title": "Idol",
+      "album": "Idol - Single",
+      "duration": 213.234,
+      "catalog_id": "1688334537",
+      "storefront": "us",
+      "expectedLanguage": "en",
+      "identityURL": "https://music.apple.com/us/album/idol/1688334284?i=1688334537&uo=4",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1688334537&country=us",
+      "identityStatus": "Apple catalog metadata verified; not Spotify identity or audio alignment",
+      "metadataContext": "Apple catalog metadata source-path probe; no Spotify or acoustic equivalence asserted",
+      "caseRole": "version_or_language_control"
+    }
+  ]
+}
