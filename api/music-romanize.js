@@ -51,7 +51,7 @@ export function createMusicRomanizeService(dependencies={}) {
   }=dependencies;
   const spotifyService=createSpotifyLyricsService(dependencies);
   const searchService=createLyricSearchService(dependencies);
-  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:RESPONSE_VERSION,selection:SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION}});
+  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:RESPONSE_VERSION,selection:SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY}});
   const inflight=new Map(),sourceAcquisitions=new SourceAcquisitions({waitUntilFn});
   const canonicalCache=new BoundedCache();
   const verifiedRouting=new BoundedCache({ttlMs:contextTTLms,now:contextNow});

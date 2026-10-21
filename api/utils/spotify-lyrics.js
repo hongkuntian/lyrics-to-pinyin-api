@@ -31,7 +31,7 @@ export function createSpotifyLyricsService(dependencies={}) {
     getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,
     getCachedFn=getCached,setCachedFn=setLyricsCached,providerTimeoutMs=6000,cacheTimeoutMs=300,hedgeDelayMs=350,untimedGraceMs=2500,wordTimingGraceMs=providerTimeoutMs,
     rejectRecordingLyricsFn=isRejectedRecordingLyrics,analyzeLyricLanguageFn=analyzeLyricLanguage,waitUntilFn=waitUntil,logger=console,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800,neteaseSourceHintBudgetMs=2500}=dependencies;
-  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,sourceNames:NETEASE_TITLE_CAPABILITY}});
+  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,sourceNames:NETEASE_TITLE_CAPABILITY,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY}});
   const cache=new BoundedCache(),inflight=new Map();let latestStart=0;
   const validCached=(entry,r)=>{
     const response=entry?.response,candidate=entry?.candidate;

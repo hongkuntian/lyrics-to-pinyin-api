@@ -1,11 +1,21 @@
 import {BaseMusicAPI} from './base.js';
-import {fetchJSON} from '../utils/fetch-json.js';
+import {fetchJSON,withDeadline} from '../utils/fetch-json.js';
 import {parseLRC} from '../utils/lrc.js';
 import {parseYRC} from '../utils/netease-yrc.js';
-import {findRecording,searchTitle,recordingNames,recordingScore,normalizeRecordingText,RecordingMismatchError} from '../utils/recording-match.js';
+import {findRecording,searchTitle,recordingNames,recordingScore,normalizeRecordingText,normalizedAlbum,sameRecordingVersions,RecordingMismatchError} from '../utils/recording-match.js';
+import {cleanLyrics} from '../utils/lyric-quality.js';
+import {hasCompleteMeasuredVocalTiming} from '../utils/lyric-selection.js';
 import {BoundedCache} from '../utils/bounded-cache.js';
 import {neteaseTitleEvidence,neteaseDescriptiveTitleMatches} from '../utils/netease-title-evidence.js';
 import chinese from 'chinese-conv';
+const performerIDs=raw=>Array.isArray(raw?.artists)&&raw.artists.length>0&&raw.artists.length<=3
+ &&raw.artists.every(p=>/^[1-9]\d{0,19}$/.test(String(p.id)))
+ ?JSON.stringify(raw.artists.map(p=>String(p.id)).sort()):null;
+// Cross-release timing is optional. Unknown annotations and named editions
+// require the complete same release label, not merely matching boolean flags.
+const qualifiedRelease=/[()[\]{}【】「」『』]|\b(?:live|remaster(?:ed)?|re[\s-]?record(?:ed|ing)?|recording|remix|mix|version|edition|edit|mono|stereo|instrumental|karaoke|acoustic|unplugged|a[\s-]?cap(?:p)?ella|demo|cover|reprise|clean|explicit|sped|speed|slowed|nightcore|daycore|pitch|dub|reverb|surround|spatial|dolby)\b|版本?|混音|现场|現場|演唱会|演唱會|重制|重製|重录|重錄|再录|再錄|伴奏|纯音乐|純音樂|不插电|不插電|清唱|翻唱|剪辑|剪輯|单声道|單聲道|立体声|立體聲|加速|减速|減速|ライブ|ライヴ|リミックス|バージョン|ヴァージョン|リマスター|モノラル|ステレオ|再録|라이브|리믹스|버전|리마스터|스테레오|모노|재녹음/iu;
+const compatibleReleases=(a,b)=>typeof a.album==='string'&&!!a.album.trim()&&typeof b.album==='string'&&!!b.album.trim()
+ &&(normalizedAlbum(a.album)===normalizedAlbum(b.album)||![a.album,b.album].some(value=>qualifiedRelease.test(value.normalize('NFKC'))));
 const withTitleEvidence=(song,raw,field,request)=>{
   if(request.recordingProvider!=='spotify')return song;
   const evidence=neteaseTitleEvidence(raw,field),candidate={...song,neteaseTitleEvidence:evidence};
@@ -35,6 +45,7 @@ export class NeteaseAPI extends BaseMusicAPI {
   constructor() { super('NeteaseAPI',['zh','yue','en','ja','ko','ru']); this.supportsVocalTiming=true; this.languageAgnosticDiscovery=true; this.baseURL='https://netease-cloud-music-api-gules-mu.vercel.app'; this.artistAliases=new BoundedCache({limit:128,ttlMs:86400000}); }
   supportsLanguage(language) { return typeof language==='string'&&/^[a-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(language); }
   async searchSong(artist,title,context={}) {
+    context.signal?.throwIfAborted();
     const request={artist,title,...context},records=new Map(),profiles=new Map(),hydrated=new Set();
     let lastMismatch;
     const select=async()=> {
@@ -56,6 +67,13 @@ export class NeteaseAPI extends BaseMusicAPI {
         && recordingScore({...song,title,artist,...(spotify?{creditedArtistNames:request.creditedArtistNames}:{})},request)>=0).slice(0,3);
       for(const song of plausible)
         await this.resolveArtistAliases(song,records.get(song.id).raw.artists||[],request,context,profiles);
+      // One verified performer profile also applies to other search rows for
+      // that exact ID. The three-profile budget must not strand an exact album
+      // or a measured release merely because it appears later in the page.
+      for(const {song,raw} of records.values()) {
+        if(plausible.includes(song)||!performerIDs(raw)||!raw.artists.every(p=>profiles.has(String(p.id))))continue;
+        await this.resolveArtistAliases(song,raw.artists,request,context,profiles);
+      }
       try { return findRecording(songs,request); }
       catch(error) { if(error.code!=='recording_mismatch') throw error;lastMismatch=error; }
       const ranked=songs.map(song=>({song,score:recordingScore(song,request)})).filter(item=>item.score>=0).sort((a,b)=>b.score-a.score);
@@ -80,11 +98,62 @@ export class NeteaseAPI extends BaseMusicAPI {
         const song={id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease',...(context.recordingProvider==='spotify'?{creditedArtistNames:raw.artists?.map(x=>x.name),...(raw.isrc?{isrc:raw.isrc}:{}),...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{})}:{})};
         records.set(raw.id,{raw,song:withTitleEvidence(song,raw,'alias',request)});
       }
-      const song=await select();if(song) return song;
+      const song=await select();if(song) return this.measuredRelease(song,records,request,context);
       if(context.signal?.aborted) throw Object.assign(new Error('Lookup cancelled'),{name:'AbortError'});
     }
     if(lastMismatch) throw lastMismatch;
     return null;
+  }
+  async measuredRelease(best,records,request,context) {
+    const origin=records.get(best.id)?.raw,ids=performerIDs(origin);
+    if(!ids||origin.originCoverType===2||!compatibleReleases(best,request)||!Number.isFinite(request.duration)||Math.abs(best.duration-request.duration)>0.5)return best;
+    const family=[...records.values()].filter(({song,raw})=>performerIDs(raw)===ids
+      &&raw.originCoverType!==2
+      &&Number.isFinite(song.duration)&&Math.abs(song.duration-best.duration)<=0.5&&Math.abs(song.duration-request.duration)<=0.5
+      &&recordingScore(song,request)>=0&&sameRecordingVersions(song,best)&&sameRecordingVersions(song,request)
+      &&compatibleReleases(song,best)&&compatibleReleases(song,request)
+      &&!(raw.isrc&&origin.isrc&&raw.isrc!==origin.isrc)
+      &&!(typeof raw.explicit==='boolean'&&typeof origin.explicit==='boolean'&&raw.explicit!==origin.explicit));
+    // Recording selection above must already be unambiguous. These are
+    // optional source editions for that anchor, not a new uniqueness test.
+    // Keep discovery and lyric acquisition bounded independently.
+    if(family.length<2||family.length>16)return best;
+    best.lyricsData??=await this.getLyrics(best.id,{...context,song:best});
+    const cleaned=song=>cleanLyrics(song.lyricsData,{duration:song.duration,title:song.title,artist:song.artist});
+    const baseline=cleaned(best);
+    if(!baseline?.lines.length||baseline.partial||baseline.instrumental||hasCompleteMeasuredVocalTiming({song:best,lyrics:baseline}))return best;
+    const text=lyrics=>normalizeRecordingText(lyrics.lines.map(l=>l.text).join(''));
+    const expected=text(baseline);if(!expected)return best;
+    try {
+      // Optional acquisition owns a fixed sub-budget inside the caller's
+      // unchanged provider deadline. Failure keeps the readable primary.
+      const companions=family.filter(({song})=>song!==best).sort((a,b)=>recordingScore(b.song,request)-recordingScore(a.song,request)
+        ||String(a.song.id).localeCompare(String(b.song.id),'en',{numeric:true})).slice(0,3);
+      const selected=await withDeadline(async signal=>{
+        const controller=new AbortController(),relay=()=>controller.abort();
+        signal.addEventListener('abort',relay,{once:true});if(signal.aborted)relay();
+        try {
+          // Every companion independently matches the established anchor.
+          // A slow or absent peer cannot erase a complete measured edition.
+          return await Promise.any(companions.map(async({song})=>{
+            controller.signal.throwIfAborted();
+            const raw=song.lyricsData??await this.getLyrics(song.id,{...context,signal:controller.signal,song});
+            controller.signal.throwIfAborted();song.lyricsData=raw;
+            const lyrics=cleaned(song);
+            if(!lyrics||lyrics.partial||lyrics.instrumental||text(lyrics)!==expected
+              ||!hasCompleteMeasuredVocalTiming({song,lyrics}))throw new Error('No complete measured edition');
+            return song;
+          }));
+        }finally{signal.removeEventListener('abort',relay);controller.abort();}
+      },1500,context.signal);
+      // Two sheets for this established recording can contain different
+      // measured annotations, just as its LRC and YRC can. Adopt the first
+      // complete verified edition; never combine or shift their cues.
+      return selected;
+    }catch(error) {
+      context.signal?.throwIfAborted();
+      return best;
+    }
   }
   async resolveArtistAliases(song,performers,request,context,profiles=new Map()) {
     const spotify=context.recordingProvider==='spotify',expected=recordingNames(request);

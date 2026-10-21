@@ -85,7 +85,7 @@ test('Spotify published hash recipes stay exact; same observed ID hints stay sta
 test('ordinary/canonical acquisition keys carry only internal provider capability; aliases bind current catalog proof',async()=>{
  const keys=[],f=yrcService({speculativeDiscovery:false,getCacheKeyFn:(raw)=>{keys.push(JSON.parse(raw));return raw;}});
  const a=await f.call(),b=await f.call({...appleRequest,storefront:'ca'});assert.equal(a.statusCode,200);assert.equal(b.statusCode,200);
- assert.ok(keys.every(k=>k.providerCapability==='netease-yrc-1:signed-credits-1:structured-lrc-1'));assert.equal(f.queries.length,1);assert.equal(b.body.metadata.lyric_timing.recordingID,'123');
+ assert.ok(keys.every(k=>k.providerCapability==='netease-yrc-1:signed-credits-1:structured-lrc-1:measured-releases-1'));assert.equal(f.queries.length,1);assert.equal(b.body.metadata.lyric_timing.recordingID,'123');
  const sameMetadataAlias={...appleRequest,catalog_id:'456',storefront:'ca'},c=await f.call(sameMetadataAlias);
  assert.equal(c.statusCode,200);assert.equal(c.body.metadata.lyric_timing.recordingID,'456');
  assert.equal(c.body.metadata.lyric_timing.revision,a.body.metadata.lyric_timing.revision);
