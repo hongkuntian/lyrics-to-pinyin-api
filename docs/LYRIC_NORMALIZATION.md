@@ -5,8 +5,17 @@ production credits and performer cues from sung text before romanization. It
 does not delete arbitrary colon-containing lines, deduplicate refrains, rewrite
 words, or move a cue's timestamp onto a vocal line.
 
-Production roles have explicit Chinese and English aliases. A bilingual label
-must consume the whole label and refer to one role. Unknown suffixes and
+Production roles have explicit Chinese and English aliases. Rights and release
+roles also use a complete-label grammar: recording/composition scope lists,
+copyright duties and entities, and joint/exclusive production, publishing or
+distribution activities compose without adding individual compound labels.
+For example, `词 + 版权 + 管理 + 方` and `(录音作品 + 及 + MV) + 版权`
+are credits. Any unconsumed sentence text keeps a colon row readable. The same
+grammar and fixture corpus run in native display cleanup, including offline
+saved sources. Credits remain in Song details; their extraction never shifts a
+retained vocal timestamp or reassigns a saved occurrence ID.
+
+A bilingual label must consume the whole label and refer to one role. Unknown suffixes and
 ambiguous chorus text remain readable. Performer labels require names from
 verified artist metadata, explicitly supplied performer identities, or the
 reviewed artist roster in `api/data/lyric-performers.json`. The roster is scoped
@@ -47,7 +56,9 @@ The existing song-library API v1 still ties `sourceText` to the visible row and
 documents onto the clean vocal rows with empty printed prefixes and no printed
 turn starts. Translation replies use that same view. The full annotation mapping
 remains in `response.metadata.lyric_structure`; the canonical stored document and
-model input keep real performer turns. IDs and hashes identify that canonical
+model input keep real performer turns. Native display validates that canonical
+row/prefix evidence before exempting a projected vocal body from credit cleanup.
+An inherited public speaker ID without a removed prefix does not exempt a row. IDs and hashes identify that canonical
 document, independent of its API view. Existing clients remain compatible without
 requiring a coordinated rollout of the saved-translation feature. Legacy documents are reprocessed into clean revisions by the explicit production migration; old IDs retain retirement records, not raw lyric payloads.
 
@@ -55,8 +66,11 @@ The response selection revision is `lyrics-selection-2026-09-30-storefront-1`.
 Backend cache keys also include the normalization version. Native memory/disk
 cache admission and durable song-library lookups use the matching revision;
 older results remain readable during rollout but must be refetched rather than
-recertified as current. Future semantic normalization changes must update these
-versions together. Existing translations are not regenerated in the background.
+recertified as current. Changes to occurrence structure or selection semantics must update these
+versions together. Corrections that recognize additional production-role
+combinations use the existing embedded-credit stale-source checks to refresh
+only contaminated caches and reject new generation from their old immutable
+documents; unaffected sources keep their identities. Existing translations are not regenerated in the background.
 
 ## Verified recording
 

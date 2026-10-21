@@ -104,3 +104,15 @@ test('cached note-only source rows are refreshed before romanization and durable
  assert.deepEqual(current.lines,fresh.lines);
  assert.equal(makeDocument(recording,current,current.metadata.selection_revision).structure.occurrences.length,4);
 });
+
+
+test('current-revision ownership credits invalidate cached acquisition without changing performed rows',async()=>{
+ const fresh=await response(),old=structuredClone(fresh);
+ old.metadata.timestamp=new Date().toISOString();
+ old.lines.unshift({original:'词曲版权管理方：Practice publisher',romanized:'credit',timestamp:0});
+ delete old.metadata.lyric_structure;delete old.lyric_structure;
+ const current=await response({cache:old});
+ assert.deepEqual(current.lines,fresh.lines);
+ assert.equal(current.metadata.selection_revision,fresh.metadata.selection_revision);
+ assert.deepEqual(old.lines[0],{original:'词曲版权管理方：Practice publisher',romanized:'credit',timestamp:0});
+});

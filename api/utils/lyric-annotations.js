@@ -102,6 +102,16 @@ const roleLabels=new Set(roles.flatMap(([zh,en])=>[
 // Match complete instrument/engineering roles with bounded production
 // modifiers. A colon or an arbitrary suffix never establishes a credit.
 const composedRole=/^(?:(?:(?:[1-9][0-9]?(?:st|nd|rd|th)|first|second|third|principal|lead|solo|assistant))?(?:strings?|violins?|violas?|cellos?|doublebass|contrabass|c\.?bass|guitars?|bass|drums?|piano|keyboards?|percussion|flute|saxophone|trumpet|trombone|horn|orchestra)(?:assistant|arrangement|arranger|recording(?:engineer|assistant)?|engineer|technician|contractor|director|conductor)?|(?:assistant|additional|chief|head)?(?:recording|mixing|mastering)(?:engineer|assistant|studio)?|(?:第?[一二三四五六七八九十0-9]+|首席|助理)?(?:弦乐|管弦乐|小提琴|中提琴|大提琴|低音提琴|倍低音提琴|吉他|贝斯|鼓|钢琴|键盘|打击乐|长笛|萨克斯|小号|长号|圆号|二胡|古筝|琵琶)(?:编写|编曲|录音|录音师|录音助理|助理|技师|统筹|监制|指挥|团)?)$/u;
+// Rights/release roles compose bounded semantic parts, not arbitrary colon
+// labels. Keep the complete-label grammar aligned with native display cleanup.
+const ownershipRole=new RegExp([
+  '^(?:',
+  '(?:(?:词曲|词|曲|歌曲|音乐|录音(?:作品)?|音像|母带|mv|musicvideo)(?:[/&+、及和](?:词曲|词|曲|歌曲|音乐|录音(?:作品)?|音像|母带|mv|musicvideo))*)?(?:版权|[著着]作权)(?:管理|代理|运营|授权|许可|归属|所有)?(?:方|人|公司)?',
+  '|(?:联合|共同|独家|全球|执行|协同)?(?:出品|制作|发行|出版|宣发|策划|营销|推广)(?:人|方|公司|团队|统筹|协力|支持)?',
+  '|(?:(?:lyrics?|music|composition|soundrecording|master|musicvideo)(?:(?:and|&|/)(?:lyrics?|music|composition|soundrecording|master|musicvideo))*)?copyright(?:management|administration|administrator|owner|holder|licensing)?',
+  '|(?:co-?|joint|executive|exclusive|global|additional)?(?:production|producer|presentation|presenter|distribution|distributor|publishing|publisher)(?:company|team)?',
+  ')$'
+].join(''),'u');
 const isrcPattern=/^\s*ISRC\s*[:：]?\s*([A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9](?:-?[0-9]){4})\s*$/iu;
 const ambiguousRoles=new Set(['chorus','和声','和音','合声','backingvocal','backingvocals']);
 const sourceCredit=/^取材自歌曲[《〈].+[》〉]\s*[（(]\s*[词詞]\s*[:：].+曲\s*[:：].+[）)]$/u;
@@ -152,7 +162,8 @@ function creditRole(text,aliases) {
     const compactNames=/^[\p{Script=Han}]{2,4}(?:[ 、/／&,，]+[\p{Script=Han}]{2,4})+$/u.test(roster);
     return namedPerformers(roster,aliases) || (key!=='chorus' && compactNames)?'production_credit':null;
   }
-  return roleLabels.has(key)||composedRole.test(key)?'production_credit':null;
+  return roleLabels.has(key)||composedRole.test(key)
+    || (ownershipRole.test(key)&&!namedPerformers(parts[1],aliases))?'production_credit':null;
 }
 
 const performanceRoles=new Set(['男声','女声','戏腔']);

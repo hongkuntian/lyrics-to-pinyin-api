@@ -215,3 +215,30 @@ test('note-only provider placeholders leave vocal text, timing and source mappin
   assert.deepEqual(cleanLyrics(result),result);
   assert.equal(cleanLyrics({source:'lrclib',lines:rows(['♪','♫'])}).instrumental,false);
 });
+
+
+test('composed ownership and release roles remove credits without treating colon lyrics as metadata',async()=>{
+  const fixture=JSON.parse(await readFile(new URL('../fixtures/production-credit-grammar.json',import.meta.url)));
+  for(const credit of fixture.credits) {
+    const vocal={text:'一起唱',timestamp:20,vocalTiming:{end:22,segments:[
+      {text:'一起唱',start:20,end:22,utf16Start:0,utf16Length:3}]}};
+    const data={source:'netease',lines:[{text:credit,timestamp:0},vocal,{text:credit,timestamp:24}]};
+    const result=cleanLyrics(data,{artist:'Eason Chan'});
+    assert.deepEqual(result.lines,[vocal],credit);
+    assert.deepEqual(result.lyricStructure.sourceRows,[{text:vocal.text,timestamp:20}]);
+    assert.equal(result.credits[0]?.original,credit);
+    assert.equal(result.credits.length,1);
+    assert.deepEqual(cleanLyrics(result,{artist:'Eason Chan'}),result);
+    assert.equal(hasEmbeddedLyricCredits({lines:[{original:credit}]}),true);
+  }
+  for(const text of fixture.preserved) {
+    const data={lines:rows([...fixture.screenshotCredits,text,...fixture.screenshotCredits])};
+    assert.deepEqual(cleanLyrics(data).lines,[data.lines[fixture.screenshotCredits.length]],text);
+  }
+  // A production-looking phrase can be performed after a verified singer cue.
+  const data={lines:rows(['Eason Chan：词版权管理方：一起唱','Eason Chan：联合出品：慢慢听'])};
+  const result=cleanLyrics(data,{artist:'Eason Chan'});
+  assert.deepEqual(result.lines.map(l=>l.text),['词版权管理方：一起唱','联合出品：慢慢听']);
+  assert.deepEqual(cleanLyrics(result,{artist:'Eason Chan'}),result);
+  assert.equal(hasEmbeddedLyricCredits({lines:result.lines.map(l=>({original:l.text})),metadata:{lyric_structure:result.lyricStructure}}),false);
+});

@@ -264,11 +264,16 @@ test('fresh cached note placeholders refresh without an explicit reload',async t
  assert.deepEqual(second.response.lines,response.lines);
  assert.equal((await store.document(first.id)).response.lines[0].original,'♪');
 });
-test('fresh saved performer credits acquire a clean immutable document without mutating the old source',async t=>{
+for(const [creditFamily,creditRows] of [
+ ['performer',['男声：单色凌','戏腔：单色凌','和声：曾婕']],
+ ['ownership',['词版权管理方：Practice publisher','曲版权管理方：Practice publisher',
+   '录音作品及MV版权：Practice company','联合出品：Practice company']]
+]) {
+test(`fresh saved ${creditFamily} credits acquire a clean immutable document without mutating the old source`,async t=>{
  let calls=0;
- const old={...response,lines:['男声：单色凌','戏腔：单色凌','和声：曾婕'].map((original,i)=>({original,romanized:'credit',timestamp:i+1})).concat(
+ const old={...response,lines:creditRows.map((original,i)=>({original,romanized:'credit',timestamp:i+1})).concat(
    response.lines.map(l=>({...l,timestamp:12})))};
- const fresh={...response,lines:old.lines.slice(3)};
+ const fresh={...response,lines:old.lines.slice(creditRows.length)};
  const {call,store}=await setup(t,{loadLyrics:async()=>++calls===1?old:fresh});
  const first=(await call({action:'lyrics',recording})).body.document;
  const second=(await call({action:'lyrics',recording})).body.document;
@@ -277,8 +282,8 @@ test('fresh saved performer credits acquire a clean immutable document without m
  assert.deepEqual((await store.document(first.id)).response.lines,old.lines);
  assert.equal((await call({action:'lyrics',recording})).body.document.id,second.id);assert.equal(calls,2);
 });
-test('legacy embedded credits require source refresh before new translation or original Study spend',async t=>{
- const old={...response,lines:['男声：单色凌','戏腔：单色凌','和声：曾婕'].map((original,i)=>({original,romanized:'credit',timestamp:i+1})).concat(response.lines)};
+test(`legacy embedded ${creditFamily} credits require source refresh before new translation or original Study spend`,async t=>{
+ const old={...response,lines:creditRows.map((original,i)=>({original,romanized:'credit',timestamp:i+1})).concat(response.lines)};
  const {call,store,pending}=await setup(t,{loadLyrics:async()=>old,
    generateFn:()=>assert.fail('credit-contaminated source must not start translation'),
    explainFn:()=>assert.fail('credit-contaminated source must not start Study')});
@@ -289,12 +294,13 @@ test('legacy embedded credits require source refresh before new translation or o
  const translated=await call({action:'translate',...ref,allowGeneration:true});
  assert.equal(translated.code,409);assert.equal(translated.body.code,'source_revision_superseded');
  const explained=await call({action:'explain',...ref,contractVersion:2,explanationLanguage:'en',allowGeneration:true,
-   studyText:{layer:'original',revisionID:doc.id,occurrenceID:'L0004'},
+   studyText:{layer:'original',revisionID:doc.id,occurrenceID:`L${String(creditRows.length+1).padStart(4,'0')}`},
    selection:{offsetUnit:'grapheme',ranges:[{lower:0,upper:3}],textHash:digest('一起唱')}});
  assert.equal(explained.code,409);assert.equal(explained.body.code,'source_revision_superseded');
  assert.equal(Number((await store.usage()).jobs),0);assert.equal(pending.length,0);
  assert.deepEqual((await store.document(doc.id)).response.lines,old.lines);
 });
+}
 test('known bad cached timing yields to readable fallback and cannot masquerade as valid on an outage',async t=>{
  const plain={...response,lines:response.lines.map(l=>({...l,timestamp:null})),quality:{...response.quality,synced:false}};
  const {call,instance,store}=await setup(t);
