@@ -48,7 +48,30 @@
     "Copyright management: Practice contributor",
     "Co-producer: Practice contributor",
     "Joint production: Practice contributor",
-    "Exclusive distribution: Practice contributor"
+    "Exclusive distribution: Practice contributor",
+    "混音/母带处理: Practice contributor",
+    "錄音及母帶後期處理: Practice contributor",
+    "Mixing / Mastering: Practice contributor",
+    "Mixing and Mastering: Practice contributor",
+    "作词/作曲/编曲: Practice contributor",
+    "Cover design: Practice contributor",
+    "Artwork illustration: Practice contributor",
+    "封面设计/视觉统筹: Practice contributor",
+    "封面设计: Practice contributor",
+    "封面制作: Practice contributor",
+    "封面剪辑: Practice contributor",
+    "视觉设计: Practice contributor",
+    "视觉制作: Practice contributor",
+    "视觉剪辑: Practice contributor",
+    "海报设计: Practice contributor",
+    "海报制作: Practice contributor",
+    "海报剪辑: Practice contributor",
+    "包装设计: Practice contributor",
+    "包装制作: Practice contributor",
+    "包装剪辑: Practice contributor",
+    "视频设计: Practice contributor",
+    "视频制作: Practice contributor",
+    "视频剪辑: Practice contributor"
   ],
   "preserved": [
     "我说：别哭",
@@ -63,6 +86,19 @@
     "Music copyright of my heart: you",
     "Joint production of love: us",
     "Copyright management says: stay",
-    "版权管理方："
+    "版权管理方：",
+    "封面设计着梦：一起唱",
+    "Cover design of my dreams: you",
+    "混音/我的心：一起唱",
+    "Mixing and my heart: stay",
+    "和声：一起唱"
+  ],
+  "creditBlocks": [
+    [
+      "和声：冯旖旎",
+      "混音/母带处理：潘君明",
+      "封面设计：米一嗷",
+      "联合出品：QQ音乐·新鲜制造×C.Z·梦想成真"
+    ]
   ]
 }

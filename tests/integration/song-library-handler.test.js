@@ -266,6 +266,7 @@ test('fresh cached note placeholders refresh without an explicit reload',async t
 });
 for(const [creditFamily,creditRows] of [
  ['performer',['男声：单色凌','戏腔：单色凌','和声：曾婕']],
+ ['design-engineering',['和声：冯旖旎','混音/母带处理：潘君明','封面设计：米一嗷','联合出品：Practice company']],
  ['ownership',['词版权管理方：Practice publisher','曲版权管理方：Practice publisher',
    '录音作品及MV版权：Practice company','联合出品：Practice company']]
 ]) {

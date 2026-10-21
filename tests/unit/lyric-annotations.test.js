@@ -242,3 +242,19 @@ test('composed ownership and release roles remove credits without treating colon
   assert.deepEqual(cleanLyrics(result,{artist:'Eason Chan'}),result);
   assert.equal(hasEmbeddedLyricCredits({lines:result.lines.map(l=>({original:l.text})),metadata:{lyric_structure:result.lyricStructure}}),false);
 });
+
+
+test('combined engineering and artwork roles corroborate a backing-vocal roster without consuming sung cues',async()=>{
+  const fixture=JSON.parse(await readFile(new URL('../fixtures/production-credit-grammar.json',import.meta.url)));
+  for(const credits of fixture.creditBlocks) {
+    for(const texts of [[...credits,'一起唱','慢慢听'],['一起唱',...credits,'慢慢听'],['一起唱','慢慢听',...credits]]) {
+      const data={source:'netease',lines:rows(texts)};const result=cleanLyrics(data);
+      assert.deepEqual(result.lines,data.lines.filter(l=>['一起唱','慢慢听'].includes(l.text)));
+      assert.deepEqual(result.credits.map(c=>c.original),credits);
+      assert.deepEqual(cleanLyrics(result),result);
+      assert.equal(hasEmbeddedLyricCredits({lines:data.lines.map(l=>({original:l.text}))}),true);
+    }
+    const sung={lines:rows(['和声：一起唱',...credits.slice(1),'我说：慢慢听'])};
+    assert.deepEqual(cleanLyrics(sung).lines,[sung.lines[0],sung.lines.at(-1)]);
+  }
+});

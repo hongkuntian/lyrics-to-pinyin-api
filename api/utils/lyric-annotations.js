@@ -112,6 +112,16 @@ const ownershipRole=new RegExp([
   '|(?:co-?|joint|executive|exclusive|global|additional)?(?:production|producer|presentation|presenter|distribution|distributor|publishing|publisher)(?:company|team)?',
   ')$'
 ].join(''),'u');
+const artworkRole=/^(?:(?:封面|视觉|平面|美术|海报|包装|字体|视频)(?:设计|制作|统筹|总监|指导|绘制|插画|剪辑|后期|拍摄)|(?:cover|artwork|visual|graphic|poster|packaging|video|typography)(?:design|illustration|direction|production|editing|photography|coordination))$/u;
+const engineeringRole=/^(?:录音|混音|母带)(?:后期)?(?:处理|制作)(?:工程师|师|室|工作室)?$/u;
+function compositeProductionRole(key) {
+  const atom=part=>!ambiguousRoles.has(part)
+    && (roleLabels.has(part)||[composedRole,ownershipRole,artworkRole,engineeringRole].some(pattern=>pattern.test(part)));
+  if(atom(key))return true;
+  // Admit role lists only when every component is a complete production role.
+  const parts=key.split(/[\/&+、及]|and/u);
+  return parts.length>1&&parts.every(part=>part&&atom(part));
+}
 const isrcPattern=/^\s*ISRC\s*[:：]?\s*([A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9](?:-?[0-9]){4})\s*$/iu;
 const ambiguousRoles=new Set(['chorus','和声','和音','合声','backingvocal','backingvocals']);
 const sourceCredit=/^取材自歌曲[《〈].+[》〉]\s*[（(]\s*[词詞]\s*[:：].+曲\s*[:：].+[）)]$/u;
@@ -163,7 +173,7 @@ function creditRole(text,aliases) {
     return namedPerformers(roster,aliases) || (key!=='chorus' && compactNames)?'production_credit':null;
   }
   return roleLabels.has(key)||composedRole.test(key)
-    || (ownershipRole.test(key)&&!namedPerformers(parts[1],aliases))?'production_credit':null;
+    || (compositeProductionRole(key)&&!namedPerformers(parts[1],aliases))?'production_credit':null;
 }
 
 const performanceRoles=new Set(['男声','女声','戏腔']);

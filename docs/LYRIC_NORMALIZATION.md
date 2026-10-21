@@ -23,6 +23,16 @@ to the group, not one song. Complete combined labels require every member to
 match. Generic chorus/gender cues require a confirmed named-performer cue in
 the same document. Unknown names and bracketed sung words remain unchanged.
 
+Production labels can list multiple complete roles with `/`, `&`, `+`, `、`,
+`及` or English `and`. Every component must independently be an unambiguous
+production role; an unknown or spoken component preserves the entire row.
+Engineering duties compose recording/mixing/mastering with processing or
+production terms. Artwork roles compose cover/visual/poster/packaging/video
+subjects with design, illustration, coordination, editing and production duties.
+This recognizes `混音/母带处理` and `封面设计` without song-specific rules.
+A single backing-singer name still requires corroborating production rows;
+`和声：一起唱` remains sung text even beside a credit block.
+
 Instrument and engineering roles also accept bounded production modifiers:
 numbered sections such as `1st Violin` and `3rd Violins`, principal/lead/solo
 instruments, assistants, recording engineers, technicians and contractors.
