@@ -13,7 +13,7 @@ import {getCached,setLyricsCached,cacheUnavailable,suspendCache} from './cache.j
 import {withDeadline} from './fetch-json.js';
 import {recordingScore,findRecording,RecordingMismatchError} from './recording-match.js';
 import {cleanLyrics,hasUsableLyrics} from './lyric-quality.js';
-import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,VOCAL_SELECTION_CAPABILITY} from './lyric-selection.js';
+import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,needsTimingDiscovery,lyricResponseLifetimeMs,VOCAL_SELECTION_CAPABILITY} from './lyric-selection.js';
 import {hedgedLookup} from './hedged-lookup.js';
 import {isRejectedRecordingLyrics} from './rejected-lyrics.js';
 import {analyzeLyricLanguage} from './lyric-language.js';
@@ -31,7 +31,7 @@ export function createSpotifyLyricsService(dependencies={}) {
     getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,
     getCachedFn=getCached,setCachedFn=setLyricsCached,providerTimeoutMs=6000,cacheTimeoutMs=300,hedgeDelayMs=350,untimedGraceMs=2500,wordTimingGraceMs=providerTimeoutMs,
     rejectRecordingLyricsFn=isRejectedRecordingLyrics,analyzeLyricLanguageFn=analyzeLyricLanguage,waitUntilFn=waitUntil,logger=console,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800,neteaseSourceHintBudgetMs=2500}=dependencies;
-  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,sourceNames:NETEASE_TITLE_CAPABILITY,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY}});
+  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,sourceNames:NETEASE_TITLE_CAPABILITY,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY,vocalSelection:VOCAL_SELECTION_CAPABILITY}});
   const cache=new BoundedCache(),inflight=new Map();let latestStart=0;
   const validCached=(entry,r)=>{
     const response=entry?.response,candidate=entry?.candidate;
@@ -42,7 +42,7 @@ export function createSpotifyLyricsService(dependencies={}) {
       if(rejectRecordingLyricsFn(response.lines.map(l=>({text:l.original})),spotifySearchRequest(r)))return false;
       if(hasEmbeddedLyricCredits(response,spotifySearchRequest(r)))return false;
       if(response.metadata.selection_revision!==LYRIC_SELECTION_REVISION||response.metadata.spotify_response_version!==1)return false;
-      if(!Number.isFinite(Date.parse(response.metadata.timestamp))||Date.now()-Date.parse(response.metadata.timestamp)>(response.quality.partial||!response.quality.synced?300000:86400000))return false;
+      if(!Number.isFinite(Date.parse(response.metadata.timestamp))||Date.now()-Date.parse(response.metadata.timestamp)>=lyricResponseLifetimeMs(response))return false;
       verifySpotifyBinding(response.recordingBinding,r,sourceCapsule(response),LYRIC_SELECTION_REVISION,response);return true;
     }catch{return false;}
   };
@@ -98,6 +98,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         };
         const lookup=async(api,parentSignal,localization=null)=>{
           const label=api.name.replace(/[^a-zA-Z0-9_]/g,'');
+          let hintCandidate=null;
           try {
             return await withDeadline(async signal=>{
               const searchTarget=localization?{...target,artist:localization.names.join(' & '),creditedArtistNames:localization.names}:target;
@@ -122,8 +123,14 @@ export function createSpotifyLyricsService(dependencies={}) {
               };
               const fresh=await hintedRecording(api,searchTarget,hintContext,{signal,deadline:Math.min(deadline,Date.now()+providerTimeoutMs),budgetMs:sourceHintBudgetMs,neteaseBudgetMs:neteaseSourceHintBudgetMs,measure});
               signal.throwIfAborted();
-              if(fresh){try{const candidate=await validateSource(fresh.song,fresh.lyrics);if(candidate)return candidate;}catch(error){logger.info?.('spotify_lyrics_lookup',{provider:independentProvider(api.name),reason:error.reason??'source_hint_rejected'});}signal.throwIfAborted();}
-              return validateSource(await measure(`${label}_search`,()=>api.searchSong(artist,title,{...context,signal,...(independentProvider(api.name)==='netease'?{onVerifiedArtistCredits}:{})})));
+              if(fresh){try{
+                hintCandidate=await validateSource(fresh.song,fresh.lyrics);
+                if(hintCandidate){
+                  if(!api.supportsVocalTiming||!needsTimingDiscovery(hintCandidate))return hintCandidate;
+                  await publishCandidate(hintCandidate);
+                }
+              }catch(error){logger.info?.('spotify_lyrics_lookup',{provider:independentProvider(api.name),reason:error.reason??'source_hint_rejected'});}signal.throwIfAborted();}
+              return chooseLyricCandidate(hintCandidate,await validateSource(await measure(`${label}_search`,()=>api.searchSong(artist,title,{...context,signal,...(independentProvider(api.name)==='netease'?{onVerifiedArtistCredits}:{})}))));
             },Math.max(1,Math.min(providerTimeoutMs,deadline-Date.now())),parentSignal);
           }catch(error){
             if(parentSignal?.aborted)return null;
@@ -131,7 +138,7 @@ export function createSpotifyLyricsService(dependencies={}) {
             if(error.code==='recording_mismatch')mismatch=error.reason;
             else if(error.code==='provider_timeout'||error.name==='AbortError')timedOut=true;
             else {unavailable=true;logger.info?.('spotify_lyrics_provider_failure',{provider:independentProvider(api.name)});}
-            return null;
+            return hintCandidate;
           }
         };
         const formatted=new WeakMap();
@@ -178,17 +185,17 @@ export function createSpotifyLyricsService(dependencies={}) {
         };
         const hedgeOptions=()=>({delayMs:hedgeDelayMs,untimedGraceMs,wordTimingGraceMs:Math.min(wordTimingGraceMs,Math.max(0,deadline-Date.now())),chooseCandidate:chooseLyricCandidate,signal:req.lyricDelivery?.signal,onCandidate:publishCandidate});
         let selected=await hedgedLookup(apis,lookup,hedgeOptions());
-        if(!selected&&localizations.length&&Date.now()<deadline) {
-          // One bounded native-name retry. Ambiguous NetEase timelines remain
-          // rejected; LRCLIB/Kugou must supply their own verified recording.
-          selected=await hedgedLookup(apis.filter(api=>independentProvider(api.name)!=='netease'),
-            (api,signal)=>lookup(api,signal,localizations[0]),hedgeOptions());
+        if(needsTimingDiscovery(selected,{measured:apis.some(api=>api.supportsVocalTiming===true)})&&localizations.length&&Date.now()<deadline) {
+          // One bounded native-name continuation. A readable baseline stays
+          // available; every provider must validate its own recording anew.
+          selected=chooseLyricCandidate(selected,await hedgedLookup(apis.filter(api=>independentProvider(api.name)!=='netease'),
+            (api,signal)=>lookup(api,signal,localizations[0]),hedgeOptions()));
         }
         if(!selected)return timedOut?{status:504,body:{code:'provider_timeout'}}:unavailable?{status:502,body:{code:'provider_unavailable'}}
           :mismatch?{status:409,body:{code:'recording_mismatch',reason:mismatch}}:{status:404,body:{code:'lyrics_absent'}};
         const {song}=selected,response=await responseFor(selected);
         req.lyricDelivery?.signal.throwIfAborted();
-        const ttlMs=response.quality.partial||!response.quality.synced?300000:86400000;
+        const ttlMs=lyricResponseLifetimeMs(response);
         // Late ordinary work cannot replace a newer explicit refresh in memory.
         const candidate={id:String(song.id),title:song.title,artist:song.artist,duration:song.duration,
           ...(song.neteaseTitleEvidence?{source:'netease',neteaseTitleEvidence:structuredClone(song.neteaseTitleEvidence)}:{}),

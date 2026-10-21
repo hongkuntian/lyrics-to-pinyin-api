@@ -1,0 +1,462 @@
+{
+  "version": 1,
+  "kind": "live-provider-handler-catalog-sample",
+  "capturedAt": "2026-10-21T06:29:49.202Z",
+  "selection": "Preselected 12 existing multilingual coverage examples plus reported songs, and 7 popular Spotify recordings plus the reported items; no outcome-based exclusions.",
+  "limitations": [
+    "Convenience sample, not a random catalog-wide estimate.",
+    "Public catalog metadata, no acoustic or stock Dynamic Lyrics verification.",
+    "Refresh bypasses client/response caches; upstream network caches remain uncontrolled.",
+    "Every case uses ordinary production discovery and unchanged deadlines."
+  ],
+  "cases": [
+    {
+      "caseID": "en-viva-album",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1122773680&country=us",
+      "request": {
+        "catalog_id": "1122773680",
+        "storefront": "us",
+        "artist": "Coldplay",
+        "title": "Viva La Vida",
+        "album": "Viva La Vida or Death and All His Friends",
+        "duration": 241.445
+      }
+    },
+    {
+      "caseID": "en-shape",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1193701392&country=us",
+      "request": {
+        "catalog_id": "1193701392",
+        "storefront": "us",
+        "artist": "Ed Sheeran",
+        "title": "Shape of You",
+        "album": "÷ (Deluxe)",
+        "duration": 233.713
+      }
+    },
+    {
+      "caseID": "en-hello",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1544494392&country=us",
+      "request": {
+        "catalog_id": "1544494392",
+        "storefront": "us",
+        "artist": "Adele",
+        "title": "Hello",
+        "album": "25",
+        "duration": 295.502
+      }
+    },
+    {
+      "caseID": "en-love-original",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1440924808&country=us",
+      "request": {
+        "catalog_id": "1440924808",
+        "storefront": "us",
+        "artist": "Taylor Swift",
+        "title": "Love Story",
+        "album": "Fearless",
+        "duration": 235.267
+      }
+    },
+    {
+      "caseID": "en-blinding",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1499378607&country=us",
+      "request": {
+        "catalog_id": "1499378607",
+        "storefront": "us",
+        "artist": "The Weeknd",
+        "title": "Blinding Lights",
+        "album": "After Hours",
+        "duration": 200.046
+      }
+    },
+    {
+      "caseID": "en-bad-guy",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1450695739&country=us",
+      "request": {
+        "catalog_id": "1450695739",
+        "storefront": "us",
+        "artist": "Billie Eilish",
+        "title": "bad guy",
+        "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+        "duration": 194.088
+      }
+    },
+    {
+      "caseID": "en-rolling",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1544491233&country=us",
+      "request": {
+        "catalog_id": "1544491233",
+        "storefront": "us",
+        "artist": "Adele",
+        "title": "Rolling in the Deep",
+        "album": "21",
+        "duration": 228.093
+      }
+    },
+    {
+      "caseID": "en-drivers",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1560735480&country=us",
+      "request": {
+        "catalog_id": "1560735480",
+        "storefront": "us",
+        "artist": "Olivia Rodrigo",
+        "title": "drivers license",
+        "album": "SOUR",
+        "duration": 242.014
+      }
+    },
+    {
+      "caseID": "zh-little-happiness",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1017697311&country=tw",
+      "request": {
+        "catalog_id": "1017697311",
+        "storefront": "tw",
+        "artist": "田馥甄",
+        "title": "小幸運 (電影《我的少女時代》主題曲)",
+        "album": "小幸運 (電影《我的少女時代》主題曲) - Single",
+        "duration": 265.522
+      }
+    },
+    {
+      "caseID": "ja-idol",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1679278167&country=jp",
+      "request": {
+        "catalog_id": "1679278167",
+        "storefront": "jp",
+        "artist": "YOASOBI",
+        "title": "アイドル",
+        "album": "アイドル - Single",
+        "duration": 213.234
+      }
+    },
+    {
+      "caseID": "ko-blueming",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1488300930&country=us",
+      "request": {
+        "catalog_id": "1488300930",
+        "storefront": "us",
+        "artist": "IU",
+        "title": "Blueming",
+        "album": "Love Poem - EP",
+        "duration": 217.053
+      }
+    },
+    {
+      "caseID": "es-despacito",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1447401620&country=es",
+      "request": {
+        "catalog_id": "1447401620",
+        "storefront": "es",
+        "artist": "Luis Fonsi & Daddy Yankee",
+        "title": "Despacito",
+        "album": "VIDA",
+        "duration": 229.387
+      }
+    },
+    {
+      "caseID": "apple-unbreakable",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1321295664&country=ca",
+      "request": {
+        "catalog_id": "1321295664",
+        "storefront": "ca",
+        "artist": "Eric Chou",
+        "title": "Unbreakable Love",
+        "album": "The Chaos After You",
+        "duration": 258.264
+      }
+    },
+    {
+      "caseID": "apple-dayue",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1720480778&country=ca",
+      "request": {
+        "catalog_id": "1720480778",
+        "storefront": "ca",
+        "artist": "Chyi Chin",
+        "title": "大約在冬季",
+        "album": "时光的碎片",
+        "duration": 232.827
+      }
+    },
+    {
+      "caseID": "apple-dang-ni",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1071506932&country=us",
+      "request": {
+        "catalog_id": "1071506932",
+        "storefront": "us",
+        "artist": "JJ Lin",
+        "title": "當你",
+        "album": "她說",
+        "duration": 249.26
+      }
+    },
+    {
+      "caseID": "spotify-46fURCnWErjFdNM2yBJ2c8",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/46fURCnWErjFdNM2yBJ2c8",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "46fURCnWErjFdNM2yBJ2c8",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "永不失聯的愛",
+            "artists": [
+              "Eric Chou"
+            ],
+            "album": "如果雨之後",
+            "duration_ms": 258954,
+            "explicit": false
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-56UzFYxgkvxU188BsCKBOc",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/56UzFYxgkvxU188BsCKBOc",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "56UzFYxgkvxU188BsCKBOc",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "當你",
+            "artists": [
+              "JJ Lin"
+            ],
+            "album": "她說",
+            "duration_ms": 249248,
+            "explicit": false
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-2wzXhxWPX0aODraKNXoJYY",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/2wzXhxWPX0aODraKNXoJYY",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "2wzXhxWPX0aODraKNXoJYY",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "後來",
+            "artists": [
+              "Rene Liu"
+            ],
+            "album": "我等你",
+            "duration_ms": 341400,
+            "explicit": false
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-2CAyR8dnIGZ3IMvqUEOSTR",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/2CAyR8dnIGZ3IMvqUEOSTR",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "2CAyR8dnIGZ3IMvqUEOSTR",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "大約在冬季",
+            "artists": [
+              "Chyi Chin"
+            ],
+            "album": "ELEMENTS -國語歌曲",
+            "duration_ms": 230813,
+            "explicit": false
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-3AJwUDP919kvQ9QcozQPxg",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/3AJwUDP919kvQ9QcozQPxg",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3AJwUDP919kvQ9QcozQPxg",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Yellow",
+            "artists": [
+              "Coldplay"
+            ],
+            "album": "Parachutes",
+            "duration_ms": 266773,
+            "explicit": false
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-1mea3bSkSGXuIRvnydlB5b",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/1mea3bSkSGXuIRvnydlB5b",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1mea3bSkSGXuIRvnydlB5b",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Viva La Vida",
+            "artists": [
+              "Coldplay"
+            ],
+            "album": "Viva La Vida or Death and All His Friends",
+            "duration_ms": 242373,
+            "explicit": false
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-7qiZfU4dY1lWllzX7mPBI3",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/7qiZfU4dY1lWllzX7mPBI3",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7qiZfU4dY1lWllzX7mPBI3",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Shape of You",
+            "artists": [
+              "Ed Sheeran"
+            ],
+            "album": "÷ (Deluxe)",
+            "duration_ms": 233712,
+            "explicit": false
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-4sPmO7WMQUAf45kwMOtONw",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/4sPmO7WMQUAf45kwMOtONw",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4sPmO7WMQUAf45kwMOtONw",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Hello",
+            "artists": [
+              "Adele"
+            ],
+            "album": "25",
+            "duration_ms": 295493,
+            "explicit": false
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-5wANPM4fQCJwkGd4rN57mH",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/5wANPM4fQCJwkGd4rN57mH",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5wANPM4fQCJwkGd4rN57mH",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "drivers license",
+            "artists": [
+              "Olivia Rodrigo"
+            ],
+            "album": "SOUR",
+            "duration_ms": 242013,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-7ovUcF5uHTBRzUpB6ZOmvt",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/7ovUcF5uHTBRzUpB6ZOmvt",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7ovUcF5uHTBRzUpB6ZOmvt",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "アイドル",
+            "artists": [
+              "YOASOBI"
+            ],
+            "album": "アイドル",
+            "duration_ms": 213233,
+            "explicit": false
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-4Dr2hJ3EnVh2Aaot6fRwDO",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/4Dr2hJ3EnVh2Aaot6fRwDO",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4Dr2hJ3EnVh2Aaot6fRwDO",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Blueming",
+            "artists": [
+              "IU"
+            ],
+            "album": "Love poem",
+            "duration_ms": 217053,
+            "explicit": false
+          }
+        }
+      }
+    }
+  ]
+}

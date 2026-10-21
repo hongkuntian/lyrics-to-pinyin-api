@@ -285,6 +285,16 @@ test('QQ retains album rendition labels for Apple admission and rechecks cached 
   await assert.rejects(search(context([other],{}, {explicit:true,fastRows:[other]})),{code:'recording_mismatch'});
  }
 });
+test('Spotify explicit flag admits QQ source-owned explicit album and sheet labels through fresh ID validation',async()=>{
+ const row=candidate('123',{albumname:'Album (Explicit)',detailTitle:'Synthetic (Explicit)'});
+ const extra={recordingProvider:'spotify',creditedArtistNames:['Test'],explicit:true,fastRows:[row]};
+ const ctx=context([row],{123:{hex:explicitQRC.ascii}},extra),song=await search(ctx);
+ assert.equal(song.album,'Album (Explicit)');assert.ok(song.lyricsData.lines[0].vocalTiming);
+ const fresh=await new QQMusicAPI().getRecording('123',context([row],{123:{hex:explicitQRC.ascii}},extra));
+ assert.ok(fresh.lyrics.lines[0].vocalTiming);
+ for(const explicit of [false,undefined])await assert.rejects(search(context([row],{123:{hex:explicitQRC.ascii}},{...extra,explicit})),{code:'recording_mismatch'});
+});
+
 test('QQ validated integer source intervals retain measured final cues within their declared precision',async()=>{
  const ctx=context([],{123:{hex:explicitQRC.rounded}},{fastRows:[candidate()]}),song=await search(ctx);
  assert.equal(song.duration,120);assert.equal(song.lyricsData.durationResolution,1);

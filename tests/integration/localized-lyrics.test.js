@@ -114,17 +114,21 @@ test('verified plain lyrics remain a fallback while a catalog alias upgrades tim
  assert.equal(res.body.metadata.recording_match.catalog_id,request.catalog_id);
 });
 
-test('a failed optional timing upgrade preserves the original plain response',async()=>{
+test('a failed optional timing upgrade preserves the original plain response',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
  for(const behavior of ['missing','mismatch','offline','timeout','instrumental']) {
+  let began;const optionalStarted=new Promise(resolve=>{began=resolve;});
   const api={name:'Fixture',searchSong:async(artist,title)=>{
     if(title===request.title)return {...request,id:1};
     if(behavior==='missing')return null;
     if(behavior==='mismatch')return {...localized,artist:'Different Performer',id:2};
     if(behavior==='offline')throw new Error('offline');
-    if(behavior==='timeout')return new Promise(()=>{});
+    if(behavior==='timeout'){began();return new Promise(()=>{});}
     return {...localized,id:2};
   },getLyrics:async id=>id===1?{lines:[{text:'一起唱',timestamp:null}]}:{instrumental:true,lines:[]}};
-  const res=await run(api,request,{providerTimeoutMs:10});
+  const work=run(api,request,{providerTimeoutMs:10});
+  if(behavior==='timeout'){await optionalStarted;t.mock.timers.tick(10);}
+  const res=await work;
   assert.equal(res.statusCode,200,behavior);assert.equal(res.body.song.id,1,behavior);
   assert.equal(res.body.quality.synced,false);assert.equal(res.body.lines[0].original,'一起唱');
   assert.equal(res.body.metadata.recording_match,undefined);

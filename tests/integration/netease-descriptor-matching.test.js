@@ -57,7 +57,7 @@ test('descriptor evidence survives cold cache validation, durable reopen and fre
  assert.equal(wire.sourceHash,doc.sourceHash);assert.deepEqual(wire.response.lines,initial.body.lines);
  const cachedFixture=fixture(),cached=await service(cachedFixture,values)();assert.equal(cached.statusCode,200);assert.equal(cached.headers['X-Lyrics-Cache'],'REDIS');assert.equal(cachedFixture.calls.length,0);
  const refreshedFixture=fixture(),refreshed=await service(refreshedFixture,values)({refresh:true});
- assert.equal(refreshed.statusCode,200);assert.equal(refreshedFixture.calls.includes('/search'),false);assert.ok(refreshedFixture.calls.includes('/song/detail'));
+ assert.equal(refreshed.statusCode,200);assert.equal(refreshedFixture.calls.includes('/search'),true);assert.ok(refreshedFixture.calls.includes('/song/detail'));
  assert.equal(refreshed.body.recordingBinding.sourceHash,initial.body.recordingBinding.sourceHash);
 });
 test('descriptor matching refuses unknown work, category, language, extra words and unproven provider fields',async()=>{
@@ -98,12 +98,12 @@ test('cold cache rejects borrowed provider or source-ID title evidence and reacq
   assert.equal(reply.body.recordingBinding.sourceHash,initial.body.recordingBinding.sourceHash);
  }
 });
-test('ordinary exact-title refresh ignores unused alias drift and fetches words only once',async()=>{
+test('ordinary exact-title refresh ignores unused alias drift and revisits sparse measured hints',async()=>{
  const request={...recording,metadata:{...recording.metadata,title:'合成之歌',album:'合成之歌'}},values=new Map();
  const initial=await service(fixture({source:{...raw(),alias:['Independent label A']}}),values,request)();
  assert.equal(initial.statusCode,200);
  assert.equal([...values.values()].find(v=>v.candidate)?.candidate.neteaseTitleEvidence,undefined);
  const fresh=fixture({source:{...raw(),alias:['Independent label B']}}),reply=await service(fresh,values,request)({refresh:true});
- assert.equal(reply.statusCode,200);assert.equal(fresh.calls.includes('/search'),false);
- assert.deepEqual(fresh.calls,['/song/detail','/artist/detail','/lyric/new']);
+ assert.equal(reply.statusCode,200);assert.equal(fresh.calls.includes('/search'),true);
+ assert.deepEqual(fresh.calls,['/song/detail','/artist/detail','/lyric/new','/search','/lyric/new']);
 });

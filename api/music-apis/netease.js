@@ -95,7 +95,7 @@ export class NeteaseAPI extends BaseMusicAPI {
       const data=await fetchJSON(`${this.baseURL}/search?limit=${limit}&keywords=${encodeURIComponent(chinese.sify(`${artist} ${searchTitle(title)}`))}`,context);
       if(data.code!==200) throw new Error('NetEase search unavailable');
       for(const raw of data.result?.songs || []) if(!records.has(raw.id)) {
-        const song={id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease',...(context.recordingProvider==='spotify'?{creditedArtistNames:raw.artists?.map(x=>x.name),...(raw.isrc?{isrc:raw.isrc}:{}),...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{})}:{})};
+        const song={id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease',...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),...(context.recordingProvider==='spotify'?{creditedArtistNames:raw.artists?.map(x=>x.name),...(raw.isrc?{isrc:raw.isrc}:{})}:{})};
         records.set(raw.id,{raw,song:withTitleEvidence(song,raw,'alias',request)});
       }
       const song=await select();if(song) return this.measuredRelease(song,records,request,context);
@@ -188,8 +188,8 @@ export class NeteaseAPI extends BaseMusicAPI {
     if(!Array.isArray(performers)||!performers.length||performers.some(p=>!p||!/^\d{1,20}$/.test(String(p.id))||typeof p.name!=='string'||!p.name.trim())
       ||typeof raw.name!=='string'||!raw.name.trim()||!Number.isFinite(raw.dt)||raw.dt<=0)
       throw Object.assign(new Error('Invalid NetEase source metadata'),{code:'recording_mismatch'});
-    const song=withTitleEvidence({id:raw.id,title:raw.name,artist:performers.map(p=>p.name).join(' & '),album:raw.al?.name,duration:raw.dt/1000,source:'netease',
-      ...(context.recordingProvider==='spotify'?{creditedArtistNames:performers.map(p=>p.name),...(raw.isrc?{isrc:raw.isrc}:{}),...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{})}:{})},raw,'alia',context);
+    const song=withTitleEvidence({id:raw.id,title:raw.name,artist:performers.map(p=>p.name).join(' & '),album:raw.al?.name,duration:raw.dt/1000,source:'netease',...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),
+      ...(context.recordingProvider==='spotify'?{creditedArtistNames:performers.map(p=>p.name),...(raw.isrc?{isrc:raw.isrc}:{})}:{})},raw,'alia',context);
     if(recordingScore(song,context)<0)await this.resolveArtistAliases(song,performers,context,context);
     findRecording([song],context);
     context.signal?.throwIfAborted();
@@ -202,6 +202,12 @@ export class NeteaseAPI extends BaseMusicAPI {
       const data=await fetchJSON(`${this.baseURL}/artist/detail?id=${id}`,context),artist=data.data?.artist;
       if(data.code!==200 || String(artist?.id)!==id) return [];
       const names=[artist.name,...(artist.alias || []),...(artist.transNames || [])].filter(name=>typeof name==='string' && name.trim());
+      // Catalogs sometimes omit Latin accents (Rene / René). Derive only this
+      // spelling from this freshly verified artist ID, never from song titles
+      // or arbitrary search labels. Other scripts keep their combining marks.
+      const latin=names.filter(name=>/\p{Script=Latin}/u.test(name)&&!name.replace(/[\p{Script=Latin}\p{M}\p{N}\p{P}\p{Z}\s]/gu,'')
+        ).map(name=>name.normalize('NFD').replace(/\p{M}/gu,'').normalize('NFC'));
+      names.push(...latin.filter(name=>!names.includes(name)));
       this.artistAliases.set(id,names);return names;
     } catch { return []; }
   }

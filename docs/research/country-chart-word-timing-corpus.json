@@ -1,0 +1,4866 @@
+{
+  "version": 1,
+  "kind": "country-chart-paired-catalog-sample",
+  "capturedAt": "2026-10-21T06:48:49.156Z",
+  "selection": "Frozen top 10 Apple Music most-played chart placements in each of GB, FR, DE, BR, MX, IN, JP, KR, TW and HK; Spotify catalog queried before timing acquisition. Retain every Apple placement and every unresolved pairing.",
+  "limitations": [
+    "Chart placements may repeat the same recording across countries.",
+    "Spotify pairing requires exact recording-name admission and duration difference at most 0.5 seconds; multiple matching catalog releases do not establish acoustic equivalence.",
+    "Timing-unavailable cases remain visible. Source availability must be separately established, never inferred from a lookup failure."
+  ],
+  "pairing": [
+    {
+      "pairID": "chart-gb-1",
+      "appleID": "6822497774",
+      "spotifyID": "spotify:track:2sFepQNyl1WjpROruP8bJ0",
+      "country": "gb",
+      "rank": 1,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-gb-2",
+      "appleID": "6794168373",
+      "spotifyID": "spotify:track:1o9mAOmNm3wT2NdyGV1Ard",
+      "country": "gb",
+      "rank": 2,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-gb-3",
+      "appleID": "6769552411",
+      "spotifyID": "spotify:track:5YcC8NpP56X2qQIEek9XVA",
+      "country": "gb",
+      "rank": 3,
+      "status": "metadata_matched",
+      "candidates": 3
+    },
+    {
+      "pairID": "chart-gb-4",
+      "appleID": "6805240960",
+      "spotifyID": "spotify:track:3zOYmiNOuyDL0ClxJcEJ0T",
+      "country": "gb",
+      "rank": 4,
+      "status": "metadata_matched",
+      "candidates": 4
+    },
+    {
+      "pairID": "chart-gb-5",
+      "appleID": "1820918468",
+      "spotifyID": "spotify:track:7MZHqgTVTnN6xZGYAcEEAf",
+      "country": "gb",
+      "rank": 5,
+      "status": "metadata_matched",
+      "candidates": 3
+    },
+    {
+      "pairID": "chart-gb-6",
+      "appleID": "1817609509",
+      "spotifyID": "spotify:track:0mYXRQpTGjaLJt1l9MY4ps",
+      "country": "gb",
+      "rank": 6,
+      "status": "metadata_matched",
+      "candidates": 4
+    },
+    {
+      "pairID": "chart-gb-7",
+      "appleID": "6822944296",
+      "spotifyID": "spotify:track:2T8ZVV7QlRrsCtXUiAoBuK",
+      "country": "gb",
+      "rank": 7,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-gb-8",
+      "appleID": "6769070199",
+      "spotifyID": "spotify:track:4vTsKN15Kqo3Geo9r7FhAN",
+      "country": "gb",
+      "rank": 8,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-gb-9",
+      "appleID": "1844932150",
+      "spotifyID": "spotify:track:65DbTqJKhbwqYbZ1Okr0rc",
+      "country": "gb",
+      "rank": 9,
+      "status": "metadata_matched",
+      "candidates": 5
+    },
+    {
+      "pairID": "chart-gb-10",
+      "appleID": "6807192825",
+      "spotifyID": "spotify:track:70cHKK8bHAfJrOGVnfRG9J",
+      "country": "gb",
+      "rank": 10,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-fr-1",
+      "appleID": "6809781929",
+      "spotifyID": "spotify:track:2x7ItKbPQXhqXad1SwVnwS",
+      "country": "fr",
+      "rank": 1,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-fr-2",
+      "appleID": "6775967738",
+      "spotifyID": "spotify:track:4Olg35ikUrPTvhqwFWveRL",
+      "country": "fr",
+      "rank": 2,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-fr-3",
+      "appleID": "6812420993",
+      "spotifyID": "spotify:track:4LRE0yUOAjUqK90vynrOMD",
+      "country": "fr",
+      "rank": 3,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-fr-4",
+      "appleID": "6816893848",
+      "spotifyID": "spotify:track:5qRO8OcqfOc7mgTEDN12XQ",
+      "country": "fr",
+      "rank": 4,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-fr-5",
+      "appleID": "6812266085",
+      "spotifyID": "spotify:track:0TwQx4EjJbI0WCmnP8n4HO",
+      "country": "fr",
+      "rank": 5,
+      "status": "metadata_matched",
+      "candidates": 3
+    },
+    {
+      "pairID": "chart-fr-6",
+      "appleID": "6817733587",
+      "spotifyID": "spotify:track:11toKjZRD7soOuH5ZFpWkL",
+      "country": "fr",
+      "rank": 6,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-fr-7",
+      "appleID": "1548713020",
+      "spotifyID": "spotify:track:1ixnGkLXZJuEueqJioIjmm",
+      "country": "fr",
+      "rank": 7,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-fr-8",
+      "appleID": "6818551658",
+      "spotifyID": "spotify:track:30XuVaQikcrhVfiNRvbqfr",
+      "country": "fr",
+      "rank": 8,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-fr-9",
+      "appleID": "6811941414",
+      "spotifyID": "spotify:track:1JAigfQReciQ8yK8XikLEr",
+      "country": "fr",
+      "rank": 9,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-fr-10",
+      "appleID": "6809755256",
+      "spotifyID": "spotify:track:5CYfZNnRoSRzMwaLyl4ey1",
+      "country": "fr",
+      "rank": 10,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-de-1",
+      "appleID": "6822497774",
+      "spotifyID": "spotify:track:2sFepQNyl1WjpROruP8bJ0",
+      "country": "de",
+      "rank": 1,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-de-2",
+      "appleID": "6769070199",
+      "spotifyID": "spotify:track:4vTsKN15Kqo3Geo9r7FhAN",
+      "country": "de",
+      "rank": 2,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-de-3",
+      "appleID": "6814997425",
+      "spotifyID": "spotify:track:11hcBLPtbMp4aQI6zGQLub",
+      "country": "de",
+      "rank": 3,
+      "status": "metadata_matched",
+      "candidates": 5
+    },
+    {
+      "pairID": "chart-de-4",
+      "appleID": "1442970583",
+      "spotifyID": null,
+      "country": "de",
+      "rank": 4,
+      "status": "unresolved_catalog_match",
+      "candidates": 0
+    },
+    {
+      "pairID": "chart-de-5",
+      "appleID": "6792884101",
+      "spotifyID": "spotify:track:6U9VpmP3dEinuezxCJ2Zg9",
+      "country": "de",
+      "rank": 5,
+      "status": "metadata_matched",
+      "candidates": 3
+    },
+    {
+      "pairID": "chart-de-6",
+      "appleID": "6768469976",
+      "spotifyID": "spotify:track:0kosUz0jePvjiz4ctmR6wL",
+      "country": "de",
+      "rank": 6,
+      "status": "metadata_matched",
+      "candidates": 3
+    },
+    {
+      "pairID": "chart-de-7",
+      "appleID": "1877803360",
+      "spotifyID": "spotify:track:4qW3BbQAwZsrnu8a3ZRdyT",
+      "country": "de",
+      "rank": 7,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-de-8",
+      "appleID": "6796864754",
+      "spotifyID": "spotify:track:3h5T5JypYU7huFiVYhv1dr",
+      "country": "de",
+      "rank": 8,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-de-9",
+      "appleID": "6805240960",
+      "spotifyID": "spotify:track:3zOYmiNOuyDL0ClxJcEJ0T",
+      "country": "de",
+      "rank": 9,
+      "status": "metadata_matched",
+      "candidates": 4
+    },
+    {
+      "pairID": "chart-de-10",
+      "appleID": "6807192825",
+      "spotifyID": "spotify:track:70cHKK8bHAfJrOGVnfRG9J",
+      "country": "de",
+      "rank": 10,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-br-1",
+      "appleID": "6822497774",
+      "spotifyID": "spotify:track:2sFepQNyl1WjpROruP8bJ0",
+      "country": "br",
+      "rank": 1,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-br-2",
+      "appleID": "6815826572",
+      "spotifyID": "spotify:track:1uDn0nbzeGPVw97jp7SvzR",
+      "country": "br",
+      "rank": 2,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-br-3",
+      "appleID": "6807192825",
+      "spotifyID": "spotify:track:70cHKK8bHAfJrOGVnfRG9J",
+      "country": "br",
+      "rank": 3,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-br-4",
+      "appleID": "6792884101",
+      "spotifyID": "spotify:track:6U9VpmP3dEinuezxCJ2Zg9",
+      "country": "br",
+      "rank": 4,
+      "status": "metadata_matched",
+      "candidates": 3
+    },
+    {
+      "pairID": "chart-br-5",
+      "appleID": "6822390426",
+      "spotifyID": "spotify:track:3XmwAZpIMNpTJy8faw3ajD",
+      "country": "br",
+      "rank": 5,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-br-6",
+      "appleID": "6794359884",
+      "spotifyID": "spotify:track:0xXYRMvxCUBKWVptybXSjB",
+      "country": "br",
+      "rank": 6,
+      "status": "metadata_matched",
+      "candidates": 4
+    },
+    {
+      "pairID": "chart-br-7",
+      "appleID": "6813197034",
+      "spotifyID": null,
+      "country": "br",
+      "rank": 7,
+      "status": "unresolved_catalog_match",
+      "candidates": 0
+    },
+    {
+      "pairID": "chart-br-8",
+      "appleID": "6797688530",
+      "spotifyID": "spotify:track:3rRihXlOCLUlkQTzglpwCi",
+      "country": "br",
+      "rank": 8,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-br-9",
+      "appleID": "1449030010",
+      "spotifyID": "spotify:track:3Exj9ecmWalLPR6wHSxDFf",
+      "country": "br",
+      "rank": 9,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-br-10",
+      "appleID": "1889992123",
+      "spotifyID": "spotify:track:55pBIZO1cqoldeqpp5WR7H",
+      "country": "br",
+      "rank": 10,
+      "status": "metadata_matched",
+      "candidates": 4
+    },
+    {
+      "pairID": "chart-mx-1",
+      "appleID": "6796864754",
+      "spotifyID": "spotify:track:3h5T5JypYU7huFiVYhv1dr",
+      "country": "mx",
+      "rank": 1,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-mx-2",
+      "appleID": "6814967656",
+      "spotifyID": "spotify:track:6756nr1dYiw5aNLSgIHNOI",
+      "country": "mx",
+      "rank": 2,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-mx-3",
+      "appleID": "6812477298",
+      "spotifyID": null,
+      "country": "mx",
+      "rank": 3,
+      "status": "unresolved_catalog_match",
+      "candidates": 0
+    },
+    {
+      "pairID": "chart-mx-4",
+      "appleID": "1804142885",
+      "spotifyID": "spotify:track:6eLQXa6uk2EW8drsiKbABZ",
+      "country": "mx",
+      "rank": 4,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-mx-5",
+      "appleID": "6770710132",
+      "spotifyID": "spotify:track:47ovAtI7DPTKTPbyRsqHmc",
+      "country": "mx",
+      "rank": 5,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-mx-6",
+      "appleID": "1712363845",
+      "spotifyID": "spotify:track:6UtWwuheJr5LLDeVypPNx7",
+      "country": "mx",
+      "rank": 6,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-mx-7",
+      "appleID": "1570323056",
+      "spotifyID": "spotify:track:2JPLbjOn0wPCngEot2STUS",
+      "country": "mx",
+      "rank": 7,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-mx-8",
+      "appleID": "1804142886",
+      "spotifyID": "spotify:track:3hpm0fTeSqlhJbnqAgaLZs",
+      "country": "mx",
+      "rank": 8,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-mx-9",
+      "appleID": "1783250950",
+      "spotifyID": "spotify:track:0hfXHqWhOpbR9YQmQojDMN",
+      "country": "mx",
+      "rank": 9,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-mx-10",
+      "appleID": "1804142884",
+      "spotifyID": "spotify:track:1a7onn7lPqqRWul5ogyMyX",
+      "country": "mx",
+      "rank": 10,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-in-1",
+      "appleID": "6814002647",
+      "spotifyID": "spotify:track:5vTJrmnmJMAvFjrUpUWxyy",
+      "country": "in",
+      "rank": 1,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-in-2",
+      "appleID": "6816001788",
+      "spotifyID": "spotify:track:1GPaw1k528Taq3YOr4Bmtu",
+      "country": "in",
+      "rank": 2,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-in-3",
+      "appleID": "6817733637",
+      "spotifyID": "spotify:track:3eYaxbCWJ9gj4OqGVekwgm",
+      "country": "in",
+      "rank": 3,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-in-4",
+      "appleID": "6817733631",
+      "spotifyID": "spotify:track:55ePB3CmrchPFWCZKWZvhW",
+      "country": "in",
+      "rank": 4,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-in-5",
+      "appleID": "6814002652",
+      "spotifyID": "spotify:track:3fky26FqPkMmTyg8wXJXp0",
+      "country": "in",
+      "rank": 5,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-in-6",
+      "appleID": "6803810914",
+      "spotifyID": "spotify:track:1IVnoc5HcteGwuBU7fGpeN",
+      "country": "in",
+      "rank": 6,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-in-7",
+      "appleID": "6817733628",
+      "spotifyID": "spotify:track:42XT1ZPONGnwbQsc4EPnoY",
+      "country": "in",
+      "rank": 7,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-in-8",
+      "appleID": "6817733413",
+      "spotifyID": "spotify:track:22I7j5EFoP2bC8q8QUQHFQ",
+      "country": "in",
+      "rank": 8,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-in-9",
+      "appleID": "1753101077",
+      "spotifyID": "spotify:track:7KmCQLSSde0UX5OqCgvGN9",
+      "country": "in",
+      "rank": 9,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-in-10",
+      "appleID": "6804643315",
+      "spotifyID": "spotify:track:6jJHYbJReFfR2ieGzRP5bq",
+      "country": "in",
+      "rank": 10,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-jp-1",
+      "appleID": "1714599822",
+      "spotifyID": "spotify:track:4GvJskA0Jn4NorP2YWxuaf",
+      "country": "jp",
+      "rank": 1,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-jp-2",
+      "appleID": "6817260751",
+      "spotifyID": "spotify:track:2j0mQg77Ivev2aIksyiiqc",
+      "country": "jp",
+      "rank": 2,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-jp-3",
+      "appleID": "6782749979",
+      "spotifyID": null,
+      "country": "jp",
+      "rank": 3,
+      "status": "unresolved_catalog_match",
+      "candidates": 0
+    },
+    {
+      "pairID": "chart-jp-4",
+      "appleID": "6803148739",
+      "spotifyID": "spotify:track:03PGemRNLrjn9Efmy2y6OY",
+      "country": "jp",
+      "rank": 4,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-jp-5",
+      "appleID": "6788211810",
+      "spotifyID": "spotify:track:3Z8NMM7IRu4YKDHBo6vmX3",
+      "country": "jp",
+      "rank": 5,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-jp-6",
+      "appleID": "6808172970",
+      "spotifyID": "spotify:track:5P3Nmg0jSYfrSKoYonTGan",
+      "country": "jp",
+      "rank": 6,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-jp-7",
+      "appleID": "1823814197",
+      "spotifyID": "spotify:track:21VsLvoE7elUmJZLSawaMh",
+      "country": "jp",
+      "rank": 7,
+      "status": "metadata_matched",
+      "candidates": 4
+    },
+    {
+      "pairID": "chart-jp-8",
+      "appleID": "1451577753",
+      "spotifyID": "spotify:track:3wGesqRt3l2D4ZmYCv9A11",
+      "country": "jp",
+      "rank": 8,
+      "status": "metadata_matched",
+      "candidates": 3
+    },
+    {
+      "pairID": "chart-jp-9",
+      "appleID": "1846753946",
+      "spotifyID": "spotify:track:4Re9Zb9uYlMtMiZy7HFFw5",
+      "country": "jp",
+      "rank": 9,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-jp-10",
+      "appleID": "6820428730",
+      "spotifyID": "spotify:track:5PvLNQRNRj61y3CU4SFIY4",
+      "country": "jp",
+      "rank": 10,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-kr-1",
+      "appleID": "6820428730",
+      "spotifyID": "spotify:track:5PvLNQRNRj61y3CU4SFIY4",
+      "country": "kr",
+      "rank": 1,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-kr-2",
+      "appleID": "6795782855",
+      "spotifyID": "spotify:track:7Jpb9OejYYIwsBIVQwceRy",
+      "country": "kr",
+      "rank": 2,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-kr-3",
+      "appleID": "6816842803",
+      "spotifyID": "spotify:track:3kcGkOmFXtaFjVdz7ge1WL",
+      "country": "kr",
+      "rank": 3,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-kr-4",
+      "appleID": "6813395915",
+      "spotifyID": "spotify:track:1hXVB56zx5oM7KUJsFRTxy",
+      "country": "kr",
+      "rank": 4,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-kr-5",
+      "appleID": "6805367598",
+      "spotifyID": "spotify:track:776vLcNy6mHNmPisdejR0I",
+      "country": "kr",
+      "rank": 5,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-kr-6",
+      "appleID": "1764485170",
+      "spotifyID": "spotify:track:6uosenLUNFZtOIih5T0qfV",
+      "country": "kr",
+      "rank": 6,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-kr-7",
+      "appleID": "1822439986",
+      "spotifyID": "spotify:track:1pBUzZE9PoKLoPxo6QxsG6",
+      "country": "kr",
+      "rank": 7,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-kr-8",
+      "appleID": "6781521710",
+      "spotifyID": "spotify:track:67bXdWqZFre6lPaBIaZHlO",
+      "country": "kr",
+      "rank": 8,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-kr-9",
+      "appleID": "6797774239",
+      "spotifyID": null,
+      "country": "kr",
+      "rank": 9,
+      "status": "unresolved_catalog_match",
+      "candidates": 0
+    },
+    {
+      "pairID": "chart-kr-10",
+      "appleID": "1887671067",
+      "spotifyID": "spotify:track:4BnDAG8QyfWirLFdGuV99x",
+      "country": "kr",
+      "rank": 10,
+      "status": "metadata_matched",
+      "candidates": 3
+    },
+    {
+      "pairID": "chart-tw-1",
+      "appleID": "6820428730",
+      "spotifyID": "spotify:track:5PvLNQRNRj61y3CU4SFIY4",
+      "country": "tw",
+      "rank": 1,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-tw-2",
+      "appleID": "6785801848",
+      "spotifyID": "spotify:track:629FqLOdjtsXh5b45FTk43",
+      "country": "tw",
+      "rank": 2,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-tw-3",
+      "appleID": "6812956004",
+      "spotifyID": "spotify:track:6cnhP7JmTV1CHJJEonNC4b",
+      "country": "tw",
+      "rank": 3,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-tw-4",
+      "appleID": "536115199",
+      "spotifyID": "spotify:track:0cOMncRq4cmDLO4tPQnkBF",
+      "country": "tw",
+      "rank": 4,
+      "status": "provider_profile_metadata_matched",
+      "candidates": 0,
+      "aliasEvidence": {
+        "provider": "netease",
+        "sourceID": "186005",
+        "names": "周杰伦",
+        "aliases": [
+          "Jay Chou"
+        ]
+      }
+    },
+    {
+      "pairID": "chart-tw-5",
+      "appleID": "6804744599",
+      "spotifyID": "spotify:track:3Vqe75qMPQP62qE3zr9WLg",
+      "country": "tw",
+      "rank": 5,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-tw-6",
+      "appleID": "578524987",
+      "spotifyID": "spotify:track:4XrWar13kLO1jr535AzKrQ",
+      "country": "tw",
+      "rank": 6,
+      "status": "provider_profile_metadata_matched",
+      "candidates": 0,
+      "aliasEvidence": {
+        "provider": "netease",
+        "sourceID": "287398",
+        "names": "孙燕姿",
+        "aliases": [
+          "Stefanie Sun"
+        ]
+      }
+    },
+    {
+      "pairID": "chart-tw-7",
+      "appleID": "1118757873",
+      "spotifyID": null,
+      "country": "tw",
+      "rank": 7,
+      "status": "unresolved_catalog_match",
+      "candidates": 0
+    },
+    {
+      "pairID": "chart-tw-8",
+      "appleID": "536115195",
+      "spotifyID": "spotify:track:57w29bSwdIZ6gr6xXOqwc1",
+      "country": "tw",
+      "rank": 8,
+      "status": "provider_profile_metadata_matched",
+      "candidates": 0,
+      "aliasEvidence": {
+        "provider": "netease",
+        "sourceID": "186001",
+        "names": "周杰伦",
+        "aliases": [
+          "Jay Chou"
+        ]
+      }
+    },
+    {
+      "pairID": "chart-tw-9",
+      "appleID": "6812635397",
+      "spotifyID": "spotify:track:4azVNx8uhpnKezwrNhcvYz",
+      "country": "tw",
+      "rank": 9,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-tw-10",
+      "appleID": "6822369089",
+      "spotifyID": "spotify:track:79kqYxIkS29va2I9AeL9ak",
+      "country": "tw",
+      "rank": 10,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-hk-1",
+      "appleID": "6820428730",
+      "spotifyID": "spotify:track:5PvLNQRNRj61y3CU4SFIY4",
+      "country": "hk",
+      "rank": 1,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-hk-2",
+      "appleID": "6814412779",
+      "spotifyID": "spotify:track:3bHIyMzAs0BC3T0YVn4Ctb",
+      "country": "hk",
+      "rank": 2,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-hk-3",
+      "appleID": "1816674595",
+      "spotifyID": "spotify:track:1jQp4mCBDmXr8NMqsMpH8E",
+      "country": "hk",
+      "rank": 3,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-hk-4",
+      "appleID": "1784959357",
+      "spotifyID": "spotify:track:1R116HqW5ECo5VRjeewhM9",
+      "country": "hk",
+      "rank": 4,
+      "status": "metadata_matched",
+      "candidates": 2
+    },
+    {
+      "pairID": "chart-hk-5",
+      "appleID": "6819159640",
+      "spotifyID": "spotify:track:0r0VLsvWv7jo2HGfvlt5xh",
+      "country": "hk",
+      "rank": 5,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-hk-6",
+      "appleID": "6772915785",
+      "spotifyID": "spotify:track:7M0ZCvE0HcikCJUy4cTsAF",
+      "country": "hk",
+      "rank": 6,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-hk-7",
+      "appleID": "6822369089",
+      "spotifyID": "spotify:track:79kqYxIkS29va2I9AeL9ak",
+      "country": "hk",
+      "rank": 7,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-hk-8",
+      "appleID": "542677437",
+      "spotifyID": "spotify:track:209lkexhDOdjGJMv9iw3rJ",
+      "country": "hk",
+      "rank": 8,
+      "status": "metadata_matched",
+      "candidates": 1
+    },
+    {
+      "pairID": "chart-hk-9",
+      "appleID": "1443717750",
+      "spotifyID": "spotify:track:0pmGleExiQyd0HxV5kAOwK",
+      "country": "hk",
+      "rank": 9,
+      "status": "provider_profile_metadata_matched",
+      "candidates": 0,
+      "aliasEvidence": {
+        "provider": "netease",
+        "sourceID": "64638",
+        "names": "陈奕迅",
+        "aliases": [
+          "Eason Chan"
+        ]
+      }
+    },
+    {
+      "pairID": "chart-hk-10",
+      "appleID": "1718045819",
+      "spotifyID": "spotify:track:1sb71AvysPMJlsx4qYtTpG",
+      "country": "hk",
+      "rank": 10,
+      "status": "metadata_matched",
+      "candidates": 2
+    }
+  ],
+  "cases": [
+    {
+      "caseID": "chart-gb-1-apple",
+      "platform": "apple",
+      "country": "gb",
+      "rank": 1,
+      "pairID": "chart-gb-1",
+      "request": {
+        "catalog_id": "6822497774",
+        "storefront": "gb",
+        "artist": "Tate McRae",
+        "title": "Housewife",
+        "album": "Housewife - Single",
+        "duration": 208.81
+      }
+    },
+    {
+      "caseID": "chart-gb-1-spotify",
+      "platform": "spotify",
+      "country": "gb",
+      "rank": 1,
+      "pairID": "chart-gb-1",
+      "metadataURL": "https://open.spotify.com/track/2sFepQNyl1WjpROruP8bJ0?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=b2d9b676-e6cd-44ed-bd37-a149cbf598f7",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "2sFepQNyl1WjpROruP8bJ0",
+          "market": "GB",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Housewife",
+            "artists": [
+              "Tate McRae"
+            ],
+            "album": "Housewife",
+            "duration_ms": 208810
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-gb-2-apple",
+      "platform": "apple",
+      "country": "gb",
+      "rank": 2,
+      "pairID": "chart-gb-2",
+      "request": {
+        "catalog_id": "6794168373",
+        "storefront": "gb",
+        "artist": "Jamie Miller",
+        "title": "Babydoll",
+        "album": "Babydoll - Single",
+        "duration": 178.822
+      }
+    },
+    {
+      "caseID": "chart-gb-2-spotify",
+      "platform": "spotify",
+      "country": "gb",
+      "rank": 2,
+      "pairID": "chart-gb-2",
+      "metadataURL": "https://open.spotify.com/track/1o9mAOmNm3wT2NdyGV1Ard?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=bdaa0f23-9eb9-41c8-a95a-6f7138012cf7",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1o9mAOmNm3wT2NdyGV1Ard",
+          "market": "GB",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Babydoll",
+            "artists": [
+              "Jamie Miller"
+            ],
+            "album": "Babydoll",
+            "duration_ms": 178822
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-gb-3-apple",
+      "platform": "apple",
+      "country": "gb",
+      "rank": 3,
+      "pairID": "chart-gb-3",
+      "request": {
+        "catalog_id": "6769552411",
+        "storefront": "gb",
+        "artist": "SIENNA SPIRO",
+        "title": "Great Expectation",
+        "album": "Visitor (Deluxe)",
+        "duration": 173.975
+      }
+    },
+    {
+      "caseID": "chart-gb-3-spotify",
+      "platform": "spotify",
+      "country": "gb",
+      "rank": 3,
+      "pairID": "chart-gb-3",
+      "metadataURL": "https://open.spotify.com/track/5YcC8NpP56X2qQIEek9XVA?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=50329293-f1d2-4adc-a945-4b012c767a32",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5YcC8NpP56X2qQIEek9XVA",
+          "market": "GB",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Great Expectation",
+            "artists": [
+              "SIENNA SPIRO"
+            ],
+            "album": "Visitor (Deluxe)",
+            "duration_ms": 173975
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-gb-4-apple",
+      "platform": "apple",
+      "country": "gb",
+      "rank": 4,
+      "pairID": "chart-gb-4",
+      "request": {
+        "catalog_id": "6805240960",
+        "storefront": "gb",
+        "artist": "Ashe",
+        "title": "Stop The Wedding!",
+        "album": "The Girl Of Your Dreams",
+        "duration": 198.84
+      }
+    },
+    {
+      "caseID": "chart-gb-4-spotify",
+      "platform": "spotify",
+      "country": "gb",
+      "rank": 4,
+      "pairID": "chart-gb-4",
+      "metadataURL": "https://open.spotify.com/track/3zOYmiNOuyDL0ClxJcEJ0T?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=f2fe466e-ec6e-4d81-8973-fa4c5621aeac",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3zOYmiNOuyDL0ClxJcEJ0T",
+          "market": "GB",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Stop The Wedding!",
+            "artists": [
+              "Ashe"
+            ],
+            "album": "Stop The Wedding!",
+            "duration_ms": 198840
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-gb-5-apple",
+      "platform": "apple",
+      "country": "gb",
+      "rank": 5,
+      "pairID": "chart-gb-5",
+      "request": {
+        "catalog_id": "1820918468",
+        "storefront": "gb",
+        "artist": "Sam Fender & Olivia Dean",
+        "title": "Rein Me In",
+        "album": "Rein Me In - Single",
+        "duration": 339.411
+      }
+    },
+    {
+      "caseID": "chart-gb-5-spotify",
+      "platform": "spotify",
+      "country": "gb",
+      "rank": 5,
+      "pairID": "chart-gb-5",
+      "metadataURL": "https://open.spotify.com/track/7MZHqgTVTnN6xZGYAcEEAf?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=ceabfe6a-acd0-4ef7-8a30-dbdf13bdf033",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7MZHqgTVTnN6xZGYAcEEAf",
+          "market": "GB",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Rein Me In (with Olivia Dean)",
+            "artists": [
+              "Sam Fender",
+              "Olivia Dean"
+            ],
+            "album": "Rein Me In (with Olivia Dean)",
+            "duration_ms": 339410,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-gb-6-apple",
+      "platform": "apple",
+      "country": "gb",
+      "rank": 6,
+      "pairID": "chart-gb-6",
+      "request": {
+        "catalog_id": "1817609509",
+        "storefront": "gb",
+        "artist": "Olivia Dean",
+        "title": "Man I Need",
+        "album": "The Art of Loving",
+        "duration": 184
+      }
+    },
+    {
+      "caseID": "chart-gb-6-spotify",
+      "platform": "spotify",
+      "country": "gb",
+      "rank": 6,
+      "pairID": "chart-gb-6",
+      "metadataURL": "https://open.spotify.com/track/0mYXRQpTGjaLJt1l9MY4ps?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=d0eb249b-0d20-46a1-a82a-0e6923e5d67e",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "0mYXRQpTGjaLJt1l9MY4ps",
+          "market": "GB",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Man I Need",
+            "artists": [
+              "Olivia Dean"
+            ],
+            "album": "The Art of Loving",
+            "duration_ms": 184000
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-gb-7-apple",
+      "platform": "apple",
+      "country": "gb",
+      "rank": 7,
+      "pairID": "chart-gb-7",
+      "request": {
+        "catalog_id": "6822944296",
+        "storefront": "gb",
+        "artist": "Zach Bryan & Lana Del Rey",
+        "title": "Lies (feat. Lana Del Rey)",
+        "album": "Young Manhood and Other Donatable Organs",
+        "duration": 220.589
+      }
+    },
+    {
+      "caseID": "chart-gb-7-spotify",
+      "platform": "spotify",
+      "country": "gb",
+      "rank": 7,
+      "pairID": "chart-gb-7",
+      "metadataURL": "https://open.spotify.com/track/2T8ZVV7QlRrsCtXUiAoBuK?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=578985a3-2266-48e6-bc3a-0ddbd3036f68",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "2T8ZVV7QlRrsCtXUiAoBuK",
+          "market": "GB",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Lies (feat. Lana Del Rey)",
+            "artists": [
+              "Zach Bryan",
+              "Lana Del Rey"
+            ],
+            "album": "Young Manhood and Other Donatable Organs",
+            "duration_ms": 220588
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-gb-8-apple",
+      "platform": "apple",
+      "country": "gb",
+      "rank": 8,
+      "pairID": "chart-gb-8",
+      "request": {
+        "catalog_id": "6769070199",
+        "storefront": "gb",
+        "artist": "HUGEL, Imael Angel & Ultra Naté",
+        "title": "Movin' To The Sun",
+        "album": "Movin' To The Sun - Single",
+        "duration": 142.2
+      }
+    },
+    {
+      "caseID": "chart-gb-8-spotify",
+      "platform": "spotify",
+      "country": "gb",
+      "rank": 8,
+      "pairID": "chart-gb-8",
+      "metadataURL": "https://open.spotify.com/track/4vTsKN15Kqo3Geo9r7FhAN?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=621da1b7-c18d-4ede-b58c-2a54d6466783",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4vTsKN15Kqo3Geo9r7FhAN",
+          "market": "GB",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Movin' To The Sun",
+            "artists": [
+              "HUGEL",
+              "Imael Angel",
+              "Ultra Naté"
+            ],
+            "album": "Twenty One",
+            "duration_ms": 142200
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-gb-9-apple",
+      "platform": "apple",
+      "country": "gb",
+      "rank": 9,
+      "pairID": "chart-gb-9",
+      "request": {
+        "catalog_id": "1844932150",
+        "storefront": "gb",
+        "artist": "Ella Langley",
+        "title": "Choosin' Texas",
+        "album": "Choosin' Texas - Single",
+        "duration": 232.226
+      }
+    },
+    {
+      "caseID": "chart-gb-9-spotify",
+      "platform": "spotify",
+      "country": "gb",
+      "rank": 9,
+      "pairID": "chart-gb-9",
+      "metadataURL": "https://open.spotify.com/track/65DbTqJKhbwqYbZ1Okr0rc?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=c5c09b06-6420-4865-ad6a-4d93a683d762",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "65DbTqJKhbwqYbZ1Okr0rc",
+          "market": "GB",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Choosin' Texas",
+            "artists": [
+              "Ella Langley"
+            ],
+            "album": "Choosin' Texas",
+            "duration_ms": 232226
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-gb-10-apple",
+      "platform": "apple",
+      "country": "gb",
+      "rank": 10,
+      "pairID": "chart-gb-10",
+      "request": {
+        "catalog_id": "6807192825",
+        "storefront": "gb",
+        "artist": "ADÉLA",
+        "title": "Nicole Kidman",
+        "album": "PRIMA",
+        "duration": 181.27
+      }
+    },
+    {
+      "caseID": "chart-gb-10-spotify",
+      "platform": "spotify",
+      "country": "gb",
+      "rank": 10,
+      "pairID": "chart-gb-10",
+      "metadataURL": "https://open.spotify.com/track/70cHKK8bHAfJrOGVnfRG9J?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=8dd1f10b-4d8c-4f29-bfa4-8dc0bcb166d5",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "70cHKK8bHAfJrOGVnfRG9J",
+          "market": "GB",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Nicole Kidman",
+            "artists": [
+              "ADÉLA"
+            ],
+            "album": "PRIMA",
+            "duration_ms": 181270,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-fr-1-apple",
+      "platform": "apple",
+      "country": "fr",
+      "rank": 1,
+      "pairID": "chart-fr-1",
+      "request": {
+        "catalog_id": "6809781929",
+        "storefront": "fr",
+        "artist": "Vacra & La Rvfleuze",
+        "title": "Fille à Papa",
+        "album": "Fille à Papa - Single",
+        "duration": 169.587
+      }
+    },
+    {
+      "caseID": "chart-fr-1-spotify",
+      "platform": "spotify",
+      "country": "fr",
+      "rank": 1,
+      "pairID": "chart-fr-1",
+      "metadataURL": "https://open.spotify.com/track/2x7ItKbPQXhqXad1SwVnwS?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e3ecc49f-983c-4bf8-a6f2-fbb7acbf2167",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "2x7ItKbPQXhqXad1SwVnwS",
+          "market": "FR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Fille à Papa",
+            "artists": [
+              "Vacra",
+              "La Rvfleuze"
+            ],
+            "album": "Fille à Papa",
+            "duration_ms": 169586,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-fr-2-apple",
+      "platform": "apple",
+      "country": "fr",
+      "rank": 2,
+      "pairID": "chart-fr-2",
+      "request": {
+        "catalog_id": "6775967738",
+        "storefront": "fr",
+        "artist": "Tiakola",
+        "title": "Mélo Décalé",
+        "album": "Mélo Décalé - Single",
+        "duration": 156.067
+      }
+    },
+    {
+      "caseID": "chart-fr-2-spotify",
+      "platform": "spotify",
+      "country": "fr",
+      "rank": 2,
+      "pairID": "chart-fr-2",
+      "metadataURL": "https://open.spotify.com/track/4Olg35ikUrPTvhqwFWveRL?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=999e8b87-2afa-433e-8005-896880e61fca",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4Olg35ikUrPTvhqwFWveRL",
+          "market": "FR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Mélo Décalé",
+            "artists": [
+              "Tiakola"
+            ],
+            "album": "Mélo Décalé",
+            "duration_ms": 156066,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-fr-3-apple",
+      "platform": "apple",
+      "country": "fr",
+      "rank": 3,
+      "pairID": "chart-fr-3",
+      "request": {
+        "catalog_id": "6812420993",
+        "storefront": "fr",
+        "artist": "Tiakola & Theodora",
+        "title": "La Nocturne",
+        "album": "La Nocturne - Single",
+        "duration": 221.053
+      }
+    },
+    {
+      "caseID": "chart-fr-3-spotify",
+      "platform": "spotify",
+      "country": "fr",
+      "rank": 3,
+      "pairID": "chart-fr-3",
+      "metadataURL": "https://open.spotify.com/track/4LRE0yUOAjUqK90vynrOMD?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=b8c483da-1683-4d7d-a6c5-2a98eb98922f",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4LRE0yUOAjUqK90vynrOMD",
+          "market": "FR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "La Nocturne",
+            "artists": [
+              "Tiakola",
+              "Theodora"
+            ],
+            "album": "La Nocturne",
+            "duration_ms": 221053,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-fr-4-apple",
+      "platform": "apple",
+      "country": "fr",
+      "rank": 4,
+      "pairID": "chart-fr-4",
+      "request": {
+        "catalog_id": "6816893848",
+        "storefront": "fr",
+        "artist": "RnBoi",
+        "title": "J'assume",
+        "album": "J'assume - Single",
+        "duration": 178.331
+      }
+    },
+    {
+      "caseID": "chart-fr-4-spotify",
+      "platform": "spotify",
+      "country": "fr",
+      "rank": 4,
+      "pairID": "chart-fr-4",
+      "metadataURL": "https://open.spotify.com/track/5qRO8OcqfOc7mgTEDN12XQ?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e1b6c840-d969-4b0b-8ab2-21bfe973d9a5",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5qRO8OcqfOc7mgTEDN12XQ",
+          "market": "FR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "J'assume",
+            "artists": [
+              "RnBoi"
+            ],
+            "album": "J'assume",
+            "duration_ms": 178331
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-fr-5-apple",
+      "platform": "apple",
+      "country": "fr",
+      "rank": 5,
+      "pairID": "chart-fr-5",
+      "request": {
+        "catalog_id": "6812266085",
+        "storefront": "fr",
+        "artist": "Mauvais Djo",
+        "title": "4",
+        "album": "4 - Single",
+        "duration": 140.027
+      }
+    },
+    {
+      "caseID": "chart-fr-5-spotify",
+      "platform": "spotify",
+      "country": "fr",
+      "rank": 5,
+      "pairID": "chart-fr-5",
+      "metadataURL": "https://open.spotify.com/track/0TwQx4EjJbI0WCmnP8n4HO?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=3bd87a1d-9168-45ee-84d1-073808b4f33b",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "0TwQx4EjJbI0WCmnP8n4HO",
+          "market": "FR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "4",
+            "artists": [
+              "Mauvais djo"
+            ],
+            "album": "4",
+            "duration_ms": 140026
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-fr-6-apple",
+      "platform": "apple",
+      "country": "fr",
+      "rank": 6,
+      "pairID": "chart-fr-6",
+      "request": {
+        "catalog_id": "6817733587",
+        "storefront": "fr",
+        "artist": "Niro",
+        "title": "RANIA",
+        "album": "RANIA - Single",
+        "duration": 222.37
+      }
+    },
+    {
+      "caseID": "chart-fr-6-spotify",
+      "platform": "spotify",
+      "country": "fr",
+      "rank": 6,
+      "pairID": "chart-fr-6",
+      "metadataURL": "https://open.spotify.com/track/11toKjZRD7soOuH5ZFpWkL?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=b27c83b0-3100-4f9e-949c-75cf256fd993",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "11toKjZRD7soOuH5ZFpWkL",
+          "market": "FR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "RANIA",
+            "artists": [
+              "Niro"
+            ],
+            "album": "RANIA",
+            "duration_ms": 222369,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-fr-7-apple",
+      "platform": "apple",
+      "country": "fr",
+      "rank": 7,
+      "pairID": "chart-fr-7",
+      "request": {
+        "catalog_id": "1548713020",
+        "storefront": "fr",
+        "artist": "Theodora",
+        "title": "Habiba",
+        "album": "Neptune",
+        "duration": 193.073
+      }
+    },
+    {
+      "caseID": "chart-fr-7-spotify",
+      "platform": "spotify",
+      "country": "fr",
+      "rank": 7,
+      "pairID": "chart-fr-7",
+      "metadataURL": "https://open.spotify.com/track/1ixnGkLXZJuEueqJioIjmm?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=470dcbdc-ad1d-4d2b-b8d9-5b7a37e25af4",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1ixnGkLXZJuEueqJioIjmm",
+          "market": "FR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Habiba",
+            "artists": [
+              "Theodora"
+            ],
+            "album": "Neptune",
+            "duration_ms": 193072,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-fr-8-apple",
+      "platform": "apple",
+      "country": "fr",
+      "rank": 8,
+      "pairID": "chart-fr-8",
+      "request": {
+        "catalog_id": "6818551658",
+        "storefront": "fr",
+        "artist": "L2B",
+        "title": "CYBERTESLA",
+        "album": "CYBERTESLA - Single",
+        "duration": 178.646
+      }
+    },
+    {
+      "caseID": "chart-fr-8-spotify",
+      "platform": "spotify",
+      "country": "fr",
+      "rank": 8,
+      "pairID": "chart-fr-8",
+      "metadataURL": "https://open.spotify.com/track/30XuVaQikcrhVfiNRvbqfr?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=43cb9368-f8e7-4c61-a662-0e2c602dfd23",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "30XuVaQikcrhVfiNRvbqfr",
+          "market": "FR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "CYBERTESLA",
+            "artists": [
+              "L2B"
+            ],
+            "album": "CYBERTESLA",
+            "duration_ms": 178645,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-fr-9-apple",
+      "platform": "apple",
+      "country": "fr",
+      "rank": 9,
+      "pairID": "chart-fr-9",
+      "request": {
+        "catalog_id": "6811941414",
+        "storefront": "fr",
+        "artist": "Ronisia",
+        "title": "Cuenta (feat. Meryl & Shay)",
+        "album": "Cuenta (feat. Meryl & Shay) - Single",
+        "duration": 183.72
+      }
+    },
+    {
+      "caseID": "chart-fr-9-spotify",
+      "platform": "spotify",
+      "country": "fr",
+      "rank": 9,
+      "pairID": "chart-fr-9",
+      "metadataURL": "https://open.spotify.com/track/1JAigfQReciQ8yK8XikLEr?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=038a1558-c724-49b8-8378-827e85d56ab3",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1JAigfQReciQ8yK8XikLEr",
+          "market": "FR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Cuenta (feat. Meryl & Shay)",
+            "artists": [
+              "Ronisia",
+              "Meryl",
+              "Shay"
+            ],
+            "album": "Cuenta (feat. Meryl & Shay)",
+            "duration_ms": 183720,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-fr-10-apple",
+      "platform": "apple",
+      "country": "fr",
+      "rank": 10,
+      "pairID": "chart-fr-10",
+      "request": {
+        "catalog_id": "6809755256",
+        "storefront": "fr",
+        "artist": "Tiakola & Jorja Smith",
+        "title": "Jet Lag",
+        "album": "WpointM",
+        "duration": 181
+      }
+    },
+    {
+      "caseID": "chart-fr-10-spotify",
+      "platform": "spotify",
+      "country": "fr",
+      "rank": 10,
+      "pairID": "chart-fr-10",
+      "metadataURL": "https://open.spotify.com/track/5CYfZNnRoSRzMwaLyl4ey1?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=4ca0220d-f2c6-49a1-bff1-e2742057dddf",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5CYfZNnRoSRzMwaLyl4ey1",
+          "market": "FR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Jet Lag",
+            "artists": [
+              "Tiakola",
+              "Jorja Smith"
+            ],
+            "album": "WpointM",
+            "duration_ms": 181000,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-de-1-apple",
+      "platform": "apple",
+      "country": "de",
+      "rank": 1,
+      "pairID": "chart-de-1",
+      "request": {
+        "catalog_id": "6822497774",
+        "storefront": "de",
+        "artist": "Tate McRae",
+        "title": "Housewife",
+        "album": "Housewife - Single",
+        "duration": 208.81
+      }
+    },
+    {
+      "caseID": "chart-de-1-spotify",
+      "platform": "spotify",
+      "country": "de",
+      "rank": 1,
+      "pairID": "chart-de-1",
+      "metadataURL": "https://open.spotify.com/track/2sFepQNyl1WjpROruP8bJ0?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=a45ba240-8313-44d8-be7a-aadfcf65d454",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "2sFepQNyl1WjpROruP8bJ0",
+          "market": "DE",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Housewife",
+            "artists": [
+              "Tate McRae"
+            ],
+            "album": "Housewife",
+            "duration_ms": 208810
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-de-2-apple",
+      "platform": "apple",
+      "country": "de",
+      "rank": 2,
+      "pairID": "chart-de-2",
+      "request": {
+        "catalog_id": "6769070199",
+        "storefront": "de",
+        "artist": "HUGEL, Imael Angel & Ultra Naté",
+        "title": "Movin' To The Sun",
+        "album": "Movin' To The Sun - Single",
+        "duration": 142.2
+      }
+    },
+    {
+      "caseID": "chart-de-2-spotify",
+      "platform": "spotify",
+      "country": "de",
+      "rank": 2,
+      "pairID": "chart-de-2",
+      "metadataURL": "https://open.spotify.com/track/4vTsKN15Kqo3Geo9r7FhAN?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=2ae865c4-9c14-47f1-b68f-6bccd3e02c3d",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4vTsKN15Kqo3Geo9r7FhAN",
+          "market": "DE",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Movin' To The Sun",
+            "artists": [
+              "HUGEL",
+              "Imael Angel",
+              "Ultra Naté"
+            ],
+            "album": "Twenty One",
+            "duration_ms": 142200
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-de-3-apple",
+      "platform": "apple",
+      "country": "de",
+      "rank": 3,
+      "pairID": "chart-de-3",
+      "request": {
+        "catalog_id": "6814997425",
+        "storefront": "de",
+        "artist": "Taylor Swift",
+        "title": "Patient Zero",
+        "album": "The Life of a Showgirl: The Encore",
+        "duration": 225.868
+      }
+    },
+    {
+      "caseID": "chart-de-3-spotify",
+      "platform": "spotify",
+      "country": "de",
+      "rank": 3,
+      "pairID": "chart-de-3",
+      "metadataURL": "https://open.spotify.com/track/11hcBLPtbMp4aQI6zGQLub?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=67b88f8c-0ae7-417b-9744-8df19c7eddfe",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "11hcBLPtbMp4aQI6zGQLub",
+          "market": "DE",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Patient Zero",
+            "artists": [
+              "Taylor Swift"
+            ],
+            "album": "The Life of a Showgirl: The Encore",
+            "duration_ms": 225868
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-de-4-apple",
+      "platform": "apple",
+      "country": "de",
+      "rank": 4,
+      "pairID": "chart-de-4",
+      "request": {
+        "catalog_id": "1442970583",
+        "storefront": "de",
+        "artist": "The Killers",
+        "title": "Mr. Brightside",
+        "album": "Festival Anthems",
+        "duration": 225.44
+      }
+    },
+    {
+      "caseID": "chart-de-5-apple",
+      "platform": "apple",
+      "country": "de",
+      "rank": 5,
+      "pairID": "chart-de-5",
+      "request": {
+        "catalog_id": "6792884101",
+        "storefront": "de",
+        "artist": "ADÉLA",
+        "title": "Ain't In LA",
+        "album": "PRIMA",
+        "duration": 184.928
+      }
+    },
+    {
+      "caseID": "chart-de-5-spotify",
+      "platform": "spotify",
+      "country": "de",
+      "rank": 5,
+      "pairID": "chart-de-5",
+      "metadataURL": "https://open.spotify.com/track/6U9VpmP3dEinuezxCJ2Zg9?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=3e1351fe-b47f-43d4-932b-b2fcd5916aa6",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "6U9VpmP3dEinuezxCJ2Zg9",
+          "market": "DE",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Ain't In LA",
+            "artists": [
+              "ADÉLA"
+            ],
+            "album": "PRIMA",
+            "duration_ms": 184927,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-de-6-apple",
+      "platform": "apple",
+      "country": "de",
+      "rank": 6,
+      "pairID": "chart-de-6",
+      "request": {
+        "catalog_id": "6768469976",
+        "storefront": "de",
+        "artist": "Shakira & Burna Boy",
+        "title": "Dai Dai",
+        "album": "Dai Dai - Single",
+        "duration": 223.448
+      }
+    },
+    {
+      "caseID": "chart-de-6-spotify",
+      "platform": "spotify",
+      "country": "de",
+      "rank": 6,
+      "pairID": "chart-de-6",
+      "metadataURL": "https://open.spotify.com/track/0kosUz0jePvjiz4ctmR6wL?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=ca2ca3e3-fcb3-4571-9c86-c5868bf3847f",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "0kosUz0jePvjiz4ctmR6wL",
+          "market": "DE",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Dai Dai",
+            "artists": [
+              "Shakira",
+              "Burna Boy"
+            ],
+            "album": "Dai Dai",
+            "duration_ms": 223448
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-de-7-apple",
+      "platform": "apple",
+      "country": "de",
+      "rank": 7,
+      "pairID": "chart-de-7",
+      "request": {
+        "catalog_id": "1877803360",
+        "storefront": "de",
+        "artist": "Temper City",
+        "title": "Self Aware",
+        "album": "Self Aware - Single",
+        "duration": 180.741
+      }
+    },
+    {
+      "caseID": "chart-de-7-spotify",
+      "platform": "spotify",
+      "country": "de",
+      "rank": 7,
+      "pairID": "chart-de-7",
+      "metadataURL": "https://open.spotify.com/track/4qW3BbQAwZsrnu8a3ZRdyT?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=5df4aa65-a421-4888-b36d-1867ec6c26a3",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4qW3BbQAwZsrnu8a3ZRdyT",
+          "market": "DE",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Self Aware",
+            "artists": [
+              "Temper City"
+            ],
+            "album": "Self Aware",
+            "duration_ms": 180740
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-de-8-apple",
+      "platform": "apple",
+      "country": "de",
+      "rank": 8,
+      "pairID": "chart-de-8",
+      "request": {
+        "catalog_id": "6796864754",
+        "storefront": "de",
+        "artist": "KAROL G, Judeline & rusowsky",
+        "title": "BbY WOW",
+        "album": "NO ME ARREPIENTO DE SENTIR TANTO",
+        "duration": 225.835
+      }
+    },
+    {
+      "caseID": "chart-de-8-spotify",
+      "platform": "spotify",
+      "country": "de",
+      "rank": 8,
+      "pairID": "chart-de-8",
+      "metadataURL": "https://open.spotify.com/track/3h5T5JypYU7huFiVYhv1dr?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=b841dbb7-4677-4e85-8bf1-3fdb27e0114b",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3h5T5JypYU7huFiVYhv1dr",
+          "market": "DE",
+          "metadata": {
+            "origin": "spotify",
+            "title": "BbY WOW",
+            "artists": [
+              "KAROL G",
+              "Judeline",
+              "rusowsky"
+            ],
+            "album": "NO ME ARREPIENTO DE SENTIR TANTO",
+            "duration_ms": 225834
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-de-9-apple",
+      "platform": "apple",
+      "country": "de",
+      "rank": 9,
+      "pairID": "chart-de-9",
+      "request": {
+        "catalog_id": "6805240960",
+        "storefront": "de",
+        "artist": "Ashe",
+        "title": "Stop The Wedding!",
+        "album": "The Girl Of Your Dreams",
+        "duration": 198.84
+      }
+    },
+    {
+      "caseID": "chart-de-9-spotify",
+      "platform": "spotify",
+      "country": "de",
+      "rank": 9,
+      "pairID": "chart-de-9",
+      "metadataURL": "https://open.spotify.com/track/3zOYmiNOuyDL0ClxJcEJ0T?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=aec4ce0d-0e9d-48df-931f-b6bb202da1e8",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3zOYmiNOuyDL0ClxJcEJ0T",
+          "market": "DE",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Stop The Wedding!",
+            "artists": [
+              "Ashe"
+            ],
+            "album": "Stop The Wedding!",
+            "duration_ms": 198840
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-de-10-apple",
+      "platform": "apple",
+      "country": "de",
+      "rank": 10,
+      "pairID": "chart-de-10",
+      "request": {
+        "catalog_id": "6807192825",
+        "storefront": "de",
+        "artist": "ADÉLA",
+        "title": "Nicole Kidman",
+        "album": "PRIMA",
+        "duration": 181.27
+      }
+    },
+    {
+      "caseID": "chart-de-10-spotify",
+      "platform": "spotify",
+      "country": "de",
+      "rank": 10,
+      "pairID": "chart-de-10",
+      "metadataURL": "https://open.spotify.com/track/70cHKK8bHAfJrOGVnfRG9J?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=a0a9ef18-463d-421c-ad17-2386f65099a3",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "70cHKK8bHAfJrOGVnfRG9J",
+          "market": "DE",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Nicole Kidman",
+            "artists": [
+              "ADÉLA"
+            ],
+            "album": "PRIMA",
+            "duration_ms": 181270,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-br-1-apple",
+      "platform": "apple",
+      "country": "br",
+      "rank": 1,
+      "pairID": "chart-br-1",
+      "request": {
+        "catalog_id": "6822497774",
+        "storefront": "br",
+        "artist": "Tate McRae",
+        "title": "Housewife",
+        "album": "Housewife - Single",
+        "duration": 208.81
+      }
+    },
+    {
+      "caseID": "chart-br-1-spotify",
+      "platform": "spotify",
+      "country": "br",
+      "rank": 1,
+      "pairID": "chart-br-1",
+      "metadataURL": "https://open.spotify.com/track/2sFepQNyl1WjpROruP8bJ0?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=38e54618-d7b2-49d1-8830-14b12b6a0b35",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "2sFepQNyl1WjpROruP8bJ0",
+          "market": "BR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Housewife",
+            "artists": [
+              "Tate McRae"
+            ],
+            "album": "Housewife",
+            "duration_ms": 208810
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-br-2-apple",
+      "platform": "apple",
+      "country": "br",
+      "rank": 2,
+      "pairID": "chart-br-2",
+      "request": {
+        "catalog_id": "6815826572",
+        "storefront": "br",
+        "artist": "Felipe e Rodrigo",
+        "title": "Pós (Ao Vivo)",
+        "album": "Pós (Ao Vivo) - Single",
+        "duration": 175.577
+      }
+    },
+    {
+      "caseID": "chart-br-2-spotify",
+      "platform": "spotify",
+      "country": "br",
+      "rank": 2,
+      "pairID": "chart-br-2",
+      "metadataURL": "https://open.spotify.com/track/1uDn0nbzeGPVw97jp7SvzR?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=7ca34ad8-492c-4549-8218-f72d51f7c24a",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1uDn0nbzeGPVw97jp7SvzR",
+          "market": "BR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Pós - Ao Vivo",
+            "artists": [
+              "Felipe e Rodrigo"
+            ],
+            "album": "Pós (Ao Vivo)",
+            "duration_ms": 175577
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-br-3-apple",
+      "platform": "apple",
+      "country": "br",
+      "rank": 3,
+      "pairID": "chart-br-3",
+      "request": {
+        "catalog_id": "6807192825",
+        "storefront": "br",
+        "artist": "ADÉLA",
+        "title": "Nicole Kidman",
+        "album": "PRIMA",
+        "duration": 181.27
+      }
+    },
+    {
+      "caseID": "chart-br-3-spotify",
+      "platform": "spotify",
+      "country": "br",
+      "rank": 3,
+      "pairID": "chart-br-3",
+      "metadataURL": "https://open.spotify.com/track/70cHKK8bHAfJrOGVnfRG9J?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=85d62534-4b3c-4a4f-b8a3-21c3c21c542d",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "70cHKK8bHAfJrOGVnfRG9J",
+          "market": "BR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Nicole Kidman",
+            "artists": [
+              "ADÉLA"
+            ],
+            "album": "PRIMA",
+            "duration_ms": 181270,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-br-4-apple",
+      "platform": "apple",
+      "country": "br",
+      "rank": 4,
+      "pairID": "chart-br-4",
+      "request": {
+        "catalog_id": "6792884101",
+        "storefront": "br",
+        "artist": "ADÉLA",
+        "title": "Ain't In LA",
+        "album": "PRIMA",
+        "duration": 184.928
+      }
+    },
+    {
+      "caseID": "chart-br-4-spotify",
+      "platform": "spotify",
+      "country": "br",
+      "rank": 4,
+      "pairID": "chart-br-4",
+      "metadataURL": "https://open.spotify.com/track/6U9VpmP3dEinuezxCJ2Zg9?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=c0437c87-12a7-4d76-acde-1f4dff68c412",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "6U9VpmP3dEinuezxCJ2Zg9",
+          "market": "BR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Ain't In LA",
+            "artists": [
+              "ADÉLA"
+            ],
+            "album": "PRIMA",
+            "duration_ms": 184927,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-br-5-apple",
+      "platform": "apple",
+      "country": "br",
+      "rank": 5,
+      "pairID": "chart-br-5",
+      "request": {
+        "catalog_id": "6822390426",
+        "storefront": "br",
+        "artist": "Olivia Rodrigo & Chappell Roan",
+        "title": "expectations",
+        "album": "expectations - Single",
+        "duration": 223.935
+      }
+    },
+    {
+      "caseID": "chart-br-5-spotify",
+      "platform": "spotify",
+      "country": "br",
+      "rank": 5,
+      "pairID": "chart-br-5",
+      "metadataURL": "https://open.spotify.com/track/3XmwAZpIMNpTJy8faw3ajD?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=1c737010-11e3-41e2-ae21-609eacb0bdde",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3XmwAZpIMNpTJy8faw3ajD",
+          "market": "BR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "expectations (feat. Chappell Roan)",
+            "artists": [
+              "Olivia Rodrigo",
+              "Chappell Roan"
+            ],
+            "album": "expectations (feat. Chappell Roan)",
+            "duration_ms": 223935
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-br-6-apple",
+      "platform": "apple",
+      "country": "br",
+      "rank": 6,
+      "pairID": "chart-br-6",
+      "request": {
+        "catalog_id": "6794359884",
+        "storefront": "br",
+        "artist": "João Gustavo e Murilo & Grelo",
+        "title": "Postinho de Gasolina",
+        "album": "Postinho de Gasolina - Single",
+        "duration": 143.371
+      }
+    },
+    {
+      "caseID": "chart-br-6-spotify",
+      "platform": "spotify",
+      "country": "br",
+      "rank": 6,
+      "pairID": "chart-br-6",
+      "metadataURL": "https://open.spotify.com/track/0xXYRMvxCUBKWVptybXSjB?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=19c8d664-2c7f-421d-bee0-14871a4b02a3",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "0xXYRMvxCUBKWVptybXSjB",
+          "market": "BR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Postinho de Gasolina",
+            "artists": [
+              "João Gustavo e Murilo",
+              "Grelo"
+            ],
+            "album": "Postinho de Gasolina",
+            "duration_ms": 143371
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-br-7-apple",
+      "platform": "apple",
+      "country": "br",
+      "rank": 7,
+      "pairID": "chart-br-7",
+      "request": {
+        "catalog_id": "6813197034",
+        "storefront": "br",
+        "artist": "K/DA, League of Legends Music, i-dle & Mimi Webb",
+        "title": "FIRESTARTER (feat. Sophie Powers, MIYEON & JEON SOYEON)",
+        "album": "FIRESTARTER (feat. Sophie Powers, MIYEON & JEON SOYEON) - Single",
+        "duration": 187.28
+      }
+    },
+    {
+      "caseID": "chart-br-8-apple",
+      "platform": "apple",
+      "country": "br",
+      "rank": 8,
+      "pairID": "chart-br-8",
+      "request": {
+        "catalog_id": "6797688530",
+        "storefront": "br",
+        "artist": "Hugo & Guilherme",
+        "title": "Flash (Ao Vivo)",
+        "album": "Flash (Ao Vivo) - Single",
+        "duration": 131.564
+      }
+    },
+    {
+      "caseID": "chart-br-8-spotify",
+      "platform": "spotify",
+      "country": "br",
+      "rank": 8,
+      "pairID": "chart-br-8",
+      "metadataURL": "https://open.spotify.com/track/3rRihXlOCLUlkQTzglpwCi?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=74c20bbc-36f6-4331-a0fb-f60c124f4b62",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3rRihXlOCLUlkQTzglpwCi",
+          "market": "BR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Flash - Ao Vivo",
+            "artists": [
+              "Hugo & Guilherme"
+            ],
+            "album": "Flash (Ao Vivo)",
+            "duration_ms": 131564
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-br-9-apple",
+      "platform": "apple",
+      "country": "br",
+      "rank": 9,
+      "pairID": "chart-br-9",
+      "request": {
+        "catalog_id": "1449030010",
+        "storefront": "br",
+        "artist": "Zé Neto & Cristiano",
+        "title": "Whisky e Gelo (Acústico)",
+        "album": "Acústico de Novo - EP",
+        "duration": 153.427
+      }
+    },
+    {
+      "caseID": "chart-br-9-spotify",
+      "platform": "spotify",
+      "country": "br",
+      "rank": 9,
+      "pairID": "chart-br-9",
+      "metadataURL": "https://open.spotify.com/track/3Exj9ecmWalLPR6wHSxDFf?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e5139ff8-a453-4c70-9fcc-a15cd662d94a",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3Exj9ecmWalLPR6wHSxDFf",
+          "market": "BR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Whisky e Gelo - Acústico",
+            "artists": [
+              "Zé Neto & Cristiano"
+            ],
+            "album": "Acústico de Novo",
+            "duration_ms": 153426
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-br-10-apple",
+      "platform": "apple",
+      "country": "br",
+      "rank": 10,
+      "pairID": "chart-br-10",
+      "request": {
+        "catalog_id": "1889992123",
+        "storefront": "br",
+        "artist": "Olivia Rodrigo",
+        "title": "the cure",
+        "album": "you seem pretty sad for a girl so in love",
+        "duration": 297.09
+      }
+    },
+    {
+      "caseID": "chart-br-10-spotify",
+      "platform": "spotify",
+      "country": "br",
+      "rank": 10,
+      "pairID": "chart-br-10",
+      "metadataURL": "https://open.spotify.com/track/55pBIZO1cqoldeqpp5WR7H?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=a0338289-ede4-4bd5-b60d-1411f9757fbb",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "55pBIZO1cqoldeqpp5WR7H",
+          "market": "BR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "the cure",
+            "artists": [
+              "Olivia Rodrigo"
+            ],
+            "album": "you seem pretty sad for a girl so in love",
+            "duration_ms": 297090,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-mx-1-apple",
+      "platform": "apple",
+      "country": "mx",
+      "rank": 1,
+      "pairID": "chart-mx-1",
+      "request": {
+        "catalog_id": "6796864754",
+        "storefront": "mx",
+        "artist": "KAROL G, Judeline & rusowsky",
+        "title": "BbY WOW",
+        "album": "NO ME ARREPIENTO DE SENTIR TANTO",
+        "duration": 225.835
+      }
+    },
+    {
+      "caseID": "chart-mx-1-spotify",
+      "platform": "spotify",
+      "country": "mx",
+      "rank": 1,
+      "pairID": "chart-mx-1",
+      "metadataURL": "https://open.spotify.com/track/3h5T5JypYU7huFiVYhv1dr?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=3ce7a19f-25ef-48e3-af26-7f2df9ca48c0",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3h5T5JypYU7huFiVYhv1dr",
+          "market": "MX",
+          "metadata": {
+            "origin": "spotify",
+            "title": "BbY WOW",
+            "artists": [
+              "KAROL G",
+              "Judeline",
+              "rusowsky"
+            ],
+            "album": "NO ME ARREPIENTO DE SENTIR TANTO",
+            "duration_ms": 225834
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-mx-2-apple",
+      "platform": "apple",
+      "country": "mx",
+      "rank": 2,
+      "pairID": "chart-mx-2",
+      "request": {
+        "catalog_id": "6814967656",
+        "storefront": "mx",
+        "artist": "Natanael Cano, Tito Double P, Victor Mendivil & Ovi",
+        "title": "OLIVIA LA FLAKA",
+        "album": "OLIVIA LA FLAKA - Single",
+        "duration": 336
+      }
+    },
+    {
+      "caseID": "chart-mx-2-spotify",
+      "platform": "spotify",
+      "country": "mx",
+      "rank": 2,
+      "pairID": "chart-mx-2",
+      "metadataURL": "https://open.spotify.com/track/6756nr1dYiw5aNLSgIHNOI?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=59b2782f-bc87-4a28-9a5c-db7e6920ea51",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "6756nr1dYiw5aNLSgIHNOI",
+          "market": "MX",
+          "metadata": {
+            "origin": "spotify",
+            "title": "OLIVIA LA FLAKA",
+            "artists": [
+              "Natanael Cano",
+              "Tito Double P",
+              "Victor Mendivil",
+              "Ovi"
+            ],
+            "album": "OLIVIA LA FLAKA",
+            "duration_ms": 336000,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-mx-3-apple",
+      "platform": "apple",
+      "country": "mx",
+      "rank": 3,
+      "pairID": "chart-mx-3",
+      "request": {
+        "catalog_id": "6812477298",
+        "storefront": "mx",
+        "artist": "Fuerza Regida",
+        "title": "Suzuki",
+        "album": "Grand Theft Auto VI: The Album",
+        "duration": 111.655
+      }
+    },
+    {
+      "caseID": "chart-mx-4-apple",
+      "platform": "apple",
+      "country": "mx",
+      "rank": 4,
+      "pairID": "chart-mx-4",
+      "request": {
+        "catalog_id": "1804142885",
+        "storefront": "mx",
+        "artist": "Fuerza Regida",
+        "title": "TU SANCHO",
+        "album": "111XPANTIA",
+        "duration": 177.995
+      }
+    },
+    {
+      "caseID": "chart-mx-4-spotify",
+      "platform": "spotify",
+      "country": "mx",
+      "rank": 4,
+      "pairID": "chart-mx-4",
+      "metadataURL": "https://open.spotify.com/track/6eLQXa6uk2EW8drsiKbABZ?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=6025e957-60a7-4804-ab3c-f415e160c168",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "6eLQXa6uk2EW8drsiKbABZ",
+          "market": "MX",
+          "metadata": {
+            "origin": "spotify",
+            "title": "TU SANCHO",
+            "artists": [
+              "Fuerza Regida"
+            ],
+            "album": "111XPANTIA",
+            "duration_ms": 177994,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-mx-5-apple",
+      "platform": "apple",
+      "country": "mx",
+      "rank": 5,
+      "pairID": "chart-mx-5",
+      "request": {
+        "catalog_id": "6770710132",
+        "storefront": "mx",
+        "artist": "Omar Camacho",
+        "title": "King of Watches",
+        "album": "Nunca Voy a Morir",
+        "duration": 147.2
+      }
+    },
+    {
+      "caseID": "chart-mx-5-spotify",
+      "platform": "spotify",
+      "country": "mx",
+      "rank": 5,
+      "pairID": "chart-mx-5",
+      "metadataURL": "https://open.spotify.com/track/47ovAtI7DPTKTPbyRsqHmc?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=f662f9bb-4338-4c5c-884c-a2da87c3a509",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "47ovAtI7DPTKTPbyRsqHmc",
+          "market": "MX",
+          "metadata": {
+            "origin": "spotify",
+            "title": "King of Watches",
+            "artists": [
+              "Omar Camacho"
+            ],
+            "album": "Nunca Voy a Morir",
+            "duration_ms": 147200,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-mx-6-apple",
+      "platform": "apple",
+      "country": "mx",
+      "rank": 6,
+      "pairID": "chart-mx-6",
+      "request": {
+        "catalog_id": "1712363845",
+        "storefront": "mx",
+        "artist": "Fuerza Regida",
+        "title": "EXCESOS",
+        "album": "Pa las Baby's Y Belikeada",
+        "duration": 187.077
+      }
+    },
+    {
+      "caseID": "chart-mx-6-spotify",
+      "platform": "spotify",
+      "country": "mx",
+      "rank": 6,
+      "pairID": "chart-mx-6",
+      "metadataURL": "https://open.spotify.com/track/6UtWwuheJr5LLDeVypPNx7?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=c7ac6c0f-16ca-41be-bcb9-e426b5f05189",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "6UtWwuheJr5LLDeVypPNx7",
+          "market": "MX",
+          "metadata": {
+            "origin": "spotify",
+            "title": "EXCESOS",
+            "artists": [
+              "Fuerza Regida"
+            ],
+            "album": "Pa las Baby's Y Belikeada",
+            "duration_ms": 187076
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-mx-7-apple",
+      "platform": "apple",
+      "country": "mx",
+      "rank": 7,
+      "pairID": "chart-mx-7",
+      "request": {
+        "catalog_id": "1570323056",
+        "storefront": "mx",
+        "artist": "Bad Bunny",
+        "title": "Yonaguni",
+        "album": "Yonaguni - Single",
+        "duration": 206.71
+      }
+    },
+    {
+      "caseID": "chart-mx-7-spotify",
+      "platform": "spotify",
+      "country": "mx",
+      "rank": 7,
+      "pairID": "chart-mx-7",
+      "metadataURL": "https://open.spotify.com/track/2JPLbjOn0wPCngEot2STUS?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=d6db0e8c-fba1-41ba-9af6-1a58670d7f09",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "2JPLbjOn0wPCngEot2STUS",
+          "market": "MX",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Yonaguni",
+            "artists": [
+              "Bad Bunny"
+            ],
+            "album": "Yonaguni",
+            "duration_ms": 206710,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-mx-8-apple",
+      "platform": "apple",
+      "country": "mx",
+      "rank": 8,
+      "pairID": "chart-mx-8",
+      "request": {
+        "catalog_id": "1804142886",
+        "storefront": "mx",
+        "artist": "Fuerza Regida",
+        "title": "Marlboro Rojo",
+        "album": "111XPANTIA",
+        "duration": 184.174
+      }
+    },
+    {
+      "caseID": "chart-mx-8-spotify",
+      "platform": "spotify",
+      "country": "mx",
+      "rank": 8,
+      "pairID": "chart-mx-8",
+      "metadataURL": "https://open.spotify.com/track/3hpm0fTeSqlhJbnqAgaLZs?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=d11d3a41-d258-49d8-95ad-06b0b49be582",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3hpm0fTeSqlhJbnqAgaLZs",
+          "market": "MX",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Marlboro Rojo",
+            "artists": [
+              "Fuerza Regida"
+            ],
+            "album": "111XPANTIA",
+            "duration_ms": 184173,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-mx-9-apple",
+      "platform": "apple",
+      "country": "mx",
+      "rank": 9,
+      "pairID": "chart-mx-9",
+      "request": {
+        "catalog_id": "1783250950",
+        "storefront": "mx",
+        "artist": "Peso Pluma",
+        "title": "gervonta",
+        "album": "gervonta - Single",
+        "duration": 167.368
+      }
+    },
+    {
+      "caseID": "chart-mx-9-spotify",
+      "platform": "spotify",
+      "country": "mx",
+      "rank": 9,
+      "pairID": "chart-mx-9",
+      "metadataURL": "https://open.spotify.com/track/0hfXHqWhOpbR9YQmQojDMN?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=47dde7d8-1a73-4d0c-96b6-ef3414d30cba",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "0hfXHqWhOpbR9YQmQojDMN",
+          "market": "MX",
+          "metadata": {
+            "origin": "spotify",
+            "title": "gervonta",
+            "artists": [
+              "Peso Pluma"
+            ],
+            "album": "gervonta",
+            "duration_ms": 167367,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-mx-10-apple",
+      "platform": "apple",
+      "country": "mx",
+      "rank": 10,
+      "pairID": "chart-mx-10",
+      "request": {
+        "catalog_id": "1804142884",
+        "storefront": "mx",
+        "artist": "Fuerza Regida",
+        "title": "ANSIEDAD",
+        "album": "111XPANTIA",
+        "duration": 151.836
+      }
+    },
+    {
+      "caseID": "chart-mx-10-spotify",
+      "platform": "spotify",
+      "country": "mx",
+      "rank": 10,
+      "pairID": "chart-mx-10",
+      "metadataURL": "https://open.spotify.com/track/1a7onn7lPqqRWul5ogyMyX?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=93052a98-8868-4f15-ae5a-1311f2a63bfc",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1a7onn7lPqqRWul5ogyMyX",
+          "market": "MX",
+          "metadata": {
+            "origin": "spotify",
+            "title": "ANSIEDAD",
+            "artists": [
+              "Fuerza Regida"
+            ],
+            "album": "111XPANTIA",
+            "duration_ms": 151836,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-in-1-apple",
+      "platform": "apple",
+      "country": "in",
+      "rank": 1,
+      "pairID": "chart-in-1",
+      "request": {
+        "catalog_id": "6814002647",
+        "storefront": "in",
+        "artist": "Karan Aujla & MXRCI",
+        "title": "Ashke",
+        "album": "AUJLA SZN 1 - EP",
+        "duration": 217.625
+      }
+    },
+    {
+      "caseID": "chart-in-1-spotify",
+      "platform": "spotify",
+      "country": "in",
+      "rank": 1,
+      "pairID": "chart-in-1",
+      "metadataURL": "https://open.spotify.com/track/5vTJrmnmJMAvFjrUpUWxyy?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=3de013b4-0881-4bce-8fb4-91c1fc1de748",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5vTJrmnmJMAvFjrUpUWxyy",
+          "market": "IN",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Ashke",
+            "artists": [
+              "Karan Aujla",
+              "Mxrci"
+            ],
+            "album": "AUJLA SZN 1",
+            "duration_ms": 217625,
+            "explicit": true
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-in-2-apple",
+      "platform": "apple",
+      "country": "in",
+      "rank": 2,
+      "pairID": "chart-in-2",
+      "request": {
+        "catalog_id": "6816001788",
+        "storefront": "in",
+        "artist": "Anirudh Ravichander, Super Subu, M.S Krsna & HEISENBERG",
+        "title": "One Sun One Moon (From \"Jailer 2\")",
+        "album": "One Sun One Moon (From \"Jailer 2\") - Single",
+        "duration": 217.143
+      }
+    },
+    {
+      "caseID": "chart-in-2-spotify",
+      "platform": "spotify",
+      "country": "in",
+      "rank": 2,
+      "pairID": "chart-in-2",
+      "metadataURL": "https://open.spotify.com/track/1GPaw1k528Taq3YOr4Bmtu?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=2f71addb-7eda-4162-9d59-fe628d6aaf4a",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1GPaw1k528Taq3YOr4Bmtu",
+          "market": "IN",
+          "metadata": {
+            "origin": "spotify",
+            "title": "One Sun One Moon (From \"Jailer 2\")",
+            "artists": [
+              "Anirudh Ravichander",
+              "Super Subu",
+              "M.S Krsna",
+              "Heisenberg"
+            ],
+            "album": "One Sun One Moon (From \"Jailer 2\")",
+            "duration_ms": 217142
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-in-3-apple",
+      "platform": "apple",
+      "country": "in",
+      "rank": 3,
+      "pairID": "chart-in-3",
+      "request": {
+        "catalog_id": "6817733637",
+        "storefront": "in",
+        "artist": "Anirudh Ravichander & Super Subu",
+        "title": "One Name",
+        "album": "Jailer 2 (Original Motion Picture Soundtrack)",
+        "duration": 204.13
+      }
+    },
+    {
+      "caseID": "chart-in-3-spotify",
+      "platform": "spotify",
+      "country": "in",
+      "rank": 3,
+      "pairID": "chart-in-3",
+      "metadataURL": "https://open.spotify.com/track/3eYaxbCWJ9gj4OqGVekwgm?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=1f0b838f-4de1-4a74-9a6a-a49e5b108ab3",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3eYaxbCWJ9gj4OqGVekwgm",
+          "market": "IN",
+          "metadata": {
+            "origin": "spotify",
+            "title": "One Name",
+            "artists": [
+              "Anirudh Ravichander",
+              "Super Subu"
+            ],
+            "album": "Jailer 2 (Original Motion Picture Soundtrack)",
+            "duration_ms": 204130
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-in-4-apple",
+      "platform": "apple",
+      "country": "in",
+      "rank": 4,
+      "pairID": "chart-in-4",
+      "request": {
+        "catalog_id": "6817733631",
+        "storefront": "in",
+        "artist": "Anirudh Ravichander & Thamizh Aadhavan",
+        "title": "Putaapu Gang",
+        "album": "Jailer 2 (Original Motion Picture Soundtrack)",
+        "duration": 160.645
+      }
+    },
+    {
+      "caseID": "chart-in-4-spotify",
+      "platform": "spotify",
+      "country": "in",
+      "rank": 4,
+      "pairID": "chart-in-4",
+      "metadataURL": "https://open.spotify.com/track/55ePB3CmrchPFWCZKWZvhW?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=8d3cefd9-427e-47cf-b30c-c741c471f0a9",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "55ePB3CmrchPFWCZKWZvhW",
+          "market": "IN",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Putaapu Gang",
+            "artists": [
+              "Anirudh Ravichander",
+              "Thamizh Aadhavan"
+            ],
+            "album": "Jailer 2 (Original Motion Picture Soundtrack)",
+            "duration_ms": 160645
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-in-5-apple",
+      "platform": "apple",
+      "country": "in",
+      "rank": 5,
+      "pairID": "chart-in-5",
+      "request": {
+        "catalog_id": "6814002652",
+        "storefront": "in",
+        "artist": "Karan Aujla & MXRCI",
+        "title": "Straight Up",
+        "album": "AUJLA SZN 1 - EP",
+        "duration": 214.673
+      }
+    },
+    {
+      "caseID": "chart-in-5-spotify",
+      "platform": "spotify",
+      "country": "in",
+      "rank": 5,
+      "pairID": "chart-in-5",
+      "metadataURL": "https://open.spotify.com/track/3fky26FqPkMmTyg8wXJXp0?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=8d0f4537-dd3e-4ee3-af2e-a381b8936767",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3fky26FqPkMmTyg8wXJXp0",
+          "market": "IN",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Straight Up",
+            "artists": [
+              "Karan Aujla",
+              "Mxrci"
+            ],
+            "album": "AUJLA SZN 1",
+            "duration_ms": 214672
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-in-6-apple",
+      "platform": "apple",
+      "country": "in",
+      "rank": 6,
+      "pairID": "chart-in-6",
+      "request": {
+        "catalog_id": "6803810914",
+        "storefront": "in",
+        "artist": "Anirudh Ravichander & Arunraja Kamaraj",
+        "title": "Ala Bolelo (From \"Jailer 2\")",
+        "album": "Ala Bolelo (From \"Jailer 2\") - Single",
+        "duration": 240.012
+      }
+    },
+    {
+      "caseID": "chart-in-6-spotify",
+      "platform": "spotify",
+      "country": "in",
+      "rank": 6,
+      "pairID": "chart-in-6",
+      "metadataURL": "https://open.spotify.com/track/1IVnoc5HcteGwuBU7fGpeN?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=340aa53d-5a82-4e67-bdf7-ac3f2631f07a",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1IVnoc5HcteGwuBU7fGpeN",
+          "market": "IN",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Ala Bolelo (From \"Jailer 2\")",
+            "artists": [
+              "Anirudh Ravichander",
+              "Arunraja Kamaraj"
+            ],
+            "album": "Ala Bolelo (From \"Jailer 2\")",
+            "duration_ms": 240012
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-in-7-apple",
+      "platform": "apple",
+      "country": "in",
+      "rank": 7,
+      "pairID": "chart-in-7",
+      "request": {
+        "catalog_id": "6817733628",
+        "storefront": "in",
+        "artist": "Deepthi Suresh, Anirudh Ravichander & Super Subu",
+        "title": "Bindaas",
+        "album": "Jailer 2 (Original Motion Picture Soundtrack)",
+        "duration": 254.305
+      }
+    },
+    {
+      "caseID": "chart-in-7-spotify",
+      "platform": "spotify",
+      "country": "in",
+      "rank": 7,
+      "pairID": "chart-in-7",
+      "metadataURL": "https://open.spotify.com/track/42XT1ZPONGnwbQsc4EPnoY?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=6c7cd808-d53f-4a55-803c-67c0cf2b7890",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "42XT1ZPONGnwbQsc4EPnoY",
+          "market": "IN",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Bindaas",
+            "artists": [
+              "Deepthi Suresh",
+              "Anirudh Ravichander",
+              "Super Subu"
+            ],
+            "album": "Jailer 2 (Original Motion Picture Soundtrack)",
+            "duration_ms": 254304
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-in-8-apple",
+      "platform": "apple",
+      "country": "in",
+      "rank": 8,
+      "pairID": "chart-in-8",
+      "request": {
+        "catalog_id": "6817733413",
+        "storefront": "in",
+        "artist": "Anirudh Ravichander, M.S Krsna & Super Subu",
+        "title": "Jailer 2 Theme",
+        "album": "Jailer 2 (Original Motion Picture Soundtrack)",
+        "duration": 107.557
+      }
+    },
+    {
+      "caseID": "chart-in-8-spotify",
+      "platform": "spotify",
+      "country": "in",
+      "rank": 8,
+      "pairID": "chart-in-8",
+      "metadataURL": "https://open.spotify.com/track/22I7j5EFoP2bC8q8QUQHFQ?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=0da0c0b6-171e-4891-8b0c-252831608a2b",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "22I7j5EFoP2bC8q8QUQHFQ",
+          "market": "IN",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Jailer 2 Theme",
+            "artists": [
+              "Anirudh Ravichander",
+              "M.S Krsna",
+              "Super Subu"
+            ],
+            "album": "Jailer 2 (Original Motion Picture Soundtrack)",
+            "duration_ms": 107556
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-in-9-apple",
+      "platform": "apple",
+      "country": "in",
+      "rank": 9,
+      "pairID": "chart-in-9",
+      "request": {
+        "catalog_id": "1753101077",
+        "storefront": "in",
+        "artist": "Karan Aujla",
+        "title": "Antidote",
+        "album": "Four Me (Apple Music Edition) - EP",
+        "duration": 187.333
+      }
+    },
+    {
+      "caseID": "chart-in-9-spotify",
+      "platform": "spotify",
+      "country": "in",
+      "rank": 9,
+      "pairID": "chart-in-9",
+      "metadataURL": "https://open.spotify.com/track/7KmCQLSSde0UX5OqCgvGN9?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=cbb6f855-8a37-446a-97fc-4fca2b47ebfe",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7KmCQLSSde0UX5OqCgvGN9",
+          "market": "IN",
+          "metadata": {
+            "origin": "spotify",
+            "title": "ANTIDOTE",
+            "artists": [
+              "Karan Aujla"
+            ],
+            "album": "Four Me",
+            "duration_ms": 187332
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-in-10-apple",
+      "platform": "apple",
+      "country": "in",
+      "rank": 10,
+      "pairID": "chart-in-10",
+      "request": {
+        "catalog_id": "6804643315",
+        "storefront": "in",
+        "artist": "Sai Abhyankkar, Nargis Teji, Asma Teji & Vivek",
+        "title": "Radhimaa (feat. Sai Smriti) [From \"Think Indie\"]",
+        "album": "Radhimaa (feat. Sai Smriti) [From \"Think Indie\"] - Single",
+        "duration": 259.853
+      }
+    },
+    {
+      "caseID": "chart-in-10-spotify",
+      "platform": "spotify",
+      "country": "in",
+      "rank": 10,
+      "pairID": "chart-in-10",
+      "metadataURL": "https://open.spotify.com/track/6jJHYbJReFfR2ieGzRP5bq?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=647636c7-a538-4d28-9981-e72d08080b92",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "6jJHYbJReFfR2ieGzRP5bq",
+          "market": "IN",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Radhimaa - From \"Think Indie\"",
+            "artists": [
+              "Sai Abhyankkar",
+              "Nargis Teji",
+              "Asma Teji",
+              "Vivek",
+              "Sai Smriti"
+            ],
+            "album": "Radhimaa (From \"Think Indie\")",
+            "duration_ms": 259852
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-jp-1-apple",
+      "platform": "apple",
+      "country": "jp",
+      "rank": 1,
+      "pairID": "chart-jp-1",
+      "request": {
+        "catalog_id": "1714599822",
+        "storefront": "jp",
+        "artist": "Vaundy",
+        "title": "しわあわせ",
+        "album": "replica",
+        "duration": 273.536
+      }
+    },
+    {
+      "caseID": "chart-jp-1-spotify",
+      "platform": "spotify",
+      "country": "jp",
+      "rank": 1,
+      "pairID": "chart-jp-1",
+      "metadataURL": "https://open.spotify.com/track/4GvJskA0Jn4NorP2YWxuaf?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=24610eb3-7f8d-46a0-95a2-164f4fe5e651",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4GvJskA0Jn4NorP2YWxuaf",
+          "market": "JP",
+          "metadata": {
+            "origin": "spotify",
+            "title": "しわあわせ",
+            "artists": [
+              "Vaundy"
+            ],
+            "album": "replica",
+            "duration_ms": 273535
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-jp-2-apple",
+      "platform": "apple",
+      "country": "jp",
+      "rank": 2,
+      "pairID": "chart-jp-2",
+      "request": {
+        "catalog_id": "6817260751",
+        "storefront": "jp",
+        "artist": "Ayumu Imazu",
+        "title": "結び",
+        "album": "結び - Single",
+        "duration": 206.999
+      }
+    },
+    {
+      "caseID": "chart-jp-2-spotify",
+      "platform": "spotify",
+      "country": "jp",
+      "rank": 2,
+      "pairID": "chart-jp-2",
+      "metadataURL": "https://open.spotify.com/track/2j0mQg77Ivev2aIksyiiqc?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=557b48ee-aa75-468b-88b2-2f6a8b739d6b",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "2j0mQg77Ivev2aIksyiiqc",
+          "market": "JP",
+          "metadata": {
+            "origin": "spotify",
+            "title": "結び",
+            "artists": [
+              "Ayumu Imazu"
+            ],
+            "album": "結び",
+            "duration_ms": 206998
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-jp-3-apple",
+      "platform": "apple",
+      "country": "jp",
+      "rank": 3,
+      "pairID": "chart-jp-3",
+      "request": {
+        "catalog_id": "6782749979",
+        "storefront": "jp",
+        "artist": "EBiDAN (恵比寿学園男子部), 超特急, M!LK & 原因は自分にある。",
+        "title": "Yes! 東京 (feat. SUPER★DRAGON, Sakurashimeji, ONE N' ONLY, BUDDiiS, ICEx & Lienel)",
+        "album": "Yes! 東京 (feat. SUPER★DRAGON, Sakurashimeji, ONE N' ONLY, BUDDiiS, ICEx & Lienel) - Single",
+        "duration": 220.467
+      }
+    },
+    {
+      "caseID": "chart-jp-4-apple",
+      "platform": "apple",
+      "country": "jp",
+      "rank": 4,
+      "pairID": "chart-jp-4",
+      "request": {
+        "catalog_id": "6803148739",
+        "storefront": "jp",
+        "artist": "YAO",
+        "title": "ありふれた世界の果てに (feat. Awich, CHICO CARLITO, ONE OK ROCK & Paledusk)",
+        "album": "ありふれた世界の果てに (feat. Awich, CHICO CARLITO, ONE OK ROCK & Paledusk) - Single",
+        "duration": 234.782
+      }
+    },
+    {
+      "caseID": "chart-jp-4-spotify",
+      "platform": "spotify",
+      "country": "jp",
+      "rank": 4,
+      "pairID": "chart-jp-4",
+      "metadataURL": "https://open.spotify.com/track/03PGemRNLrjn9Efmy2y6OY?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=ec789ee6-0650-4e19-b69c-89526c77dda1",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "03PGemRNLrjn9Efmy2y6OY",
+          "market": "JP",
+          "metadata": {
+            "origin": "spotify",
+            "title": "FOR OKINAWA (feat. Awich, CHICO CARLITO, ONE OK ROCK & Paledusk)",
+            "artists": [
+              "YAO",
+              "Awich",
+              "CHICO CARLITO",
+              "ONE OK ROCK",
+              "Paledusk"
+            ],
+            "album": "FOR OKINAWA (feat. Awich, CHICO CARLITO, ONE OK ROCK & Paledusk)",
+            "duration_ms": 234782
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-jp-5-apple",
+      "platform": "apple",
+      "country": "jp",
+      "rank": 5,
+      "pairID": "chart-jp-5",
+      "request": {
+        "catalog_id": "6788211810",
+        "storefront": "jp",
+        "artist": "Mrs. GREEN APPLE",
+        "title": "Brand New",
+        "album": "Brand New - Single",
+        "duration": 211.667
+      }
+    },
+    {
+      "caseID": "chart-jp-5-spotify",
+      "platform": "spotify",
+      "country": "jp",
+      "rank": 5,
+      "pairID": "chart-jp-5",
+      "metadataURL": "https://open.spotify.com/track/3Z8NMM7IRu4YKDHBo6vmX3?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=2311932d-dc36-4171-aff3-68c7a5dd748d",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3Z8NMM7IRu4YKDHBo6vmX3",
+          "market": "JP",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Brand New",
+            "artists": [
+              "Mrs. GREEN APPLE"
+            ],
+            "album": "Brand New",
+            "duration_ms": 211666
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-jp-6-apple",
+      "platform": "apple",
+      "country": "jp",
+      "rank": 6,
+      "pairID": "chart-jp-6",
+      "request": {
+        "catalog_id": "6808172970",
+        "storefront": "jp",
+        "artist": "Mrs. GREEN APPLE",
+        "title": "共犯",
+        "album": "POPS",
+        "duration": 231.947
+      }
+    },
+    {
+      "caseID": "chart-jp-6-spotify",
+      "platform": "spotify",
+      "country": "jp",
+      "rank": 6,
+      "pairID": "chart-jp-6",
+      "metadataURL": "https://open.spotify.com/track/5P3Nmg0jSYfrSKoYonTGan?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=dd87e1a2-1eb2-4f29-985a-6bab8b9298b9",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5P3Nmg0jSYfrSKoYonTGan",
+          "market": "JP",
+          "metadata": {
+            "origin": "spotify",
+            "title": "共犯",
+            "artists": [
+              "Mrs. GREEN APPLE"
+            ],
+            "album": "POPS",
+            "duration_ms": 231946
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-jp-7-apple",
+      "platform": "apple",
+      "country": "jp",
+      "rank": 7,
+      "pairID": "chart-jp-7",
+      "request": {
+        "catalog_id": "1823814197",
+        "storefront": "jp",
+        "artist": "Mrs. GREEN APPLE",
+        "title": "ライラック",
+        "album": "10",
+        "duration": 289.507
+      }
+    },
+    {
+      "caseID": "chart-jp-7-spotify",
+      "platform": "spotify",
+      "country": "jp",
+      "rank": 7,
+      "pairID": "chart-jp-7",
+      "metadataURL": "https://open.spotify.com/track/21VsLvoE7elUmJZLSawaMh?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e9fee9ed-3957-4a69-ac1e-1a8406d6f2fc",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "21VsLvoE7elUmJZLSawaMh",
+          "market": "JP",
+          "metadata": {
+            "origin": "spotify",
+            "title": "ライラック",
+            "artists": [
+              "Mrs. GREEN APPLE"
+            ],
+            "album": "10",
+            "duration_ms": 289506
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-jp-8-apple",
+      "platform": "apple",
+      "country": "jp",
+      "rank": 8,
+      "pairID": "chart-jp-8",
+      "request": {
+        "catalog_id": "1451577753",
+        "storefront": "jp",
+        "artist": "back number",
+        "title": "花束",
+        "album": "アンコール",
+        "duration": 286.253
+      }
+    },
+    {
+      "caseID": "chart-jp-8-spotify",
+      "platform": "spotify",
+      "country": "jp",
+      "rank": 8,
+      "pairID": "chart-jp-8",
+      "metadataURL": "https://open.spotify.com/track/3wGesqRt3l2D4ZmYCv9A11?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=224a0e27-6226-4dd2-a5b6-a50589b7e91a",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3wGesqRt3l2D4ZmYCv9A11",
+          "market": "JP",
+          "metadata": {
+            "origin": "spotify",
+            "title": "花束",
+            "artists": [
+              "back number"
+            ],
+            "album": "アンコール",
+            "duration_ms": 286253
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-jp-9-apple",
+      "platform": "apple",
+      "country": "jp",
+      "rank": 9,
+      "pairID": "chart-jp-9",
+      "request": {
+        "catalog_id": "1846753946",
+        "storefront": "jp",
+        "artist": "M!LK",
+        "title": "好きすぎて滅!",
+        "album": "好きすぎて滅! - Single",
+        "duration": 212.4
+      }
+    },
+    {
+      "caseID": "chart-jp-9-spotify",
+      "platform": "spotify",
+      "country": "jp",
+      "rank": 9,
+      "pairID": "chart-jp-9",
+      "metadataURL": "https://open.spotify.com/track/4Re9Zb9uYlMtMiZy7HFFw5?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=9ecf0a27-f198-43ee-8d79-ac5ac543c8e9",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4Re9Zb9uYlMtMiZy7HFFw5",
+          "market": "JP",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Sukisugite METSU!",
+            "artists": [
+              "M!LK"
+            ],
+            "album": "Sukisugite METSU!",
+            "duration_ms": 212400
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-jp-10-apple",
+      "platform": "apple",
+      "country": "jp",
+      "rank": 10,
+      "pairID": "chart-jp-10",
+      "request": {
+        "catalog_id": "6820428730",
+        "storefront": "jp",
+        "artist": "A2O & A2O LITE",
+        "title": "NEON",
+        "album": "NEON - Single",
+        "duration": 208
+      }
+    },
+    {
+      "caseID": "chart-jp-10-spotify",
+      "platform": "spotify",
+      "country": "jp",
+      "rank": 10,
+      "pairID": "chart-jp-10",
+      "metadataURL": "https://open.spotify.com/track/5PvLNQRNRj61y3CU4SFIY4?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=b0281ebd-da0a-44de-b59f-6452ce14afb6",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5PvLNQRNRj61y3CU4SFIY4",
+          "market": "JP",
+          "metadata": {
+            "origin": "spotify",
+            "title": "NEON",
+            "artists": [
+              "A2O LITE",
+              "A2O"
+            ],
+            "album": "NEON",
+            "duration_ms": 208000
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-kr-1-apple",
+      "platform": "apple",
+      "country": "kr",
+      "rank": 1,
+      "pairID": "chart-kr-1",
+      "request": {
+        "catalog_id": "6820428730",
+        "storefront": "kr",
+        "artist": "A2O & A2O LITE",
+        "title": "NEON",
+        "album": "NEON - Single",
+        "duration": 208
+      }
+    },
+    {
+      "caseID": "chart-kr-1-spotify",
+      "platform": "spotify",
+      "country": "kr",
+      "rank": 1,
+      "pairID": "chart-kr-1",
+      "metadataURL": "https://open.spotify.com/track/5PvLNQRNRj61y3CU4SFIY4?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=15069042-692b-44a7-96d1-3f260dce29c4",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5PvLNQRNRj61y3CU4SFIY4",
+          "market": "KR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "NEON",
+            "artists": [
+              "A2O LITE",
+              "A2O"
+            ],
+            "album": "NEON",
+            "duration_ms": 208000
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-kr-2-apple",
+      "platform": "apple",
+      "country": "kr",
+      "rank": 2,
+      "pairID": "chart-kr-2",
+      "request": {
+        "catalog_id": "6795782855",
+        "storefront": "kr",
+        "artist": "튜이드",
+        "title": "SUN KISS",
+        "album": "TUNE & PLAY - EP",
+        "duration": 181
+      }
+    },
+    {
+      "caseID": "chart-kr-2-spotify",
+      "platform": "spotify",
+      "country": "kr",
+      "rank": 2,
+      "pairID": "chart-kr-2",
+      "metadataURL": "https://open.spotify.com/track/7Jpb9OejYYIwsBIVQwceRy?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=7c18b96e-24e3-4ff1-96d2-371b0192f24f",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7Jpb9OejYYIwsBIVQwceRy",
+          "market": "KR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "SUN KISS",
+            "artists": [
+              "TUIDE"
+            ],
+            "album": "TUNE & PLAY",
+            "duration_ms": 181000
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-kr-3-apple",
+      "platform": "apple",
+      "country": "kr",
+      "rank": 3,
+      "pairID": "chart-kr-3",
+      "request": {
+        "catalog_id": "6816842803",
+        "storefront": "kr",
+        "artist": "NCT WISH",
+        "title": "I SPY",
+        "album": "I SPY - The 4th Mini Album - EP",
+        "duration": 185
+      }
+    },
+    {
+      "caseID": "chart-kr-3-spotify",
+      "platform": "spotify",
+      "country": "kr",
+      "rank": 3,
+      "pairID": "chart-kr-3",
+      "metadataURL": "https://open.spotify.com/track/3kcGkOmFXtaFjVdz7ge1WL?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e581c8b5-50a0-4a5d-8903-f8951c1ecbd0",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3kcGkOmFXtaFjVdz7ge1WL",
+          "market": "KR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "I SPY",
+            "artists": [
+              "NCT WISH"
+            ],
+            "album": "I SPY - The 4th Mini Album",
+            "duration_ms": 185000
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-kr-4-apple",
+      "platform": "apple",
+      "country": "kr",
+      "rank": 4,
+      "pairID": "chart-kr-4",
+      "request": {
+        "catalog_id": "6813395915",
+        "storefront": "kr",
+        "artist": "ALLDAY PROJECT",
+        "title": "CRASH",
+        "album": "CRASH - EP",
+        "duration": 172.979
+      }
+    },
+    {
+      "caseID": "chart-kr-4-spotify",
+      "platform": "spotify",
+      "country": "kr",
+      "rank": 4,
+      "pairID": "chart-kr-4",
+      "metadataURL": "https://open.spotify.com/track/1hXVB56zx5oM7KUJsFRTxy?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=473b204b-7574-41e5-8448-9053d6ad9f4c",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1hXVB56zx5oM7KUJsFRTxy",
+          "market": "KR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "CRASH",
+            "artists": [
+              "ALLDAY PROJECT"
+            ],
+            "album": "CRASH",
+            "duration_ms": 172978
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-kr-5-apple",
+      "platform": "apple",
+      "country": "kr",
+      "rank": 5,
+      "pairID": "chart-kr-5",
+      "request": {
+        "catalog_id": "6805367598",
+        "storefront": "kr",
+        "artist": "BIG Naughty",
+        "title": "노스탈지아",
+        "album": "노스탈지아 - Single",
+        "duration": 195
+      }
+    },
+    {
+      "caseID": "chart-kr-5-spotify",
+      "platform": "spotify",
+      "country": "kr",
+      "rank": 5,
+      "pairID": "chart-kr-5",
+      "metadataURL": "https://open.spotify.com/track/776vLcNy6mHNmPisdejR0I?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=9469c915-dc16-4f28-95de-fd8401c6ec4b",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "776vLcNy6mHNmPisdejR0I",
+          "market": "KR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Nostalgia",
+            "artists": [
+              "BIG Naughty"
+            ],
+            "album": "Nostalgia",
+            "duration_ms": 195000
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-kr-6-apple",
+      "platform": "apple",
+      "country": "kr",
+      "rank": 6,
+      "pairID": "chart-kr-6",
+      "request": {
+        "catalog_id": "1764485170",
+        "storefront": "kr",
+        "artist": "리센느",
+        "title": "LOVE ATTACK",
+        "album": "SCENEDROME - EP",
+        "duration": 181.56
+      }
+    },
+    {
+      "caseID": "chart-kr-6-spotify",
+      "platform": "spotify",
+      "country": "kr",
+      "rank": 6,
+      "pairID": "chart-kr-6",
+      "metadataURL": "https://open.spotify.com/track/6uosenLUNFZtOIih5T0qfV?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=6ce086d9-2795-4fae-b859-82b91241c1d8",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "6uosenLUNFZtOIih5T0qfV",
+          "market": "KR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "LOVE ATTACK",
+            "artists": [
+              "RESCENE"
+            ],
+            "album": "SCENEDROME",
+            "duration_ms": 181560
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-kr-7-apple",
+      "platform": "apple",
+      "country": "kr",
+      "rank": 7,
+      "pairID": "chart-kr-7",
+      "request": {
+        "catalog_id": "1822439986",
+        "storefront": "kr",
+        "artist": "리센느",
+        "title": "Deja Vu",
+        "album": "Dearest - Single",
+        "duration": 184
+      }
+    },
+    {
+      "caseID": "chart-kr-7-spotify",
+      "platform": "spotify",
+      "country": "kr",
+      "rank": 7,
+      "pairID": "chart-kr-7",
+      "metadataURL": "https://open.spotify.com/track/1pBUzZE9PoKLoPxo6QxsG6?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=fe186214-7382-448e-b97e-39a7c7aaf42b",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1pBUzZE9PoKLoPxo6QxsG6",
+          "market": "KR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Deja Vu",
+            "artists": [
+              "RESCENE"
+            ],
+            "album": "Dearest",
+            "duration_ms": 184000
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-kr-8-apple",
+      "platform": "apple",
+      "country": "kr",
+      "rank": 8,
+      "pairID": "chart-kr-8",
+      "request": {
+        "catalog_id": "6781521710",
+        "storefront": "kr",
+        "artist": "머무르",
+        "title": "꿈꾸던 어른이 되었나요?",
+        "album": "꿈꾸던 어른이 되었나요? - Single",
+        "duration": 207.429
+      }
+    },
+    {
+      "caseID": "chart-kr-8-spotify",
+      "platform": "spotify",
+      "country": "kr",
+      "rank": 8,
+      "pairID": "chart-kr-8",
+      "metadataURL": "https://open.spotify.com/track/67bXdWqZFre6lPaBIaZHlO?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e219a706-c8a0-4c73-91c4-5e1890582a8d",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "67bXdWqZFre6lPaBIaZHlO",
+          "market": "KR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "The Adult I Dreamed Of",
+            "artists": [
+              "머무르"
+            ],
+            "album": "The Adult I Dreamed Of",
+            "duration_ms": 207428
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-kr-9-apple",
+      "platform": "apple",
+      "country": "kr",
+      "rank": 9,
+      "pairID": "chart-kr-9",
+      "request": {
+        "catalog_id": "6797774239",
+        "storefront": "kr",
+        "artist": "키키",
+        "title": "Pop Off Pop Off",
+        "album": "WhyKiiiKiii - EP",
+        "duration": 141.285
+      }
+    },
+    {
+      "caseID": "chart-kr-10-apple",
+      "platform": "apple",
+      "country": "kr",
+      "rank": 10,
+      "pairID": "chart-kr-10",
+      "request": {
+        "catalog_id": "1887671067",
+        "storefront": "kr",
+        "artist": "코르티스",
+        "title": "REDRED",
+        "album": "GREENGREEN - EP",
+        "duration": 163.002
+      }
+    },
+    {
+      "caseID": "chart-kr-10-spotify",
+      "platform": "spotify",
+      "country": "kr",
+      "rank": 10,
+      "pairID": "chart-kr-10",
+      "metadataURL": "https://open.spotify.com/track/4BnDAG8QyfWirLFdGuV99x?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=8bd00a05-2641-44c5-80d4-454964c73df2",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4BnDAG8QyfWirLFdGuV99x",
+          "market": "KR",
+          "metadata": {
+            "origin": "spotify",
+            "title": "REDRED",
+            "artists": [
+              "CORTIS"
+            ],
+            "album": "GREENGREEN",
+            "duration_ms": 163001
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-tw-1-apple",
+      "platform": "apple",
+      "country": "tw",
+      "rank": 1,
+      "pairID": "chart-tw-1",
+      "request": {
+        "catalog_id": "6820428730",
+        "storefront": "tw",
+        "artist": "A2O & A2O LITE",
+        "title": "NEON",
+        "album": "NEON - Single",
+        "duration": 208
+      }
+    },
+    {
+      "caseID": "chart-tw-1-spotify",
+      "platform": "spotify",
+      "country": "tw",
+      "rank": 1,
+      "pairID": "chart-tw-1",
+      "metadataURL": "https://open.spotify.com/track/5PvLNQRNRj61y3CU4SFIY4?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=fa72138c-6c80-40e6-8210-7264daaa3e64",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5PvLNQRNRj61y3CU4SFIY4",
+          "market": "TW",
+          "metadata": {
+            "origin": "spotify",
+            "title": "NEON",
+            "artists": [
+              "A2O LITE",
+              "A2O"
+            ],
+            "album": "NEON",
+            "duration_ms": 208000
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-tw-2-apple",
+      "platform": "apple",
+      "country": "tw",
+      "rank": 2,
+      "pairID": "chart-tw-2",
+      "request": {
+        "catalog_id": "6785801848",
+        "storefront": "tw",
+        "artist": "李佳薇",
+        "title": "甲乙丙丁Strangers",
+        "album": "甲乙丙丁Strangers - Single",
+        "duration": 210.462
+      }
+    },
+    {
+      "caseID": "chart-tw-2-spotify",
+      "platform": "spotify",
+      "country": "tw",
+      "rank": 2,
+      "pairID": "chart-tw-2",
+      "metadataURL": "https://open.spotify.com/track/629FqLOdjtsXh5b45FTk43?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=4b2cafe1-501c-4283-9693-8c854b4dfd92",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "629FqLOdjtsXh5b45FTk43",
+          "market": "TW",
+          "metadata": {
+            "origin": "spotify",
+            "title": "甲乙丙丁Strangers",
+            "artists": [
+              "Jess Lee"
+            ],
+            "album": "甲乙丙丁Strangers",
+            "duration_ms": 210461
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-tw-3-apple",
+      "platform": "apple",
+      "country": "tw",
+      "rank": 3,
+      "pairID": "chart-tw-3",
+      "request": {
+        "catalog_id": "6812956004",
+        "storefront": "tw",
+        "artist": "NMIXX",
+        "title": "Birthday Wish",
+        "album": "Strange Muse - EP",
+        "duration": 200
+      }
+    },
+    {
+      "caseID": "chart-tw-3-spotify",
+      "platform": "spotify",
+      "country": "tw",
+      "rank": 3,
+      "pairID": "chart-tw-3",
+      "metadataURL": "https://open.spotify.com/track/6cnhP7JmTV1CHJJEonNC4b?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=dbd1f376-d7f1-4802-9c00-77e7e93bd8e7",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "6cnhP7JmTV1CHJJEonNC4b",
+          "market": "TW",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Birthday Wish",
+            "artists": [
+              "NMIXX"
+            ],
+            "album": "Strange Muse",
+            "duration_ms": 200000
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-tw-4-apple",
+      "platform": "apple",
+      "country": "tw",
+      "rank": 4,
+      "pairID": "chart-tw-4",
+      "request": {
+        "catalog_id": "536115199",
+        "storefront": "tw",
+        "artist": "周杰倫",
+        "title": "擱淺",
+        "album": "七里香",
+        "duration": 238.133
+      }
+    },
+    {
+      "caseID": "chart-tw-5-apple",
+      "platform": "apple",
+      "country": "tw",
+      "rank": 5,
+      "pairID": "chart-tw-5",
+      "request": {
+        "catalog_id": "6804744599",
+        "storefront": "tw",
+        "artist": "JEON SOYEON",
+        "title": "I’m gonna TOESA (feat. Kian84)",
+        "album": "What a Wonderful Life",
+        "duration": 211.575
+      }
+    },
+    {
+      "caseID": "chart-tw-5-spotify",
+      "platform": "spotify",
+      "country": "tw",
+      "rank": 5,
+      "pairID": "chart-tw-5",
+      "metadataURL": "https://open.spotify.com/track/3Vqe75qMPQP62qE3zr9WLg?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=c91cb212-cb5e-4db1-8784-1f49535bc6f6",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3Vqe75qMPQP62qE3zr9WLg",
+          "market": "TW",
+          "metadata": {
+            "origin": "spotify",
+            "title": "I’m gonna TOESA (feat. Kian84)",
+            "artists": [
+              "SOYEON",
+              "Kian84"
+            ],
+            "album": "What a Wonderful Life",
+            "duration_ms": 211574
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-tw-6-apple",
+      "platform": "apple",
+      "country": "tw",
+      "rank": 6,
+      "pairID": "chart-tw-6",
+      "request": {
+        "catalog_id": "578524987",
+        "storefront": "tw",
+        "artist": "孫燕姿",
+        "title": "我不難過",
+        "album": "2 Her",
+        "duration": 320.4
+      }
+    },
+    {
+      "caseID": "chart-tw-7-apple",
+      "platform": "apple",
+      "country": "tw",
+      "rank": 7,
+      "pairID": "chart-tw-7",
+      "request": {
+        "catalog_id": "1118757873",
+        "storefront": "tw",
+        "artist": "周杰倫",
+        "title": "不該 (with 張惠妹)",
+        "album": "周杰倫的床邊故事",
+        "duration": 291.407
+      }
+    },
+    {
+      "caseID": "chart-tw-8-apple",
+      "platform": "apple",
+      "country": "tw",
+      "rank": 8,
+      "pairID": "chart-tw-8",
+      "request": {
+        "catalog_id": "536115195",
+        "storefront": "tw",
+        "artist": "周杰倫",
+        "title": "七里香",
+        "album": "七里香",
+        "duration": 297.2
+      }
+    },
+    {
+      "caseID": "chart-tw-9-apple",
+      "platform": "apple",
+      "country": "tw",
+      "rank": 9,
+      "pairID": "chart-tw-9",
+      "request": {
+        "catalog_id": "6812635397",
+        "storefront": "tw",
+        "artist": "田馥甄",
+        "title": "要去什麼地方",
+        "album": "要去什麼地方",
+        "duration": 227.747
+      }
+    },
+    {
+      "caseID": "chart-tw-9-spotify",
+      "platform": "spotify",
+      "country": "tw",
+      "rank": 9,
+      "pairID": "chart-tw-9",
+      "metadataURL": "https://open.spotify.com/track/4azVNx8uhpnKezwrNhcvYz?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=b6329e9c-bc11-4234-b31b-b61ae97ccaf2",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4azVNx8uhpnKezwrNhcvYz",
+          "market": "TW",
+          "metadata": {
+            "origin": "spotify",
+            "title": "要去什麼地方",
+            "artists": [
+              "Hebe Tien"
+            ],
+            "album": "要去什麼地方",
+            "duration_ms": 227746
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-tw-10-apple",
+      "platform": "apple",
+      "country": "tw",
+      "rank": 10,
+      "pairID": "chart-tw-10",
+      "request": {
+        "catalog_id": "6822369089",
+        "storefront": "tw",
+        "artist": "IVE",
+        "title": "Looks Can Kill",
+        "album": "Looks Can Kill - Single",
+        "duration": 195.56
+      }
+    },
+    {
+      "caseID": "chart-tw-10-spotify",
+      "platform": "spotify",
+      "country": "tw",
+      "rank": 10,
+      "pairID": "chart-tw-10",
+      "metadataURL": "https://open.spotify.com/track/79kqYxIkS29va2I9AeL9ak?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=9aba9555-55ff-4a8f-ae65-e4b21d590ca2",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "79kqYxIkS29va2I9AeL9ak",
+          "market": "TW",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Looks Can Kill",
+            "artists": [
+              "IVE"
+            ],
+            "album": "Looks Can Kill",
+            "duration_ms": 195559
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-hk-1-apple",
+      "platform": "apple",
+      "country": "hk",
+      "rank": 1,
+      "pairID": "chart-hk-1",
+      "request": {
+        "catalog_id": "6820428730",
+        "storefront": "hk",
+        "artist": "A2O & A2O LITE",
+        "title": "NEON",
+        "album": "NEON - Single",
+        "duration": 208
+      }
+    },
+    {
+      "caseID": "chart-hk-1-spotify",
+      "platform": "spotify",
+      "country": "hk",
+      "rank": 1,
+      "pairID": "chart-hk-1",
+      "metadataURL": "https://open.spotify.com/track/5PvLNQRNRj61y3CU4SFIY4?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=d37586d9-2ca7-4730-af79-3a301fefb9d4",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5PvLNQRNRj61y3CU4SFIY4",
+          "market": "HK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "NEON",
+            "artists": [
+              "A2O LITE",
+              "A2O"
+            ],
+            "album": "NEON",
+            "duration_ms": 208000
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-hk-2-apple",
+      "platform": "apple",
+      "country": "hk",
+      "rank": 2,
+      "pairID": "chart-hk-2",
+      "request": {
+        "catalog_id": "6814412779",
+        "storefront": "hk",
+        "artist": "Gareth.T",
+        "title": "淺粉紅 pale pink",
+        "album": "淺粉紅 - Single",
+        "duration": 201.817
+      }
+    },
+    {
+      "caseID": "chart-hk-2-spotify",
+      "platform": "spotify",
+      "country": "hk",
+      "rank": 2,
+      "pairID": "chart-hk-2",
+      "metadataURL": "https://open.spotify.com/track/3bHIyMzAs0BC3T0YVn4Ctb?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e4f32be1-cfce-4fc7-9e43-3adf055d9952",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3bHIyMzAs0BC3T0YVn4Ctb",
+          "market": "HK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "淺粉紅 pale pink",
+            "artists": [
+              "Gareth.T"
+            ],
+            "album": "淺粉紅",
+            "duration_ms": 201816
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-hk-3-apple",
+      "platform": "apple",
+      "country": "hk",
+      "rank": 3,
+      "pairID": "chart-hk-3",
+      "request": {
+        "catalog_id": "1816674595",
+        "storefront": "hk",
+        "artist": "Gareth.T",
+        "title": "用背脊唱情歌",
+        "album": "用背脊唱情歌 - Single",
+        "duration": 210.027
+      }
+    },
+    {
+      "caseID": "chart-hk-3-spotify",
+      "platform": "spotify",
+      "country": "hk",
+      "rank": 3,
+      "pairID": "chart-hk-3",
+      "metadataURL": "https://open.spotify.com/track/1jQp4mCBDmXr8NMqsMpH8E?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=0d0c127e-17d7-453a-aba9-f54d03b4f799",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1jQp4mCBDmXr8NMqsMpH8E",
+          "market": "HK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "用背脊唱情歌",
+            "artists": [
+              "Gareth.T"
+            ],
+            "album": "用背脊唱情歌",
+            "duration_ms": 210026
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-hk-4-apple",
+      "platform": "apple",
+      "country": "hk",
+      "rank": 4,
+      "pairID": "chart-hk-4",
+      "request": {
+        "catalog_id": "1784959357",
+        "storefront": "hk",
+        "artist": "MC 張天賦",
+        "title": "說謊者",
+        "album": "說謊者 - Single",
+        "duration": 249.137
+      }
+    },
+    {
+      "caseID": "chart-hk-4-spotify",
+      "platform": "spotify",
+      "country": "hk",
+      "rank": 4,
+      "pairID": "chart-hk-4",
+      "metadataURL": "https://open.spotify.com/track/1R116HqW5ECo5VRjeewhM9?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=90015e37-2856-4c1c-81ca-19172cf1dd52",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1R116HqW5ECo5VRjeewhM9",
+          "market": "HK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "說謊者",
+            "artists": [
+              "MC 張天賦"
+            ],
+            "album": "說謊者",
+            "duration_ms": 249136
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-hk-5-apple",
+      "platform": "apple",
+      "country": "hk",
+      "rank": 5,
+      "pairID": "chart-hk-5",
+      "request": {
+        "catalog_id": "6819159640",
+        "storefront": "hk",
+        "artist": "MC 張天賦",
+        "title": "未深入但了解",
+        "album": "未深入但了解 - Single",
+        "duration": 181.62
+      }
+    },
+    {
+      "caseID": "chart-hk-5-spotify",
+      "platform": "spotify",
+      "country": "hk",
+      "rank": 5,
+      "pairID": "chart-hk-5",
+      "metadataURL": "https://open.spotify.com/track/0r0VLsvWv7jo2HGfvlt5xh?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=d5ffb26c-c5f5-4ef7-a96d-eb4b5d6741d7",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "0r0VLsvWv7jo2HGfvlt5xh",
+          "market": "HK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "未深入但了解",
+            "artists": [
+              "MC 張天賦"
+            ],
+            "album": "未深入但了解",
+            "duration_ms": 181619
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-hk-6-apple",
+      "platform": "apple",
+      "country": "hk",
+      "rank": 6,
+      "pairID": "chart-hk-6",
+      "request": {
+        "catalog_id": "6772915785",
+        "storefront": "hk",
+        "artist": "MC 張天賦",
+        "title": "男人怎可以",
+        "album": "男人怎可以 - Single",
+        "duration": 256.014
+      }
+    },
+    {
+      "caseID": "chart-hk-6-spotify",
+      "platform": "spotify",
+      "country": "hk",
+      "rank": 6,
+      "pairID": "chart-hk-6",
+      "metadataURL": "https://open.spotify.com/track/7M0ZCvE0HcikCJUy4cTsAF?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=723ce71d-3405-4595-8784-be5f2fd5e20f",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7M0ZCvE0HcikCJUy4cTsAF",
+          "market": "HK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "男人怎可以",
+            "artists": [
+              "MC 張天賦"
+            ],
+            "album": "男人怎可以",
+            "duration_ms": 256014
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-hk-7-apple",
+      "platform": "apple",
+      "country": "hk",
+      "rank": 7,
+      "pairID": "chart-hk-7",
+      "request": {
+        "catalog_id": "6822369089",
+        "storefront": "hk",
+        "artist": "IVE",
+        "title": "Looks Can Kill",
+        "album": "Looks Can Kill - Single",
+        "duration": 195.56
+      }
+    },
+    {
+      "caseID": "chart-hk-7-spotify",
+      "platform": "spotify",
+      "country": "hk",
+      "rank": 7,
+      "pairID": "chart-hk-7",
+      "metadataURL": "https://open.spotify.com/track/79kqYxIkS29va2I9AeL9ak?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=8ab2ebac-517d-456b-aa94-b8bcced8320c",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "79kqYxIkS29va2I9AeL9ak",
+          "market": "HK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Looks Can Kill",
+            "artists": [
+              "IVE"
+            ],
+            "album": "Looks Can Kill",
+            "duration_ms": 195559
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-hk-8-apple",
+      "platform": "apple",
+      "country": "hk",
+      "rank": 8,
+      "pairID": "chart-hk-8",
+      "request": {
+        "catalog_id": "542677437",
+        "storefront": "hk",
+        "artist": "陳奕迅",
+        "title": "歲月如歌",
+        "album": "Live for Today",
+        "duration": 207.852
+      }
+    },
+    {
+      "caseID": "chart-hk-8-spotify",
+      "platform": "spotify",
+      "country": "hk",
+      "rank": 8,
+      "pairID": "chart-hk-8",
+      "metadataURL": "https://open.spotify.com/track/209lkexhDOdjGJMv9iw3rJ?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=56e66028-ee00-4c18-8d7d-0ef78628d900",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "209lkexhDOdjGJMv9iw3rJ",
+          "market": "HK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "歲月如歌",
+            "artists": [
+              "Eason Chan"
+            ],
+            "album": "Live For Today",
+            "duration_ms": 207852
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-hk-9-apple",
+      "platform": "apple",
+      "country": "hk",
+      "rank": 9,
+      "pairID": "chart-hk-9",
+      "request": {
+        "catalog_id": "1443717750",
+        "storefront": "hk",
+        "artist": "陳奕迅",
+        "title": "陀飛輪",
+        "album": "Time Flies 2010 - EP",
+        "duration": 278.133
+      }
+    },
+    {
+      "caseID": "chart-hk-10-apple",
+      "platform": "apple",
+      "country": "hk",
+      "rank": 10,
+      "pairID": "chart-hk-10",
+      "request": {
+        "catalog_id": "1718045819",
+        "storefront": "hk",
+        "artist": "Gareth.T",
+        "title": "緊急聯絡人",
+        "album": "緊急聯絡人 - Single",
+        "duration": 222.668
+      }
+    },
+    {
+      "caseID": "chart-hk-10-spotify",
+      "platform": "spotify",
+      "country": "hk",
+      "rank": 10,
+      "pairID": "chart-hk-10",
+      "metadataURL": "https://open.spotify.com/track/1sb71AvysPMJlsx4qYtTpG?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=2789e5d9-923e-43da-9daa-757c7445fcca",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1sb71AvysPMJlsx4qYtTpG",
+          "market": "HK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "緊急聯絡人",
+            "artists": [
+              "Gareth.T"
+            ],
+            "album": "緊急聯絡人",
+            "duration_ms": 222668
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-tw-4-spotify",
+      "platform": "spotify",
+      "country": "tw",
+      "rank": 4,
+      "pairID": "chart-tw-4",
+      "metadataURL": "https://open.spotify.com/track/0cOMncRq4cmDLO4tPQnkBF?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=5958b54d-4469-4e68-ad82-65cae38363f1",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "0cOMncRq4cmDLO4tPQnkBF",
+          "market": "TW",
+          "metadata": {
+            "origin": "spotify",
+            "title": "擱淺",
+            "artists": [
+              "Jay Chou"
+            ],
+            "album": "七里香",
+            "duration_ms": 238133
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-tw-6-spotify",
+      "platform": "spotify",
+      "country": "tw",
+      "rank": 6,
+      "pairID": "chart-tw-6",
+      "metadataURL": "https://open.spotify.com/track/4XrWar13kLO1jr535AzKrQ?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=009f78a1-ab50-4a23-9bc1-8172a76ee11d",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4XrWar13kLO1jr535AzKrQ",
+          "market": "TW",
+          "metadata": {
+            "origin": "spotify",
+            "title": "我不難過",
+            "artists": [
+              "Stefanie Sun"
+            ],
+            "album": "未完成",
+            "duration_ms": 320400
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-tw-8-spotify",
+      "platform": "spotify",
+      "country": "tw",
+      "rank": 8,
+      "pairID": "chart-tw-8",
+      "metadataURL": "https://open.spotify.com/track/57w29bSwdIZ6gr6xXOqwc1?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=debb2248-f9b0-4a81-ba2f-e03a401b6405",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "57w29bSwdIZ6gr6xXOqwc1",
+          "market": "TW",
+          "metadata": {
+            "origin": "spotify",
+            "title": "七里香",
+            "artists": [
+              "Jay Chou"
+            ],
+            "album": "七里香",
+            "duration_ms": 297200
+          }
+        }
+      }
+    },
+    {
+      "caseID": "chart-hk-9-spotify",
+      "platform": "spotify",
+      "country": "hk",
+      "rank": 9,
+      "pairID": "chart-hk-9",
+      "metadataURL": "https://open.spotify.com/track/0pmGleExiQyd0HxV5kAOwK?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=c873b097-cf77-4831-8e10-5848c19a8dd7",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "0pmGleExiQyd0HxV5kAOwK",
+          "market": "HK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "陀飛輪",
+            "artists": [
+              "Eason Chan"
+            ],
+            "album": "Time Flies",
+            "duration_ms": 278133
+          }
+        }
+      }
+    }
+  ]
+}

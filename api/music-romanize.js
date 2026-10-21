@@ -29,12 +29,11 @@ import {lookupReviewedRecording,hasReviewedCatalogSource} from './utils/reviewed
 import {lookupOfficialTranscription,hasOfficialCatalogSource} from './utils/official-transcriptions.js';
 import {lookupListeningReviewedRecording,hasListeningCatalogSource} from './utils/listening-reviewed-recordings.js';
 import {analyzeLyricLanguage} from './utils/lyric-language.js';
-import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,VOCAL_SELECTION_CAPABILITY} from './utils/lyric-selection.js';
+import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,needsTimingDiscovery,lyricResponseLifetimeMs as responseLifetimeMs,VOCAL_SELECTION_CAPABILITY} from './utils/lyric-selection.js';
 import {isRejectedRecordingLyrics} from './utils/rejected-lyrics.js';
 export const RESPONSE_VERSION='2.5.0';
 export const config={supportsResponseStreaming:true};
 export const SELECTION_REVISION=LYRIC_SELECTION_REVISION;
-const responseLifetimeMs=response=>response.quality?.partial===true || (response.quality?.synced===false && response.quality?.instrumental!==true) ? 300000:86400000;
 const remainingLifetimeMs=response=> {
   const created=Date.parse(response.metadata?.timestamp);
   return Math.max(0,responseLifetimeMs(response)-(Number.isFinite(created)?Math.max(0,Date.now()-created):0));
@@ -51,7 +50,7 @@ export function createMusicRomanizeService(dependencies={}) {
   }=dependencies;
   const spotifyService=createSpotifyLyricsService(dependencies);
   const searchService=createLyricSearchService(dependencies);
-  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:RESPONSE_VERSION,selection:SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY}});
+  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:RESPONSE_VERSION,selection:SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY,vocalSelection:VOCAL_SELECTION_CAPABILITY}});
   const inflight=new Map(),sourceAcquisitions=new SourceAcquisitions({waitUntilFn});
   const canonicalCache=new BoundedCache();
   const verifiedRouting=new BoundedCache({ttlMs:contextTTLms,now:contextNow});
@@ -154,6 +153,7 @@ export function createMusicRomanizeService(dependencies={}) {
             if(probe){probe.used=true;probe.transfer(parentSignal??scope?.signal);}
             const providerDeadline=probe?Math.min(deadline,probe.deadline):Date.now()+Math.min(providerTimeoutMs,remaining);
             if(providerDeadline<=Date.now()){timedOut=true;return null;}
+            let hintCandidate=null;
             try {
               return await withDeadline(async signal=> {
                 const label=api.name.replace(/[^a-zA-Z0-9_]/g,'');
@@ -168,34 +168,40 @@ export function createMusicRomanizeService(dependencies={}) {
                 };
                 const fresh=probe?null:await hintedRecording(api,target,hintContext,{signal,deadline:providerDeadline,budgetMs:sourceHintBudgetMs,neteaseBudgetMs:neteaseSourceHintBudgetMs,measure});
                 signal.throwIfAborted();
-                if(fresh){try{const candidate=await validateSource(fresh.song,fresh.lyrics);if(candidate){matched=true;return candidate;}}catch(error){diagnose(api.name,error.reason??'source_hint_rejected');}signal.throwIfAborted();}
+                if(fresh){try{
+                  hintCandidate=await validateSource(fresh.song,fresh.lyrics);
+                  if(hintCandidate){
+                    matched=true;
+                    if(preferred||!api.supportsVocalTiming||!needsTimingDiscovery(hintCandidate))return hintCandidate;
+                    await publishCandidate(hintCandidate);
+                  }
+                }catch(error){diagnose(api.name,error.reason??'source_hint_rejected');}signal.throwIfAborted();}
                 const discovered=probe?await probe.promise:null;if(discovered?.error)throw discovered.error;
-                const song=probe?discovered.song:await measure(`${label}_search`,()=>api.searchSong(target.artist,target.title,{album:target.album,duration:target.duration,catalog_id:target.catalog_id||catalog_id,...(target.artist_entities?.length?{artist_entities:target.artist_entities}:{}),signal}));
-                if(!song){diagnose(api.name,'not_found');return null;}
-                return validateSource(song,undefined,true);
+                const song=probe?discovered.song:await measure(`${label}_search`,()=>api.searchSong(target.artist,target.title,{album:target.album,duration:target.duration,catalog_id:target.catalog_id||catalog_id,...(typeof target.explicit==='boolean'?{explicit:target.explicit}:{}),...(target.artist_entities?.length?{artist_entities:target.artist_entities}:{}),signal}));
+                if(!song){diagnose(api.name,'not_found');return hintCandidate;}
+                return chooseLyricCandidate(hintCandidate,await validateSource(song,undefined,true));
               },Math.max(1,providerDeadline-Date.now()),parentSignal);
             } catch(error) {
               if(parentSignal?.aborted) return null;
               recordFailure(api,error);
-              return null;
+              return hintCandidate;
             }
           };
           // An explicit source retains its first opportunity before fallback.
           if(preferred) { for(const api of apis) { const result=await lookup(api,scope?.signal);if(result){await publishCandidate(result);return result;} }return null; }
-          // Fast plain lyrics remain available, but do not cancel a verified
-          // timed candidate after just 350 ms. The extra wait applies only
-          // when the current fallback has no timestamps, and remains bounded.
+          // Readable results publish while measured sources remain eligible
+          // inside the fixed provider and request deadlines.
           const targetScript=await detectLanguageFn(`${target.artist} ${target.title}`);
           const targetAPIs=target===request || preferred ? apis : [...new Set([...getAvailableAPIsFn(targetScript).filter(acceptsSource),...apis])];
           return hedgedLookup(targetAPIs,lookup,{delayMs:hedgeDelayMs,untimedGraceMs:Math.min(untimedGraceMs,Math.max(0,deadline-Date.now())),wordTimingGraceMs:Math.min(wordTimingGraceMs,Math.max(0,deadline-Date.now())),chooseCandidate:chooseLyricCandidate,signal:scope?.signal,onCandidate:publishCandidate});
         };
         // Reuse previously verified localizations first on repeated catalog requests.
-        const timed=candidate=>timingQuality(candidate).usable;
-        const mayImprove=candidate=>!candidate || (!preferred && !candidate.lyrics.instrumental && (candidate.lyrics.partial || !timed(candidate)));
+        const mayImprove=candidate=>!candidate || (!preferred&&needsTimingDiscovery(candidate,{measured:apis.some(api=>api.supportsVocalTiming===true)}));
         const better=chooseLyricCandidate;
         const aliases=await aliasTask,resolution=aliases.resolution;
         if(!verifiedContext)verifiedContext=contexts.catalog(request,aliases,acquisitionStartedAt);
         if(verifiedContext){contexts.save(verifiedContext);verifiedRouting.set(routeKey,true,{ttlMs:verifiedContext.expiresAtMS-contextNow()});}else diagnose('catalog','alias_evidence_missing');
+        if(typeof resolution?.explicit==='boolean')request.explicit=resolution.explicit;
         const {searches:resolvedSearches,genres,artist_entities,...proof}=resolution??{};
         // Only server-fetched catalog relationships may guide punctuation parsing.
         // This reuses the existing bounded lookup; client display strings cannot

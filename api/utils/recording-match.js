@@ -156,6 +156,7 @@ function equivalentLyrics(a,b) {
 }
 export function recordingScore(song, request) {
   if(request.recordingProvider==='spotify')return spotifyRecordingScore(song,request);
+  if(typeof song.explicit==='boolean'&&typeof request.explicit==='boolean'&&song.explicit!==request.explicit)return -1;
   const strict=sameRecordingNames(song,request);
   if (!strict && !metadataEquivalence(song,request)) return -1;
   if (request.album && song.album && JSON.stringify(version(`${request.title} ${request.album}`)) !== JSON.stringify(version(`${song.title} ${song.album}`))) return -1;
@@ -280,11 +281,12 @@ export function sameSpotifyRecordingNames(song,request) {
   const a=withGuests(parsed[0],left.guests),b=withGuests(requested,right.guests);
   return a!==null&&b!==null&&JSON.stringify(a)===JSON.stringify(b);
 }
+const explicitVersionMarker=/\bexplicit\b/iu;
 const spotifyVersionMarkers=[
   /\blive\b|演唱会|现场/iu,/\bremaster(?:ed)?\b|重制/iu,/\bdemo\b|概念版|小样/iu,
   /\bremix\b|混音/iu,/\binstrumental\b|纯音乐|器乐/iu,/\bkaraoke\b|伴奏/iu,
   /\bacoustic\b|不插电/iu,/\ba[ -]?cap(?:p)?ella\b|清唱/iu,/\bradio\s+edit\b/iu,
-  /\bedit\b|剪辑版/iu,/\bclean\b/iu,/\bexplicit\b/iu,/\bcover\b|翻唱/iu,/\breprise\b/iu
+  /\bedit\b|剪辑版/iu,/\bclean\b/iu,explicitVersionMarker,/\bcover\b|翻唱/iu,/\breprise\b/iu
 ];
 function spotifyAlbumVersionText(value='') {
   const album=chinese.sify(value??'').normalize('NFKC');
@@ -303,9 +305,19 @@ const spotifyVersions=song=>{
 };
 // Provider display labels may add translations, but they must never erase a
 // rendition or clean/explicit marker carried only in another structured field.
-export const sameRecordingVersions=(a,b)=>JSON.stringify(spotifyVersions(a))===JSON.stringify(spotifyVersions(b));
+export function sameRecordingVersions(a,b) {
+ const left=spotifyVersions(a),right=spotifyVersions(b),explicit=spotifyVersionMarkers.indexOf(explicitVersionMarker);
+ // Spotify carries this edition fact as a boolean, while providers may put it
+ // in the release label. A positive flag qualifies only that one marker.
+ // Unknown/clean requests and contradictory source flags remain mismatches.
+ if(left[explicit]!==right[explicit]) {
+  const marked=left[explicit]?a:b,unmarked=left[explicit]?b:a;
+  if(unmarked.explicit===true&&marked.explicit!==false)left[explicit]=right[explicit]=true;
+ }
+ return JSON.stringify(left)===JSON.stringify(right);
+}
 function spotifyFailure(song,request) {
-  if(JSON.stringify(spotifyVersions(song))!==JSON.stringify(spotifyVersions(request)))return 'version_conflict';
+  if(!sameRecordingVersions(song,request))return 'version_conflict';
   if(song.isrc&&request.isrc&&song.isrc!==request.isrc)return 'isrc_conflict';
   if(typeof song.explicit==='boolean'&&typeof request.explicit==='boolean'&&song.explicit!==request.explicit)return 'metadata_conflict';
   if(!Number.isFinite(song.duration)||song.duration<=0||!Number.isFinite(request.duration)||Math.abs(song.duration-request.duration)>3)return 'duration_conflict';

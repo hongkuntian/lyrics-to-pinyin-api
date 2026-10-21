@@ -1,0 +1,46 @@
+name: Measured timing coverage
+
+on:
+  workflow_dispatch:
+    inputs:
+      minimum_complete_rate:
+        description: Minimum complete measured coverage over the frozen eligible cohort
+        required: true
+        default: '0.99'
+      runs:
+        description: Repetitions of every request; every attempt counts
+        type: choice
+        options: ['1', '2', '3']
+        default: '1'
+
+permissions:
+  contents: read
+
+jobs:
+  live-provider-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Acquire and validate source-bound word timings
+        env:
+          MINIMUM_RATE: ${{ inputs.minimum_complete_rate }}
+          REPETITIONS: ${{ inputs.runs }}
+        run: >-
+          node scripts/benchmark-catalog-word-timing.mjs
+          --corpus docs/research/source-positive-word-timing-corpus.json
+          --runs "$REPETITIONS" --minimum-available-rate "$MINIMUM_RATE"
+          --out measured-timing-coverage.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: measured-timing-coverage-${{ github.sha }}
+          path: measured-timing-coverage.json
+          if-no-files-found: error

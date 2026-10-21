@@ -8,7 +8,8 @@ const signature=(a,b)=>a.catalog_id===b.catalog_id&&Number.isFinite(a.duration)&
  &&['title','artist','album'].every(key=>typeof a[key]==='string'&&typeof b[key]==='string'&&normalizeRecordingText(a[key])===normalizeRecordingText(b[key]));
 const valid=song=>typeof song.title==='string'&&typeof song.artist==='string'&&Number.isFinite(song.duration);
 const item=(song,storefront)=>({catalog_id:String(song.trackId),title:song.trackName,artist:song.artistName,album:song.collectionName,duration:song.trackTimeMillis/1000,
- storefront,genres:song.primaryGenreName?[song.primaryGenreName]:[],provenance:'itunes'});
+ storefront,genres:song.primaryGenreName?[song.primaryGenreName]:[],provenance:'itunes',
+ ...(['explicit','notExplicit','cleaned'].includes(song.trackExplicitness)?{explicit:song.trackExplicitness==='explicit'}:{})});
 // Seven territories, three simultaneous reads, one caller-owned deadline. This
 // registry covers native and international names without scanning every market.
 export const CATALOG_TERRITORIES=['us','hk','tw','cn','jp','kr'];
@@ -23,11 +24,16 @@ async function mapBounded(values,work,{deadline,signal}={}) {
  return results;
 }
 const key=song=>JSON.stringify([normalizeRecordingText(song.artist),normalizeRecordingText(song.title),normalizedAlbum(song.album??'')]);
-const searchFields=song=>({catalog_id:song.catalog_id,title:song.title,artist:song.artist,album:song.album,duration:song.duration,
+const searchFields=(song,explicit)=>({catalog_id:song.catalog_id,title:song.title,artist:song.artist,album:song.album,duration:song.duration,
+ ...(typeof explicit==='boolean'?{explicit}:{}),
  ...(song.artist_entities?.length?{artist_entities:song.artist_entities}:{})});
 function finish(request,songs,catalogID,method) {
  const priority=s=>{const index=CATALOG_TERRITORIES.indexOf(s.storefront);return index<0?99:index;};
  const ordered=[...songs].sort((a,b)=>priority(a)-priority(b)||key(a).localeCompare(key(b),'en'));
+ // A catalog item supplies edition evidence; the caller cannot assert it.
+ // Conflicting known territory ratings grant no explicit-sheet permission.
+ const ratings=[...new Set(ordered.map(s=>typeof s.explicit==='boolean'?s.explicit:s.content_rating==='explicit'?true:s.content_rating==='clean'?false:null).filter(v=>v!==null))];
+ const explicit=ratings.length===1?ratings[0]:undefined;
  const entities=[...new Map(ordered.flatMap(s=>s.artist_entities??[]).map(s=>[s.id+':'+s.name,s])).values()].slice(0,48);
  const expected=recordingNames(request,entities),artists=ordered.filter(s=>recordingNames(s,entities).credits.length===expected.credits.length);
  const complete=ordered.filter(s=>recordingNames(s,entities).credits.length===expected.credits.length);
@@ -38,14 +44,14 @@ function finish(request,songs,catalogID,method) {
  const localized=!ordered.some(s=>sameRecordingNames(s,request))
   ? complete.find(s=>recordingNames(s,entities).title===expected.title):null;
  const candidates=[...(localized?[localized]:[]),...complete,...complete.flatMap(s=>artists.map(a=>({...s,artist:a.artist})))];
- const seen=new Set(),searches=candidates.filter(s=>{const k=key(s);if(seen.has(k))return false;seen.add(k);return true;}).map(searchFields).slice(0,8);
+ const seen=new Set(),searches=candidates.filter(s=>{const k=key(s);if(seen.has(k))return false;seen.add(k);return true;}).map(s=>searchFields(s,explicit)).slice(0,8);
  const canonical=ordered.find(s=>s.storefront==='us')??ordered[0];
  const aliases=searches.filter(song=>key(song)!==key(request));
  const resolution={version:CATALOG_RESOLUTION_VERSION,method,requested:{catalog_id:request.catalog_id??null,storefront:request.storefront??null},
   canonical_recording_id:'apple:'+ordered.map(s=>s.catalog_id).sort((a,b)=>BigInt(a)<BigInt(b)?-1:BigInt(a)>BigInt(b)?1:0)[0],canonical_context:{title:canonical.title,artist:canonical.artist},
   accepted_request:{catalog_id:request.catalog_id??catalogID,artist:request.artist,title:request.title,album:request.album??null,duration:request.duration},
   catalog_items:[...new Map(ordered.map(s=>[s.storefront+':'+s.catalog_id,{catalog_id:s.catalog_id,storefront:s.storefront,provenance:s.provenance}])).values()],
-  isrc:ordered.find(s=>s.isrc)?.isrc??null,...(entities.length?{artist_entities:entities}:{}),genres:[...new Set(ordered.flatMap(s=>s.genres??[]))],searches};
+  isrc:ordered.find(s=>s.isrc)?.isrc??null,...(typeof explicit==='boolean'?{explicit}:{}),...(entities.length?{artist_entities:entities}:{}),genres:[...new Set(ordered.flatMap(s=>s.genres??[]))],searches};
  Object.defineProperty(aliases,'resolution',{value:resolution});return aliases;
 }
 export async function resolveCatalogAliases(request,context={}) {

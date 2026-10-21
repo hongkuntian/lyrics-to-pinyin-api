@@ -9,6 +9,20 @@ const vectors=JSON.parse(readFileSync(new URL('../fixtures/spotify-recording-vec
 const minimal=vectors.fixtures[0].recording;
 const request=(artists=['A & B'],extra={})=>({recordingProvider:'spotify',artist:artists.join(' & '),creditedArtistNames:artists,title:'Song',duration:240,...extra});
 const candidate=(extra={})=>({id:'source',artist:'A & B',title:'Song',duration:240,...extra});
+test('Spotify explicit catalog flag qualifies an explicit release marker without qualifying other editions',()=>{
+ const source=candidate({album:'Album (Explicit)'}),target=request(['A & B'],{album:'Album',explicit:true});
+ assert.ok(recordingScore(source,target)>=0);
+ for(const explicit of [false,undefined])assert.equal(recordingScore(source,{...target,explicit}),-1);
+ assert.equal(recordingScore({...source,explicit:false},target),-1);
+ for(const label of ['Clean','Live','Remix','2015 Remaster','Acoustic'])assert.equal(recordingScore({...source,album:`Album (${label})`},target),-1);
+ // Positive flags do not require an otherwise unlabelled provider to add a suffix.
+ assert.ok(recordingScore(candidate({album:'Album'}),target)>=0);
+});
+test('Apple known explicitness conflicts reject before ordinary source ranking',()=>{
+ const source={id:42,artist:'Test',title:'Synthetic',album:'Example',duration:120,explicit:true};
+ assert.equal(recordingScore(source,{...source,explicit:false}),-1);
+ assert.ok(recordingScore(source,{...source,explicit:true})>=0);
+});
 test('published V2 hashes and unchanged Apple request bytes match the frozen vectors',()=>{
   for(const f of vectors.fixtures) {
     const r=recordingRequest(f.recording);assert.deepEqual(r,f.recording);

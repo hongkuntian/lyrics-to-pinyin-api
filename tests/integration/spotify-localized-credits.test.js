@@ -62,6 +62,18 @@ test('provider localization cannot drop or invent a contributor or accept wrong 
   }
 });
 
+test('a provider-ID-bound Latin artist alias permits its unaccented catalog spelling only',async()=>{
+ const target={...spotifySearchRequest(recording),artist:'Rene Liu',creditedArtistNames:['Rene Liu'],title:'後來',album:'我等你',duration:341.4};
+ const song={id:254574,name:'后来',artists:[{id:8326,name:'刘若英'}],album:{name:'我等你'},duration:341400};
+ for(const [alias,accepted] of [['René Liu',true],['Other Singer',false],['Ренé Liu',false]]) {
+  const {api}=fixture({song,changeProfile:()=>({id:8326,name:'刘若英',alias:[alias]})});
+  if(accepted)assert.equal((await api.searchSong(target.artist,target.title,target)).id,song.id);
+  else await assert.rejects(()=>api.searchSong(target.artist,target.title,target),{code:'recording_mismatch'});
+ }
+ const {api}=fixture({song:{...song,name:'Café'},changeProfile:()=>({id:8326,name:'刘若英',alias:['René Liu']})});
+ await assert.rejects(()=>api.searchSong(target.artist,'Cafe',{...target,title:'Cafe'}),{code:'recording_mismatch'});
+});
+
 test('localized Spotify acquisition remains independent through fallback, durable document and wire binding',async()=>{
   const {api}=fixture();
   const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}},

@@ -37,6 +37,11 @@ test('artist aliases require the matching provider artist ID and actual independ
   assert.equal(n.calls.includes('/lyric/new'),false);
  }
 });
+test('Apple verified clean catalog evidence rejects a fresh explicitly marked NetEase source before words',async()=>{
+ const n=network({record:{...raw(),explicit:true}});
+ await assert.rejects(()=>new NeteaseAPI().getRecording('42',context({explicit:false,fetchFn:n.fetchFn})),{code:'recording_mismatch'});
+ assert.equal(n.calls.includes('/lyric/new'),false);
+});
 test('Spotify fresh ID keeps whole credited names and never drops a guest or splits band punctuation',async()=>{
  const spotify={artist:'Band & Name & Guest',title:request.title,album:request.album,duration:240,recordingProvider:'spotify',creditedArtistNames:['Band & Name','Guest'],isrc:'USABC2600001',explicit:false};
  const record={...raw(),ar:[{id:1,name:'Band & Name'},{id:2,name:'Guest'}],isrc:'USABC2600001',explicit:false};
