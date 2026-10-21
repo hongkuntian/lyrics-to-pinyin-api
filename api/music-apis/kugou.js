@@ -6,6 +6,7 @@ import {parseLRC} from '../utils/lrc.js';
 import {cleanLyrics} from '../utils/lyric-quality.js';
 import {decodeKRC,parseKRC} from '../utils/kugou-krc.js';
 import {sameRecordingNames,recordingScore,findRecording,RecordingMismatchError,normalizeRecordingText,searchTitle} from '../utils/recording-match.js';
+import {simplifyRecordingScript} from '../utils/recording-script.js';
 
 const origin='https://lyrics.kugou.com';
 const maxBytes=512*1024;
@@ -145,7 +146,7 @@ async function hydrateEquivalent(entries,context) {
 // download capabilities live only within this call and never reach a client.
 async function lyricCandidates(query,context={}) {
   if(typeof query!=='string'||!query.trim()||query.length>500)throw providerError();
-  const data=await requestJSON('/search',{ver:1,man:'yes',client:'pc',keyword:chinese.sify(query),
+  const data=await requestJSON('/search',{ver:1,man:'yes',client:'pc',keyword:simplifyRecordingScript(query),
     ...(Number.isFinite(context.duration)&&context.duration>0?{duration:Math.round(context.duration*1000)}:{})},context);
   if(!Array.isArray(data.candidates)||data.candidates.length>100)throw providerError();
   const records=new Map();
@@ -179,7 +180,7 @@ export class KugouAPI extends BaseMusicAPI {
     cancelled(context.signal);
     if(!Number.isFinite(context.duration) || context.duration<=0) return null;
     const request={...context,artist,title};
-    const data=await requestJSON('/search',{ver:1,man:'yes',client:'pc',keyword:chinese.sify(`${artist} - ${searchTitle(title)}`),duration:Math.round(context.duration*1000)},context);
+    const data=await requestJSON('/search',{ver:1,man:'yes',client:'pc',keyword:simplifyRecordingScript(`${artist} - ${searchTitle(title)}`),duration:Math.round(context.duration*1000)},context);
     if(!Array.isArray(data.candidates) || data.candidates.length>100) throw providerError();
     if(!data.candidates.length) return null;
     const records=new Map();

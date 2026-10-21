@@ -7,7 +7,7 @@ import {cleanLyrics} from '../utils/lyric-quality.js';
 import {hasCompleteMeasuredVocalTiming} from '../utils/lyric-selection.js';
 import {BoundedCache} from '../utils/bounded-cache.js';
 import {neteaseTitleEvidence,neteaseDescriptiveTitleMatches} from '../utils/netease-title-evidence.js';
-import chinese from 'chinese-conv';
+import {simplifyRecordingScript} from '../utils/recording-script.js';
 const performerIDs=raw=>Array.isArray(raw?.artists)&&raw.artists.length>0&&raw.artists.length<=3
  &&raw.artists.every(p=>/^[1-9]\d{0,19}$/.test(String(p.id)))
  ?JSON.stringify(raw.artists.map(p=>String(p.id)).sort()):null;
@@ -92,7 +92,7 @@ export class NeteaseAPI extends BaseMusicAPI {
       return null;
     };
     for(const limit of [30,100]) {
-      const data=await fetchJSON(`${this.baseURL}/search?limit=${limit}&keywords=${encodeURIComponent(chinese.sify(`${artist} ${searchTitle(title)}`))}`,context);
+      const data=await fetchJSON(`${this.baseURL}/search?limit=${limit}&keywords=${encodeURIComponent(simplifyRecordingScript(`${artist} ${searchTitle(title)}`))}`,context);
       if(data.code!==200) throw new Error('NetEase search unavailable');
       for(const raw of data.result?.songs || []) if(!records.has(raw.id)) {
         const song={id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease',...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),...(context.recordingProvider==='spotify'?{creditedArtistNames:raw.artists?.map(x=>x.name),...(raw.isrc?{isrc:raw.isrc}:{})}:{})};

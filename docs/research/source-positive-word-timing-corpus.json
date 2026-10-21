@@ -3158,6 +3158,61 @@
         },
         "metadataOnly": true
       }
+    },
+    {
+      "caseID": "apple-mei-na-simple",
+      "platform": "apple",
+      "pairID": "mei-na-simple",
+      "request": {
+        "catalog_id": "540287928",
+        "storefront": "tw",
+        "artist": "黃小琥",
+        "title": "沒那麼簡單",
+        "album": "簡單不簡單",
+        "duration": 310.133
+      },
+      "availabilityEvidence": {
+        "fromCaseID": "spotify-4xZIMRwaaBx7CZMmM6KLuh",
+        "artifact": "mei-na-word-timing-20261021/candidate-handler.json",
+        "source": {
+          "provider": "QQMusicAPI",
+          "itemID": "649069",
+          "timing": "qq:649069:qrc"
+        },
+        "metadataOnly": true
+      }
+    },
+    {
+      "caseID": "spotify-4xZIMRwaaBx7CZMmM6KLuh",
+      "platform": "spotify",
+      "pairID": "mei-na-simple",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "4xZIMRwaaBx7CZMmM6KLuh",
+          "market": "US",
+          "metadata": {
+            "origin": "spotify",
+            "title": "沒那麽簡單",
+            "artists": [
+              "黃小琥"
+            ],
+            "album": "簡單不簡單",
+            "duration_ms": 310133
+          }
+        }
+      },
+      "availabilityEvidence": {
+        "fromCaseID": "spotify-4xZIMRwaaBx7CZMmM6KLuh",
+        "artifact": "mei-na-word-timing-20261021/candidate-handler.json",
+        "source": {
+          "provider": "QQMusicAPI",
+          "itemID": "649069",
+          "timing": "qq:649069:qrc"
+        },
+        "metadataOnly": true
+      }
     }
   ]
 }

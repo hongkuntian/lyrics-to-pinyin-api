@@ -59,7 +59,7 @@ node scripts/benchmark-catalog-word-timing.mjs \
 source tree; mode order alternates. `--runs 2` repeats every request without
 best-of-retry scoring. The optional case concurrency is bounded at two.
 
-The original corpus contains 15 Apple and 11 Spotify requests, including the
+The original corpus contains 16 Apple and 12 Spotify requests, including the
 reported recordings. The larger country corpus freezes the first ten chart
 placements in GB, FR, DE, BR, MX, IN, JP, KR, TW and HK from Apple's
 [Music Marketing Tools feeds](https://rss.marketingtools.apple.com/), using
@@ -69,7 +69,7 @@ six unresolved pairings stay visible. Verified Apple catalog localizations and
 four provider artist-profile bindings qualify additional catalog-name matches.
 These are metadata relationships, not acoustic equivalence proof.
 
-The availability-qualified corpus freezes 107 requests: every chart pair with a
+The availability-qualified corpus freezes 109 requests: every chart pair with a
 measured source found during screening, including failed counterparts, plus all
 source-positive original cases. Availability evidence is never passed as a
 source-ID hint to acquisition. Failed eligible requests remain in the coverage
@@ -97,3 +97,27 @@ require 100% and select up to three repetitions. Every attempt counts. The
 workflow has no schedule or app-account credentials, and stays separate from
 hermetic CI. The CLI accepts the same gate with
 `--minimum-available-rate 0.99`; failed gates retain their report and exit nonzero.
+
+## Dictionary script variants
+
+The exact Spotify report `4xZIMRwaaBx7CZMmM6KLuh` supplies “沒那麽簡單”
+on 簡單不簡單, duration 310133 ms. The old character converter left `麽`
+unchanged while sources used `么/麼`, rejecting otherwise matching metadata.
+The native display converter could already show the ordinary simplified title,
+which hid the metadata difference from the visible reader.
+
+Recording comparisons and provider discovery queries now share generic OpenCC
+traditional-to-simplified conversion after the historical normalization. It
+covers dictionary variants such as `麽`, `羣`, `牀`, `祕` and `峯`; regional
+vocabulary conversion, transliteration and fuzzy titles are not enabled. Extra
+Chinese variant recovery does not apply to names containing Japanese kana or
+Korean Hangul. Artist credits, editions, ISRC conflicts and duration still qualify
+every source independently. Raw request hashes, source words, cue positions,
+timing revisions and published negative lyric fingerprint recipes stay intact.
+The acquisition policy version changes so old readable responses and ID hints
+do not suppress this discovery path.
+
+The exact reported Spotify recording and public Apple counterpart `540287928`
+are retained in both regression and availability-qualified corpora. Their
+availability evidence routes no provider ID into ordinary acquisition. The
+separate shorter 248910 ms Spotify release is not substituted.

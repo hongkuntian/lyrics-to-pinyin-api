@@ -5,6 +5,7 @@ import {findRecording,findLyricsRecording,searchTitle,sameRecordingNames,recordi
 import chinese from 'chinese-conv';
 import {cleanLyrics,hasUsableLyrics} from '../utils/lyric-quality.js';
 import {isRejectedLyrics,isRejectedRecordingLyrics} from '../utils/rejected-lyrics.js';
+import {simplifyRecordingScript} from '../utils/recording-script.js';
 export class LRCAPI extends BaseMusicAPI {
   constructor({rejectLyrics=isRejectedLyrics,rejectRecordingLyrics=isRejectedRecordingLyrics}={}) { super('LRCAPI',['zh','yue','en','ja','ko','ru']); this.baseURL='https://lrclib.net/api'; this.rejectLyrics=rejectLyrics; this.rejectRecordingLyrics=rejectRecordingLyrics; this.languageAgnosticDiscovery=true; }
   // Search accepts Unicode metadata independently of reading-aid coverage.
@@ -36,7 +37,7 @@ export class LRCAPI extends BaseMusicAPI {
     const direct=attempt();if(direct) return direct;
     // Discovery may be broad; acceptance still requires verified recording
     // names and duration. LRCLIB search is script-sensitive.
-    const base=searchTitle(title), variants=/\p{Script=Han}/u.test(base) ? [...new Set([chinese.sify(base),chinese.tify(base)])]:[base];
+    const base=searchTitle(title),simple=simplifyRecordingScript(base), variants=/\p{Script=Han}/u.test(base) ? [...new Set([simple,chinese.tify(simple)])]:[base];
     const results=await Promise.allSettled(variants.map(track_name=>search({track_name})));
     for(const result of results) if(result.status==='rejected') failure=result.reason;
     const broad=attempt();if(broad) return broad;

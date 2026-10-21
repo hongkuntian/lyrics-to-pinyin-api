@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
-import {normalizeRecordingText} from './recording-match.js';
+import chinese from 'chinese-conv';
 
 const require=createRequire(import.meta.url);
 const {recordings,catalogRecordings=[],spotifyRecordings=[]}=require('../data/rejected-lyrics.json');
@@ -10,7 +10,10 @@ const spotifyKeys=new Map(spotifyRecordings.flatMap(record=>record.itemIDs.map(i
 // Match words independently of timestamps, wrapping, punctuation, and Chinese
 // script. Metadata alone cannot identify a mislabeled language version.
 export function lyricsFingerprint(lines) {
-  return createHash('sha256').update(normalizeRecordingText(lines.map(line=>line.text || '').join(''))).digest('hex');
+  // Published negative reviews use this historical digest recipe. Catalogue
+  // spelling recovery must never silently change those existing exclusions.
+  const text=chinese.sify(lines.map(line=>line.text || '').join('')).normalize('NFKC').toLowerCase().replace(/[\p{P}\p{Z}\s]/gu,'');
+  return createHash('sha256').update(text).digest('hex');
 }
 export function isRejectedLyrics(provider,id,lines,records=recordings) {
   const matches=records.filter(record=>record.provider===provider && record.id===String(id));

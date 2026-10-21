@@ -3,6 +3,7 @@ import {createRequire} from 'node:module';
 import {cleanLyrics} from './lyric-quality.js';
 import {neteaseDescriptiveTitleMatches} from './netease-title-evidence.js';
 import {validTimingTimestamp,sourceDurationResolution} from './vocal-timing.js';
+import {simplifyRecordingScript} from './recording-script.js';
 const require=createRequire(import.meta.url);
 const {artists:reviewedArtists}=require('../data/lyric-performers.json');
 const escapePattern=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -27,7 +28,7 @@ function splitCredits(value,entityNames=[]) {
   credits.push(text.slice(start));return credits;
 }
 export function normalizeRecordingText(value = '') {
-  return chinese.sify(value).normalize('NFKC').toLowerCase().replace(/[\p{P}\p{Z}\s]/gu,'');
+  return simplifyRecordingScript(value).toLowerCase().replace(/[\p{P}\p{Z}\s]/gu,'');
 }
 export class RecordingMismatchError extends Error {
   constructor(reason='recording_mismatch') { super('No unambiguous matching recording found'); this.code='recording_mismatch'; this.reason=reason; }

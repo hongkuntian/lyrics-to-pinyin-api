@@ -5,6 +5,7 @@ import {parseLRC} from '../utils/lrc.js';
 import {decryptQRC} from '../utils/vendor/qq-qrc-codec.js';
 import {parseQRC,qrcBody} from '../utils/qq-qrc.js';
 import {sameRecordingNames,sameRecordingVersions,recordingNames,normalizeRecordingText,normalizedAlbum,stripTitleDescription,recordingScore,findRecording,RecordingMismatchError,searchTitle} from '../utils/recording-match.js';
+import {simplifyRecordingScript} from '../utils/recording-script.js';
 
 const maxBytes=512*1024,legacyOrigin='https://c.y.qq.com',musicuOrigin='https://u.y.qq.com';
 const comm={ct:24,cv:4747474,format:'json',inCharset:'utf-8',outCharset:'utf-8',notice:0,platform:'yqq.json',needNewCode:1,g_tk:5381,chid:'0'};
@@ -247,7 +248,7 @@ async function discover(query,context) {
  if(!scalar(query,1000))throw providerError();const url=new URL('/soso/fcgi-bin/client_search_cp',legacyOrigin);
  // This legacy route returns an empty success for n=100; its verified page
  // size is 30. Keep every returned best candidate inside the bounded page.
- for(const [key,value] of Object.entries({w:query,format:'json',n:30,p:1}))url.searchParams.set(key,value);
+ for(const [key,value] of Object.entries({w:simplifyRecordingScript(query,{preserveOtherCJK:true}),format:'json',n:30,p:1}))url.searchParams.set(key,value);
  const data=await requestJSON(url,undefined,context),rows=data.data?.song?.list;
  if(!Array.isArray(rows)||rows.length>100)throw providerError();const songs=new Map();
  for(const row of rows){const song=metadata(row);if(!song)continue;const old=songs.get(song.id);if(old&&JSON.stringify(old)!==JSON.stringify(song))throw mismatch();songs.set(song.id,song);}
@@ -255,7 +256,7 @@ async function discover(query,context) {
 }
 async function fastDiscover(query,request,context,records,responses,state) {
  const url=new URL('/splcloud/fcgi-bin/smartbox_new.fcg',legacyOrigin);
- for(const [key,value] of Object.entries({format:'json',is_xml:0,key:query}))url.searchParams.set(key,value);
+ for(const [key,value] of Object.entries({format:'json',is_xml:0,key:simplifyRecordingScript(query,{preserveOtherCJK:true})}))url.searchParams.set(key,value);
  const data=await requestJSON(url,undefined,context),group=data.data?.song;
  if(!object(group)||!Number.isSafeInteger(group.count)||!Array.isArray(group.itemlist)
   ||group.count!==group.itemlist.length||group.count>10)throw providerError();
