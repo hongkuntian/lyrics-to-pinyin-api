@@ -5,10 +5,9 @@ import {createWriteStream} from 'node:fs';
 import {pipeline} from 'node:stream/promises';
 import {createRequire} from 'node:module';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {execFile} from 'node:child_process';
-import {promisify} from 'node:util';
+import {runBuildPreflight} from './build-preflight.mjs';
 const require=createRequire(import.meta.url),u=require('@vercel/build-utils'),{build}=require('@vercel/node');
-const execute=promisify(execFile),root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export const manifest=JSON.parse(await fs.readFile(new URL('./vercel-functions.json',import.meta.url),'utf8'));
 // Runtime bundles need dependency/module identity, never package lifecycle hooks.
 // The outer explicit static carrier owns the one and only packaging invocation.
@@ -20,7 +19,7 @@ export const notFoundPath='/_lyrica-not-found.json';
 export function deploymentRoutes(routes){return [...routes,{src:'/.*',dest:notFoundPath,status:404}];}
 export async function packageFunctions({workPath=root,output=path.join(workPath,'.vercel/output'),preflight=true}={}){
  if(process.versions.node.split('.')[0]!=='24')throw new Error('node24_required');
- if(preflight)await execute(process.execPath,[path.join(workPath,'scripts/vercel-library-build.js')],{cwd:workPath});
+ if(preflight)await runBuildPreflight({args:[path.join(workPath,'scripts/vercel-library-build.js')],cwd:workPath});
  await fs.mkdir(path.join(workPath,'.vercel'),{recursive:true});
  const stage=await fs.mkdtemp(path.join(workPath,'.vercel','build-stage-'));
  try{
