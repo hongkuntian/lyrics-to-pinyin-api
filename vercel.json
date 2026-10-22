@@ -6,6 +6,8 @@
       "use": "@vercel/static-build"
     }
   ],
-  "buildCommand": "node scripts/build-output.mjs",
+  "git": {"deploymentEnabled": false},
+  "installCommand": "npm ci --ignore-scripts",
+  "buildCommand": "node evaluation/language-expansion/probe-transport.mjs",
   "outputDirectory": ".vercel/output"
 }
