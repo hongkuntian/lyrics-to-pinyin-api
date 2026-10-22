@@ -162,3 +162,22 @@ test('Apple Sunny Day localization completes a whitespace-padded QRC without exh
   [['Alpha ',10,10.5],['beta',10.6,11.1]],[['Gamma ',30,30.5],['delta',30.6,31.1]]
  ]);
 });
+
+test('Zhang Yuan exact-source QRC with literal ampersands reaches the final measured response',async()=>{
+ const request={artist:'张远',title:'看着我的眼睛说',album:'看着我的眼睛说 - Single',duration:260.794,catalog_id:'1815583986',storefront:'cn'};
+ const song={...request,id:571093214,album:'看着我的眼睛说',duration:260,source:'qq'};
+ const lyrics=parseQRC('<QrcInfos><LyricInfo LyricCount="1"><Lyric_1 LyricType="1" LyricContent="[10000,2000]A&B (10000,500)sing (10600,500)&#10;[30000,2000]C&D (30000,500)reply (30600,500)"/></LyricInfo></QrcInfos>',{songId:song.id,duration:song.duration,durationResolution:1});
+ const api={name:'QQMusicAPI',supportsVocalTiming:true,searchSong:async()=>song,getLyrics:async()=>lyrics};
+ const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],speculativeDiscovery:false,
+  resolveCatalogAliasesFn:async()=>[],lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,
+  lookupOfficialTranscriptionFn:async()=>null,getDefaultRomanizationSystemFn:()=> 'none',logger:{info(){},error(){}}});
+ const res=createMockRes();
+ await service({method:'POST',body:{...request,options:{lyric_sources_version:2}}},res);
+ assert.equal(res.statusCode,200);
+ assert.equal(res.body.metadata.lyric_timing.source,'qq:571093214:qrc');
+ assert.equal(res.body.metadata.lyric_timing.recordingID,request.catalog_id);
+ assert.deepEqual(res.body.lines.map(l=>l.original),['A&B sing','C&D reply']);
+ assert.deepEqual(res.body.lines.map(l=>l.vocalTiming.segments.map(s=>[s.text,s.start,s.end])),[
+  [['A&B ',10,10.5],['sing',10.6,11.1]],[['C&D ',30,30.5],['reply',30.6,31.1]]
+ ]);
+});

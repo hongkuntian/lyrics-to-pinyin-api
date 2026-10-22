@@ -65,8 +65,22 @@ test('XML envelope decodes standard/numeric entities and rejects ambiguous struc
  const r=xml('[0,1000]A(0,500)').replace('A(0,500)','&#65;&#x1F600;&amp;(0,500)');
  assert.equal(parseQRC(r,{songId:123}).lines[0].text,'A😀&');
  const base=xml('[0,1000]A(0,500)');
- for(const raw of [base.replace('LyricCount="1"','LyricCount="2"'),base.replace('LyricType="1"','LyricType="2"'),base.replace('LyricType="1"','LyricType="1" LyricType="1"'),base.replace('</LyricInfo>','<Lyric_2/></LyricInfo>'),base.replace('A(0,500)','A&unknown;(0,500)'),base.replace('A(0,500)','&#xD800;(0,500)'),base.replace('A(0,500)','&#0;(0,500)'),base.replace('A(0,500)','A&(0,500)'),base.replace('<QrcInfos>','<!DOCTYPE a SYSTEM "https://example.invalid/x"><QrcInfos>'),base+'extra'])assert.equal(parseQRC(raw,{songId:123}),null);
+ for(const raw of [base.replace('LyricCount="1"','LyricCount="2"'),base.replace('LyricType="1"','LyricType="2"'),base.replace('LyricType="1"','LyricType="1" LyricType="1"'),base.replace('</LyricInfo>','<Lyric_2/></LyricInfo>'),base.replace('A(0,500)','A&unknown;(0,500)'),base.replace('A(0,500)','&#xD800;(0,500)'),base.replace('A(0,500)','&#0;(0,500)'),base.replace('<QrcInfos>','<!DOCTYPE a SYSTEM "https://example.invalid/x"><QrcInfos>'),base+'extra'])assert.equal(parseQRC(raw,{songId:123}),null);
  assert.equal(qrcBody('[0,1000]A(0,500)'),null);
+});
+test('literal ampersands in QQ lyric content preserve text and measured cues without enabling entities or markup',()=>{
+ const raw=xml('[1000,1000]A&B & C(1100,500)').replace('A&amp;B &amp; C','A&B & C');
+ const result=parseQRC(raw,{songId:571093214,duration:260,durationResolution:1});
+ assert.equal(result.lines[0].text,'A&B & C');
+ assert.deepEqual(result.lines[0].vocalTiming.segments,[{utf16Start:0,utf16Length:7,text:'A&B & C',start:1.1,end:1.6}]);
+ assert.deepEqual(result,parseQRC(xml('[1000,1000]A&B & C(1100,500)'),{songId:571093214,duration:260,durationResolution:1}));
+ const mixed=raw.replace('A&B & C','A&B &amp; C');
+ assert.equal(parseQRC(mixed,{songId:123}).lines[0].text,'A&B & C');
+ for(const text of ['A&unknown;','A&#xZZ;','A&#99999999;','A&#xD800;','A&thisEntityNameIsTooLong;','A&<tag>','A\" duplicate=\"value']) {
+  assert.equal(parseQRC(raw.replace('A&B & C',text),{songId:123}),null,text);
+ }
+ assert.equal(parseQRC(raw.replace('SaveTime="1"','SaveTime="1&"'),{songId:123}),null);
+ assert.equal(parseQRC(raw.replace('version="1.0"','version="1.0&"'),{songId:123}),null);
 });
 test('invalid headers, Unicode, IDs, durations and source ordering fail closed',()=>{
  for(const body of ['[0,0]A(0,1)','[9999999999999999,1000]A(0,500)','[0,10001]A(0,500)','[1000,1000]A(1000,500)\n[0,1000]B(0,500)','[0,1000]\ud800(0,500)','[0,1000]A\u0000(0,500)'])assert.equal(parse(body),null);
