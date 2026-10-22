@@ -4,7 +4,7 @@
     "deploymentEnabled": false
   },
   "installCommand": "node --version",
-  "buildCommand": "node evaluation/language-expansion/policy-observation.mjs",
+  "buildCommand": "node evaluation/language-expansion/model-access-observation.mjs",
   "outputDirectory": ".vercel/output",
   "framework": null
 }
