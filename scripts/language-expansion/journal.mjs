@@ -1,4 +1,8 @@
 import fs from 'node:fs/promises';
+import {isModelPlan,bindModel,assertPartitionOrder,assertPartitionSet,validateModelResult} from './model-plans.mjs';
+import {assertProfiles} from './model-family.mjs';
+import {validateObservation} from './http-observation.mjs';
+import {BASELINE_MODE, bindBaseline} from './baseline.mjs';
 import path from 'node:path';
 import {SCHEMA, hash, fail, integer, save, readJSON, recoverPayload} from './common.mjs';
 import {CEILING, CONFIRMATION_RESERVE, validatePlan, shard, bindDependent} from './plan.mjs';
@@ -24,17 +28,20 @@ const events = {
 };
 const common = ['schema', 'event', 'planHash', 'shardHash', 'caseID', 'bodyHash', 'definitionHash', 'reservedMicros', 'transport'];
 export function validateEvent(event, manifests) {
+  return validateEventIndexed(event,manifests,new Map(manifests.map(m=>[hash(m),m])));
+}
+function validateEventIndexed(event,manifests,manifestIndex) {
   if (event.event === 'language_expansion_terminal') {
     if (event.schema !== SCHEMA || Object.keys(event).sort().join() !== 'event,intentionalBuildFailure,operation,planHash,schema,shardHash,state' ||
         event.intentionalBuildFailure !== true || !['standard', 'submit', 'inspect', 'recover', 'retrieve'].includes(event.operation) ||
         !['evaluation_only_complete', 'evaluation_only_interrupted'].includes(event.state) ||
-        !manifests.some(m => hash(m) === event.shardHash && m.planHash === event.planHash)) fail('invalid_terminal_event');
+        (!manifestIndex.has(event.shardHash)||manifestIndex.get(event.shardHash).planHash !== event.planHash)) fail('invalid_terminal_event');
     return;
   }
   if (!events[event.event] || event.schema !== SCHEMA || Object.keys(event).some(k => ![...common, ...events[event.event]].includes(k)) ||
       Buffer.byteLength(JSON.stringify(event)) > 16_384) fail('invalid_journal_event');
-  const manifest = manifests.find(m => hash(m) === event.shardHash && m.planHash === event.planHash);
-  if (!manifest || event.transport !== manifest.transport) fail('unknown_event_shard');
+  const manifest = manifestIndex.get(event.shardHash);
+  if (!manifest || event.planHash!==manifest.planHash || event.transport !== manifest.transport) fail('unknown_event_shard');
   const job = manifest.jobs.find(j => j.id === event.caseID);
   if (!job || job.bodyHash !== event.bodyHash || job.definitionHash !== event.definitionHash || job.reservedMicros !== event.reservedMicros) fail('unknown_event_case_or_body');
   if (event.event === 'language_expansion_admitted' && !/^[A-Za-z0-9_-]{1,120}$/.test(event.executionID ?? '')) fail('invalid_execution_identity');
@@ -111,11 +118,16 @@ export async function snapshot(directory, {incoming = [], replayRoot} = {}) {
   const root = await readJSON(path.join(directory, 'root.json'));
   if (root.schema !== SCHEMA || root.ceilingMicros !== CEILING || ![root.priorMicros, root.unknownHeldMicros].every(integer)) fail('invalid_external_journal');
   const plans = await records(directory, 'plans'), manifests = await records(directory, 'shards'), rows = await entries(directory);
+  // Immutable identity indexes are rebuilt from verified frozen files on every
+  // replay. No cached state/results and no skipped reducer/validation work.
+  const planIndex=new Map(plans.map(p=>[hash(p),p])),manifestIndex=new Map(manifests.map(m=>[hash(m),m]));
   const inherited = await recipeTransitionState(directory, plans, rows, {replayRoot}) ?? await handoverState(directory, plans, rows, {replayRoot});
   assertCommonCases(plans);
+  assertPartitionSet(plans);
   for (const plan of plans) if (!inherited?.record.legacyPlanHashes.includes(hash(plan))) await validatePlan(plan, hash(plan));
   const jobs = new Map(), confirmations = new Set();
   for (const plan of plans) {
+    if(!isModelPlan(plan)&&plan.jobs.some(j=>j.templateOnly))fail('named_only_mode_required');
     for (const name of plan.confirmationNames) confirmations.add(name);
     for (const job of plan.jobs) {
       if (jobs.has(job.id) && hash(jobs.get(job.id)) !== hash(job)) fail('case_spec_changed');
@@ -138,16 +150,16 @@ export async function snapshot(directory, {incoming = [], replayRoot} = {}) {
     try {
       if (inherited?.record.legacyPlanHashes.includes(value.planHash) || (value.event === 'language_expansion_start' && inherited?.record.legacyShardHashes.includes(value.shardHash))) fail('legacy_executor_prefix_sealed');
       if (value.event === 'language_expansion_start') {
-        const manifest = manifests.find(m => hash(m) === value.shardHash);
+        const manifest = manifestIndex.get(value.shardHash);
         if (!manifest || !value.executionID || Object.keys(value).sort().join() !== 'event,executionID,schema,shardHash' || value.schema !== SCHEMA || result.events.some(e => e.event === value.event && e.shardHash === value.shardHash)) fail('invalid_or_duplicate_start');
         const admissions = result.events.filter(e => e.event === 'language_expansion_admitted' && e.shardHash === value.shardHash);
         if (admissions.length !== manifest.jobs.length || admissions.some(e => e.executionID !== value.executionID)) fail('unadmitted_start');
         result.events.push(value); continue;
       }
-      validateEvent(value, manifests);
+      validateEventIndexed(value,manifests,manifestIndex);
       if (value.event === 'language_expansion_terminal') { result.events.push(value); continue; }
       if (value.event === 'language_expansion_admitted') {
-        if (result.retiredJobs?.[value.caseID] || manifests.find(m=>hash(m)===value.shardHash)?.jobs.some(j=>result.retiredJobs?.[j.confirmationOf])) fail('retired_case_cannot_reactivate');
+        if (result.retiredJobs?.[value.caseID] || manifestIndex.get(value.shardHash)?.jobs.some(j=>result.retiredJobs?.[j.confirmationOf])) fail('retired_case_cannot_reactivate');
         if (result.states[value.caseID]) fail('duplicate_case_admission');
         result.states[value.caseID] = {state: 'unknown', ...value};
         if (value.transport === 'batch') result.shardStates[value.shardHash] = {state: 'unresolved'};
@@ -157,8 +169,8 @@ export async function snapshot(directory, {incoming = [], replayRoot} = {}) {
         if (!result.events.some(e => e.event === 'language_expansion_start' && e.shardHash === value.shardHash)) fail('unstarted_event');
         if (value.event === 'language_expansion_control' && value.transport === 'batch') {
           const controls = result.events.filter(e => e.event === value.event && e.shardHash === value.shardHash);
-          if (value.inputHash !== hash(batchInput(manifests.find(m => hash(m) === value.shardHash)))) fail('batch_identity_changed');
-          const manifest = manifests.find(m => hash(m) === value.shardHash);
+          if (value.inputHash !== hash(batchInput(manifestIndex.get(value.shardHash)))) fail('batch_identity_changed');
+          const manifest = manifestIndex.get(value.shardHash);
           const pinned = controls.find(e => e.operation === 'inspect' && e.state === 'known' && terminalBatch(e.status));
           if (pinned && value.status && terminalBatch(value.status) && hash(terminalIdentity(manifest, pinned)) !== hash(terminalIdentity(manifest, value))) fail('batch_identity_changed');
           const prior = controls.findLast(e => e.batchID);
@@ -170,16 +182,19 @@ export async function snapshot(directory, {incoming = [], replayRoot} = {}) {
         if (value.event === 'language_expansion_complete') {
           if (result.results[value.caseID]) fail('duplicate_completion');
           const output = recoverPayload([...result.events, value], value);
-          const manifest = manifests.find(m => hash(m) === value.shardHash), job = manifest.jobs.find(j => j.id === value.caseID);
-          const source = plans.find(p => hash(p) === manifest.planHash).sources.find(s => s.id === job.source);
+          const manifest = manifestIndex.get(value.shardHash), job = manifest.jobs.find(j => j.id === value.caseID);
+          const source = planIndex.get(manifest.planHash).sources.find(s => s.id === job.source);
           if (output.id !== value.caseID || output.bodyHash !== value.bodyHash || output.definitionHash !== job.definitionHash || output.sourceDefinitionHash !== job.sourceDefinitionHash ||
               hash(output.sourceBindings) !== hash(source.bindings) || hash(output.selection) !== hash(job.selection ?? source.selection) || hash(output.qualification) !== hash(job.qualification) || typeof output.valid !== 'boolean' ||
               !(output.actualMicros === null || integer(output.actualMicros)) || output.accountedMicros !== (output.actualMicros ?? value.reservedMicros)) fail('invalid_result_accounting');
+          const owner=planIndex.get(manifest.planHash);
+          if(isModelPlan(owner)||owner.mode===BASELINE_MODE)validateModelResult(owner,job,output,manifest.transport);
+          if(output.httpObservation)validateObservation(output.httpObservation,job.bodyHash);
           result.results[value.caseID] = output;
           result.states[value.caseID].state = output.actualMicros === null ? 'unknown_cost' : output.actualMicros > value.reservedMicros ? 'cost_overrun' : 'settled';
         }
         if (['language_expansion_file_scan', 'language_expansion_scan'].includes(value.event)) {
-          const manifest = manifests.find(m => hash(m) === value.shardHash);
+          const manifest = manifestIndex.get(value.shardHash);
           const prior = result.events.filter(e => e.shardHash === value.shardHash);
           const terminal = prior.findLast(e => e.event === 'language_expansion_control' && e.operation === 'inspect' && e.state === 'known');
           if (!terminal || value.identityHash !== hash(terminalIdentity(manifest, terminal))) fail('batch_identity_changed');
@@ -198,13 +213,13 @@ export async function snapshot(directory, {incoming = [], replayRoot} = {}) {
           if (result.shardStates[value.shardHash]?.state !== 'reconciled') result.shardStates[value.shardHash] = {state: 'unresolved', batchID: value.batchID ?? null};
         }
         if (value.event === 'language_expansion_reconciled') {
-          const manifest = manifests.find(m => hash(m) === value.shardHash);
+          const manifest = manifestIndex.get(value.shardHash);
           const controls = result.events.filter(e => e.shardHash === value.shardHash && e.event === 'language_expansion_control');
           const terminal = controls.findLast(e => e.operation === 'inspect' && e.state === 'known');
           if (!terminal || !terminalBatch(terminal.status)) fail('terminal_batch_identity_required');
           const files = result.events.filter(e => e.shardHash === value.shardHash && e.event === 'language_expansion_file_scan');
           const scans = result.events.filter(e => e.shardHash === value.shardHash && e.event === 'language_expansion_scan');
-          const plan = plans.find(p => hash(p) === manifest.planHash);
+          const plan = planIndex.get(manifest.planHash);
           const expected = {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_reconciled', ...reconciliationFor(manifest, terminal, files, result.results, scans, plan)};
           if (hash(expected) !== hash(value)) fail('batch_reconciliation_changed');
           result.shardStates[value.shardHash] = {state: 'reconciled', ...value};
@@ -215,15 +230,15 @@ export async function snapshot(directory, {incoming = [], replayRoot} = {}) {
   }
   const confirmationJobs = new Map();
   for (const manifest of manifests) {
-    const plan = plans.find(p => hash(p) === manifest.planHash);
+    const plan = planIndex.get(manifest.planHash);
     if (!plan || (!inherited?.record.legacyShardHashes.includes(hash(manifest)) && hash(shard(plan, manifest.jobs.map(j => j.id), result.results, manifest.transport)) !== hash(manifest))) fail('unregistered_or_changed_shard');
     for (const job of manifest.jobs.filter(j => j.confirmationName)) {
       if (confirmationJobs.has(job.confirmationName)) fail('duplicate_confirmation_name');
       confirmationJobs.set(job.confirmationName, job);
     }
   }
-  for (const plan of plans.filter(p=>!inherited?.record.legacyPlanHashes.includes(hash(p)))) for (const job of plan.jobs.filter(j => j.kind === 'translated' && result.results[j.dependency])) {
-    try { bindDependent(plan, job, result.results[job.dependency]); }
+  for (const plan of plans.filter(p=>!inherited?.record.legacyPlanHashes.includes(hash(p)))) for (const job of plan.jobs.filter(j => (j.kind === 'translated' || ((plan.mode === BASELINE_MODE || isModelPlan(plan)) && j.dependency)) && result.results[j.dependency])) {
+    try { (isModelPlan(plan) ? bindModel : plan.mode === BASELINE_MODE ? bindBaseline : bindDependent)(plan, job, result.results[job.dependency]); }
     catch (e) { result.dependentFailures[job.id] = e.message; }
   }
   for (const p of plans.filter(p=>!inherited?.record.legacyPlanHashes.includes(hash(p)))) validateRecipeParents(p,result);
@@ -244,21 +259,15 @@ export async function registerPlan(directory, plan, approvedHash) {
     if (current.budgetExceeded) fail('evaluation_budget_exceeded');
     if (current.plans.some(p => hash(p) === approvedHash)) return;
     assertCommonCases([...current.plans,plan], 'case_spec_changed');
+    assertProfiles([...current.plans,plan],current,true);
+    assertPartitionOrder(current.plans,plan);
     validateRecipeParents(plan,current);
     if (plan.jobs.some(j=>current.retiredJobs?.[j.id])) fail('retired_case_cannot_reactivate');
-    // Validate proposed union before writing any maintained registration.
-    const unique = new Map(current.plans.flatMap(p => p.jobs).map(j => [j.id, j]));
-    for (const job of plan.jobs) {
-      if (unique.has(job.id) && hash(unique.get(job.id)) !== hash(job)) fail('case_spec_changed');
-      unique.set(job.id, job);
-    }
-    const names = new Set([...current.plans.flatMap(p => p.confirmationNames), ...plan.confirmationNames]);
-    const total = transitionLedger(current,[...current.plans,plan],current.retiredJobs??{});
-    if (names.size > 60 || total > CEILING) fail('evaluation_budget_exceeded');
+    if (transitionLedger(current,[...current.plans,plan],current.retiredJobs??{})>CEILING) fail('evaluation_budget_exceeded');
     await save(path.join(directory, 'plans', approvedHash + '.json'), plan);
   });
 }
-export async function admitShard({directory, plan, manifest, executionID, batchAccepted = false, representativeReviewed = false}) {
+export async function admitShard({directory, plan, manifest, executionID, batchAccepted = false, representativeReviewed = false, solSeedDualReviewed = false, solBatchCapacityReviewed = false}) {
   await validatePlan(plan, manifest.planHash);
   return exclusive(directory, async () => {
     const current = await snapshot(directory);
@@ -271,6 +280,7 @@ export async function admitShard({directory, plan, manifest, executionID, batchA
     if (hash(expected) !== hash(manifest)) fail('shard_changed');
     if (manifest.transport === 'batch' && (plan.seedIDs.length !== 33 || !plan.seedIDs.every(id=>plan.jobs.some(j=>j.id===id)))) fail('recipe_standard_seed_qualification_required');
     if (manifest.transport === 'batch' && (!batchAccepted || !representativeReviewed || !plan.seedIDs.every(id => current.results[id]?.valid && current.states[id]?.transport === 'standard'))) fail('standard_review_and_batch_entitlement_required');
+    if(manifest.transport==='batch'&&plan.modelFamily==='r1-sol'&&(plan.mode!=='model-partition-r1'||plan.kind!=='genuine728'||solSeedDualReviewed!==true||solBatchCapacityReviewed!==true))fail('sol_fresh_seed_dual_review_and_capacity_required');
     if (manifest.jobs.some(j => current.states[j.id])) fail('already_submitted_or_unknown_never_resend');
     if (manifest.jobs.some(j => j.confirmationName && current.manifests.some(m => m.jobs.some(old => old.confirmationName === j.confirmationName)))) fail('duplicate_confirmation_name');
     if (Object.values(current.states).some(s => ['unknown', 'unknown_cost', 'cost_overrun'].includes(s.state)) ||

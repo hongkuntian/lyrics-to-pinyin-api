@@ -1,3 +1,5 @@
+import {isModelPlan,validateModelPlan,modelShard} from './model-plans.mjs';
+import {BASELINE_MODE, validateBaseline, baselineShard} from './baseline.mjs';
 import {RECIPE_MODE, validateRecipe} from './recipe.mjs';
 import {caseInput} from '../evaluate-content-quality.mjs';
 import {requestBody, reservationMicros} from '../../api/utils/song-library/translation.js';
@@ -109,6 +111,8 @@ export async function preparePlan({corpus, approvedCorpusHash, routingManifest, 
   return plan;
 }
 export async function validatePlan(plan, approvedHash) {
+  if (isModelPlan(plan)) return validateModelPlan(plan,approvedHash);
+  if (plan?.mode === BASELINE_MODE) return validateBaseline(plan, approvedHash);
   if (plan?.mode === RECIPE_MODE) return validateRecipe(plan, approvedHash);
   if (!plan.retrievalPolicy || hash(plan.retrievalPolicy) !== hash(BATCH_RETRIEVAL)) fail('retrieval_policy_changed');
   if (plan.schema !== SCHEMA || hash(plan) !== approvedHash) fail('plan_changed');
@@ -182,6 +186,8 @@ export function bindDependent(plan, job, result) {
   return {...job, ...frozen, translation, selection, dependencyResultHash: hash(result)};
 }
 export function shard(plan, caseIDs, results = {}, transport = 'standard') {
+  if (isModelPlan(plan)) return modelShard(plan,caseIDs,results,transport);
+  if (plan.mode === BASELINE_MODE) return baselineShard(plan, caseIDs, results, transport);
   if (!['standard', 'batch'].includes(transport) || !caseIDs.length || new Set(caseIDs).size !== caseIDs.length || (transport === 'standard' && caseIDs.length > 4) || (transport === 'batch' && caseIDs.length > BATCH_RETRIEVAL.maxCases)) fail('invalid_shard');
   const jobs = caseIDs.map(id => {
     let job = plan.jobs.find(j => j.id === id);

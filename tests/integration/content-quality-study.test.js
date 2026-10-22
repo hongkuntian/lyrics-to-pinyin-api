@@ -34,7 +34,7 @@ async function fixture(t,{invalidEvidence=false}={}) {
 test('English v2 admission validates real generator evidence, persists the unchanged public content and reuses it once',async t=>{
  const f=await fixture(t);assert.equal((await f.call({...f.request,allowGeneration:true})).code,202);await f.drain();
  const ready=(await f.call({...f.request,readOnly:true})).body;
- assert.equal(ready.state,'ready');assert.equal(ready.explanation.sourceQuote,'唱成');assert.equal(ready.explanation.recipe,'study-text-1');
+ assert.equal(ready.state,'ready');assert.equal(ready.explanation.sourceQuote,'唱成');assert.equal(ready.explanation.recipe,'study-text-3-source-grounding-1');
  assert.equal(Object.hasOwn(ready.explanation,'evidence'),false);
  assert.equal((await f.call({...f.request,resumeOnly:true})).body.explanation.id,ready.explanation.id);
  assert.equal(f.calls(),1);assert.equal(Number((await f.store.budget()).held),0);

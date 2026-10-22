@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "retrievedAtUTC": "2026-10-22T15:04:17.472736+00:00",
+  "model": "gpt-6.1-sol",
+  "sources": [
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "support": "Model-specific pricing lists Standard input2/cache-write2.5/output10 per million and explicitly states Batch50%lower thanStandard; strictstructuredoutputs supported."
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "support": "Sol Flex/Batch row: input1/cache-write30m1.25/output5 per million."
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/batch",
+      "support": "Batch Responses bodies use the underlying endpoint body; general discount50%; mostmodels supportBatch; account availability remains to be observed."
+    }
+  ],
+  "standardConservativeMicrosPerToken": {
+    "input": 2.5,
+    "output": 10
+  },
+  "batchConservativeMicrosPerToken": {
+    "input": 1.25,
+    "output": 5
+  },
+  "inputUpperBound": 24000,
+  "unchangedOutputCaps": {
+    "translation": 32768,
+    "study": 4096
+  },
+  "batchWorstCaseMicros": {
+    "translation": 193840,
+    "study": 50480
+  },
+  "scope": "Public model-specific price evidence only; no paidrequest, account/model entitlement or semantic/seedqualification; optional13 diagnostic remainsStandard-only. Registration may keepStandardworstcase reserves conservatively.",
+  "accountEntitlementVerified": false,
+  "currentSolStandardCalls": 0,
+  "currentSolBatchCalls": 0
+}

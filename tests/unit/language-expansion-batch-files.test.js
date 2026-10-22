@@ -284,6 +284,7 @@ test('Batch credential echo is sanitized and configuration change stops after ch
     const result=recoverPayload(events,baseEvent(f.manifest,f.jobs[0]));
     assert.equal(JSON.stringify(events).includes(secret),false);
     assert.equal(result.error,mode==='secret'?'provider_echoed_credentials':'provider_configuration_changed');
+    if(mode==='secret'){assert.equal(result.actualMicros,null);assert.equal(result.accountedMicros,f.jobs[0].reservedMicros);assert.equal(hash(result),hash(responseResult(f.plan,f.jobs[0],null,'batch','provider_echoed_credentials')));}
     assert(events.some(e=>e.event==='language_expansion_file_scan'));assert.equal(events.some(e=>e.event==='language_expansion_scan'),false);
   }
 });

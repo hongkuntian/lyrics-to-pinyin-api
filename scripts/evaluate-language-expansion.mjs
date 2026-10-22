@@ -1,3 +1,5 @@
+export {prepareModelCanaries,prepareModelPartition,describeModelSchedule} from './language-expansion/model-plans.mjs';
+export {prepareBaseline} from './language-expansion/baseline.mjs';
 // Research only. This entry point never changes production policy or data.
 import {createReadStream} from 'node:fs';
 import {createInterface} from 'node:readline';
@@ -127,7 +129,8 @@ async function main() {
   if (hash(manifest) !== options['--approved-shard-hash']) fail('shard_changed');
   if (command === 'admit') {
     const ticket = await admitShard({directory, plan, manifest, executionID: options['--execution-id'],
-      batchAccepted: options['--batch-accepted'] === 'yes', representativeReviewed: options['--representative-reviewed'] === 'yes'});
+      batchAccepted: options['--batch-accepted'] === 'yes', representativeReviewed: options['--representative-reviewed'] === 'yes',
+      solSeedDualReviewed:options['--sol-seed-dual-reviewed']==='yes',solBatchCapacityReviewed:options['--sol-batch-capacity-reviewed']==='yes'});
     await save(options['--out'], ticket); return ticket;
   }
   if (command === 'start') {

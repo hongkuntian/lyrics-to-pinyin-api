@@ -78,11 +78,14 @@ test('new fidelity recipes preserve named entities while legacy queued English p
  assert.throws(()=>requestBody(source,'fr',{legacy:true}),{code:'generation_configuration_unavailable'});
 });
 
-test('new explanation languages use precise grammar rules without changing released English recipes',()=>{
+test('current Study recipes advance with the repaired bodies and retain language-specific grammar rules',()=>{
  const selection={studyText:{layer:'original'},text:'Nadie'};
- assert.equal(explanationRecipe(selection,'en'),'study-text-1');
- assert.equal(explanationRecipe(selection,'zh-Hans'),'study-text-2');
- assert.equal(explanationRecipe({},'en'),'study-occurrence-2');
+ for(const layer of ['original','translation']){
+  const selected={...selection,studyText:{layer}};
+  assert.equal(explanationRecipe(selected,'en'),'study-text-3-source-grounding-1');
+  for(const target of ['fr','es','zh-Hans'])assert.equal(explanationRecipe(selected,target),'study-text-4-source-grounding-1');
+ }
+ assert.equal(explanationRecipe({},'en'),'study-occurrence-3-position-1');
  assert.match(explanationBody(source,null,selection,'zh-Hans').instructions,/invariant pronoun/);
  assert.doesNotMatch(explanationBody(source,null,selection,'en').instructions,/invariant pronoun/);
 });

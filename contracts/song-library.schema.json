@@ -638,7 +638,10 @@
                   "minimum": 1
                 },
                 "recipe": {
-                  "const": "study-occurrence-2"
+                  "enum": [
+                    "study-occurrence-2",
+                    "study-occurrence-3-position-1"
+                  ]
                 },
                 "meaning": {
                   "type": "string"
@@ -709,7 +712,9 @@
                 "recipe": {
                   "enum": [
                     "study-text-1",
-                    "study-text-2"
+                    "study-text-2",
+                    "study-text-3-source-grounding-1",
+                    "study-text-4-source-grounding-1"
                   ]
                 },
                 "meaning": {

@@ -46,6 +46,7 @@ function project(builderPlan, namespace, caseIDs, dependencyBindings) {
 }
 export async function prepareRecipe({builderPlan, namespace, caseIDs, dependencyBindings = {}}) {
   if (builderPlan?.mode === RECIPE_MODE) fail('nested_recipe_forbidden');
+  if (['named-model-canaries-r1','model-partition-r1','baseline113-automatic-source-v1'].includes(builderPlan?.mode)) fail('fixed_research_compiler_cannot_be_wrapped');
   await validatePlan(builderPlan, hash(builderPlan));
   return project(builderPlan, namespace, caseIDs, dependencyBindings);
 }

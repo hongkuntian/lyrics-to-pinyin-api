@@ -1,0 +1,223 @@
+{
+  "status": "Original authored definitions only; copied verbatim from pinned Git objects; no commercial source text",
+  "backend": "625c5f4d014322d347d7e9c0e1b72d5bfe3de796",
+  "sources": [
+    {
+      "path": "evaluation/multilingual/corpus.json",
+      "pointer": "/cases/0",
+      "sourceFileSHA256": "0ee1dd771b5276b9a7f956cddc67a416d888932ff1d5999efd630653262a6e76",
+      "role": "primary",
+      "family": "en",
+      "spec": {
+        "id": "en-window",
+        "language": "en",
+        "title": "The Unlocked Window",
+        "lines": [
+          "I did not ask you to stay.",
+          "I left the window open, not the door.",
+          "You said the sea would keep our names.",
+          "Perhaps you meant the rain.",
+          "I carry your silence home.",
+          "No one has promised to return.",
+          "At dawn, I do not ask you to stay.",
+          "At dusk, I ask you not to stay.",
+          "Luz says, mañana, but never says whose tomorrow.",
+          "The window waits; I might not."
+        ],
+        "selection": {
+          "line": 7,
+          "text": "not to stay"
+        },
+        "checks": [
+          "Do not invert I did not ask into I asked you not.",
+          "Changed refrain must distinguish negated asking from asking for departure.",
+          "No definite lover, death, or reunion invented.",
+          "Luz is a name, not light; mañana remains tomorrow with uncertainty.",
+          "Open window and closed/unopened door contrast, silence metaphor and final ambiguity retained."
+        ]
+      }
+    },
+    {
+      "path": "evaluation/multilingual/corpus.json",
+      "pointer": "/cases/1",
+      "sourceFileSHA256": "0ee1dd771b5276b9a7f956cddc67a416d888932ff1d5999efd630653262a6e76",
+      "role": "primary",
+      "family": "fr",
+      "spec": {
+        "id": "fr-quai",
+        "language": "fr",
+        "title": "Sur le quai",
+        "lines": [
+          "Je ne t’ai pas demandé de rester.",
+          "J’ai laissé la fenêtre ouverte, pas la porte.",
+          "Tu disais que la mer garderait nos noms.",
+          "Peut-être parlais-tu de la pluie.",
+          "Je ramène ton silence chez moi.",
+          "Personne n’a promis de revenir.",
+          "À l’aube, je ne te demande pas de rester.",
+          "Au soir, je te demande de ne pas rester.",
+          "Luz dit mañana, sans dire à qui appartient demain.",
+          "La fenêtre attend ; moi, peut-être pas."
+        ],
+        "selection": {
+          "line": 0,
+          "text": "ne t’ai pas demandé"
+        },
+        "checks": [
+          "Preserve speaker and addressee; no inferred gender for speaker.",
+          "Negated asking differs from asking not to stay.",
+          "Perhaps remains uncertainty, not a settled interpretation.",
+          "Luz remains a person, not light.",
+          "Personne with ne means nobody; refrain occurrence 8 changes scope."
+        ]
+      }
+    },
+    {
+      "path": "evaluation/multilingual/corpus.json",
+      "pointer": "/cases/2",
+      "sourceFileSHA256": "0ee1dd771b5276b9a7f956cddc67a416d888932ff1d5999efd630653262a6e76",
+      "role": "primary",
+      "family": "es",
+      "spec": {
+        "id": "es-ventana",
+        "language": "es",
+        "title": "La ventana",
+        "lines": [
+          "No te pedí que te quedaras.",
+          "Dejé abierta la ventana, no la puerta.",
+          "Decías que el mar guardaría nuestros nombres.",
+          "Quizá hablabas de la lluvia.",
+          "Llevo tu silencio a casa.",
+          "Nadie ha prometido volver.",
+          "Al alba, no te pido que te quedes.",
+          "Al anochecer, te pido que no te quedes.",
+          "Luz dice mañana, pero no dice de quién será.",
+          "La ventana espera; yo, quizá no."
+        ],
+        "selection": {
+          "line": 5,
+          "text": "Nadie"
+        },
+        "checks": [
+          "Nadie is nobody, not somebody; keep promise absent.",
+          "Do not convert negated request into a request to leave.",
+          "Luz stays proper name.",
+          "Maybe rain and final speaker uncertainty preserved.",
+          "No invented relationship or speaker gender."
+        ]
+      }
+    },
+    {
+      "path": "evaluation/multilingual/corpus.json",
+      "pointer": "/cases/3",
+      "sourceFileSHA256": "0ee1dd771b5276b9a7f956cddc67a416d888932ff1d5999efd630653262a6e76",
+      "role": "primary",
+      "family": "cmn",
+      "spec": {
+        "id": "zh-window",
+        "language": "zh",
+        "title": "未关的窗",
+        "lines": [
+          "我没求你留下。",
+          "我打开的是窗，不是门。",
+          "你说海会记住我们的名字。",
+          "也许你说的是雨。",
+          "我把你的沉默带回家。",
+          "没有人答应过回来。",
+          "天亮时，我不求你留下。",
+          "入夜后，我求你不要留下。",
+          "Luz说mañana，却没说是谁的明天。",
+          "窗还在等，我却未必。"
+        ],
+        "selection": {
+          "line": 7,
+          "text": "不要留下"
+        },
+        "checks": [
+          "我没求你留下 must not become I asked you to leave.",
+          "我求你不要留下 is explicitly asking not to stay.",
+          "No gender, lover identity or death inferred.",
+          "Source uncertainty also appears in output, not only notes.",
+          "Window versus door, silence metaphor, Luz proper name and changed refrain preserved."
+        ]
+      }
+    },
+    {
+      "path": "evaluation/content-quality/cases.json",
+      "pointer": "/cases/9",
+      "sourceFileSHA256": "3c182a051b8696cef762598d001cd95eab4d0135cebe09f83ccc8849fb775c62",
+      "role": "primary",
+      "family": "yue",
+      "spec": {
+        "id": "fresh-dialect",
+        "phase": "fresh",
+        "language": "yue",
+        "lines": [
+          "甲：你話過會同我等到天光。",
+          "乙：我話可以等，唔係一定會等。",
+          "甲：咁我唔會代你應承佢。"
+        ],
+        "speakers": {
+          "甲": "A",
+          "乙": "B"
+        },
+        "line": 1,
+        "text": "唔係一定會等",
+        "checks": [
+          "B distinguishes possibility from a definite commitment.",
+          "Do not describe the line as promising to wait or definitely refusing to wait."
+        ]
+      }
+    },
+    {
+      "path": "evaluation/content-quality/cases.json",
+      "pointer": "/cases/8",
+      "sourceFileSHA256": "3c182a051b8696cef762598d001cd95eab4d0135cebe09f83ccc8849fb775c62",
+      "role": "control",
+      "family": "cmn",
+      "spec": {
+        "id": "fresh-proxy",
+        "phase": "fresh",
+        "language": "zh",
+        "lines": [
+          "甲：我沒有替你答應留下。",
+          "乙：我只請你替我傳話，沒請你留下。",
+          "甲：那我會把你的話傳到，去留仍由你決定。"
+        ],
+        "speakers": {
+          "甲": "A",
+          "乙": "B"
+        },
+        "line": 0,
+        "text": "替你答應",
+        "checks": [
+          "Representation modifies agreement, not performance of staying.",
+          "Speaker A denies agreeing on B's behalf; embedded actor is not uniquely explicit."
+        ]
+      }
+    },
+    {
+      "path": "evaluation/content-quality/confirmation-cases.json",
+      "pointer": "/cases/5",
+      "sourceFileSHA256": "d995e84bf906d2dc9493f4c0703798aa27bd47ffe886b096d70d38c123134417",
+      "role": "control",
+      "family": "cmn",
+      "spec": {
+        "id": "fresh-unresolved-name",
+        "phase": "fresh",
+        "language": "zh",
+        "lines": [
+          "他只寫下「罙岇」，沒有解釋。",
+          "我不知道這是名字、記號，還是寫錯的字。",
+          "你別替我決定它的意思。"
+        ],
+        "line": 0,
+        "text": "罙岇",
+        "checks": [
+          "Do not decide that the fragment is a name or a transcription error.",
+          "Preserve the stated uncertainty instead of inventing a dictionary compound or repairing the source."
+        ]
+      }
+    }
+  ]
+}

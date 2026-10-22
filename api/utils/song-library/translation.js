@@ -5,7 +5,7 @@ const require=createRequire(import.meta.url);
 const prompt=require('./prompt.json'),multilingualPrompt=require('./multilingual-prompt.json'),lexicon=require('./lexicon.json');
 import {canonicalTarget,TARGETS} from './languages.js';
 import {LibraryError} from './store.js';
-import {MODEL,LEGACY_MODEL,modelPolicy} from './model-policy.js';
+import {MODEL,LEGACY_MODEL,RESEARCH_MODEL,RESEARCH_BATCH_PRICE,modelPolicy} from './model-policy.js';
 export {MODEL} from './model-policy.js';
 export const LEGACY_RECIPE='song-clause-4-vocal-text-1';
 export const RECIPE='song-clause-6-source-grounding-1';
@@ -41,12 +41,12 @@ export function reservationMicros(body,{batch=false}={}) {
   if(!policy)throw new LibraryError('generation_configuration_unavailable');
   const inputTokenUpperBound=Buffer.byteLength(JSON.stringify(body),'utf8')+4096;
   if(inputTokenUpperBound>100_000) throw new LibraryError('source_too_large',422);
-  return Math.ceil((inputTokenUpperBound*policy.input+body.max_output_tokens*policy.output)*(batch?0.5:1));
+  return batch&&body.model===RESEARCH_MODEL?Math.ceil(inputTokenUpperBound*RESEARCH_BATCH_PRICE.input+body.max_output_tokens*RESEARCH_BATCH_PRICE.output):Math.ceil((inputTokenUpperBound*policy.input+body.max_output_tokens*policy.output)*(batch?0.5:1));
 }
 export function usageMicros(usage,model=MODEL,{batch=false}={}) {
   const policy=modelPolicy(model);if(!policy)return null;
   if(!usage||!['input_tokens','output_tokens'].every(k=>Number.isSafeInteger(usage[k])&&usage[k]>=0&&usage[k]<=10_000_000)) return null;
-  return Math.ceil((usage.input_tokens*policy.input+usage.output_tokens*policy.output)*(batch?0.5:1));
+  return batch&&model===RESEARCH_MODEL?Math.ceil(usage.input_tokens*RESEARCH_BATCH_PRICE.input+usage.output_tokens*RESEARCH_BATCH_PRICE.output):Math.ceil((usage.input_tokens*policy.input+usage.output_tokens*policy.output)*(batch?0.5:1));
 }
 export function strictJSON(text) {
   if(typeof text!=='string'||Buffer.byteLength(text)>500_000) throw new LibraryError('invalid_json',502);

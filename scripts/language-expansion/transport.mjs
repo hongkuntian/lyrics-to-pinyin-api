@@ -1,3 +1,6 @@
+import {RESEARCH_BATCH_PRICE} from '../../api/utils/song-library/model-policy.js';
+import {isModelPlan,validateModelManifest} from './model-plans.mjs';
+import {observeHTTP,validateObservation} from './http-observation.mjs';
 import {requestBody, parseTranslation, usageMicros, reservationMicros} from '../../api/utils/song-library/translation.js';
 import {explanationBody, parseExplanation, parseGroundedExplanation} from '../../api/utils/song-library/study-explanation.js';
 import {GROUNDING_FORMAT} from '../../api/utils/song-library/study-grounding.js';
@@ -12,6 +15,7 @@ export async function validateManifest(plan, manifest, approvedHash) {
   if (hash(manifest) !== approvedHash || !['standard', 'batch'].includes(manifest.transport) || !manifest.jobs.length ||
       (manifest.transport === 'standard' && manifest.jobs.length > 4) || manifest.maxRawBytes !== MAX_PAYLOAD ||
       new Set(manifest.jobs.map(j => j.id)).size !== manifest.jobs.length) fail('invalid_frozen_manifest');
+  if(isModelPlan(plan)){validateModelManifest(plan,manifest);return;}
   for (const job of manifest.jobs) {
     const intent = plan.jobs.find(j => j.id === (job.confirmationOf ?? job.id)), source = plan.sources.find(s => s.id === job.source);
     if (intent?.executionDisposition !== 'generate' || job.executionDisposition !== 'generate') fail('static_refusal_not_dispatchable');
@@ -27,6 +31,7 @@ export async function validateManifest(plan, manifest, approvedHash) {
 }
 export function responseResult(plan, job, response, transport, error = null) {
   if (job.executionDisposition !== 'generate') fail('static_refusal_not_dispatchable');
+  if (transport==='batch'&&job.body?.model==='gpt-6.1-sol'&&hash(job.batchPriceDescriptor??null)!==hash(RESEARCH_BATCH_PRICE)) fail('sol_batch_descriptor_not_reviewed_for_case');
   const actualMicros = response?.model === job.body.model && response?.service_tier === job.body.service_tier ? usageMicros(response?.usage, job.body.model, {batch: transport === 'batch'}) : null;
   const source = plan.sources.find(s => s.id === job.source);
   const result = {id: job.id, bodyHash: job.bodyHash, definitionHash: job.definitionHash, sourceDefinitionHash: job.sourceDefinitionHash,
@@ -49,14 +54,15 @@ export function responseResult(plan, job, response, transport, error = null) {
   } catch (e) { result.error = /^[a-z_]{1,80}$/.test(e.message) ? e.message : 'invalid_provider_response'; delete result.content; }
   return result;
 }
-function safeResult(result, secret) {
-  if (secret && JSON.stringify(result).includes(secret)) return {id: result.id, bodyHash: result.bodyHash, definitionHash: result.definitionHash,
-    sourceDefinitionHash: result.sourceDefinitionHash, qualification: result.qualification, sourceBindings: result.sourceBindings, selection: result.selection, transport: result.transport,
-    valid: false, error: 'provider_echoed_credentials', actualMicros: result.actualMicros, accountedMicros: result.accountedMicros, response: null};
+function safeResult(plan, job, result, secret) {
+  // Discard the credential-bearing response completely. A canonical result
+  // remains reconstructible from retained evidence and keeps the full hold.
+  if (secret && JSON.stringify(result).includes(secret))
+    return responseResult(plan, job, null, result.transport, 'provider_echoed_credentials');
   return result;
 }
-async function output(manifest, job, result, emit, secret) {
-  const safe = safeResult(result, secret);
+async function output(plan, manifest, job, result, emit, secret) {
+  const safe = safeResult(plan, job, result, secret);
   for (const event of payloadEvents(baseEvent(manifest, job), safe)) await emitRecord(emit, event);
   return safe;
 }
@@ -77,8 +83,11 @@ export async function runStandard({plan, manifest, approvedHash, ticket, executi
     try {
       const response = await client.standard(job.bodyJSON, job.kind === 'translation' ? 270_000 : 240_000);
       result = responseResult(plan, job, response, 'standard');
-    } catch { result = responseResult(plan, job, null, 'standard', 'submission_unknown'); }
-    result = await output(manifest, job, result, emit, secret);
+    } catch(error) {
+      result = responseResult(plan, job, null, 'standard', 'submission_unknown');
+      if(error?.providerObservation){validateObservation(error.providerObservation,job.bodyHash);result.httpObservation=error.providerObservation;}
+    }
+    result = await output(plan, manifest, job, result, emit, secret);
     if (result.actualMicros === null || result.actualMicros > job.reservedMicros || ['provider_configuration_changed', 'provider_echoed_credentials'].includes(result.error)) fail('stop_reconcile_unknown_or_configuration');
   }
 }
@@ -185,9 +194,9 @@ export async function retrieveBatch({plan, manifest, approvedHash, batchID, inpu
       const result = responseResult(plan, job, row.response?.body ?? null, 'batch',
         row.error != null ? 'batch_case_error' : row.response?.status_code !== 200 ? 'batch_http_error' : null);
       Object.assign(result, {fileID, role, lineIndex: descriptor.lineIndex, rawLine, filePayloadHash: scan.receipt.payloadHash});
-      const safe = safeResult(result, secret), retained = retainedResults[job.id];
+      const safe = safeResult(plan, job, result, secret), retained = retainedResults[job.id];
       if (retained) { if (hash(safe) !== hash(retained)) fail('retained_batch_result_changed'); }
-      else await output(manifest, job, safe, emit, secret);
+      else await output(plan, manifest, job, safe, emit, secret);
       if (['provider_configuration_changed', 'provider_echoed_credentials'].includes(safe.error)) fail('stop_reconcile_unknown_or_configuration');
     }
   }
@@ -204,7 +213,13 @@ export function openAIClient({apiKey, fetchFn}) {
   if (!apiKey || typeof fetchFn !== 'function') fail('explicit_sensitive_key_and_fetch_required');
   async function request(route, {method = 'GET', body, timeout = 30_000} = {}) {
     const response = await fetchFn('https://api.openai.com/v1/' + route, {method, headers: {Authorization: `Bearer ${apiKey}`, ...(typeof body === 'string' ? {'Content-Type': 'application/json'} : {})}, body, signal: AbortSignal.timeout(timeout)});
-    if (!response.ok) { await response.body?.cancel(); fail('provider_rejected'); }
+    if (!response.ok) {
+      if(route==='responses'&&method==='POST'&&typeof body==='string') {
+        const observation=await observeHTTP(response,hash(body),apiKey);
+        const error=new Error('provider_rejected');error.providerObservation=observation;throw error;
+      }
+      await response.body?.cancel(); fail('provider_rejected');
+    }
     return response;
   }
   const json = async (route, options) => {

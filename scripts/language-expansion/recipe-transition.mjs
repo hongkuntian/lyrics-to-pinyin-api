@@ -1,5 +1,6 @@
 // Research-only, at most four explicit code/plan transitions in one root ledger.
 import fs from 'node:fs/promises';
+import {assertProfiles,checkSlot} from './model-family.mjs';
 import path from 'node:path';
 import {hash, fail, readJSON, codeHashes, SCHEMA} from './common.mjs';
 import {validateRecipeParents} from './recipe.mjs';
@@ -78,12 +79,16 @@ export function assertCommonCases(plans, errorCode='common_case_binding_changed_
 }
 export function transitionLedger(state, plans, retiredJobs) {
   assertCommonCases(plans);
+  const profile=assertProfiles(plans,state);
   const unique = new Map(plans.flatMap(p=>p.jobs).map(j=>[j.id,j]));
   const names = new Set(plans.flatMap(p=>p.confirmationNames));
   if (names.size>60) fail('confirmation_budget_exceeded');
   return state.priorMicros + state.unknownHeldMicros + [...unique.values()].reduce((n,j)=>n +
-    (retiredJobs[j.id] ? 0 : state.results[j.id]?.actualMicros ?? j.reservedMicros),0) + names.size*CONFIRMATION_RESERVE +
-    state.manifests.flatMap(m=>m.jobs).filter(j=>j.confirmationName).reduce((n,j)=>n+Math.max(0,(state.results[j.id]?.actualMicros??0)-CONFIRMATION_RESERVE),0);
+    (retiredJobs[j.id] || j.templateOnly===true ? 0 : state.results[j.id]?.actualMicros ?? j.reservedMicros),0) + (profile?profile.slots.reduce((n,s)=>n+s.reservedMicros,0):names.size*CONFIRMATION_RESERVE) +
+    state.manifests.flatMap(m=>m.jobs).filter(j=>j.confirmationName).reduce((n,j)=>{
+      if(profile && j.modelFamily)checkSlot(j,profile);
+      return n+Math.max(0,(state.results[j.id]?.actualMicros??0)-(profile?.slots.find(s=>s.name===j.confirmationName)?.reservedMicros??CONFIRMATION_RESERVE));
+    },0);
 }
 function retirement(state, ids, recordHash) {
   if (!Array.isArray(ids) || new Set(ids).size!==ids.length || hash(ids)!==hash([...ids].sort())) fail('invalid_retirement_schedule');
