@@ -1,13 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build"
-    }
-  ],
-  "git": {"deploymentEnabled": false},
+  "git": {
+    "deploymentEnabled": false
+  },
   "installCommand": "npm ci --ignore-scripts",
   "buildCommand": "node evaluation/language-expansion/probe-transport.mjs",
-  "outputDirectory": ".vercel/output"
+  "outputDirectory": ".vercel/output",
+  "framework": null
 }
