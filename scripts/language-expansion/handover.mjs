@@ -2,11 +2,12 @@
 // results and costs. Old receipts are decoded only by that pinned executable.
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {hash, fail, readJSON, save, codeHashes} from './common.mjs';
 import {validatePlan} from './plan.mjs';
 
-async function hashesAt(directory) {
+export async function hashesAt(directory) {
   const files = ['scripts/evaluate-language-expansion.mjs', 'scripts/language-expansion-build.mjs', 'scripts/evaluate-content-quality.mjs',
     'api/utils/lyric-annotations.js', 'api/utils/lyric-selection.js', 'api/utils/vocal-timing.js', 'api/utils/rejected-lyrics.js',
     'api/data/lyric-performers.json', 'api/data/rejected-lyrics.json', 'package.json', 'package-lock.json'];
@@ -34,11 +35,11 @@ async function readFrozen(directory, kind, hashes) {
   }
   return values;
 }
-async function legacyReplay(directory, record) {
+export async function legacyReplay(directory, record, {replayRoot = os.tmpdir(), metadata} = {}) {
   const oldPlans = await readFrozen(directory, 'plans', record.legacyPlanHashes);
   const oldShards = await readFrozen(directory, 'shards', record.legacyShardHashes);
   const observed = await hashesAt(record.legacyCodeRoot);
-  if (oldPlans.some(p => hash(p.codeHashes) !== hash(observed))) fail('legacy_generation_code_changed');
+  if (record.legacyCodeHash ? record.legacyCodeHash !== hash(observed) : oldPlans.some(p => hash(p.codeHashes) !== hash(observed))) fail('legacy_generation_code_changed');
   const rootBytes = await fs.readFile(path.join(directory, 'root.json'));
   const journalBytes = await fs.readFile(path.join(directory, 'journal.jsonl'));
   const prefix = journalBytes.subarray(0, record.prefixBytes);
@@ -46,18 +47,22 @@ async function legacyReplay(directory, record) {
       (prefix.length && prefix.at(-1) !== 10)) fail('handover_prefix_changed');
   const oldAPI = await import(pathToFileURL(path.join(record.legacyCodeRoot, 'scripts/evaluate-language-expansion.mjs')).href);
   // Replay a private prefix view; the original journal is never rewritten.
-  const view = await fs.mkdtemp(path.join(directory, '.handover-replay-'));
+  const parent = await fs.realpath(replayRoot), journal = await fs.realpath(directory);
+  if (parent === journal || parent.startsWith(journal + path.sep)) fail('replay_scratch_must_be_outside_journal');
+  const view = await fs.mkdtemp(path.join(parent, 'language-expansion-replay-'));
   try {
     await fs.writeFile(path.join(view, 'root.json'), rootBytes);
     await fs.writeFile(path.join(view, 'journal.jsonl'), prefix);
     for (const [kind, values] of [['plans', oldPlans], ['shards', oldShards]])
       for (const value of values) await save(path.join(view, kind, hash(value) + '.json'), value);
-    const state = await oldAPI.snapshot(view);
+    if (metadata?.handover) await save(path.join(view, 'handover.json'), metadata.handover);
+    for (const value of metadata?.transitions ?? []) await save(path.join(view,'recipe-transitions',hash(value)+'.json'),value);
+    const state = await oldAPI.snapshot(view, {replayRoot: parent});
     if (record.legacySnapshotHash && hash(state) !== record.legacySnapshotHash) fail('handover_legacy_snapshot_changed');
     return state;
   } finally { await fs.rm(view, {recursive: true}); }
 }
-export async function handoverState(directory, plans, rows) {
+export async function handoverState(directory, plans, rows, options) {
   const record = await readJSON(path.join(directory, 'handover.json')).catch(e => e.code === 'ENOENT' ? null : Promise.reject(e));
   if (!record) return null;
   if (record.version !== 'executor-handover-1' || record.targetCodeHash !== hash(await codeHashes()) ||
@@ -65,7 +70,7 @@ export async function handoverState(directory, plans, rows) {
   const next = plans.find(p => hash(p) === record.targetPlanHash);
   if (!next) fail('handover_registration_incomplete');
   await validatePlan(next, record.targetPlanHash);
-  const state = await legacyReplay(directory, record);
+  const state = await legacyReplay(directory, record, options);
   if (state.events.length !== record.prefixEvents || rows.length < record.prefixEvents ||
       (rows[record.prefixEvents - 1]?.hash ?? hash('')) !== record.prefixTip) fail('handover_prefix_changed');
   sameGeneration(state.plans, next);

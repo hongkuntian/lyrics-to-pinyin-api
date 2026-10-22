@@ -4,13 +4,14 @@ import {createInterface} from 'node:readline';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {hash, readJSON, save, fail} from './language-expansion/common.mjs';
+import {prepareRecipe} from './language-expansion/recipe.mjs';
 import {preparePlan, shard, validatePlan} from './language-expansion/plan.mjs';
-import {initJournal, registerPlan, snapshot, admitShard, claimStart, append, importEvents, finalizeBatch, importReadReplay, handoverPlan} from './language-expansion/journal.mjs';
+import {initJournal, registerPlan, snapshot, admitShard, claimStart, append, importEvents, finalizeBatch, importReadReplay, handoverPlan, transitionPlan} from './language-expansion/journal.mjs';
 import {runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch, openAIClient} from './language-expansion/transport.mjs';
 import {terminalIdentity, scanProjection} from './language-expansion/reconciliation.mjs';
 import {fileProjection} from './language-expansion/batch-files.mjs';
 export {hash, preparePlan, shard, validatePlan, initJournal, registerPlan, snapshot, admitShard, claimStart, importEvents,
-  runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch, finalizeBatch, importReadReplay, handoverPlan};
+  runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch, finalizeBatch, importReadReplay, handoverPlan, transitionPlan, prepareRecipe};
 
 export async function importJSONL(directory, file) {
   const lines = createInterface({input: createReadStream(file), crlfDelay: Infinity});
@@ -77,6 +78,10 @@ async function main() {
     options[args[i]] = args[i + 1];
   }
   const directory = options['--journal'];
+  if (command === 'prepare-recipe') {
+    const plan = await prepareRecipe({builderPlan:await readJSON(options['--builder-plan']),namespace:options['--namespace'],caseIDs:JSON.parse(options['--case-ids']),dependencyBindings:options['--dependency-bindings']?await readJSON(options['--dependency-bindings']):{}});
+    await save(options['--out'],plan); return {planHash:hash(plan),cases:plan.jobs.length};
+  }
   if (command === 'prepare') {
     const corpus = await readJSON(options['--corpus']);
     const plan = await preparePlan({corpus, approvedCorpusHash: options['--approved-corpus-hash'],
@@ -110,6 +115,7 @@ async function main() {
   }
   const plan = await readJSON(options['--plan']);
   await validatePlan(plan, options['--approved-plan-hash']);
+  if (command === 'transition') return transitionPlan(directory,plan,options['--approved-plan-hash'],options['--legacy-code-root'],await readJSON(options['--retire-case-ids']),{replayRoot:options['--replay-root']});
   if (command === 'handover') return handoverPlan(directory, plan, options['--approved-plan-hash'], options['--legacy-code-root']);
   if (command === 'register') return registerPlan(directory, plan, options['--approved-plan-hash']);
   if (command === 'freeze') {

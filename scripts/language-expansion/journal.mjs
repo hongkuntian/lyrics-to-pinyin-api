@@ -7,6 +7,8 @@ import {reconciliationFor, terminalBatch, terminalIdentity, scanProjection} from
 import {BATCH_RETRIEVAL, fileProjection, validateFileReceipt, freshPayloadRecords} from './batch-files.mjs';
 import {batchInput} from './plan.mjs';
 
+import {validateRecipeParents} from './recipe.mjs';
+import {recipeTransitionState, transitionPlanLocked, assertCommonCases, transitionLedger} from './recipe-transition.mjs';
 import {handoverState, handoverPlanLocked} from './handover.mjs';
 
 const events = {
@@ -105,11 +107,12 @@ async function records(directory, name) {
     return value;
   }));
 }
-export async function snapshot(directory, {incoming = []} = {}) {
+export async function snapshot(directory, {incoming = [], replayRoot} = {}) {
   const root = await readJSON(path.join(directory, 'root.json'));
   if (root.schema !== SCHEMA || root.ceilingMicros !== CEILING || ![root.priorMicros, root.unknownHeldMicros].every(integer)) fail('invalid_external_journal');
   const plans = await records(directory, 'plans'), manifests = await records(directory, 'shards'), rows = await entries(directory);
-  const inherited = await handoverState(directory, plans, rows);
+  const inherited = await recipeTransitionState(directory, plans, rows, {replayRoot}) ?? await handoverState(directory, plans, rows, {replayRoot});
+  assertCommonCases(plans);
   for (const plan of plans) if (!inherited?.record.legacyPlanHashes.includes(hash(plan))) await validatePlan(plan, hash(plan));
   const jobs = new Map(), confirmations = new Set();
   for (const plan of plans) {
@@ -127,7 +130,7 @@ export async function snapshot(directory, {incoming = []} = {}) {
       actualMicros: 0, accountedMicros: 0, sourceBindings: source.bindings, selection: source.selection, qualification: job.qualification}];
   }));
   let result = {plans, manifests, events: [], states: {}, shardStates: {}, results: {}, staticRefusals, dependentFailures: {}, priorMicros: root.priorMicros, unknownHeldMicros: root.unknownHeldMicros};
-  if (inherited) result = {...result, ...inherited.state, plans, manifests};
+  if (inherited) result = {...result, ...inherited.state, plans, manifests, staticRefusals: {...staticRefusals,...inherited.state.staticRefusals}};
   const startIndex = inherited?.record.prefixEvents ?? 0;
   const values = [...rows.map(r => r.value), ...incoming];
   for (let eventIndex = startIndex; eventIndex < values.length; eventIndex++) {
@@ -144,6 +147,7 @@ export async function snapshot(directory, {incoming = []} = {}) {
       validateEvent(value, manifests);
       if (value.event === 'language_expansion_terminal') { result.events.push(value); continue; }
       if (value.event === 'language_expansion_admitted') {
+        if (result.retiredJobs?.[value.caseID] || manifests.find(m=>hash(m)===value.shardHash)?.jobs.some(j=>result.retiredJobs?.[j.confirmationOf])) fail('retired_case_cannot_reactivate');
         if (result.states[value.caseID]) fail('duplicate_case_admission');
         result.states[value.caseID] = {state: 'unknown', ...value};
         if (value.transport === 'batch') result.shardStates[value.shardHash] = {state: 'unresolved'};
@@ -218,12 +222,12 @@ export async function snapshot(directory, {incoming = []} = {}) {
       confirmationJobs.set(job.confirmationName, job);
     }
   }
-  for (const plan of plans) for (const job of plan.jobs.filter(j => j.kind === 'translated' && result.results[j.dependency])) {
+  for (const plan of plans.filter(p=>!inherited?.record.legacyPlanHashes.includes(hash(p)))) for (const job of plan.jobs.filter(j => j.kind === 'translated' && result.results[j.dependency])) {
     try { bindDependent(plan, job, result.results[job.dependency]); }
     catch (e) { result.dependentFailures[job.id] = e.message; }
   }
-  result.committedMicros = root.priorMicros + root.unknownHeldMicros + [...jobs.values()].reduce((sum, job) => sum + (result.results[job.id]?.actualMicros ?? job.reservedMicros), 0) + confirmations.size * CONFIRMATION_RESERVE +
-    [...confirmationJobs.values()].reduce((sum, job) => sum + Math.max(0, (result.results[job.id]?.actualMicros ?? 0) - CONFIRMATION_RESERVE), 0);
+  for (const p of plans.filter(p=>!inherited?.record.legacyPlanHashes.includes(hash(p)))) validateRecipeParents(p,result);
+  result.committedMicros = transitionLedger(result, plans, result.retiredJobs ?? {});
   result.budgetExceeded = result.committedMicros > CEILING;
   return result;
 }
@@ -239,6 +243,9 @@ export async function registerPlan(directory, plan, approvedHash) {
     const current = await snapshot(directory);
     if (current.budgetExceeded) fail('evaluation_budget_exceeded');
     if (current.plans.some(p => hash(p) === approvedHash)) return;
+    assertCommonCases([...current.plans,plan], 'case_spec_changed');
+    validateRecipeParents(plan,current);
+    if (plan.jobs.some(j=>current.retiredJobs?.[j.id])) fail('retired_case_cannot_reactivate');
     // Validate proposed union before writing any maintained registration.
     const unique = new Map(current.plans.flatMap(p => p.jobs).map(j => [j.id, j]));
     for (const job of plan.jobs) {
@@ -246,7 +253,7 @@ export async function registerPlan(directory, plan, approvedHash) {
       unique.set(job.id, job);
     }
     const names = new Set([...current.plans.flatMap(p => p.confirmationNames), ...plan.confirmationNames]);
-    const total = current.priorMicros + current.unknownHeldMicros + [...unique.values()].reduce((sum, j) => sum + (current.results[j.id]?.actualMicros ?? j.reservedMicros), 0) + names.size * CONFIRMATION_RESERVE;
+    const total = transitionLedger(current,[...current.plans,plan],current.retiredJobs??{});
     if (names.size > 60 || total > CEILING) fail('evaluation_budget_exceeded');
     await save(path.join(directory, 'plans', approvedHash + '.json'), plan);
   });
@@ -257,9 +264,12 @@ export async function admitShard({directory, plan, manifest, executionID, batchA
     const current = await snapshot(directory);
     if (current.budgetExceeded) fail('evaluation_budget_exceeded');
     if (!current.plans.some(p => hash(p) === hash(plan))) fail('register_plan_first');
+    if (manifest.jobs.some(j=>current.retiredJobs?.[j.id] || current.retiredJobs?.[j.confirmationOf])) fail('retired_case_cannot_reactivate');
+    if (current.recipeTransitions?.at(-1)?.legacyPlanHashes.includes(hash(plan))) fail('legacy_executor_prefix_sealed');
     if (!/^[A-Za-z0-9_-]{1,120}$/.test(executionID ?? '')) fail('execution_identity_required');
     const expected = shard(plan, manifest.jobs.map(j => j.id), current.results, manifest.transport);
     if (hash(expected) !== hash(manifest)) fail('shard_changed');
+    if (manifest.transport === 'batch' && (plan.seedIDs.length !== 33 || !plan.seedIDs.every(id=>plan.jobs.some(j=>j.id===id)))) fail('recipe_standard_seed_qualification_required');
     if (manifest.transport === 'batch' && (!batchAccepted || !representativeReviewed || !plan.seedIDs.every(id => current.results[id]?.valid && current.states[id]?.transport === 'standard'))) fail('standard_review_and_batch_entitlement_required');
     if (manifest.jobs.some(j => current.states[j.id])) fail('already_submitted_or_unknown_never_resend');
     if (manifest.jobs.some(j => j.confirmationName && current.manifests.some(m => m.jobs.some(old => old.confirmationName === j.confirmationName)))) fail('duplicate_confirmation_name');
@@ -347,4 +357,8 @@ export async function importReadReplay(directory, incoming, shardHash, caseID) {
 
 export async function handoverPlan(directory, plan, approvedHash, legacyCodeRoot) {
   return exclusive(directory, () => handoverPlanLocked(directory, plan, approvedHash, legacyCodeRoot));
+}
+
+export async function transitionPlan(directory, plan, approvedHash, legacyCodeRoot, retireCaseIDs, options = {}) {
+  return exclusive(directory, () => transitionPlanLocked(directory,plan,approvedHash,legacyCodeRoot,retireCaseIDs,{...options,append}));
 }

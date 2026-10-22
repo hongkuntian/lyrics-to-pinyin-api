@@ -1,3 +1,4 @@
+import {RECIPE_MODE, validateRecipe} from './recipe.mjs';
 import {caseInput} from '../evaluate-content-quality.mjs';
 import {requestBody, reservationMicros} from '../../api/utils/song-library/translation.js';
 import {explanationBody, selectionV2} from '../../api/utils/song-library/study-explanation.js';
@@ -108,6 +109,7 @@ export async function preparePlan({corpus, approvedCorpusHash, routingManifest, 
   return plan;
 }
 export async function validatePlan(plan, approvedHash) {
+  if (plan?.mode === RECIPE_MODE) return validateRecipe(plan, approvedHash);
   if (!plan.retrievalPolicy || hash(plan.retrievalPolicy) !== hash(BATCH_RETRIEVAL)) fail('retrieval_policy_changed');
   if (plan.schema !== SCHEMA || hash(plan) !== approvedHash) fail('plan_changed');
   if (JSON.stringify(plan.codeHashes) !== JSON.stringify(await codeHashes())) fail('generation_code_changed');
@@ -166,7 +168,9 @@ export async function validatePlan(plan, approvedHash) {
 }
 export function bindDependent(plan, job, result) {
   const source = plan.sources.find(s => s.id === job.source);
-  const parent = plan.jobs.find(j => j.id === job.dependency);
+  const binding=job.parentBinding;
+  const parent = binding?.historical?.job ?? plan.jobs.find(j => j.id === (binding?.confirmationOf ?? job.dependency));
+  if (binding?.historical && hash(result??null)!==binding.historical.resultHash) fail('historical_dependency_result_changed');
   if (!result?.valid || result.id !== job.dependency || result.bodyHash !== parent?.bodyHash || result.definitionHash !== parent?.definitionHash || result.sourceDefinitionHash !== parent?.sourceDefinitionHash) fail('dependent_translation_failed');
   const translation = {id: hash({bodyHash: result.bodyHash, content: result.content}), target: job.target, ...result.content};
   const row = translation.lines.find(line => line.sourceID === job.intent.sourceID)?.lyricText;
