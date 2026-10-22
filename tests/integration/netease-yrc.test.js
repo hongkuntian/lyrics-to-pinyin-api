@@ -52,11 +52,13 @@ test('negative credit metadata preserves measured Apple and Spotify durable sour
   assert.equal(signed.f.urls.length,1);
  }
 });
-test('no catalog ID and final normalization changes omit words; same-payload LRC remains readable',async()=>{
+test('catalog proof is required for words, while outer whitespace preserves exact cues and LRC remains readable',async()=>{
  const {catalog_id,...request}=appleRequest,f=yrcService(),res=await f.call(request);
  assert.equal(res.statusCode,200);assert.equal(res.body.metadata.lyric_timing,undefined);assert.ok(res.body.lines.every(l=>!l.vocalTiming));
  const changed=await acquired(appleRequest,{yrc:'[10000,1000](10000,1000,0)  Synthetic sky  \n[20000,1000](20000,1000,0)other'});
- assert.equal(changed.response.lines[0].original,'Synthetic sky');assert.equal(changed.response.lines[0].vocalTiming,undefined);assert.ok(changed.response.lines[1].vocalTiming);
+ assert.equal(changed.response.lines[0].original,'Synthetic sky');
+ assert.deepEqual(changed.response.lines[0].vocalTiming,{end:11,segments:[{utf16Start:0,utf16Length:13,text:'Synthetic sky',start:10,end:11}]});
+ assert.ok(changed.response.lines[1].vocalTiming);
  const legacy=await acquired(appleRequest,{yrc:'malformed'});assert.equal(legacy.response.lines[0].original,'Old synthetic LRC');assert.equal(legacy.response.metadata.lyric_timing,undefined);
 });
 test('new timed Apple hashes use canonical JSON; legacy Apple digest bytes remain frozen',async()=>{

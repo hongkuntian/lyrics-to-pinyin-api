@@ -55,11 +55,12 @@ test('whitespace, empty tokens and literal parentheses preserve the exact sung t
  const a=parse(good),b=parse(good.replace(',9)',',7)'));assert.equal(a.timingSource.revision,b.timingSource.revision);
  assert.notEqual(a.timingSource.revision,parse(good.replace('10750,500','10750,450')).timingSource.revision);
 });
-test('normalization drops timing on changed text and validates final timestamps/recording bounds',()=>{
+test('normalization preserves outer-whitespace timing but drops changed sung text and validates recording bounds',()=>{
  const raw=parse('[0,1000](0,1000,0)  text  \n[1000,1000](1000,1000,0)Mira: words\n[2000,1000](2000,1000,0)unchanged');
  const cleaned=cleanLyrics(raw,{artist:'Mira',duration:240});
  assert.deepEqual(cleaned.lines.map(l=>l.text),['text','words','unchanged']);
- assert.equal(cleaned.lines[0].vocalTiming,undefined);assert.equal(cleaned.lines[1].vocalTiming,undefined);assert.ok(cleaned.lines[2].vocalTiming);
+ assert.deepEqual(cleaned.lines[0].vocalTiming.segments,[{utf16Start:0,utf16Length:4,text:'text',start:0,end:1}]);
+ assert.equal(cleaned.lines[1].vocalTiming,undefined);assert.ok(cleaned.lines[2].vocalTiming);
  assert.equal(cleanLyrics(parse(good),{duration:11}).lines[0].vocalTiming,undefined);
  for(const mutate of [l=>l.vocalTiming.end=Infinity,l=>l.vocalTiming.segments[0].utf16Length=1.5,l=>l.vocalTiming.segments[0].text='wrong',l=>l.timestamp=11]){
   const line=structuredClone(parse(good).lines[0]);mutate(line);assert.equal(validVocalTiming(line),false);

@@ -33,7 +33,21 @@ export function validVocalTiming(line,{duration=MAX_LYRIC_SECONDS,durationResolu
 }
 export function revalidatedVocalLine(line,text=line.text,options={}) {
  const {vocalTiming,...rest}=line;
- return {...rest,text,...(text===line.text&&validVocalTiming(line,options)?{vocalTiming}:{} )};
+ if(!validVocalTiming(line,options))return {...rest,text};
+ if(text===line.text)return {...rest,text,vocalTiming};
+ // Outer whitespace is display cleanup, not a different sung token. Preserve
+ // every source interval while projecting its exact UTF16 range onto the
+ // trimmed text. No other text edit (including a speaker prefix) grants cues.
+ if(typeof text!=='string'||!text||text!==line.text.trim())return {...rest,text};
+ const offset=line.text.length-line.text.trimStart().length,end=offset+text.length;
+ const boundaries=new Set([...segmenter.segment(line.text)].map(s=>s.index).concat(line.text.length));
+ if(!boundaries.has(offset)||!boundaries.has(end))return {...rest,text};
+ const segments=vocalTiming.segments.flatMap(segment=>{
+  const start=Math.max(offset,segment.utf16Start),stop=Math.min(end,segment.utf16Start+segment.utf16Length);
+  return start<stop?[{...segment,utf16Start:start-offset,utf16Length:stop-start,text:line.text.slice(start,stop)}]:[];
+ });
+ const projected={...rest,text,vocalTiming:{...vocalTiming,segments}};
+ return validVocalTiming(projected,options)?projected:{...rest,text};
 }
 const sourceFormats={netease:'yrc',kugou:'krc',qq:'qrc'};
 const sourcePattern=/^(?:netease:\d{1,20}:yrc|kugou:\d{1,20}:krc|qq:\d{1,20}:qrc)$/;

@@ -127,3 +127,57 @@ for(const provider of ['apple','spotify'])test(`${provider}: cancellation after 
  assert.deepEqual(candidates.map(c=>c.song.id),[1]);
  assert.equal([...f.values.keys()].some(k=>k.startsWith('romanize:')||k.startsWith('spotify:lyrics:')),false);
 });
+
+test('Apple Sunny Day localization completes a whitespace-padded QRC without exhausting later aliases',async()=>{
+ const request={artist:'Jay Chou',title:'Sunny Day',album:'Yeh, Hwei-Mei',duration:269.747,catalog_id:'1721464906',storefront:'us'};
+ const localized={...request,artist:'周杰倫',title:'晴天',album:'葉惠美'},queries=[];
+ // The reported source has Latin sung tokens ending in a provider space.
+ // All content here is invented; ranges/times reproduce that source shape.
+ const lyrics=parseQRC('<QrcInfos><LyricInfo LyricCount="1"><Lyric_1 LyricType="1" LyricContent="[10000,2000]Alpha (10000,500)beta (10600,500)&#10;[30000,2000]Gamma (30000,500)delta (30600,500)"/></LyricInfo></QrcInfos>',{songId:97773,duration:269,durationResolution:1});
+ const api={name:'QQMusicAPI',supportsVocalTiming:true,searchSong:async(a,t)=>{
+  queries.push([a,t]);
+  if(a===localized.artist&&t===localized.title)return {...localized,id:97773,duration:269,source:'qq'};
+  return null;
+ },getLyrics:async()=>lyrics};
+ const aliases=Object.assign([localized],{resolution:{version:'catalog-recording-1',method:'same_catalog_id',
+  requested:{catalog_id:request.catalog_id,storefront:'us'},canonical_recording_id:'apple:'+request.catalog_id,
+  canonical_context:{artist:request.artist,title:request.title},accepted_request:request,
+  catalog_items:[{catalog_id:request.catalog_id,storefront:'us',provenance:'itunes'}],searches:[request,localized,{...localized,artist:'Other localized name'}]}});
+ const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],speculativeDiscovery:false,
+  resolveCatalogAliasesFn:async()=>aliases,lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,
+  lookupOfficialTranscriptionFn:async()=>null,getDefaultRomanizationSystemFn:()=> 'none',logger:{info(){},error(){}}});
+ const res=streamResponse();
+ await service({method:'POST',body:{...request,options:{lyric_sources_version:2,delivery:'progressive-v1'}}},res);
+ const final=frames(res).at(-1);
+ assert.equal(final.event,'complete');
+ assert.deepEqual(queries,[[request.artist,request.title],[localized.artist,localized.title]]);
+ const response=final.response;
+ assert.equal(response.metadata.lyric_timing.source,'qq:97773:qrc');
+ assert.equal(response.metadata.lyric_timing.recordingID,request.catalog_id);
+ assert.equal(response.metadata.lyric_timing.durationResolution,1);
+ assert.equal(response.metadata.recording_match.duration,269.747);
+ assert.equal(response.metadata.recording_match.artist,request.artist);
+ assert.deepEqual(response.lines.map(l=>l.original),['Alpha beta','Gamma delta']);
+ assert.deepEqual(response.lines.map(l=>l.vocalTiming.segments.map(s=>[s.text,s.start,s.end])),[
+  [['Alpha ',10,10.5],['beta',10.6,11.1]],[['Gamma ',30,30.5],['delta',30.6,31.1]]
+ ]);
+});
+
+test('Zhang Yuan exact-source QRC with literal ampersands reaches the final measured response',async()=>{
+ const request={artist:'张远',title:'看着我的眼睛说',album:'看着我的眼睛说 - Single',duration:260.794,catalog_id:'1815583986',storefront:'cn'};
+ const song={...request,id:571093214,album:'看着我的眼睛说',duration:260,source:'qq'};
+ const lyrics=parseQRC('<QrcInfos><LyricInfo LyricCount="1"><Lyric_1 LyricType="1" LyricContent="[10000,2000]A&B (10000,500)sing (10600,500)&#10;[30000,2000]C&D (30000,500)reply (30600,500)"/></LyricInfo></QrcInfos>',{songId:song.id,duration:song.duration,durationResolution:1});
+ const api={name:'QQMusicAPI',supportsVocalTiming:true,searchSong:async()=>song,getLyrics:async()=>lyrics};
+ const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],speculativeDiscovery:false,
+  resolveCatalogAliasesFn:async()=>[],lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,
+  lookupOfficialTranscriptionFn:async()=>null,getDefaultRomanizationSystemFn:()=> 'none',logger:{info(){},error(){}}});
+ const res=createMockRes();
+ await service({method:'POST',body:{...request,options:{lyric_sources_version:2}}},res);
+ assert.equal(res.statusCode,200);
+ assert.equal(res.body.metadata.lyric_timing.source,'qq:571093214:qrc');
+ assert.equal(res.body.metadata.lyric_timing.recordingID,request.catalog_id);
+ assert.deepEqual(res.body.lines.map(l=>l.original),['A&B sing','C&D reply']);
+ assert.deepEqual(res.body.lines.map(l=>l.vocalTiming.segments.map(s=>[s.text,s.start,s.end])),[
+  [['A&B ',10,10.5],['sing',10.6,11.1]],[['C&D ',30,30.5],['reply',30.6,31.1]]
+ ]);
+});

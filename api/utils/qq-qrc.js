@@ -12,29 +12,38 @@ const fail=()=>{throw new Error('invalid_qrc_xml');};
 // The provider's known XML envelope is parsed as a small closed grammar. No
 // DTD, external entities, arbitrary markup, duplicate attrs or sibling sheets.
 // Numeric entities are Unicode scalars; attribute newlines remain source rows.
-function xmlValue(value) {
+function xmlValue(value,{literalAmpersands=false}={}) {
  let out='',at=0;
- for(const entity of value.matchAll(/&([^;]{1,16});/g)) {
-  const prefix=value.slice(at,entity.index);if(prefix.includes('&'))fail();out+=prefix;
+ while(at<value.length) {
+  const next=value.indexOf('&',at);
+  if(next<0){out+=value.slice(at);break;}
+  out+=value.slice(at,next);
+  const entity=/^&([^;&]{1,16});/.exec(value.slice(next));
+  if(!entity) {
+   // QQ sometimes leaves literal production/lyric ampersands unescaped.
+   // Only LyricContent permits them. Entity-like numeric/unknown names remain
+   // invalid, and the enclosing attribute/element grammar is unchanged.
+   if(!literalAmpersands||/^&(?:#|[^\s&;]*;)/u.test(value.slice(next)))fail();
+   out+='&';at=next+1;continue;
+  }
   const name=entity[1],named={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'"};
   if(Object.hasOwn(named,name))out+=named[name];
   else {
    const n=/^#\d{1,7}$/.test(name)?Number(name.slice(1)):/^#x[\da-f]{1,6}$/i.test(name)?parseInt(name.slice(2),16):NaN;
    if(!integer(n)||n>0x10ffff||(n>=0xd800&&n<=0xdfff))fail();out+=String.fromCodePoint(n);
   }
-  at=entity.index+entity[0].length;
+  at=next+entity[0].length;
  }
- const tail=value.slice(at);if(tail.includes('&'))fail();out+=tail;
  if(invalidUnicode(out))fail();return out;
 }
-function readAttrs(raw) {
+function readAttrs(raw,{literalLyricContent=false}={}) {
  let at=0;const attrs={};
  while(at<raw.length) {
   const ws=/^\s+/.exec(raw.slice(at));if(!ws)fail();at+=ws[0].length;if(at===raw.length)break;
   const key=/^[A-Za-z_][A-Za-z0-9_.:-]{0,39}/.exec(raw.slice(at));if(!key)fail();at+=key[0].length;
   const equals=/^\s*=\s*(["'])/.exec(raw.slice(at));if(!equals)fail();at+=equals[0].length;
   const end=raw.indexOf(equals[1],at);if(end<0||Object.hasOwn(attrs,key[0])||Object.keys(attrs).length>=8)fail();
-  const value=raw.slice(at,end);if(value.includes('<'))fail();attrs[key[0]]=xmlValue(value);at=end+1;
+  const value=raw.slice(at,end);if(value.includes('<'))fail();attrs[key[0]]=xmlValue(value,{literalAmpersands:literalLyricContent&&key[0]==='LyricContent'});at=end+1;
  }
  return attrs;
 }
@@ -58,7 +67,7 @@ export function qrcBody(raw) {
   }
   const info=consume(/^<LyricInfo((?:[^"'<>]|"[^"<>]*"|'[^'<>]*')*)>\s*/);const attrs=readAttrs(info[1]);
   allowedAttrs(attrs,['LyricCount'],['LyricCount']);if(attrs.LyricCount!=='1')fail();
-  const lyric=consume(/^<Lyric_1((?:[^"'<>]|"[^"<>]*"|'[^'<>]*')*)(\/\s*>|>\s*<\/Lyric_1\s*>)\s*/);const l=readAttrs(lyric[1]);
+  const lyric=consume(/^<Lyric_1((?:[^"'<>]|"[^"<>]*"|'[^'<>]*')*)(\/\s*>|>\s*<\/Lyric_1\s*>)\s*/);const l=readAttrs(lyric[1],{literalLyricContent:true});
   allowedAttrs(l,['LyricType','LyricContent'],['LyricType','LyricContent']);if(l.LyricType!=='1')fail();
   consume(/^<\/LyricInfo\s*>\s*<\/QrcInfos\s*>\s*$/);if(at!==text.length)fail();
   return l.LyricContent;
