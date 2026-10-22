@@ -23,7 +23,7 @@ function xmlValue(value,{literalAmpersands=false}={}) {
    // QQ sometimes leaves literal production/lyric ampersands unescaped.
    // Only LyricContent permits them. Entity-like numeric/unknown names remain
    // invalid, and the enclosing attribute/element grammar is unchanged.
-   if(!literalAmpersands||/^&(?:#|[A-Za-z_][A-Za-z0-9_.:-]*;)/u.test(value.slice(next)))fail();
+   if(!literalAmpersands||/^&(?:#|[^\s&;]*;)/u.test(value.slice(next)))fail();
    out+='&';at=next+1;continue;
   }
   const name=entity[1],named={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'"};

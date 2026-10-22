@@ -81,6 +81,9 @@ test('literal ampersands in QQ lyric content preserve text and measured cues wit
  }
  assert.equal(parseQRC(raw.replace('SaveTime="1"','SaveTime="1&"'),{songId:123}),null);
  assert.equal(parseQRC(raw.replace('version="1.0"','version="1.0&"'),{songId:123}),null);
+ for(const length of [15,16,17,32])for(const name of ['x'.repeat(length),'名'.repeat(length),'x'.repeat(length)+'é','x'.repeat(length)+'́']) {
+  assert.equal(parseQRC(raw.replace('A&B & C',`A&${name};`),{songId:123}),null,name);
+ }
 });
 test('invalid headers, Unicode, IDs, durations and source ordering fail closed',()=>{
  for(const body of ['[0,0]A(0,1)','[9999999999999999,1000]A(0,500)','[0,10001]A(0,500)','[1000,1000]A(1000,500)\n[0,1000]B(0,500)','[0,1000]\ud800(0,500)','[0,1000]A\u0000(0,500)'])assert.equal(parse(body),null);
