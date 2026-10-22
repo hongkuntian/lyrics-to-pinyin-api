@@ -3,8 +3,8 @@
   "git": {
     "deploymentEnabled": false
   },
-  "installCommand": "npm ci --ignore-scripts",
-  "buildCommand": "node evaluation/language-expansion/run-operation.mjs",
+  "installCommand": "node --version",
+  "buildCommand": "node evaluation/language-expansion/policy-observation.mjs",
   "outputDirectory": ".vercel/output",
   "framework": null
 }
