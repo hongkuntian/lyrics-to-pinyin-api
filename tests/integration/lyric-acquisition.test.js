@@ -113,11 +113,23 @@ test('last canonical reader cancellation aborts held source work without a fallb
  const f=fixture();let aborted=0;f.api.getLyrics=async(_,context)=>{f.stats.lyrics++;return new Promise((resolve,reject)=>context.signal.addEventListener('abort',()=>{aborted++;reject(Object.assign(new Error('cancel'),{name:'AbortError'}));},{once:true}));};
  const res=streamResponse(),work=f.call(f.make(),{...request,options:{delivery:'progressive-v1'}},res);await until(()=>f.stats.lyrics===1);res.emit('close');await work;assert.equal(aborted,1);assert.equal(f.stats.search,1);assert.equal(f.stats.lyrics,1);
 });
-for(const progressive of [false,true])for(const failure of ['timeout','outage','discarded'])test(`later admitted original retains ${failure} classification without repeating its probe (${progressive?'progressive':'legacy'})`,async()=>{
- const queries=[];const f=fixture({speculativeDiscovery:true,providerTimeoutMs:10,resolveCatalogAliasesFn:async r=>{await wait(failure==='timeout'?20:1);const aliases=[],p=proof(r);p.searches=[{...p.searches[0],title:'Alias Song'},p.searches[0]];Object.defineProperty(aliases,'resolution',{value:p});return aliases;}});
- f.api.searchSong=async(_,title,context)=>{queries.push(title);if(title!=='Song')return null;if(failure==='outage')throw new Error('offline');return new Promise((resolve,reject)=>context.signal.addEventListener('abort',()=>reject(Object.assign(new Error('cancelled'),{name:'AbortError'})),{once:true}));};
- const res=progressive?streamResponse():createMockRes();await f.call(f.make(),{...request,...(progressive?{options:{delivery:'progressive-v1'}}:{})},res);
- assert.equal(queries.filter(q=>q==='Song').length,1);assert.equal(res.statusCode,failure==='timeout'?504:failure==='outage'?502:404);if(progressive)assert.equal(res.chunks.length,0);
+for(const progressive of [false,true])for(const failure of ['timeout','outage','discarded'])test(`later admitted original retains ${failure} classification without repeating its probe (${progressive?'progressive':'legacy'})`,{timeout:2000},async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});t.after(()=>t.mock.timers.reset());
+ const catalog=gate(),catalogStarted=gate(),probeStarted=gate(),queries=[],abortedAt=[];
+ const f=fixture({speculativeDiscovery:true,providerTimeoutMs:10,resolveCatalogAliasesFn:async r=>{catalogStarted.resolve();await catalog.promise;const aliases=[],p=proof(r);p.searches=[{...p.searches[0],title:'Alias Song'},p.searches[0]];Object.defineProperty(aliases,'resolution',{value:p});return aliases;}});
+ f.api.searchSong=async(_,title,context)=>{queries.push(title);if(title!=='Song')return null;probeStarted.resolve();if(failure==='outage')throw new Error('offline');return new Promise((resolve,reject)=>context.signal.addEventListener('abort',()=>{abortedAt.push(Date.now());reject(Object.assign(new Error('cancelled'),{name:'AbortError'}));},{once:true}));};
+ const res=progressive?streamResponse():createMockRes(),start=Date.now(),work=f.call(f.make(),{...request,...(progressive?{options:{delivery:'progressive-v1'}}:{})},res);
+ await Promise.all([catalogStarted.promise,probeStarted.promise]);
+ // Catalog admission, rather than host scheduling of a 1ms sleep, chooses
+ // whether cancellation precedes the unchanged 10ms provider deadline.
+ t.mock.timers.tick(failure==='timeout'?9:1);await tick();assert.deepEqual(abortedAt,[]);assert.deepEqual(queries,['Song']);
+ if(failure==='timeout'){
+  t.mock.timers.tick(1);assert.deepEqual(abortedAt,[start+10]);await tick();t.mock.timers.tick(10);
+ }
+ catalog.resolve();await work;
+ assert.equal(Date.now()-start,failure==='timeout'?20:1);assert.deepEqual(abortedAt,failure==='outage'?[]:[start+(failure==='timeout'?10:1)]);
+ assert.equal(queries.filter(q=>q==='Song').length,1);assert.deepEqual(queries,['Song','Alias Song']);assert.equal(f.stats.lyrics,0);
+ assert.equal(res.statusCode,failure==='timeout'?504:failure==='outage'?502:404);if(progressive)assert.equal(res.chunks.length,0);
 });
 test('later admitted speculative recording mismatch retains actionable 409 without repeating discovery',async()=>{
  const queries=[];const f=fixture({speculativeDiscovery:true,resolveCatalogAliasesFn:async r=>{await tick();const aliases=[],p=proof(r);p.searches=[{...p.searches[0],title:'Alias Song'},p.searches[0]];Object.defineProperty(aliases,'resolution',{value:p});return aliases;}});
