@@ -9,7 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {hash, preparePlan, shard, validatePlan, initJournal, registerPlan, snapshot, admitShard, claimStart,
   runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch, importEvents, execute} from '../../scripts/evaluate-language-expansion.mjs';
 import {TAGS, TARGETS, sourceInput, batchInput, DEPENDENT_RESERVE, CONFIRMATION_RESERVE} from '../../scripts/language-expansion/plan.mjs';
-import {payloadEvents, recoverPayload, SCHEMA, boundedSink} from '../../scripts/language-expansion/common.mjs';
+import {payloadEvents, recoverPayload, SCHEMA, boundedSink, MAX_PAYLOAD} from '../../scripts/language-expansion/common.mjs';
 import {baseEvent} from '../../scripts/language-expansion/journal.mjs';
 import {responseResult, openAIClient, validateManifest} from '../../scripts/language-expansion/transport.mjs';
 import {evaluateLanguageExpansionInBuild, runLanguageExpansionBuild} from '../../scripts/language-expansion-build.mjs';
@@ -196,6 +196,22 @@ test('chunks recover out of order and reject drops, duplicates, unknown chunks, 
   assert.deepEqual(recoverPayload([...events.slice(0, -1).reverse(), events.at(-1)], base), value);
   for (const corrupt of [events.slice(1), [...events, events[0]], events.slice(0, -1), events.map((e, i) => i === 0 ? {...e, data: 'AAAA'} : e), events.map((e, i) => i === 0 ? {...e, index: 999} : e)]) assert.throws(() => recoverPayload(corrupt, base));
 });
+test('one MiB payloads fit lossless 2000-character log transport including longest case metadata', async () => {
+  const plan = await planFixture(), manifest = shard(plan, [plan.jobs[0].id]);
+  const base = {...baseEvent(manifest, manifest.jobs[0]), caseID: 'c'.repeat(80) + '--translated--zh-Hans--zh-Hans--confirmation--' + 'n'.repeat(80)};
+  const value = {text: 'x'.repeat(MAX_PAYLOAD - Buffer.byteLength(JSON.stringify({text: ''})))};
+  const events = payloadEvents(base, value);
+  assert.equal(Buffer.byteLength(JSON.stringify(value)), MAX_PAYLOAD);
+  assert.equal(events.length, Math.ceil(Math.ceil(MAX_PAYLOAD / 3) * 4 / 1000) + 1);
+  assert.ok(events.slice(0, -1).every(e => e.data.length <= 1000));
+  assert.ok(events.every(e => JSON.stringify(e).length <= 1900 && Buffer.byteLength(JSON.stringify(e)) <= 1900));
+  assert.equal(hash(recoverPayload([...events].reverse(), base)), hash(value));
+  for (const broken of [events.slice(1), [...events, events[0]], [...events, events.at(-1)], events.map((e, i) => i === 1 ? {...e, index: 0} : e)]) {
+    assert.throws(() => recoverPayload(broken, base));
+  }
+  assert.throws(() => payloadEvents(base, {text: value.text + 'x'}), /payload_limit/);
+  assert.throws(() => payloadEvents({...base, caseID: 'x'.repeat(2000)}, {}), /payload_record_limit/);
+});
 test('external imports reject unknown records and preserve completed prefixes before later corruption', async t => {
   const plan = await planFixture(), manifest = shard(plan, [plan.jobs[0].id]), dir = await journalFixture(t, plan);
   const ticket = await admitShard({directory: dir, plan, manifest, executionID: 'build_test'}); await claimStart(dir, ticket);
@@ -217,7 +233,7 @@ test('large payload events stream incrementally above old 2MiB buffer with bound
   await runStandard({plan, manifest, approvedHash: hash(manifest), ticket: ticketFor(manifest), executionID: 'build_test', claimStart: async () => {},
     client: {standard: async () => { assert.equal(completedBeforeNext, index); return fakeResponse(plan, jobs[index++], {padding: 'x'.repeat(580000)}); }},
     emit: event => { const size = Buffer.byteLength(JSON.stringify(event)); bytes += size; max = Math.max(max, size); if (event.event === 'language_expansion_complete') completedBeforeNext++; }});
-  assert.ok(bytes > 2 * 1024 * 1024); assert.ok(bytes < 16 * 1024 * 1024); assert.ok(max <= 16384);
+  assert.ok(bytes > 2 * 1024 * 1024); assert.ok(bytes < 16 * 1024 * 1024); assert.ok(max <= 1900);
 });
 test('SIGTERM after a completed case retains its output and the interrupted shard cannot restart', async t => {
   const plan = await planFixture(), jobs = plan.jobs.filter(j => j.kind === 'translation').slice(0, 2), manifest = shard(plan, jobs.map(j => j.id)), dir = await journalFixture(t, plan);

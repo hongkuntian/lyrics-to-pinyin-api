@@ -43,12 +43,17 @@ export function boundedSink(sink, secret) {
 export function payloadEvents(base, value) {
   const raw = Buffer.from(JSON.stringify(value));
   if (raw.length > MAX_PAYLOAD) fail('payload_limit');
-  const data = raw.toString('base64'), count = Math.ceil(data.length / 2000);
+  // Log transport caps the whole serialized string at 2000 characters. Leave
+  // room for identity metadata and check it before emitting any payload records.
+  const chunkChars = 1000;
+  const data = raw.toString('base64'), count = Math.ceil(data.length / chunkChars);
   const meta = {...base, payloadHash: hash(raw), bytes: raw.length, count};
-  return [
-    ...Array.from({length: count}, (_, index) => ({...meta, event: 'language_expansion_chunk', index, data: data.slice(index * 2000, (index + 1) * 2000)})),
+  const events = [
+    ...Array.from({length: count}, (_, index) => ({...meta, event: 'language_expansion_chunk', index, data: data.slice(index * chunkChars, (index + 1) * chunkChars)})),
     {...meta, event: 'language_expansion_complete'}
   ];
+  if (events.some(event => Buffer.byteLength(JSON.stringify(event)) > 1900)) fail('payload_record_limit');
+  return events;
 }
 export function recoverPayload(events, base) {
   const matches = events.filter(e => e.planHash === base.planHash && e.shardHash === base.shardHash && e.caseID === base.caseID && e.bodyHash === base.bodyHash && e.definitionHash === base.definitionHash);
