@@ -17,7 +17,8 @@ Targets, in order, are en, fr, es, zh-Hans.
 
 - 240 complete translations, every document into every target: 44 exact-tag
   directions, 40 nominal language-family directions.
-- 240 original Study cases, every document into every explanation language.
+- 240 original Study acceptance cases: 236 generations and four exact `ru-c`
+  static refusals (`unsupported_selected_language`, actual selected tag `uk`).
 - 248 translated Study cases. For every translation, explanation target index
   is `(docOrdinalWithinExactTag + targetIndex) % 4`. Each Hindi exact tag adds
   the four missing ordinal=3 target/explanation cells on its first document.
@@ -25,7 +26,10 @@ Targets, in order, are en, fr, es, zh-Hans.
   cells without claiming a population accuracy estimate.
 
 `full1440` is an explicit optional plan mode with the full 960 translated Study
-crossproduct. It is not the default acceptance requirement.
+crossproduct (1,440 acceptance cases, at most 1,436 generations). It is not the
+default acceptance requirement. The default has 728 cases and at most 724
+generation jobs: 240 translations + 236 originals + 248 dependents. Failed
+dependencies remain failures; no easier work replaces them.
 
 The 33 Standard seed IDs are part of that same matrix: first document per exact
 tag, translation target `globalTagIndex % 4`, original explanation target
@@ -58,9 +62,46 @@ indices, exclusive at the end, validated with production `selectionV2`.
 The adapter uses existing `caseInput`/`makeDocument`. Author IDs such as ja-a:01
 are **not** wire IDs. It retains both directions of the mapping to production
 document-local L0001 IDs, in retained order, with source/lyric UTF-8 byte hashes.
-Every result carries `sourceBindings` and its exact selection. Source bytes,
+Every job and result carries immutable `sourceDefinitionHash` and `definitionHash`,
+plus qualification metadata; every result carries `sourceBindings` and its exact selection. Source bytes,
 declared hashes/order and authored ranges must match. This does not assert that
 authored language labels, glosses or readings have passed linguistic review.
+
+The curated profile keeps the exact ja/ko/pt/it/de/ru/vi/id/th a–f IDs and Hindi
+hi-b/d/f (`hi`) and hi-a/c/e (`hi-Latn`), in their retained within-tag order.
+`preparePlan` requires the curated `routing-manifest.json` and its explicit
+approved parsed-JSON hash as well as the approved corpus hash. It validates all
+ten exact c controls, their family/exact/effective tags, dispositions and exact
+selection bytes/bindings against each source's `effectiveSelectionLanguage` and
+`selectionRouting`. This is a fixed definition, never an arbitrary exclusion list.
+
+Only the four `ru-c--original--{en,fr,es,zh-Hans}` entries are `static_refusal`.
+`snapshot().staticRefusals` derives their separate immutable receipts, with
+`providerCalled:false`, actual/accounted cost 0, selected language uk and exact
+bindings. They do not enter `results` or unknown states and have no provider body.
+Shard construction, admission, manifest validation and result creation reject
+them, including named confirmations. They are never `valid:true` provider outputs.
+
+The other six foreign original controls keep their exact selections:
+ja-c→zh-Hans, ko-c→en, pt-c/it-c/de-c→es, th-c→en. They are diagnostic-only and
+`familyDirectionPositiveEligible:false`; ru-c is likewise ineligible. All
+translation and dependent cases, all 176 translated cells and the 33 first-document
+seed IDs remain. vi-c/id-c/hi-c retain their curated qualification holds. No
+synthetic protocol fixture or annotation grants linguistic qualification.
+
+The profile is explicitly **legacy document-language-only mixed-context
+research**. Production request bodies still use the document language unchanged.
+Outside-body effective-language metadata never claims that the model received
+resolved passage hints. A later context-aware recipe requires separate frozen
+bodies/code and qualification. No such recipe is implemented here.
+
+The per-source definition hashes the full authored spec, reconstructed document,
+exact occurrence bindings/selection and routing under the fixed profile. Each
+case additionally binds its schedule, execution disposition and qualification.
+Plan unions reject changes under an existing case ID even when the production
+wire bytes are identical. The profile/routing/qualification must be reviewed and
+frozen before the paid seed. Old executor plans cannot be reused after a code
+change: no code-hash bypass is available.
 
 `preparePlan` requires an explicit exact approved corpus hash. Plans retain code
 hashes (including prompt/recipe/parser files), actual `requestBody` and
@@ -98,10 +139,19 @@ Unknown usage/model/tier retains the reserve and stops. Known cost overrun also
 stops. Semantic/structural failures with known usage remain charged failures.
 All admitted cases begin as unknown *before dispatch*, including cases a killed
 build may never have reached. The next shard is refused while any earlier shard
-has unknown submission/cost or overrun. There is no blind retry, transport switch,
+has unknown submission/cost, overrun or an unreconciled Batch shard. There is no blind retry, transport switch,
 or release of uncertain holds. Resolving genuinely unknown costs/identities needs
 Root's evidence and an explicit accounting disposition, not another submit call.
 The harness intentionally supplies no automatic unknown-hold clearing command.
+
+A future context-aware executor/matrix is separate qualification, not part of this
+legacy plan. Complete the old fixed-code Batch to terminal reconciliation before
+freezing the next executor version. Preserve its external global actual/unknown
+ledger and carry all costs/holds into the new version; a new recipe, journal or
+code hash never resets cumulative accounting. Root separately reserves any future
+matrix against the same 20,000,000-micro ceiling. Integrating changed selection or
+timing code also invalidates this executor's plan hashes; freeze only the final
+combined reviewed candidate. No paid plan is frozen by these fake-provider tests.
 
 ## Root journal and transport recovery
 
@@ -111,8 +161,10 @@ Root commands use a brief exclusive mutation lock; no provider work holds it.
 Never delete a lock or truncate the journal to resume after interruption.
 `snapshot` verifies the complete chain, immutable file hashes, admission, bodies,
 costs and recovered payloads. Log imports reject the offending record and retain
-their verified prefix, including completed earlier cases; incomplete tails keep
-unknown holds. Import only fresh records, not a previously imported prefix.
+their verified prefix, including completed earlier cases; the real CLI reads
+JSONL incrementally and stops at the first malformed JSON record, preserving the
+verified preceding records and never accepting a later tail. Incomplete cases
+keep unknown holds. Import only fresh records, not a previously imported prefix.
 
 Standard shards have at most four cases and run serially. Production deadlines
 remain 270 seconds translation/240 seconds Study. Four worst-case 270-second
@@ -161,6 +213,18 @@ counts, final-newline state and hash. Together these reconstruct the exact JSONL
 files. Do not claim a reconstructed file matches until its complete receipt hash
 has been checked. Invalid UTF-8 is rejected.
 
+Every admitted Batch also has a durable `shardStates` gate, independent of case
+settlement. Only a validated `language_expansion_reconciled` record closes it.
+That record binds terminal Batch/input/output/error identities and status,
+complete per-file hashes/bytes/row counts/newline state, exact row coverage hash
+and request counts. Replay recomputes all of these from retained rows and file
+receipts. Both files are required when declared, including an empty error file.
+Missing reconciliation, a failed second-file retrieval, truncated rows, changed
+identities, bad counts or an interrupted import keep the next admission blocked
+even if every case already settled. A terminal build record or a retained-case
+receipt cannot clear this gate. Read-only exact-file recovery may complete the
+same reconciliation; there is no automatic release, create, retry or resubmit.
+
 Each retrieval operation accepts at most **1 MiB total raw output+error bytes**;
 Root sizes its frozen Batch shards accordingly. Exceeding this bound stops with
 unknown holds, preserving earlier retained file/case records. There is no automatic
@@ -177,7 +241,7 @@ The corpus hash is SHA256 of `JSON.stringify(parsedCorpus)`, not the raw pretty
 printed file. `hash` is exported to compute it without copying the corpus.
 
 ```sh
-node scripts/evaluate-language-expansion.mjs prepare --corpus /private/approved-corpus.json --approved-corpus-hash CORPUS_HASH --mode matrix728 --out /private/plan.json
+node scripts/evaluate-language-expansion.mjs prepare --corpus /private/approved-corpus.json --approved-corpus-hash CORPUS_HASH --routing-manifest /private/routing-manifest.json --approved-routing-hash ROUTING_HASH --mode matrix728 --out /private/plan.json
 node scripts/evaluate-language-expansion.mjs init --journal /private/root-journal --prior-micros 0 --unknown-held-micros 0
 node scripts/evaluate-language-expansion.mjs register --journal /private/root-journal --plan /private/plan.json --approved-plan-hash PLAN_HASH
 node scripts/evaluate-language-expansion.mjs freeze --journal /private/root-journal --plan /private/plan.json --approved-plan-hash PLAN_HASH --case-ids CASE_ID_1,CASE_ID_2 --transport standard --out /private/shard.json
@@ -217,8 +281,8 @@ Sensitive provider key only in the production build; it does not export a key or
 edit persistent environment settings. The direct callable also accepts injected
 `client`/`claimStart` for fake rehearsals. Legacy opt-in export
 `evaluateLanguageExpansionInBuild(env, {loadBundle, claimStart, emit, fetchFn, client})`
-is available but intentionally unwired; it requires an authoritative external
-claim, not a `/tmp` marker.
+is available but intentionally unwired; every enabled path uses the same
+terminal/forced-nonzero contract and requires an authoritative external claim.
 
 Root's separate immutable evaluation branch must run only this adapter, with no
 normal packaging/schema/migration/repair hooks. The direct entry always emits
@@ -227,7 +291,7 @@ normal packaging/schema/migration/repair hooks. The direct entry always emits
 throws/finishes **nonzero**. The CLI uses `process.exitCode=1` to flush stdout;
 do not catch this into a successful build. This code alone does not prove
 deployment/domain isolation: Root owns the exact branch/config and checks actual
-build state/log identity. The terminal event does not settle missing case output.
+build state/log identity. The terminal event does not settle missing case output or reconcile a Batch shard.
 
 ## Fake-provider recovery reproduction and acceptance
 

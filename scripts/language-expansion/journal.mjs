@@ -2,16 +2,18 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {SCHEMA, hash, fail, integer, save, readJSON, recoverPayload} from './common.mjs';
 import {CEILING, CONFIRMATION_RESERVE, validatePlan, shard, bindDependent} from './plan.mjs';
+import {reconciliationFor, terminalBatch} from './reconciliation.mjs';
 
 const events = {
   language_expansion_admitted: ['executionID'],
   language_expansion_submitting: [],
   language_expansion_chunk: ['payloadHash', 'bytes', 'count', 'index', 'data'],
   language_expansion_complete: ['payloadHash', 'bytes', 'count'],
-  language_expansion_control: ['operation', 'state', 'inputHash', 'inputFileID', 'batchID', 'outputFileID', 'errorFileID', 'status'],
+  language_expansion_control: ['operation', 'state', 'inputHash', 'inputFileID', 'batchID', 'outputFileID', 'errorFileID', 'status', 'requestCounts'],
   language_expansion_file: ['role', 'fileID', 'bytes', 'payloadHash', 'count', 'finalNewline'],
+  language_expansion_reconciled: ['inputFileID', 'batchID', 'outputFileID', 'errorFileID', 'status', 'requestCounts', 'files', 'rowCoverageHash', 'rowCount'],
 };
-const common = ['schema', 'event', 'planHash', 'shardHash', 'caseID', 'bodyHash', 'reservedMicros', 'transport'];
+const common = ['schema', 'event', 'planHash', 'shardHash', 'caseID', 'bodyHash', 'definitionHash', 'reservedMicros', 'transport'];
 export function validateEvent(event, manifests) {
   if (event.event === 'language_expansion_terminal') {
     if (event.schema !== SCHEMA || Object.keys(event).sort().join() !== 'event,intentionalBuildFailure,operation,planHash,schema,shardHash,state' ||
@@ -25,7 +27,7 @@ export function validateEvent(event, manifests) {
   const manifest = manifests.find(m => hash(m) === event.shardHash && m.planHash === event.planHash);
   if (!manifest || event.transport !== manifest.transport) fail('unknown_event_shard');
   const job = manifest.jobs.find(j => j.id === event.caseID);
-  if (!job || job.bodyHash !== event.bodyHash || job.reservedMicros !== event.reservedMicros) fail('unknown_event_case_or_body');
+  if (!job || job.bodyHash !== event.bodyHash || job.definitionHash !== event.definitionHash || job.reservedMicros !== event.reservedMicros) fail('unknown_event_case_or_body');
   if (event.event === 'language_expansion_admitted' && !/^[A-Za-z0-9_-]{1,120}$/.test(event.executionID ?? '')) fail('invalid_execution_identity');
   if (event.event === 'language_expansion_control') {
     if (!['upload', 'create', 'inspect', 'recover', 'retrieve'].includes(event.operation) ||
@@ -91,7 +93,13 @@ export async function snapshot(directory, {incoming = []} = {}) {
     }
   }
   if (confirmations.size > 60) fail('confirmation_budget_exceeded');
-  const result = {plans, manifests, events: [], states: {}, results: {}, dependentFailures: {}, priorMicros: root.priorMicros, unknownHeldMicros: root.unknownHeldMicros};
+  const staticRefusals = Object.fromEntries([...jobs.values()].filter(j => j.executionDisposition === 'static_refusal').map(job => {
+    const source = plans.flatMap(p => p.sources).find(s => s.id === job.source && s.definitionHash === job.sourceDefinitionHash);
+    return [job.id, {id: job.id, definitionHash: job.definitionHash, sourceDefinitionHash: job.sourceDefinitionHash,
+      disposition: 'static_refusal', reason: job.refusalCode, effectiveSelectionLanguage: 'uk', providerCalled: false,
+      actualMicros: 0, accountedMicros: 0, sourceBindings: source.bindings, selection: source.selection, qualification: job.qualification}];
+  }));
+  const result = {plans, manifests, events: [], states: {}, shardStates: {}, results: {}, staticRefusals, dependentFailures: {}, priorMicros: root.priorMicros, unknownHeldMicros: root.unknownHeldMicros};
   for (const [eventIndex, value] of [...rows.map(r => r.value), ...incoming].entries()) {
     try {
       if (value.event === 'language_expansion_start') {
@@ -106,25 +114,49 @@ export async function snapshot(directory, {incoming = []} = {}) {
       if (value.event === 'language_expansion_admitted') {
         if (result.states[value.caseID]) fail('duplicate_case_admission');
         result.states[value.caseID] = {state: 'unknown', ...value};
+        if (value.transport === 'batch') result.shardStates[value.shardHash] = {state: 'unresolved'};
       } else {
         const admission = result.states[value.caseID];
         if (!admission || admission.shardHash !== value.shardHash || admission.bodyHash !== value.bodyHash) fail('unadmitted_event');
         if (!result.events.some(e => e.event === 'language_expansion_start' && e.shardHash === value.shardHash)) fail('unstarted_event');
+        if (value.event === 'language_expansion_control' && value.transport === 'batch') {
+          const controls = result.events.filter(e => e.event === value.event && e.shardHash === value.shardHash);
+          const prior = controls.findLast(e => e.batchID);
+          if ((prior && value.batchID && prior.batchID !== value.batchID) ||
+              controls.some(e => e.inputFileID && value.inputFileID && e.inputFileID !== value.inputFileID)) fail('batch_identity_changed');
+        }
         if (value.event === 'language_expansion_submitting' && result.events.some(e => e.caseID === value.caseID && e.event === value.event)) fail('duplicate_submission');
         if (value.event === 'language_expansion_chunk' && result.events.some(e => e.caseID === value.caseID && e.event === value.event && e.index === value.index)) fail('duplicate_chunk');
         if (value.event === 'language_expansion_complete') {
           if (result.results[value.caseID]) fail('duplicate_completion');
           const output = recoverPayload([...result.events, value], value);
-          if (output.id !== value.caseID || output.bodyHash !== value.bodyHash || typeof output.valid !== 'boolean' ||
+          const manifest = manifests.find(m => hash(m) === value.shardHash), job = manifest.jobs.find(j => j.id === value.caseID);
+          const source = plans.find(p => hash(p) === manifest.planHash).sources.find(s => s.id === job.source);
+          if (output.id !== value.caseID || output.bodyHash !== value.bodyHash || output.definitionHash !== job.definitionHash || output.sourceDefinitionHash !== job.sourceDefinitionHash ||
+              hash(output.sourceBindings) !== hash(source.bindings) || hash(output.selection) !== hash(job.selection ?? source.selection) || hash(output.qualification) !== hash(job.qualification) || typeof output.valid !== 'boolean' ||
               !(output.actualMicros === null || integer(output.actualMicros)) || output.accountedMicros !== (output.actualMicros ?? value.reservedMicros)) fail('invalid_result_accounting');
           result.results[value.caseID] = output;
           result.states[value.caseID].state = output.actualMicros === null ? 'unknown_cost' : output.actualMicros > value.reservedMicros ? 'cost_overrun' : 'settled';
         }
         if (value.event === 'language_expansion_file') {
-          const lines = Object.values(result.results).filter(r => r.fileID === value.fileID && r.role === value.role).sort((a, b) => a.lineIndex - b.lineIndex);
+          const manifest = manifests.find(m => hash(m) === value.shardHash);
+          const lines = manifest.jobs.map(j => result.results[j.id]).filter(r => r?.fileID === value.fileID && r.role === value.role).sort((a, b) => a.lineIndex - b.lineIndex);
           if (lines.length !== value.count || lines.some((r, i) => r.lineIndex !== i || typeof r.rawLine !== 'string')) fail('incomplete_retained_file');
           const raw = lines.map(r => r.rawLine).join('\n') + (value.finalNewline ? '\n' : '');
           if (Buffer.byteLength(raw) !== value.bytes || hash(raw) !== value.payloadHash) fail('corrupt_retained_file');
+        }
+        if (value.event === 'language_expansion_control' && value.transport === 'batch' && ['inspect', 'recover'].includes(value.operation)) {
+          result.shardStates[value.shardHash] = {state: 'unresolved', batchID: value.batchID ?? null};
+        }
+        if (value.event === 'language_expansion_reconciled') {
+          const manifest = manifests.find(m => hash(m) === value.shardHash);
+          const controls = result.events.filter(e => e.shardHash === value.shardHash && e.event === 'language_expansion_control');
+          const terminal = controls.findLast(e => e.operation === 'inspect' && e.state === 'known');
+          if (!terminal || !terminalBatch(terminal.status)) fail('terminal_batch_identity_required');
+          const files = result.events.filter(e => e.shardHash === value.shardHash && e.event === 'language_expansion_file');
+          const expected = {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_reconciled', ...reconciliationFor(manifest, terminal, files, result.results)};
+          if (hash(expected) !== hash(value)) fail('batch_reconciliation_changed');
+          result.shardStates[value.shardHash] = {state: 'reconciled', ...value};
         }
       }
       result.events.push(value);
@@ -179,19 +211,20 @@ export async function admitShard({directory, plan, manifest, executionID, batchA
     if (current.budgetExceeded) fail('evaluation_budget_exceeded');
     if (!current.plans.some(p => hash(p) === hash(plan))) fail('register_plan_first');
     if (!/^[A-Za-z0-9_-]{1,120}$/.test(executionID ?? '')) fail('execution_identity_required');
-    if (manifest.transport === 'batch' && (!batchAccepted || !representativeReviewed || !plan.seedIDs.every(id => current.results[id]?.valid && current.states[id]?.transport === 'standard'))) fail('standard_review_and_batch_entitlement_required');
     const expected = shard(plan, manifest.jobs.map(j => j.id), current.results, manifest.transport);
     if (hash(expected) !== hash(manifest)) fail('shard_changed');
+    if (manifest.transport === 'batch' && (!batchAccepted || !representativeReviewed || !plan.seedIDs.every(id => current.results[id]?.valid && current.states[id]?.transport === 'standard'))) fail('standard_review_and_batch_entitlement_required');
     if (manifest.jobs.some(j => current.states[j.id])) fail('already_submitted_or_unknown_never_resend');
     if (manifest.jobs.some(j => j.confirmationName && current.manifests.some(m => m.jobs.some(old => old.confirmationName === j.confirmationName)))) fail('duplicate_confirmation_name');
-    if (Object.values(current.states).some(s => ['unknown', 'unknown_cost', 'cost_overrun'].includes(s.state))) fail('prior_shard_unresolved_reconcile_first');
+    if (Object.values(current.states).some(s => ['unknown', 'unknown_cost', 'cost_overrun'].includes(s.state)) ||
+        Object.values(current.shardStates).some(s => s.state !== 'reconciled')) fail('prior_shard_unresolved_reconcile_first');
     const shardHash = hash(manifest);
     await save(path.join(directory, 'shards', shardHash + '.json'), manifest);
     await appendMany(directory, manifest.jobs.map(job => ({...baseEvent(manifest, job), event: 'language_expansion_admitted', executionID})));
     return {schema: SCHEMA, planHash: hash(plan), shardHash, executionID, transport: manifest.transport};
   });
 }
-export const baseEvent = (manifest, job) => ({schema: SCHEMA, planHash: manifest.planHash, shardHash: hash(manifest), caseID: job.id, bodyHash: job.bodyHash, reservedMicros: job.reservedMicros, transport: manifest.transport});
+export const baseEvent = (manifest, job) => ({schema: SCHEMA, planHash: manifest.planHash, shardHash: hash(manifest), caseID: job.id, bodyHash: job.bodyHash, definitionHash: job.definitionHash, reservedMicros: job.reservedMicros, transport: manifest.transport});
 export async function claimStart(directory, ticket) {
   return exclusive(directory, async () => {
     const current = await snapshot(directory);

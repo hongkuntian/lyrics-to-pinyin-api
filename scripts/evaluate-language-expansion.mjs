@@ -1,5 +1,6 @@
 // Research only. This entry point never changes production policy or data.
-import fs from 'node:fs/promises';
+import {createReadStream} from 'node:fs';
+import {createInterface} from 'node:readline';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {hash, readJSON, save, fail} from './language-expansion/common.mjs';
@@ -8,6 +9,26 @@ import {initJournal, registerPlan, snapshot, admitShard, claimStart, append, imp
 import {runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch, openAIClient} from './language-expansion/transport.mjs';
 export {hash, preparePlan, shard, validatePlan, initJournal, registerPlan, snapshot, admitShard, claimStart, importEvents,
   runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch};
+
+export async function importJSONL(directory, file) {
+  const lines = createInterface({input: createReadStream(file), crlfDelay: Infinity});
+  let pending = [], imported = 0;
+  const flush = async () => {
+    if (!pending.length) return;
+    await importEvents(directory, pending); imported += pending.length; pending = [];
+  };
+  try {
+    for await (const line of lines) {
+      if (!line.trim()) continue;
+      let event;
+      try { event = JSON.parse(line); }
+      catch { await flush(); fail('malformed_jsonl_record'); }
+      pending.push(event);
+      if (pending.length >= 128) await flush();
+    }
+    await flush(); return {imported};
+  } finally { lines.close(); lines.input.destroy(); }
+}
 
 export async function execute({plan, manifest, ticket, directory, operation, client, emit, secret, executionID = ticket.executionID}) {
   const state = await snapshot(directory);
@@ -39,6 +60,7 @@ async function main() {
   if (command === 'prepare') {
     const corpus = await readJSON(options['--corpus']);
     const plan = await preparePlan({corpus, approvedCorpusHash: options['--approved-corpus-hash'],
+      routingManifest: await readJSON(options['--routing-manifest']), approvedRoutingHash: options['--approved-routing-hash'],
       mode: options['--mode'] ?? 'matrix728', confirmationNames: JSON.parse(options['--confirmation-names'] ?? '[]')});
     await save(options['--out'], plan);
     return {planHash: hash(plan), jobs: plan.jobs.length, seedIDs: plan.seedIDs, maxReservedMicros: plan.maxReservedMicros, confirmationReserveMicros: plan.confirmationReserveMicros};
@@ -49,11 +71,11 @@ async function main() {
     if (options['--out']) await save(options['--out'], state);
     return {committedMicros: state.committedMicros, admitted: Object.keys(state.states).length,
       completed: Object.keys(state.results).length, dependentFailures: Object.keys(state.dependentFailures).length,
+      staticRefusals: Object.keys(state.staticRefusals).length, unresolvedBatchShards: Object.values(state.shardStates).filter(s => s.state !== 'reconciled').length,
       unknown: Object.values(state.states).filter(s => ['unknown', 'unknown_cost'].includes(s.state)).length};
   }
   if (command === 'import') {
-    const lines = (await fs.readFile(options['--events'], 'utf8')).trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
-    await importEvents(directory, lines); return {imported: lines.length};
+    return importJSONL(directory, options['--events']);
   }
   const plan = await readJSON(options['--plan']);
   await validatePlan(plan, options['--approved-plan-hash']);

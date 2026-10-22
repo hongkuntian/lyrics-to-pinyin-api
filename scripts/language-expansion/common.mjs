@@ -51,7 +51,7 @@ export function payloadEvents(base, value) {
   ];
 }
 export function recoverPayload(events, base) {
-  const matches = events.filter(e => e.planHash === base.planHash && e.shardHash === base.shardHash && e.caseID === base.caseID && e.bodyHash === base.bodyHash);
+  const matches = events.filter(e => e.planHash === base.planHash && e.shardHash === base.shardHash && e.caseID === base.caseID && e.bodyHash === base.bodyHash && e.definitionHash === base.definitionHash);
   const ends = matches.filter(e => e.event === 'language_expansion_complete');
   const chunks = matches.filter(e => e.event === 'language_expansion_chunk');
   if (ends.length !== 1) fail('incomplete_or_duplicate_payload');

@@ -4,6 +4,7 @@ import {explanationBody, selectionV2} from '../../api/utils/song-library/study-e
 import {digest} from '../../api/utils/song-library/store.js';
 import {modelPolicy, MODEL} from '../../api/utils/song-library/model-policy.js';
 import {SCHEMA, hash, fail, integer, codeHashes} from './common.mjs';
+import {SOURCE_PROFILE, validateRouting, expectedSourceIDs, sourceDefinition, jobDefinition} from './routing.mjs';
 
 export const TAGS = ['ja', 'ko', 'pt', 'it', 'de', 'ru', 'vi', 'id', 'th', 'hi', 'hi-Latn'];
 export const TARGETS = ['en', 'fr', 'es', 'zh-Hans'];
@@ -51,19 +52,21 @@ export function sourceInput(spec) {
       choice.range.selectionUtf8SHA256 !== hash(selection.text) || choice.range.sourceUtf8SHA256 !== hash(lines[line]))) fail('authored_range_changed');
   return {doc: input.doc, selection, sourceIDMap, wireSourceIDMap: Object.fromEntries(bindings.map(b => [b.wireSourceID, b.corpusSourceID])), bindings};
 }
-export async function preparePlan({corpus, approvedCorpusHash, mode = 'matrix728', confirmationNames = []}) {
+export async function preparePlan({corpus, approvedCorpusHash, routingManifest, approvedRoutingHash, mode = 'matrix728', confirmationNames = []}) {
   if (hash(corpus) !== approvedCorpusHash) fail('approved_corpus_hash_required');
   if (!['matrix728', 'full1440'].includes(mode)) fail('explicit_plan_mode_required');
   if (!Array.isArray(confirmationNames) || confirmationNames.length > 60 || new Set(confirmationNames).size !== confirmationNames.length || confirmationNames.some(x => !/^[A-Za-z0-9_-]{1,80}$/.test(x))) fail('invalid_named_confirmations');
   const specs = corpus.documents ?? corpus.sources;
   if (!Array.isArray(specs) || specs.length !== 60 || new Set(specs.map(x => x.id)).size !== 60) fail('sixty_unique_sources_required');
+  validateRouting(specs, routingManifest, approvedRoutingHash);
   const sources = [], jobs = [], seedIDs = [];
   for (const [tagIndex, tag] of TAGS.entries()) {
     const group = specs.filter(x => x.language === tag);
     if (group.length !== (tag.startsWith('hi') ? 3 : 6)) fail('exact_tag_document_count');
+    if (group.map(s => s.id).join() !== expectedSourceIDs(tag).join()) fail('exact_source_schedule_changed');
     for (const [ordinal, spec] of group.entries()) {
       const input = sourceInput(spec);
-      sources.push({id: spec.id, tag, ordinal, specHash: hash(spec), ...input,
+      sources.push({id: spec.id, tag, ordinal, spec, specHash: hash(spec), ...input, ...sourceDefinition(spec, input, routingManifest),
         semanticInvariants: spec.semanticInvariants ?? [], permissibleInterpretations: spec.permissibleInterpretations ?? []});
       for (const [targetIndex, target] of TARGETS.entries()) {
         const translationID = idFor(spec, 'translation', target);
@@ -89,11 +92,15 @@ export async function preparePlan({corpus, approvedCorpusHash, mode = 'matrix728
         intent: {sourceID: source.selection.sourceID, strategy: 'whole-occurrence-max80'}, body: null, bodyHash: null, reservedMicros: DEPENDENT_RESERVE});
     }
   }
+  for (const job of jobs) {
+    Object.assign(job, jobDefinition(sources.find(s => s.id === job.source), job));
+    if (job.executionDisposition === 'static_refusal') Object.assign(job, {body: null, bodyJSON: null, bodyHash: null, reservedMicros: 0, refusalCode: 'unsupported_selected_language'});
+  }
   if (jobs.length !== (mode === 'matrix728' ? 728 : 1440) || new Set(jobs.map(x => x.id)).size !== jobs.length) fail('matrix_count');
-  const plan = {schema: SCHEMA, mode, corpusHash: hash(corpus), codeHashes: await codeHashes(), sources, jobs, seedIDs,
+  const plan = {schema: SCHEMA, mode, corpusHash: hash(corpus), sourceProfile: SOURCE_PROFILE, routingManifest, routingHash: approvedRoutingHash, codeHashes: await codeHashes(), sources, jobs, seedIDs,
     ceilingMicros: CEILING, confirmationNames, confirmationReserveMicros: confirmationNames.length * CONFIRMATION_RESERVE,
     maxReservedMicros: jobs.reduce((sum, job) => sum + job.reservedMicros, 0),
-    coverage: {nominalDirections: 40, exactDirections: 44, translatedCells: 176},
+    coverage: {nominalDirections: 40, exactDirections: 44, translatedCells: 176, acceptanceCases: jobs.length, maxGenerationJobs: jobs.length - 4, staticRefusals: 4},
     rotation: '(docOrdinalWithinExactTag + targetIndex) % 4; Hindi missing ordinal=3 cells on first document',
     review: 'unreviewed; structural evidence never qualifies semantic quality'};
   if (plan.maxReservedMicros + plan.confirmationReserveMicros > CEILING) fail('evaluation_budget_exceeded');
@@ -108,9 +115,38 @@ export async function validatePlan(plan, approvedHash) {
       plan.sources.length !== 60 || !Array.isArray(plan.confirmationNames) || plan.confirmationNames.length > 60 ||
       new Set(plan.confirmationNames).size !== plan.confirmationNames.length || plan.confirmationNames.some(n => !/^[A-Za-z0-9_-]{1,80}$/.test(n)) ||
       plan.confirmationReserveMicros !== plan.confirmationNames.length * CONFIRMATION_RESERVE) fail('invalid_budget_or_schedule');
+  if (plan.sourceProfile !== SOURCE_PROFILE) fail('source_profile_changed');
+  validateRouting(plan.sources.map(s => s.spec), plan.routingManifest, plan.routingHash);
+  for (const tag of TAGS) {
+    const group = plan.sources.filter(s => s.tag === tag);
+    if (group.map(s => s.id).join() !== expectedSourceIDs(tag).join() || group.some((s, i) => s.ordinal !== i)) fail('exact_source_schedule_changed');
+  }
+  for (const source of plan.sources) {
+    const input = sourceInput(source.spec), definition = sourceDefinition(source.spec, input, plan.routingManifest);
+    if (source.id !== source.spec.id || source.tag !== source.spec.language || source.specHash !== hash(source.spec) ||
+        hash(source.semanticInvariants) !== hash(source.spec.semanticInvariants ?? []) || hash(source.permissibleInterpretations) !== hash(source.spec.permissibleInterpretations ?? []) ||
+        Object.keys(input).some(k => hash(source[k]) !== hash(input[k])) ||
+        Object.keys(definition).some(k => hash(source[k]) !== hash(definition[k]))) fail('source_definition_changed');
+  }
+  if (plan.jobs.filter(j => j.executionDisposition === 'static_refusal').map(j => j.id).sort().join() !== TARGETS.map(t => 'ru-c--original--' + t).sort().join() ||
+      plan.jobs.filter(j => j.executionDisposition === 'generate').length !== plan.jobs.length - 4) fail('exact_static_refusals_required');
   for (const job of plan.jobs) {
     const source = plan.sources.find(s => s.id === job.source);
     if (!source) fail('source_missing');
+    if (!['translation', 'original', 'translated'].includes(job.kind) || !TARGETS.includes(job.target) || job.tag !== source.tag ||
+        job.id !== idFor(source.spec, job.kind, job.target, job.explanation)) fail('case_schedule_changed');
+    if (job.kind === 'translated') {
+      const targetIndex = TARGETS.indexOf(job.target);
+      const scheduled = plan.mode === 'full1440' ? TARGETS : [TARGETS[(source.ordinal + targetIndex) % 4],
+        ...(source.tag.startsWith('hi') && source.ordinal === 0 ? [TARGETS[(3 + targetIndex) % 4]] : [])];
+      if (!scheduled.includes(job.explanation) || hash(job.intent) !== hash({sourceID: source.selection.sourceID, strategy: 'whole-occurrence-max80'})) fail('case_schedule_changed');
+    } else if (job.explanation !== undefined || job.dependency !== undefined) fail('case_schedule_changed');
+    const definition = jobDefinition(source, job);
+    if (Object.keys(definition).some(k => hash(job[k]) !== hash(definition[k]))) fail('case_definition_changed');
+    if (job.executionDisposition === 'static_refusal') {
+      if (job.body !== null || job.bodyHash !== null || job.bodyJSON !== null || job.reservedMicros !== 0 || job.refusalCode !== 'unsupported_selected_language') fail('static_refusal_definition_changed');
+      continue;
+    }
     if (job.kind === 'translated') {
       if (!plan.jobs.some(j => j.id === job.dependency && j.kind === 'translation' && j.source === job.source && j.target === job.target) || job.reservedMicros !== DEPENDENT_RESERVE) fail('missing_dependency');
     } else {
@@ -118,11 +154,18 @@ export async function validatePlan(plan, approvedHash) {
       if (['bodyJSON', 'bodyHash', 'reservedMicros'].some(k => expected[k] !== job[k]) || JSON.stringify(job.body) !== expected.bodyJSON) fail('frozen_body_changed');
     }
   }
+  const expectedSeed = TAGS.flatMap((tag, index) => {
+    const source = plan.sources.find(s => s.tag === tag && s.ordinal === 0), target = TARGETS[index % 4];
+    return [idFor(source, 'translation', target), idFor(source, 'original', TARGETS[(index + 1) % 4]), idFor(source, 'translated', target, target)];
+  });
+  if (hash(plan.seedIDs) !== hash(expectedSeed)) fail('seed_schedule_changed');
+  if (hash(plan.coverage) !== hash({nominalDirections: 40, exactDirections: 44, translatedCells: 176, acceptanceCases: plan.jobs.length, maxGenerationJobs: plan.jobs.length - 4, staticRefusals: 4})) fail('coverage_definition_changed');
   if (plan.jobs.reduce((sum, j) => sum + j.reservedMicros, 0) !== plan.maxReservedMicros) fail('invalid_reservations');
 }
 export function bindDependent(plan, job, result) {
   const source = plan.sources.find(s => s.id === job.source);
-  if (!result?.valid || result.id !== job.dependency || result.bodyHash !== plan.jobs.find(j => j.id === job.dependency)?.bodyHash) fail('dependent_translation_failed');
+  const parent = plan.jobs.find(j => j.id === job.dependency);
+  if (!result?.valid || result.id !== job.dependency || result.bodyHash !== parent?.bodyHash || result.definitionHash !== parent?.definitionHash || result.sourceDefinitionHash !== parent?.sourceDefinitionHash) fail('dependent_translation_failed');
   const translation = {id: hash({bodyHash: result.bodyHash, content: result.content}), target: job.target, ...result.content};
   const row = translation.lines.find(line => line.sourceID === job.intent.sourceID)?.lyricText;
   if (typeof row !== 'string' || !row.trim() || graphemes(row).length > 80) fail('dependent_selection_invalid');
@@ -143,6 +186,7 @@ export function shard(plan, caseIDs, results = {}, transport = 'standard') {
       job = {...original, id, confirmationOf: originalID, confirmationName: name};
     }
     if (!job) fail('unknown_case');
+    if (job.executionDisposition !== 'generate') fail('static_refusal_not_dispatchable');
     return job.kind === 'translated' ? bindDependent(plan, job, results[job.dependency]) : job;
   });
   const names = jobs.filter(j => j.confirmationName).map(j => j.confirmationName);

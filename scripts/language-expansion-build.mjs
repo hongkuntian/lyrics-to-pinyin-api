@@ -9,7 +9,7 @@ import {validateStartReceipt} from './language-expansion/journal.mjs';
  * A frozen journal snapshot or a /tmp marker is NOT an implementation of claimStart.
  * emit receives allowlisted JSON records, already bounded for build-preflight.mjs.
  */
-export async function evaluateLanguageExpansionInBuild(env = process.env, {loadBundle, claimStart, emit, fetchFn, client} = {}) {
+async function evaluateBuildOperation(env = process.env, {loadBundle, claimStart, emit, fetchFn, client, onOperation} = {}) {
   if (env.LYRA_LANGUAGE_EXPANSION_ON_BUILD !== '1') return;
   if (env.VERCEL !== '1' || env.VERCEL_ENV !== 'production') fail('unpromoted_production_build_required');
   if (!/^[a-f0-9]{64}$/.test(env.LYRA_LANGUAGE_EXPANSION_PLAN_HASH ?? '') || !/^[a-f0-9]{64}$/.test(env.LYRA_LANGUAGE_EXPANSION_SHARD_HASH ?? '')) fail('reviewed_frozen_hashes_required');
@@ -21,6 +21,7 @@ export async function evaluateLanguageExpansionInBuild(env = process.env, {loadB
   }
   const bundle = await loadBundle();
   const {plan, manifest, ticket, operation} = bundle;
+  onOperation(operation);
   if (hash(plan) !== env.LYRA_LANGUAGE_EXPANSION_PLAN_HASH) fail('plan_changed');
   await validateManifest(plan, manifest, env.LYRA_LANGUAGE_EXPANSION_SHARD_HASH);
   if (ticket.planHash !== hash(plan) || ticket.shardHash !== hash(manifest) || ticket.executionID !== env.VERCEL_DEPLOYMENT_ID || ticket.transport !== manifest.transport) fail('execution_identity_mismatch');
@@ -37,6 +38,21 @@ export async function evaluateLanguageExpansionInBuild(env = process.env, {loadB
   if (operation === 'recover') return recoverBatch(options);
   if (operation === 'retrieve' && bundle.batchID) return retrieveBatch(options);
   fail('explicit_transport_operation_required');
+}
+
+// Retained opt-in adapter obeys the same nonzero contract as the direct entry.
+export async function evaluateLanguageExpansionInBuild(env = process.env, dependencies = {}) {
+  if (env.LYRA_LANGUAGE_EXPANSION_ON_BUILD !== '1') return;
+  let completed = false, operation = null;
+  try {
+    await evaluateBuildOperation(env, {...dependencies, onOperation: value => { operation = value; }});
+    completed = true;
+  } finally {
+    if (typeof dependencies.emit === 'function') await emitRecord(dependencies.emit, {schema: SCHEMA, event: 'language_expansion_terminal',
+      planHash: env.LYRA_LANGUAGE_EXPANSION_PLAN_HASH ?? null, shardHash: env.LYRA_LANGUAGE_EXPANSION_SHARD_HASH ?? null,
+      operation, state: completed ? 'evaluation_only_complete' : 'evaluation_only_interrupted', intentionalBuildFailure: true});
+  }
+  fail('evaluation_only_intentional_build_failure');
 }
 
 /** Direct entry for an immutable EVALUATION-ONLY branch. Always rejects after

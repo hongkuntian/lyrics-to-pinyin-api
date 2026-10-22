@@ -1,9 +1,10 @@
 import {requestBody, parseTranslation, usageMicros, reservationMicros} from '../../api/utils/song-library/translation.js';
 import {explanationBody, parseExplanation, parseGroundedExplanation} from '../../api/utils/song-library/study-explanation.js';
 import {GROUNDING_FORMAT} from '../../api/utils/song-library/study-grounding.js';
-import {hash, fail, integer, MAX_PAYLOAD, emitRecord, payloadEvents, boundedSink} from './common.mjs';
+import {hash, fail, MAX_PAYLOAD, emitRecord, payloadEvents, boundedSink} from './common.mjs';
 import {batchInput, validatePlan} from './plan.mjs';
 import {baseEvent} from './journal.mjs';
+import {reconciliationFor, terminalBatch} from './reconciliation.mjs';
 
 export async function validateManifest(plan, manifest, approvedHash) {
   await validatePlan(plan, manifest.planHash);
@@ -12,17 +13,21 @@ export async function validateManifest(plan, manifest, approvedHash) {
       new Set(manifest.jobs.map(j => j.id)).size !== manifest.jobs.length) fail('invalid_frozen_manifest');
   for (const job of manifest.jobs) {
     const intent = plan.jobs.find(j => j.id === (job.confirmationOf ?? job.id)), source = plan.sources.find(s => s.id === job.source);
+    if (intent?.executionDisposition !== 'generate' || job.executionDisposition !== 'generate') fail('static_refusal_not_dispatchable');
     if (job.confirmationOf && (manifest.transport !== 'standard' || !plan.confirmationNames.includes(job.confirmationName) || job.id !== `${job.confirmationOf}--confirmation--${job.confirmationName}`)) fail('invalid_named_standard_confirmation');
     if (!intent || !source || ['source', 'kind', 'target', 'explanation', 'dependency'].some(k => job[k] !== intent[k])) fail('unknown_manifest_case');
+    if (['definitionHash', 'sourceDefinitionHash', 'executionDisposition'].some(k => job[k] !== intent[k]) || hash(job.qualification) !== hash(intent.qualification)) fail('case_definition_changed');
     const expected = job.kind === 'translation' ? requestBody(source.doc, job.target) : explanationBody(source.doc, job.translation ?? null, job.selection ?? source.selection, job.explanation ?? job.target);
     if (JSON.stringify(expected) !== job.bodyJSON || JSON.stringify(job.body) !== job.bodyJSON || hash(job.bodyJSON) !== job.bodyHash ||
         Buffer.byteLength(job.bodyJSON) + 4096 > 24000 || job.reservedMicros !== reservationMicros(job.body) || job.reservedMicros > intent.reservedMicros) fail('frozen_body_changed');
   }
 }
 export function responseResult(plan, job, response, transport, error = null) {
+  if (job.executionDisposition !== 'generate') fail('static_refusal_not_dispatchable');
   const actualMicros = response?.model === job.body.model && response?.service_tier === job.body.service_tier ? usageMicros(response?.usage, job.body.model, {batch: transport === 'batch'}) : null;
   const source = plan.sources.find(s => s.id === job.source);
-  const result = {id: job.id, bodyHash: job.bodyHash, transport, valid: false, actualMicros,
+  const result = {id: job.id, bodyHash: job.bodyHash, definitionHash: job.definitionHash, sourceDefinitionHash: job.sourceDefinitionHash,
+    qualification: job.qualification, transport, valid: false, actualMicros,
     accountedMicros: actualMicros ?? job.reservedMicros, response: response ?? null,
     sourceBindings: source.bindings, selection: job.selection ?? source.selection};
   try {
@@ -42,7 +47,8 @@ export function responseResult(plan, job, response, transport, error = null) {
   return result;
 }
 function safeResult(result, secret) {
-  if (secret && JSON.stringify(result).includes(secret)) return {id: result.id, bodyHash: result.bodyHash, transport: result.transport,
+  if (secret && JSON.stringify(result).includes(secret)) return {id: result.id, bodyHash: result.bodyHash, definitionHash: result.definitionHash,
+    sourceDefinitionHash: result.sourceDefinitionHash, qualification: result.qualification, sourceBindings: result.sourceBindings, selection: result.selection, transport: result.transport,
     valid: false, error: 'provider_echoed_credentials', actualMicros: result.actualMicros, accountedMicros: result.accountedMicros, response: null};
   return result;
 }
@@ -82,7 +88,7 @@ function batchIdentity(manifest, batch, inputFileID) {
   return batch;
 }
 function batchFields(batch) {
-  return {batchID: batch.id, inputFileID: batch.input_file_id, outputFileID: batch.output_file_id ?? null, errorFileID: batch.error_file_id ?? null, status: batch.status};
+  return {batchID: batch.id, inputFileID: batch.input_file_id, outputFileID: batch.output_file_id ?? null, errorFileID: batch.error_file_id ?? null, status: batch.status, requestCounts: batch.request_counts ?? null};
 }
 export async function submitBatch({plan, manifest, approvedHash, ticket, executionID, claimStart, client, emit, secret}) {
   emit = boundedSink(emit, secret);
@@ -145,8 +151,8 @@ export async function retrieveBatch({plan, manifest, approvedHash, batchID, inpu
   emit = boundedSink(emit, secret);
   await validateManifest(plan, manifest, approvedHash);
   const batch = await inspectBatch({manifest, batchID, inputFileID, client, emit});
-  if (!['completed', 'expired', 'cancelled', 'failed'].includes(batch.status)) fail('batch_not_terminal');
-  const seen = new Set(); let bytes = 0;
+  if (!terminalBatch(batch.status)) fail('batch_not_terminal');
+  const seen = new Set(), files = [], results = {}; let bytes = 0;
   for (const [role, fileID] of [['output', batch.output_file_id], ['error', batch.error_file_id]]) {
     if (!fileID) continue;
     const raw = await fileBytes(client, fileID, MAX_PAYLOAD - bytes); bytes += raw.length;
@@ -158,21 +164,24 @@ export async function retrieveBatch({plan, manifest, approvedHash, batchID, inpu
       seen.add(row.custom_id);
       if (retainedResults[job.id]) {
         const retained = retainedResults[job.id];
-        if (retained.bodyHash !== job.bodyHash || retained.rawLine !== line || retained.fileID !== fileID) fail('retained_batch_result_changed');
+        if (retained.bodyHash !== job.bodyHash || retained.definitionHash !== job.definitionHash || retained.rawLine !== line || retained.fileID !== fileID || retained.role !== role || retained.lineIndex !== lineIndex) fail('retained_batch_result_changed');
+        results[job.id] = retained;
         continue;
       }
       const result = responseResult(plan, job, row.response?.body ?? null, 'batch', row.error ? 'batch_case_error' : row.response?.status_code !== 200 ? 'batch_http_error' : null);
       Object.assign(result, {fileID, role, lineIndex, rawLine: line});
       const retained = await output(manifest, job, result, emit, secret);
+      results[job.id] = retained;
       if (retained.error === 'provider_echoed_credentials') fail('provider_echoed_credentials');
     }
-    await emitRecord(emit, {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_file', role, fileID,
-      bytes: raw.length, payloadHash: hash(raw), count: lines.length, finalNewline: raw.at(-1) === 10});
+    const receipt = {role, fileID, bytes: raw.length, payloadHash: hash(raw), count: lines.length, finalNewline: raw.at(-1) === 10};
+    await emitRecord(emit, {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_file', ...receipt});
+    files.push(receipt);
   }
   // Keep partial successes on expiry/failure. Missing cases keep their full holds.
   if (seen.size !== manifest.jobs.length) fail('missing_batch_cases_hold_unknown');
-  const counts = batch.request_counts;
-  if (!counts || counts.total !== manifest.jobs.length || !integer(counts.completed) || !integer(counts.failed) || counts.completed + counts.failed !== counts.total) fail('invalid_batch_request_counts');
+  const reconciled = reconciliationFor(manifest, batchFields(batch), files, results);
+  await emitRecord(emit, {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_reconciled', ...reconciled});
   await control(manifest, emit, 'retrieve', 'retained', batchFields(batch));
   return {cases: seen.size, rawBytes: bytes, status: batch.status};
 }
