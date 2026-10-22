@@ -20,7 +20,7 @@
     "test:ru": "node tests/run-language-tests.js ru",
     "test:yue": "node tests/run-language-tests.js yue",
     "test:music": "node tests/music-tests.js",
-    "build": "node evaluation/language-expansion/probe-transport.mjs",
+    "build": "node evaluation/language-expansion/run-operation.mjs",
     "start": "node scripts/dev-server.js",
     "deploy": "vercel --prod"
   },

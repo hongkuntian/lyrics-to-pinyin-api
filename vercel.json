@@ -4,7 +4,7 @@
     "deploymentEnabled": false
   },
   "installCommand": "npm ci --ignore-scripts",
-  "buildCommand": "node evaluation/language-expansion/probe-transport.mjs",
+  "buildCommand": "node evaluation/language-expansion/run-operation.mjs",
   "outputDirectory": ".vercel/output",
   "framework": null
 }
