@@ -110,3 +110,71 @@ Compact Chinese personal names following 男声, 女声, or 戏腔 require corro
 Cached responses containing recognized embedded credits revalidate through the existing recording-bound acquisition path, including Spotify memory/Redis and durable documents. This is a targeted repair under the existing selection contract. Reacquisition creates a new immutable source identity; saved translations are never remapped or regenerated automatically. The native projection keeps older copies readable offline without changing their source IDs/hashes and requests a throttled refresh for the newly recognized performance block. Clean sources with credits only in metadata do not trigger that refresh.
 
 New translation or Study reservations against a legacy source that still embeds credits return `source_revision_superseded` before reserving allowance or invoking a model. Existing saved results and already reserved jobs keep their normal reuse/recovery paths.
+
+## Provider notices and bracket preservation
+
+`api/data/lyric-notice-policy.json` is the authoritative version-1 declarative
+notice policy, mirrored byte-for-byte into the app. Both runtimes compare whole
+rows after NFKC, Traditional-to-Simplified conversion, lowercase and whitespace
+removal. Comparison never rewrites retained lyrics or removes punctuation.
+Rows containing CR, LF, VT, FF, NEL, LS or PS are not notices. At most one
+balanced outer `[]` or `【】` pair is admitted; malformed, mixed or nested square
+wrappers preserve the row. Round parentheses remain meaningful inside the legal
+use-action clause. Arbitrary bracketed words, background vocals in parentheses,
+unknown English/Japanese/Korean notices, quotations and sung copyright prose
+remain readable. No row-position, timestamp or first-N heuristic is used.
+
+The Chinese rights grammar consumes a formal rights holder, missing permission
+or authorization, a prohibition and a bounded list of explicit use actions. The
+longer declaration form consumes the rights-reservation clause, the same
+permission/use clause (including an optional parenthesized action enumeration),
+and an optional exact AI-training prohibition sentence. The existing complete
+owner declaration remains recognized. Unconsumed prose preserves the entire
+row; the former `本作品声明 ... 著作权 ... 权利保留` wildcard rule is removed.
+Promotion recognition is limited to the evidenced `银河计划X星斗推` campaign
+template with normalized X/×, script, width and spacing. Unknown A×B rows remain
+lyrics. Production-role credits continue to use their separate complete-label
+grammar, including English role labels.
+
+`tests/fixtures/lyric-notice-grammar.json` separates three observed rows from
+synthetic regression variants and adversarial preserved rows. The two screenshot
+rows are from a screenshot headed 五十年以后 / 海来阿木; its raw provider ID and
+duration were not verified. The longer rights row was printed from the
+[NetEase item 3425563499 lyric endpoint](https://music.163.com/api/song/lyric?id=3425563499&lv=-1&kv=-1&tv=-1)
+at 4.99 seconds on 2026-10-22. Only that printed notice is retained here, not a
+full raw source payload or song lyrics. Other grammar variants are synthetic.
+
+The same classifier removes notices from visible lines and canonical source
+rows before romanization, source hashing and model input, and detects stale
+embedded metadata in caches and generation preflight. Notices do not become
+contributor credits. Notice-only responses are missing text, not instrumentals.
+Recognized complete wrapped instrumental markers remain a separate rule;
+unknown section labels such as `[Verse 1]` and `[Chorus]` are preserved. LRC
+parsing consumes only leading valid timestamp syntax and whole recognized
+header rows, preserving unknown brackets and inline bracketed words. Existing
+fraction, repeated-timestamp and invalid-second behavior remains covered.
+
+Verified raw performer cues are resolved before metadata classification. A
+stripped performed body is protected on subsequent passes only by a valid
+canonical row/prefix/annotation mapping. Every cue annotation must also name its
+referenced performer through its captured source label, canonical name or
+reviewed aliases; an unrelated standalone label cannot borrow a speaker ID.
+Generic cue aliases retain their explicit All/Male/Female identity. Uncorroborated
+custom aliases retain separate compact speaker labels. An unchecked prefix or inherited
+speaker ID cannot exempt a notice. Selected-source previews carry optional
+`candidate.lyricStructure` only when validated removed-prefix evidence exists.
+Admission validates it against the exact previewed words, freezes the candidate,
+then binds it as `selectedSourceCapsule.lyricStructure` in the immutable
+`sourceHash` and projects it as `response.metadata.lyric_structure`. The validator
+requires the response metadata to equal the bound capsule mapping. Existing
+selected documents without this additive field keep their identities and public
+speaker projection. Selection still binds the ordered visible bytes through
+`expectedTextHash`: admission never cleans words after that hash, and changed or
+still-contaminated choices return `selected_source_changed` for reselection.
+
+`lyric-annotations-3`, the automatic selection revision and the selected-source
+revision are unchanged. Targeted stale-source detection reacquires a new
+immutable document while leaving old stored sources and saved results readable.
+New translation and original Study against a contaminated old source fail before
+allowance reservation or model invocation. There is no bulk migration or
+background regeneration of saved content.

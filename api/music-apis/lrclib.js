@@ -74,7 +74,7 @@ export class LRCAPI extends BaseMusicAPI {
     return song?{song,lyrics:song.lyricsData}:null;
   }
   lyricsFromRecord(record,request={}) {
-    const make=raw=>cleanLyrics({lines:raw ? parseLRC(raw):[],source:'lrclib',songId:record.id,instrumental:record.instrumental===true},{duration:record.duration});
+    const make=raw=>cleanLyrics({lines:raw ? parseLRC(raw):[],source:'lrclib',songId:record.id,instrumental:record.instrumental===true},{duration:record.duration,title:record.trackName??record.name,artist:record.artistName});
     let rejected=false;
     // A credit-only synced field must not hide a usable plain transcription.
     for(const raw of [record.syncedLyrics,record.plainLyrics]) {

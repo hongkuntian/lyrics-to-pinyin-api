@@ -1,6 +1,7 @@
 import {createRequire} from 'node:module';
 import chinese from 'chinese-conv';
 import {revalidatedVocalLine} from './vocal-timing.js';
+import {classifyLyricNotice} from './lyric-notices.js';
 const require=createRequire(import.meta.url);
 const roster=require('../data/lyric-performers.json');
 export const LYRIC_NORMALIZATION_VERSION='lyric-annotations-3';
@@ -125,12 +126,38 @@ function compositeProductionRole(key) {
 const isrcPattern=/^\s*ISRC\s*[:：]?\s*([A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9](?:-?[0-9]){4})\s*$/iu;
 const ambiguousRoles=new Set(['chorus','和声','和音','合声','backingvocal','backingvocals']);
 const sourceCredit=/^取材自歌曲[《〈].+[》〉]\s*[（(]\s*[词詞]\s*[:：].+曲\s*[:：].+[）)]$/u;
+const wrappedInstrumentals=new Set(['music','instrumental','interlude','intro','outro','间奏','前奏','尾奏','伴奏','纯音乐']);
+const isInstrumentalMarker=text=>{
+  if(instrumental.test(text))return true;
+  if(/[\r\n\v\f\u0085\u2028\u2029]/u.test(text))return false;
+  const key=labelKey(text);
+  return ((key.startsWith('(')&&key.endsWith(')'))||(key.startsWith('[')&&key.endsWith(']'))
+    ||(key.startsWith('【')&&key.endsWith('】')))&&wrappedInstrumentals.has(key.slice(1,-1));
+};
 const instrumental=/^(?:纯音乐[，,。\s]*(?:请欣赏)?|純音樂[，,。\s]*(?:請欣賞)?|instrumental)[。.!\s]*$/iu;
 // Provider placeholders describe a break, not performed words. Keep notes
 // embedded in actual lyrics; presentation owns the instrumental indicator.
 const musicNotes=/^[♩♪♫♬🎵🎶\s\uFE0E\uFE0F]+$/u;
 export const isMusicNotePlaceholder=text=>typeof text==='string' && musicNotes.test(text.trim());
 const genericLabels=new Map([['合','All'],['合唱','All'],['齐唱','All'],['all','All'],['chorus','All'],['男','Male'],['女','Female']]);
+
+// A cue annotation must name its referenced performer, not merely repeat the
+// bracket/colon label on an arbitrary source row. Canonical names, the captured
+// source-label components and reviewed member aliases provide bounded context.
+function speakerLabelMatches(speaker,label) {
+  if(labelKey(speaker.sourceLabel)===labelKey(label))return true;
+  const generic=genericLabels.get(labelKey(speaker.sourceLabel));
+  if(generic===speaker.displayName)return genericLabels.get(labelKey(label))===generic;
+  const names=speaker.displayName.split(' / '),parts=speaker.sourceLabel.split(/\s*[/／&、]\s*/u),aliases=new Map();
+  names.forEach((name,i)=>{
+    aliases.set(labelKey(name),name);
+    if(parts.length===names.length)aliases.set(labelKey(parts[i]),name);
+    for(const artist of roster.artists)for(const member of artist.members??[])
+      if(labelKey(member.name)===labelKey(name))for(const alias of member.aliases??[])aliases.set(labelKey(alias),name);
+  });
+  const matched=namedPerformers(label,aliases);
+  return matched!==null&&labelKey(matched.join(' / '))===labelKey(speaker.displayName);
+}
 
 export function performerAliases({artist='',catalogID,performers=[]}={}) {
   const result=new Map();
@@ -217,11 +244,27 @@ export function lyricCreditRoles(lines,options={},protectedIndices=new Set()) {
   return result;
 }
 
+// A verified performer cue is parsed before metadata. Its body is performed
+// text even when it happens to spell a complete credit or notice.
+function performedCueIndices(lines,aliases) {
+  const prefixes=lines.map(line=>labelPrefix(line.text.trim()));
+  const named=prefixes.some(prefix=>prefix&&namedPerformers(prefix.label,aliases));
+  return new Set(prefixes.flatMap((prefix,i)=>prefix&&(namedPerformers(prefix.label,aliases)
+    ||(named&&genericLabels.has(labelKey(prefix.label))))?[i]:[]));
+}
 export function hasEmbeddedLyricCredits(response,options={}) {
-  const lines=(response?.lines??[]).map(line=>({text:line.original}));
+  const lines=(response?.lines??[]).map(line=>({text:line.original??''}));
   const structure=response?.metadata?.lyric_structure;
-  const protectedIndices=new Set((structure?.occurrences??[]).flatMap((o,i)=>o.lyricText===lines[i]?.text && o.sourcePrefix?[i]:[]));
-  return lyricCreditRoles(lines,options,protectedIndices).size>0;
+  const context={artist:response?.song?.artist?.original??'',...options};
+  const protectedIndices=performedCueIndices(lines,performerAliases(context));
+  // Public speaker IDs and unchecked prefix flags are not canonical evidence.
+  const canonicalValid=validLyricStructure(structure,response?.lines??[]);
+  if(canonicalValid)
+    structure.occurrences.forEach((o,i)=>{if(o.sourcePrefix)protectedIndices.add(i);});
+  const canonicalCues=canonicalValid?new Set(structure.annotations.map(a=>a.sourceIndex)):new Set();
+  return lyricCreditRoles(lines,context,protectedIndices).size>0
+    ||lines.some((line,i)=>!protectedIndices.has(i)&&classifyLyricNotice(line.text))
+    ||(Array.isArray(structure?.sourceRows)&&structure.sourceRows.some((row,i)=>!canonicalCues.has(i)&&classifyLyricNotice(row?.text)));
 }
 
 // Only a repeated Chinese^English provider convention is admitted. A stray
@@ -249,11 +292,11 @@ export function normalizeLyricAnnotations(data,options={}) {
   const paired=separateProviderTranslation(data);
   const input=(paired.lines??[]).filter(line=>typeof line.text==='string');
   const previous=data.lyricStructure;
-  const reusable=previous?.version===LYRIC_NORMALIZATION_VERSION && previous.occurrences?.length===input.length
-    && previous.occurrences.every((o,i)=>o.lyricText===input[i].text);
+  const reusable=validLyricStructure(previous,input.map(line=>({original:line.text})));
   const sourceRows=reusable?previous.sourceRows:input.map(line=>({text:line.text,timestamp:Number.isFinite(line.timestamp)?line.timestamp:null}));
   const aliases=performerAliases(options);
-  const protectedIndices=new Set(reusable?previous.occurrences.flatMap((o,i)=>o.sourcePrefix?[i]:[]):[]);
+  const protectedIndices=performedCueIndices(input,aliases);
+  if(reusable)previous.occurrences.forEach((o,i)=>{if(o.sourcePrefix)protectedIndices.add(i);});
   const creditRoles=lyricCreditRoles(input,options,protectedIndices);
   const hasNamedCue=input.some(line=>{
     const prefix=labelPrefix(line.text.trim());
@@ -263,25 +306,27 @@ export function normalizeLyricAnnotations(data,options={}) {
   const speakers=reusable?previous.speakers.map(s=>({...s})):[];
   const speakerFor=(label,names)=>{
     const displayName=names.join(' / ');
-    let speaker=speakers.find(s=>s.displayName===displayName);
+    let speaker=speakers.find(s=>s.displayName===displayName&&speakerLabelMatches(s,label));
     if(!speaker) {speaker={id:`S${speakers.length+1}`,sourceLabel:label,displayName};speakers.push(speaker);}
     return speaker.id;
   };
-  const lines=[],occurrences=[],translationInputs=[],credits=[...(data.credits??[])],removed=new Set();
+  const canonicalCues=new Set(reusable?previous.annotations.map(a=>a.sourceIndex):protectedIndices);
+  const lines=[],occurrences=[],translationInputs=[],credits=[...(data.credits??[])],
+    removed=new Set(sourceRows.flatMap((row,i)=>!canonicalCues.has(i)&&classifyLyricNotice(row.text)?[i]:[]));
   let active=null,pendingTurn=false;
   input.forEach((line,i)=>{
     const original=reusable?previous.occurrences[i]:null;
     const sourceIndex=original?.sourceIndex??i,sourceText=original?.sourceText??line.text;
     const strippedPrefix=Boolean(original?.sourcePrefix);
-    const text=line.text.trim();
+    const text=/[\r\n\v\f\u0085\u2028\u2029]/u.test(line.text)?line.text:line.text.trim();
     const heading=options.title && options.artist && labelKey(text)===labelKey(`${options.title} - ${options.artist}`);
-    const rights=/^[【\[]?本作品声明[，,].*(?:著作权|著作權).*权利保留.*[】\]]?$/u.test(text);
-    const role=strippedPrefix?null:heading?'recording_heading':rights?'rights_notice':creditRoles.get(i);
-    if(!text || role || (!strippedPrefix && (instrumental.test(text) || isMusicNotePlaceholder(text)))) {
-      if(role) {
+    const notice=protectedIndices.has(i)?null:classifyLyricNotice(line.text);
+    const role=protectedIndices.has(i)?null:notice??(heading?'recording_heading':creditRoles.get(i));
+    if(!text || role || (!strippedPrefix && (isInstrumentalMarker(text) || isMusicNotePlaceholder(text)))) {
+      if(role && !notice) {
         const match=text.match(/^([^:：]+)[:：]\s*(.+)$/u);
         const isrc=text.match(isrcPattern);
-        const credit={role:role==='recording_heading'?'Recording':role==='rights_notice'?'Rights':isrc?'ISRC':match?.[1].trim()??'Source',contributors:isrc?[isrc[1]]:match?match[2].split(/\s*[、/／&，,]\s*/u).filter(Boolean):[],
+        const credit={role:role==='recording_heading'?'Recording':isrc?'ISRC':match?.[1].trim()??'Source',contributors:isrc?[isrc[1]]:match?match[2].split(/\s*[、/／&，,]\s*/u).filter(Boolean):[],
           source:data.source??'unknown',original:text};
         if(!credits.some(c=>c.original===text && c.source===credit.source)) credits.push(credit);
       }
@@ -325,7 +370,7 @@ export function validLyricStructure(structure,lines) {
     || structure.sourceRows.length>1000 || !Array.isArray(structure.speakers)
     || !Array.isArray(structure.annotations) || !Array.isArray(structure.occurrences)
     || structure.occurrences.length!==lines.length) return false;
-  const text=value=>typeof value==='string' && value.length<=4000 && !/[\r\n]/u.test(value);
+  const text=value=>typeof value==='string' && value.length<=4000 && !/[\r\n\v\f\u0085\u2028\u2029]/u.test(value);
   if(structure.sourceRows.some(r=>!text(r?.text) || (r.timestamp!==null && !Number.isFinite(r.timestamp)))) return false;
   const ids=new Set();
   for(const speaker of structure.speakers) {
@@ -334,14 +379,27 @@ export function validLyricStructure(structure,lines) {
     ids.add(speaker.id);
   }
   const index=value=>Number.isInteger(value) && value>=0 && value<structure.sourceRows.length;
-  if(structure.annotations.some(a=>!index(a?.sourceIndex)
-    || !['performer_cue'].includes(a.kind)
-    || (a.kind==='performer_cue' && (!ids.has(a.speakerID) || !text(a.sourceLabel))))) return false;
+  if(structure.annotations.some(a=>{
+    if(!index(a?.sourceIndex)||a.kind!=='performer_cue'||!ids.has(a.speakerID)||!text(a.sourceLabel))return true;
+    const parsed=labelPrefix(structure.sourceRows[a.sourceIndex].text.trim());
+    const speaker=structure.speakers.find(s=>s.id===a.speakerID);
+    return !parsed||labelKey(parsed.label)!==labelKey(a.sourceLabel)||!speakerLabelMatches(speaker,a.sourceLabel);
+  }))return false;
+  const prefixProof=o=>{
+    if(!o.sourcePrefix)return true;
+    const parsed=labelPrefix(o.sourceText.trim());
+    if(!parsed||!o.speakerID||parsed.body.trim()!==o.lyricText)return false;
+    const leading=o.sourceText.length-o.sourceText.trimStart().length;
+    const length=leading+parsed.prefix.length+(parsed.body.match(/^\s*/u)?.[0].length??0);
+    return o.sourcePrefix===o.sourceText.slice(0,length)
+      &&structure.annotations.some(a=>a.sourceIndex===o.sourceIndex&&a.speakerID===o.speakerID
+        &&labelKey(a.sourceLabel)===labelKey(parsed.label));
+  };
   return structure.occurrences.every((o,i)=>index(o?.sourceIndex)
     && (!i || o.sourceIndex>structure.occurrences[i-1].sourceIndex)
     && o.sourceID===`L${String(i+1).padStart(4,'0')}` && o.lyricText===lines[i].original
     && o.sourceText===structure.sourceRows[o.sourceIndex].text && text(o.sourcePrefix)
     && o.sourceText.startsWith(o.sourcePrefix) && o.sourceText.slice(o.sourcePrefix.length).trim()===o.lyricText
     && (o.speakerID===null || ids.has(o.speakerID)) && typeof o.startsTurn==='boolean'
-    && (!o.startsTurn || o.speakerID!==null));
+    && (!o.startsTurn || o.speakerID!==null) && prefixProof(o));
 }

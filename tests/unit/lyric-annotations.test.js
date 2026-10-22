@@ -99,7 +99,7 @@ test('exact recording headings and rights notices leave performed speech and tim
   const data={source:'netease',lines:rows(['一起唱 (Live) - 练习歌手','本作品声明，著作权归权利人所有，权利保留','我说：一起唱','一起唱'])};
   const result=cleanLyrics(data,{title:'一起唱 (Live)',artist:'练习歌手'});
   assert.deepEqual(result.lines,data.lines.slice(2));assert.deepEqual(result.lyricStructure.sourceRows,data.lines.slice(2));
-  assert.deepEqual(result.credits.map(c=>c.role),['Recording','Rights']);
+  assert.deepEqual(result.credits.map(c=>c.role),['Recording']);
   assert.deepEqual(cleanLyrics(result,{title:'一起唱 (Live)',artist:'练习歌手'}),result);
 });
 

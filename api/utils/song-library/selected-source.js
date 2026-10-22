@@ -4,6 +4,7 @@ import {canonicalJSON,spotifyHash} from './spotify-recording.js';
 import {analyzeLyricLanguage} from '../lyric-language.js';
 import {getDefaultRomanizationSystem} from '../language-detection.js';
 import {validVocalTiming} from '../vocal-timing.js';
+import {validLyricStructure,hasEmbeddedLyricCredits} from '../lyric-annotations.js';
 
 export const SELECTED_SOURCE_REVISION='selected-lyrics-learning-1';
 const providers={lrclib:'LRCLIB',netease:'NetEase',kugou:'Kugou'};
@@ -51,7 +52,16 @@ export async function makeSelectedDocument(candidate,request,{analyzeLanguageFn=
     ||!Array.isArray(candidate.lines)||!candidate.lines.length||candidate.lines.length>250
     ||candidate.lines.some(l=>!text(l.text,4000))||Buffer.byteLength(JSON.stringify(candidate))>200000)
     throw new LibraryError('invalid_source',502);
+  // Freeze provider-owned inputs before asynchronous pronunciation work. The
+  // preview hash binds the visible words; canonical cue evidence is separately
+  // validated and then included in the immutable source capsule/hash.
+  candidate=structuredClone(candidate);
   if(selectedTextHash(candidate.lines)!==request.expectedTextHash)throw new LibraryError('selected_source_changed');
+  const canonical=candidate.lyricStructure;
+  const originals=candidate.lines.map(l=>({original:l.text}));
+  if(canonical&&!validLyricStructure(canonical,originals))throw new LibraryError('invalid_source_structure',502);
+  if(hasEmbeddedLyricCredits({lines:originals,metadata:{lyric_structure:canonical}}))
+    throw new LibraryError('selected_source_changed');
   const details=analyzeLanguageFn(candidate.lines.map(l=>l.text));
   // Processors use pronunciation aids, which in turn validate library context.
   // Resolve the registry after module initialization rather than creating a
@@ -64,13 +74,14 @@ export async function makeSelectedDocument(candidate,request,{analyzeLanguageFn=
     sourceText:l.original,lyricText:l.original,speakerID:null,startsTurn:false,sourcePrefix:''}))};
   const s={version:'selected-provider-source-1',provider:request.provider,itemID:request.itemID,title:candidate.title,artist:candidate.artist,
     album:candidate.album??null,duration:candidate.duration??null,language:details.primary,romanizationSystem:system,lines,structure,
+    ...(canonical?{lyricStructure:canonical}:{}),
     sourceTiming:candidate.lines.map(l=>({timestamp:Number.isFinite(l.timestamp)&&l.timestamp>=0?l.timestamp:null,
       ...(validVocalTiming(l,{duration:candidate.duration??7200})?{vocalTiming:structuredClone(l.vocalTiming)}:{})}))};
   const h=hashes(s);
   const response={song:{id:s.itemID,title:{original:s.title,romanized:s.title},artist:{original:s.artist,romanized:s.artist},album:s.album,duration:s.duration,
     language:s.language,romanization_system:s.romanizationSystem},lines,quality:{synced:false,partial:false,instrumental:false},
     metadata:{version:'2.5.0',timestamp:new Date().toISOString(),source:providers[s.provider],music_api:s.provider,
-      selection_revision:SELECTED_SOURCE_REVISION,language_details:details}};
+      selection_revision:SELECTED_SOURCE_REVISION,language_details:details,...(canonical?{lyric_structure:canonical}:{})}};
   return {...h,selectionRevision:SELECTED_SOURCE_REVISION,canonicalRecordingID:null,response,structure,
     selectedSourceCapsule:s,selectedSource:selectedSourceDescriptor(s),modelContext:context(s)};
 }
@@ -84,6 +95,8 @@ export function validateSelectedDocument(doc) {
       ||s.sourceTiming?.length!==s.lines.length||s.structure?.version!=='source-speakers-1'
       ||doc.selectionRevision!==SELECTED_SOURCE_REVISION||doc.sourceCapsule||doc.canonicalRecordingID!=null||doc.recordingBinding||doc.requestRecording||doc.requestEvidence||doc.requestKey)
       throw new Error();
+    if(s.lyricStructure&&!validLyricStructure(s.lyricStructure,s.lines))throw new Error();
+    if(canonicalJSON(doc.response.metadata.lyric_structure??null)!==canonicalJSON(s.lyricStructure??null))throw new Error();
     const h=hashes(s),song=doc.response.song;
     if(Object.entries(h).some(([k,v])=>doc[k]!==v)||canonicalJSON(doc.modelContext)!==canonicalJSON(context(s))
       ||canonicalJSON(doc.selectedSource)!==canonicalJSON(selectedSourceDescriptor(s))||canonicalJSON(doc.structure)!==canonicalJSON(s.structure)

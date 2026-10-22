@@ -5,10 +5,10 @@ import {createSongLibraryService} from '../../api/song-library.js';
 import {selectedTextHash} from '../../api/utils/song-library/selected-source.js';
 const candidate={provider:'lrclib',itemID:'123',title:'Independent live title',artist:'Independent artist',duration:180,lines:[{text:'Only these exact source words',timestamp:3}]};
 const choice={action:'selected_source',provider:'lrclib',itemID:'123',expectedTextHash:selectedTextHash(candidate.lines)};
-async function setup(t){
+async function setup(t,source=candidate){
  const {db,store}=await libraryDB();t.after(()=>db.close());let fetches=0,generations=0;
  const pending=[];
- const handler=createSongLibraryService({store,loadSelectedSource:async()=>{fetches++;return structuredClone(candidate);},apiKey:'fixture',waitUntilFn:task=>pending.push(task),logger:{error(){}},
+ const handler=createSongLibraryService({store,loadSelectedSource:async()=>{fetches++;return structuredClone(source);},apiKey:'fixture',waitUntilFn:task=>pending.push(task),logger:{error(){}},
   generateFn:async()=>{generations++;return {content:{lines:[{sourceID:'L0001',lyricText:'Exact translated source.',speakerID:null,startsTurn:false}],sourceNotes:[]},actualMicros:1000,response:{id:'fixture'}};}});
  const call=async(body,user='reader-a')=>{const res={code:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(v){this.code=v;return this;},json(v){this.body=v;return this;}};
   await handler({method:'POST',lyricaUser:user?{id:user}:null,body},res);return res;};
@@ -40,4 +40,21 @@ test('private source admission precedes cached derivatives and status recovery; 
  await s.db.query('DELETE FROM selected_source_access WHERE user_id=$1',['reader-a']);
  assert.equal((await s.call(translate)).body.code,'selected_source_unavailable');
  assert.equal((await s.call({action:'status',jobID:start.body.job.id})).body.code,'selected_source_unavailable');
+});
+
+test('selected performed notice-looking words retain bound canonical proof through storage and new generation',async t=>{
+ const {cleanLyrics}=await import('../../api/utils/lyric-quality.js');
+ const {hasEmbeddedLyricCredits}=await import('../../api/utils/lyric-annotations.js');
+ const {validateSelectedDocument}=await import('../../api/utils/song-library/selected-source.js');
+ const normalized=cleanLyrics({source:'lrclib',lines:[{text:'Singer：银河计划X星斗推',timestamp:3}]},{artist:'Singer'});
+ const source={...candidate,artist:'Singer',lines:normalized.lines,lyricStructure:normalized.lyricStructure};
+ const s=await setup(t,source),selected={...choice,expectedTextHash:selectedTextHash(source.lines)};
+ const registered=await s.call(selected);assert.equal(registered.code,200);
+ const doc=registered.body.document,stored=await s.store.document(doc.id);
+ assert.equal(doc.response.lines[0].original,'银河计划X星斗推');
+ assert.deepEqual(doc.response.metadata.lyric_structure,normalized.lyricStructure);
+ assert.doesNotThrow(()=>validateSelectedDocument(stored));assert.equal(hasEmbeddedLyricCredits(stored.response),false);
+ const translated=await s.call({action:'translate',documentID:doc.id,sourceHash:doc.sourceHash,target:'en',allowGeneration:true});
+ assert.equal(translated.code,202);await Promise.all(s.pending);assert.equal(s.generations,1);
+ assert.equal(Number((await s.store.usage()).jobs),1);
 });

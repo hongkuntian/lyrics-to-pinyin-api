@@ -265,6 +265,8 @@ test('fresh cached note placeholders refresh without an explicit reload',async t
  assert.equal((await store.document(first.id)).response.lines[0].original,'♪');
 });
 for(const [creditFamily,creditRows] of [
+ ['provider-notice',['银河计划X星斗推','【未经著作权人许可不得翻唱 翻录 或使用】',
+   '【本作品声明，著作权权利保留。未经著作权人书面许可，不得以任何方式（包括翻唱、翻录等）使用。本作品禁止生成式人工智能训练使用。】']],
  ['performer',['男声：单色凌','戏腔：单色凌','和声：曾婕']],
  ['design-engineering',['和声：冯旖旎','混音/母带处理：潘君明','封面设计：米一嗷','联合出品：Practice company']],
  ['ownership',['词版权管理方：Practice publisher','曲版权管理方：Practice publisher',

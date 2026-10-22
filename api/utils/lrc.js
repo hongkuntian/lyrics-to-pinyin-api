@@ -1,13 +1,19 @@
 // LRC fractions are decimal seconds, not always milliseconds.
+const headerRows=/^(?:\[(?:ar|al|ti|by|offset|length|re|ve):[^\[\]\r\n]*\]\s*)+$/iu;
 export function parseLRC(raw = '') {
   const lines = [];
   for (const row of raw.split(/\r?\n/)) {
-    if (/^\s*\[(?:ar|al|ti|by|offset|length|re|ve):/i.test(row)) continue;
-    const matches = [...row.matchAll(/\[(\d+):(\d{2})(?:\.(\d{1,3}))?\]/g)];
-    const text = row.replace(/\[[^\]]*\]/g, '').trim();
-    if (!text) continue;
+    let remaining=row.trimStart(),matches=[];
+    for(let match;(match=remaining.match(/^\[(\d+):(\d{2})(?:\.(\d{1,3}))?\]/u));){
+      matches.push(match);remaining=remaining.slice(match[0].length).trimStart();
+    }
+    const text=remaining.trim();
+    // Recognized headers may concatenate or follow timestamps, but must
+    // consume the whole remaining row. A mixed sung tail preserves them all.
+    if (!text || headerRows.test(text)) continue;
     if (!matches.length) {
-      if (!/^\s*\[\d/.test(row)) lines.push({text, timestamp:null});
+      // Retain the established malformed numeric-timestamp rejection.
+      if (!/^\s*\[\d+:/u.test(row)) lines.push({text, timestamp:null});
       continue;
     }
     for (const match of matches) {

@@ -53,3 +53,33 @@ test('selected pronunciation resolves the existing registry after its module ini
   assert.equal(doc.response.lines[0].original,'君が好き');assert.notEqual(doc.response.lines[0].romanized,'君が好き');
   assert.doesNotThrow(()=>validateSelectedDocument(doc));
 });
+
+test('selected cue proof is canonical, exact-word bound, immutable and survives wire projection',async()=>{
+  const {cleanLyrics}=await import('../../api/utils/lyric-quality.js');
+  const {hasEmbeddedLyricCredits}=await import('../../api/utils/lyric-annotations.js');
+  const body='银河计划X星斗推';
+  const normalized=cleanLyrics({source:'netease',lines:[{text:`Singer：${body}`,timestamp:3},{text:'普通句',timestamp:6}]},{artist:'Singer'});
+  const source={...candidate,artist:'Singer',lines:normalized.lines,lyricStructure:normalized.lyricStructure};
+  const choice={...request(),expectedTextHash:selectedTextHash(source.lines)};
+  const doc=await makeSelectedDocument(source,choice,{analyzeLanguageFn:()=>({primary:'en',pronunciation_language:null})});
+  assert.deepEqual(doc.response.lines.map(l=>l.original),[body,'普通句']);
+  assert.deepEqual(doc.response.metadata.lyric_structure,normalized.lyricStructure);
+  assert.deepEqual(doc.selectedSourceCapsule.lyricStructure,normalized.lyricStructure);
+  assert.equal(hasEmbeddedLyricCredits(doc.response),false);
+  assert.equal(hasEmbeddedLyricCredits(publicDocument(doc).response),false);
+  assert.doesNotThrow(()=>validateSelectedDocument(JSON.parse(JSON.stringify(doc))));
+  const unproven={...source};delete unproven.lyricStructure;
+  await assert.rejects(makeSelectedDocument(unproven,choice),/selected_source_changed/);
+  for(const mutate of [d=>delete d.response.metadata.lyric_structure,
+    d=>d.response.metadata.lyric_structure.occurrences[0].sourcePrefix='fake',
+    d=>d.selectedSourceCapsule.lyricStructure.sourceRows[0].text='changed']){
+    const changed=structuredClone(doc);mutate(changed);
+    assert.throws(()=>validateSelectedDocument(changed),/source_context_unavailable/);
+  }
+  const corrupt=structuredClone(source);corrupt.lyricStructure.annotations=[];
+  await assert.rejects(makeSelectedDocument(corrupt,choice),/invalid_source_structure/);
+  // Old preview choices containing provider metadata require reselection after
+  // acquisition cleans it. Neither old choice nor new response is relabelled.
+  const oldRows=[{text:'银河计划X星斗推'},...candidate.lines];
+  await assert.rejects(makeSelectedDocument(candidate,{...request(),expectedTextHash:selectedTextHash(oldRows)}),/selected_source_changed/);
+});

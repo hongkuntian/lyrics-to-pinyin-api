@@ -82,3 +82,21 @@ test('valid optional word cues survive preview while malformed cues preserve the
     assert.deepEqual(res.body.candidate.lines[0].vocalTiming,timing===vocalTiming?vocalTiming:undefined);
   }
 });
+
+test('provider preview preserves validated performer evidence for notice-looking sung bodies',async()=>{
+  const {makeSelectedDocument,selectedTextHash,validateSelectedDocument}=await import('../../api/utils/song-library/selected-source.js');
+  const {hasEmbeddedLyricCredits}=await import('../../api/utils/lyric-annotations.js');
+  const body='银河计划X星斗推';
+  const service=fixture({previewLRCLIB:async()=>({...record,artistName:'Singer',
+    syncedLyrics:`[00:01]${body}\n[00:02]Singer：${body}\n[00:04]普通句`})});
+  const res=await call(service,{action:'preview_lyrics',provider:'lrclib',itemID:'34750760'});
+  assert.equal(res.statusCode,200);
+  const source=res.body.candidate;
+  assert.deepEqual(source.lines.map(l=>l.text),[body,'普通句']);
+  assert.ok(source.lyricStructure.occurrences[0].sourcePrefix);
+  const doc=await makeSelectedDocument(source,{provider:source.provider,itemID:source.itemID,expectedTextHash:selectedTextHash(source.lines)},
+    {analyzeLanguageFn:()=>({primary:'en',pronunciation_language:null})});
+  assert.equal(hasEmbeddedLyricCredits(doc.response),false);
+  assert.doesNotThrow(()=>validateSelectedDocument(doc));
+  assert.deepEqual(doc.response.metadata.lyric_structure,source.lyricStructure);
+});

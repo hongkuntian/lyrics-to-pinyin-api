@@ -4,6 +4,7 @@ import {LRCAPI} from '../music-apis/lrclib.js';
 import {NeteaseAPI} from '../music-apis/netease.js';
 import {KugouAPI} from '../music-apis/kugou.js';
 import {cleanLyrics} from './lyric-quality.js';
+import {validLyricStructure} from './lyric-annotations.js';
 import {sameSpotifyRecordingNames,normalizeRecordingText} from './recording-match.js';
 import {isRejectedLyrics,isRejectedRecordingLyrics} from './rejected-lyrics.js';
 import {validVocalTiming} from './vocal-timing.js';
@@ -48,11 +49,16 @@ const sourceLines=(lyrics,duration=7200)=>{
   // Optional cues cannot turn a readable transcription into an oversized miss.
   return Buffer.byteLength(JSON.stringify(timed))<=180000?timed:lines;
 };
+// Only canonical, row-bound cue evidence is additive preview metadata. Keep
+// the exact same evidence through selected admission; a public speaker ID alone
+// never protects words that resemble metadata.
+const sourceEvidence=(lyrics,lines)=>validLyricStructure(lyrics?.lyricStructure,lines.map(l=>({original:l.text})))
+  &&lyrics.lyricStructure.occurrences.some(o=>o.sourcePrefix)?{lyricStructure:structuredClone(lyrics.lyricStructure)}:{};
 function fromLRCLIB(raw,hints) {
   if(!raw||!sourceID(String(raw.id))||!text(raw.trackName)&&!text(raw.name)||!text(raw.artistName,1024))return null;
-  const lines=sourceLines(lrclib.lyricsFromRecord(raw,rejectionContext(hints)));if(!lines)return null;
+  const lyrics=lrclib.lyricsFromRecord(raw,rejectionContext(hints)),lines=sourceLines(lyrics);if(!lines)return null;
   return {provider:'lrclib',itemID:String(raw.id),title:raw.trackName??raw.name,artist:raw.artistName,
-    ...(text(raw.albumName,1024)?{album:raw.albumName}:{}),...(finiteDuration(raw.duration)?{duration:raw.duration}:{}),lines};
+    ...(text(raw.albumName,1024)?{album:raw.albumName}:{}),...(finiteDuration(raw.duration)?{duration:raw.duration}:{}),lines,...sourceEvidence(lyrics,lines)};
 }
 function fromNetEase(raw) {
   const artists=raw?.artists??raw?.ar;
@@ -80,7 +86,7 @@ async function previewNetEase(id,signal) {
   const raw=page.code===200&&page.songs?.length===1?page.songs[0]:null;
   const candidate=fromNetEase(raw);if(!candidate||candidate.itemID!==id)return null;
   const lyrics=cleanLyrics(await netease.getLyrics(id,{signal,song:candidate}),{title:candidate.title,artist:candidate.artist,duration:candidate.duration});
-  const lines=sourceLines(lyrics,candidate.duration);return lines?{...candidate,lines}:null;
+  const lines=sourceLines(lyrics,candidate.duration);return lines?{...candidate,lines,...sourceEvidence(lyrics,lines)}:null;
 }
 async function searchKugou(query,hints,signal) {return kugou.searchLyrics(query,{signal,duration:hints?.duration});}
 const fromKugou=raw=>raw&&sourceID(String(raw.id))&&text(raw.title)&&text(raw.artist,1024)&&finiteDuration(raw.duration)
@@ -88,7 +94,7 @@ const fromKugou=raw=>raw&&sourceID(String(raw.id))&&text(raw.title)&&text(raw.ar
 async function previewKugou(id,signal,context) {
   const raw=await kugou.previewLyrics(id,context.query,{signal,duration:context.hints?.duration});
   const candidate=fromKugou(raw),lines=sourceLines(raw?.lyricsData,raw?.duration);
-  return candidate&&lines?{...candidate,lines}:null;
+  return candidate&&lines?{...candidate,lines,...sourceEvidence(raw.lyricsData,lines)}:null;
 }
 
 /// Shared by explicit learning-source admission and the independent preview API.
@@ -102,11 +108,12 @@ export function createLyricSourceLoader(dependencies={}) {
     const candidate=provider==='lrclib'?fromLRCLIB(raw,hints):raw;
     if(!candidate||candidate.provider!==provider||candidate.itemID!==itemID||!text(candidate.title)||!text(candidate.artist,1024))return null;
     const lines=sourceLines({lines:candidate.lines},candidate.duration);
-    if(!lines||isRejectedLyrics(provider,itemID,lines)||isRejectedRecordingLyrics(lines,rejectionContext(hints)))return null;
+    if(!lines||isRejectedLyrics(provider,itemID,lines)||isRejectedRecordingLyrics(lines,rejectionContext(hints))
+      ||(candidate.lyricStructure&&!validLyricStructure(candidate.lyricStructure,lines.map(l=>({original:l.text})))))return null;
     return {provider,itemID,title:candidate.title,artist:candidate.artist,
       ...(text(candidate.album,1024)?{album:candidate.album}:{}),
       ...(finiteDuration(candidate.duration)?{duration:candidate.duration}:{}),
-      ...(Array.isArray(candidate.artists)&&candidate.artists.length<=32&&candidate.artists.every(a=>text(a,1024))?{artists:candidate.artists}:{}),lines};
+      ...(Array.isArray(candidate.artists)&&candidate.artists.length<=32&&candidate.artists.every(a=>text(a,1024))?{artists:candidate.artists}:{}),lines,...sourceEvidence(candidate,lines)};
   };
 }
 export function createLyricSearchService(dependencies={}) {
@@ -135,7 +142,7 @@ export function createLyricSearchService(dependencies={}) {
       const candidates=[...unique.values()].sort((a,b)=>b.score-a.score||a.provider.localeCompare(b.provider)||a.itemID.localeCompare(b.itemID,'en',{numeric:true})).slice(0,20);
       // Keep metadata choices even when several complete transcriptions exceed
       // the transport budget; those words can be requested explicitly later.
-      let bytes=0;for(const c of candidates){bytes+=Buffer.byteLength(JSON.stringify(c));if(bytes>500000)delete c.lines;}
+      let bytes=0;for(const c of candidates){bytes+=Buffer.byteLength(JSON.stringify(c));if(bytes>500000){delete c.lines;delete c.lyricStructure;}}
       return res.status(200).json({version:1,candidates,unavailable});
     }
     if(body.action==='preview_lyrics') {
