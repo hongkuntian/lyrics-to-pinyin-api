@@ -7,12 +7,21 @@ import {spawn, spawnSync} from 'node:child_process';
 import {once} from 'node:events';
 import {fileURLToPath} from 'node:url';
 import {hash, preparePlan, shard, validatePlan, initJournal, registerPlan, snapshot, admitShard, claimStart,
-  runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch, importEvents, execute} from '../../scripts/evaluate-language-expansion.mjs';
+  runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch as retrieveSelectedBatch, importEvents, execute as executeOperation, finalizeBatch} from '../../scripts/evaluate-language-expansion.mjs';
 import {TAGS, TARGETS, sourceInput, batchInput, DEPENDENT_RESERVE, CONFIRMATION_RESERVE} from '../../scripts/language-expansion/plan.mjs';
 import {payloadEvents, recoverPayload, SCHEMA, boundedSink, MAX_PAYLOAD} from '../../scripts/language-expansion/common.mjs';
 import {baseEvent} from '../../scripts/language-expansion/journal.mjs';
 import {responseResult, openAIClient, validateManifest} from '../../scripts/language-expansion/transport.mjs';
 import {evaluateLanguageExpansionInBuild, runLanguageExpansionBuild} from '../../scripts/language-expansion-build.mjs';
+
+// Every offline read explicitly predeclares one case; multi-case tests perform
+// distinct read-only scans and keep finalization a separate local operation.
+const retrieveBatch = async options => {
+  let result;
+  for (const job of options.manifest.jobs) result = await retrieveSelectedBatch({...options, inputFileID: options.inputFileID ?? 'file-input', selectedCaseID: job.id});
+  return result;
+};
+const execute = options => executeOperation({...options, selectedCaseID: options.selectedCaseID ?? options.manifest.jobs[0].id});
 
 // Deliberately synthetic protocol fixtures, not a linguistic corpus or quality evidence.
 const controls = {'ja-c': 'zh-Hans', 'ko-c': 'en', 'pt-c': 'es', 'it-c': 'es', 'de-c': 'es', 'ru-c': 'uk', 'vi-c': 'vi', 'id-c': 'id', 'th-c': 'en', 'hi-c': 'hi-Latn'};
@@ -272,8 +281,8 @@ test('Batch admission waits for all 33 Standard seed outputs and explicit review
   await execute({plan, manifest, ticket, directory: dir, operation: 'submit', client});
   await execute({plan, manifest, ticket, directory: dir, operation: 'retrieve', client});
   const recovered = await snapshot(dir); assert.equal(recovered.results[remaining.id].valid, true);
-  const fileReceipt = recovered.events.find(e => e.event === 'language_expansion_file');
-  await assert.rejects(importEvents(dir, [{...fileReceipt, payloadHash: hash('corrupt')}]), /corrupt_retained_file/);
+  const fileReceipt = recovered.events.find(e => e.event === 'language_expansion_file_scan');
+  await assert.rejects(importEvents(dir, [{...fileReceipt, payloadHash: hash('corrupt')}]), /batch_file_changed/);
   // A read-only retrieval can revisit known IDs without repeating settled case chunks.
   await execute({plan, manifest, ticket, directory: dir, operation: 'retrieve', client});
   assert.equal((await snapshot(dir)).results[remaining.id].valid, true);
@@ -294,7 +303,7 @@ test('Batch results match custom IDs out of order, retain error files and valida
   const raw = jobs.toReversed().map(job => JSON.stringify({custom_id: job.id, response: {status_code: 200, body: fakeResponse(plan, job)}, error: null})).join('\n') + '\n';
   const client = {inspect: async () => batchObject(manifest), file: async () => byteStream(raw)};
   const result = await retrieveBatch({plan, manifest, approvedHash: hash(manifest), batchID: 'batch_test', inputFileID: 'file-input', client, emit: e => output.push(e)});
-  assert.equal(result.cases, 2); assert.equal(output.find(e => e.event === 'language_expansion_file').payloadHash, hash(raw));
+  assert.equal(result.cases, 2); assert.equal(output.find(e => e.event === 'language_expansion_file_scan').payloadHash, hash(raw));
   for (const job of jobs) { const r = recoverPayload(output, baseEvent(manifest, job)); assert.equal(r.valid, true); assert.equal(r.actualMicros, 32); }
   await assert.rejects(inspectBatch({manifest, batchID: 'wrong', client, emit: () => {}}), /identity_unknown/);
 });
@@ -309,14 +318,15 @@ test('partial Batch expiry retains successes plus failed/unknown costs; missing/
   const failed = recoverPayload(output, baseEvent(manifest, jobs[1])); assert.equal(failed.valid, false); assert.equal(failed.actualMicros, null);
   for (const raw of [one, one + one, one + JSON.stringify({custom_id: 'unknown'}) + '\n']) {
     const retained = []; await assert.rejects(retrieveBatch({plan, manifest, approvedHash: hash(manifest), batchID: 'batch_test', client: {...client, inspect: async () => batchObject(manifest), file: async () => byteStream(raw)}, emit: e => retained.push(e)}));
-    assert.equal(recoverPayload(retained, baseEvent(manifest, jobs[0])).valid, true);
+    if (raw === one) assert.equal(recoverPayload(retained, baseEvent(manifest, jobs[0])).valid, true);
+    else assert.throws(() => recoverPayload(retained, baseEvent(manifest, jobs[0]))); // corrupt file has no complete-file proof
   }
 });
-test('Batch retrieval enforces one MiB per operation and retains earlier file results on later-file failure', async () => {
+test('Batch retrieval retains earlier file results when a later file exceeds the unchanged line cap', async () => {
   const plan = await planFixture(), job = plan.jobs[0], manifest = shard(plan, [job.id], {}, 'batch'), output = [];
   const raw = JSON.stringify({custom_id: job.id, response: {status_code: 200, body: fakeResponse(plan, job)}}) + '\n';
-  const client = {inspect: async () => batchObject(manifest, {error_file_id: 'file-error'}), file: async id => byteStream(id === 'file-output' ? raw : 'x'.repeat(1048576))};
-  await assert.rejects(retrieveBatch({plan, manifest, approvedHash: hash(manifest), batchID: 'batch_test', client, emit: e => output.push(e)}), /operation_limit/);
+  const client = {inspect: async () => batchObject(manifest, {error_file_id: 'file-error'}), file: async id => byteStream(id === 'file-output' ? raw : 'x'.repeat(1048577))};
+  await assert.rejects(retrieveBatch({plan, manifest, approvedHash: hash(manifest), batchID: 'batch_test', client, emit: e => output.push(e)}), /batch_line_limit/);
   assert.equal(recoverPayload(output, baseEvent(manifest, job)).valid, true);
 });
 test('sensitive values cannot appear in output; all provider traffic requires injected fetch', async () => {
@@ -429,9 +439,9 @@ test('all settled Batch cases still block admission after failed second-file ret
   const batch = batchObject(manifest, {error_file_id: 'file-error'});
   const raw = JSON.stringify({custom_id: job.id, response: {status_code: 200, body: fakeResponse(plan, job)}, error: null}) + '\n';
   const client = {upload: async () => ({id: 'file-input'}), create: async () => batch, inspect: async () => batch,
-    file: async id => byteStream(id === 'file-output' ? raw : 'x'.repeat(1048576))};
+    file: async id => byteStream(id === 'file-output' ? raw : 'x'.repeat(1048577))};
   await execute({directory: dir, plan, manifest, ticket, operation: 'submit', client});
-  await assert.rejects(execute({directory: dir, plan, manifest, ticket, operation: 'retrieve', client}), /operation_limit/);
+  await assert.rejects(execute({directory: dir, plan, manifest, ticket, operation: 'retrieve', client}), /batch_line_limit/);
   const state = await snapshot(dir); assert.equal(state.states[job.id].state, 'settled');
   assert.equal(state.shardStates[hash(manifest)].state, 'unresolved');
   assert.equal(Object.values(state.states).filter(s => ['unknown', 'unknown_cost'].includes(s.state)).length, 0);
@@ -441,10 +451,12 @@ test('all settled Batch cases still block admission after failed second-file ret
   await importEvents(dir, [{schema: SCHEMA, event: 'language_expansion_terminal', planHash: hash(plan), shardHash: hash(manifest), operation: 'retrieve', state: 'evaluation_only_interrupted', intentionalBuildFailure: true}]);
   await assert.rejects(admitShard({directory: dir, plan, manifest: shard(plan, [next.id]), executionID: 'still_blocked'}), /prior_shard_unresolved/);
   const goodClient = {...client, file: async id => byteStream(id === 'file-output' ? raw : '')};
-  await assert.rejects(execute({directory: dir, plan, manifest, ticket, operation: 'retrieve', client: {...goodClient, inspect: async () => ({...batch, request_counts: {total: 1, completed: 0, failed: 1}})}}), /request_counts/);
+  await assert.rejects(execute({directory: dir, plan, manifest, ticket, operation: 'retrieve', client: {...goodClient, inspect: async () => ({...batch, request_counts: {total: 1, completed: 0, failed: 1}})}}), /request_counts|identity_changed/);
   assert.equal((await snapshot(dir)).shardStates[hash(manifest)].state, 'unresolved');
   await assert.rejects(admitShard({directory: dir, plan, manifest: shard(plan, [next.id]), executionID: 'bad_counts'}), /prior_shard_unresolved/);
   await execute({directory: dir, plan, manifest, ticket, operation: 'retrieve', client: goodClient});
+  assert.equal((await snapshot(dir)).shardStates[hash(manifest)].state, 'unresolved');
+  await finalizeBatch(dir, hash(manifest));
   const recovered = await snapshot(dir), receipt = recovered.events.findLast(e => e.event === 'language_expansion_reconciled');
   assert.equal(recovered.shardStates[hash(manifest)].state, 'reconciled');
   assert.deepEqual(receipt.files.map(f => f.role), ['output', 'error']);
@@ -560,7 +572,7 @@ test('every enabled legacy Batch build operation emits terminal evidence and rej
   const raw = JSON.stringify({custom_id: manifest.jobs[0].id, response: {status_code: 200, body: fakeResponse(plan, manifest.jobs[0])}, error: null}) + '\n';
   for (const operation of ['submit', 'inspect', 'recover', 'retrieve']) {
     const events = [];
-    const bundle = {plan, manifest, ticket, operation, allocationMicros: manifest.jobs[0].reservedMicros, representativeReviewed: true, batchAccepted: true, batchID: batch.id, inputFileID: batch.input_file_id};
+    const bundle = {plan, manifest, ticket, operation, selectedCaseID: manifest.jobs[0].id, allocationMicros: manifest.jobs[0].reservedMicros, representativeReviewed: true, batchAccepted: true, batchID: batch.id, inputFileID: batch.input_file_id};
     const client = {upload: async () => ({id: batch.input_file_id}), create: async () => batch, inspect: async () => batch,
       list: async () => ({data: [batch], has_more: false}), file: async id => byteStream(id === batch.input_file_id ? batchInput(manifest) : raw)};
     const env = {LYRA_LANGUAGE_EXPANSION_ON_BUILD: '1', VERCEL: '1', VERCEL_ENV: 'production', VERCEL_DEPLOYMENT_ID: ticket.executionID, LYRA_LANGUAGE_EXPANSION_PLAN_HASH: hash(plan), LYRA_LANGUAGE_EXPANSION_SHARD_HASH: hash(manifest)};

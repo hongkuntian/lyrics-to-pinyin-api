@@ -5,10 +5,12 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {hash, readJSON, save, fail} from './language-expansion/common.mjs';
 import {preparePlan, shard, validatePlan} from './language-expansion/plan.mjs';
-import {initJournal, registerPlan, snapshot, admitShard, claimStart, append, importEvents} from './language-expansion/journal.mjs';
+import {initJournal, registerPlan, snapshot, admitShard, claimStart, append, importEvents, finalizeBatch, importReadReplay, handoverPlan} from './language-expansion/journal.mjs';
 import {runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch, openAIClient} from './language-expansion/transport.mjs';
+import {terminalIdentity, scanProjection} from './language-expansion/reconciliation.mjs';
+import {fileProjection} from './language-expansion/batch-files.mjs';
 export {hash, preparePlan, shard, validatePlan, initJournal, registerPlan, snapshot, admitShard, claimStart, importEvents,
-  runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch};
+  runStandard, submitBatch, inspectBatch, recoverBatch, retrieveBatch, finalizeBatch, importReadReplay, handoverPlan};
 
 export async function importJSONL(directory, file) {
   const lines = createInterface({input: createReadStream(file), crlfDelay: Infinity});
@@ -30,12 +32,16 @@ export async function importJSONL(directory, file) {
   } finally { lines.close(); lines.input.destroy(); }
 }
 
-export async function execute({plan, manifest, ticket, directory, operation, client, emit, secret, executionID = ticket.executionID}) {
+export async function execute({plan, manifest, ticket, directory, operation, client, emit, secret, executionID = ticket.executionID, selectedCaseID, expectedIdentity, expectedFiles, expectedScan}) {
   const state = await snapshot(directory);
   if (!state.manifests.some(m => hash(m) === hash(manifest))) fail('unregistered_manifest');
-  const send = async event => { await append(directory, event); if (emit) await emit(event); };
+  const send = async event => {
+    if (['language_expansion_control', 'language_expansion_file_scan', 'language_expansion_scan'].includes(event.event)) await importEvents(directory, [event]);
+    else await append(directory, event);
+    if (emit) await emit(event);
+  };
   const options = {plan, manifest, ticket, executionID, approvedHash: hash(manifest), client, emit: send, secret,
-    claimStart: t => claimStart(directory, t), retainedResults: state.results};
+    claimStart: t => claimStart(directory, t), retainedResults: state.results, selectedCaseID, expectedIdentity, expectedFiles, expectedScan};
   if (operation === 'standard') return runStandard(options);
   if (operation === 'submit') return submitBatch(options);
   const controls = state.events.filter(e => e.event === 'language_expansion_control' && e.shardHash === hash(manifest));
@@ -45,7 +51,21 @@ export async function execute({plan, manifest, ticket, directory, operation, cli
   if (operation === 'recover') return recoverBatch(options);
   if (!options.batchID) fail('known_batch_id_required');
   if (operation === 'inspect') return inspectBatch(options);
-  if (operation === 'retrieve') return retrieveBatch(options);
+  if (operation === 'retrieve') {
+    const terminal = controls.findLast(e => e.operation === 'inspect' && e.state === 'known' && ['completed', 'expired', 'cancelled', 'failed'].includes(e.status));
+    if (terminal && options.expectedIdentity && hash(terminalIdentity(manifest, terminal)) !== hash(terminalIdentity(manifest, options.expectedIdentity))) fail('batch_identity_changed');
+    options.expectedIdentity ??= terminal;
+    const pins = new Map(state.events.filter(e => e.shardHash === hash(manifest) && e.event === 'language_expansion_file_scan').map(e => [e.role, e]));
+    for (const pin of options.expectedFiles ?? []) {
+      if (pins.has(pin.role) && hash(fileProjection(pin)) !== hash(fileProjection(pins.get(pin.role)))) fail('batch_file_changed');
+      pins.set(pin.role, pin);
+    }
+    options.expectedFiles = [...pins.values()];
+    const scan = state.events.find(e => e.shardHash === hash(manifest) && e.event === 'language_expansion_scan');
+    if (scan && options.expectedScan && hash(scanProjection(scan)) !== hash(scanProjection(options.expectedScan))) fail('batch_scan_changed');
+    options.expectedScan ??= scan;
+    return retrieveBatch(options);
+  }
   fail('explicit_operation_required');
 }
 
@@ -77,8 +97,20 @@ async function main() {
   if (command === 'import') {
     return importJSONL(directory, options['--events']);
   }
+  if (command === 'finalize') return finalizeBatch(directory, options['--approved-shard-hash']);
+  if (command === 'stage-repeat') {
+    const lines = createInterface({input: createReadStream(options['--events']), crlfDelay: Infinity});
+    const incoming = []; let bytes = 0;
+    try { for await (const line of lines) {
+      bytes += Buffer.byteLength(line) + 1;
+      if (!line.trim() || bytes > 2_600_000 || Buffer.byteLength(line) > 16_384) fail('staged_read_limit_or_blank');
+      incoming.push(JSON.parse(line));
+    } } finally { lines.close(); lines.input.destroy(); }
+    return importReadReplay(directory, incoming, options['--approved-shard-hash'], options['--case-id']);
+  }
   const plan = await readJSON(options['--plan']);
   await validatePlan(plan, options['--approved-plan-hash']);
+  if (command === 'handover') return handoverPlan(directory, plan, options['--approved-plan-hash'], options['--legacy-code-root']);
   if (command === 'register') return registerPlan(directory, plan, options['--approved-plan-hash']);
   if (command === 'freeze') {
     const state = await snapshot(directory);
@@ -102,6 +134,9 @@ async function main() {
   const ticket = await readJSON(options['--ticket']);
   const secret = process.env.OPENAI_API_KEY;
   return execute({plan, manifest, ticket, directory, operation: options['--operation'], secret,
+    selectedCaseID: options['--case-id'], expectedIdentity: options['--expected-identity'] ? await readJSON(options['--expected-identity']) : undefined,
+    expectedFiles: options['--expected-files'] ? await readJSON(options['--expected-files']) : undefined,
+    expectedScan: options['--expected-scan'] ? await readJSON(options['--expected-scan']) : undefined,
     client: openAIClient({apiKey: secret, fetchFn: globalThis.fetch}), emit: event => process.stdout.write(JSON.stringify(event) + '\n')});
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {

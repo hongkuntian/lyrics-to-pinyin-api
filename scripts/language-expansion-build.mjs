@@ -29,7 +29,8 @@ async function evaluateBuildOperation(env = process.env, {loadBundle, claimStart
   if (manifest.transport === 'batch' && (!bundle.representativeReviewed || !bundle.batchAccepted)) fail('standard_review_and_batch_entitlement_required');
   const options = {plan, manifest, ticket, approvedHash: hash(manifest), executionID: env.VERCEL_DEPLOYMENT_ID,
     claimStart, client: client ?? openAIClient({apiKey: env.OPENAI_API_KEY, fetchFn}), emit, secret: env.OPENAI_API_KEY,
-    batchID: bundle.batchID, inputFileID: bundle.inputFileID};
+    batchID: bundle.batchID, inputFileID: bundle.inputFileID, selectedCaseID: bundle.selectedCaseID,
+    expectedIdentity: bundle.expectedIdentity, expectedFiles: bundle.expectedFiles, expectedScan: bundle.expectedScan};
   options.retainedResults = bundle.retainedResults ?? {};
   if (operation === 'standard' && manifest.transport === 'standard') return runStandard(options);
   if (operation === 'submit' && manifest.transport === 'batch') return submitBatch(options);
@@ -61,14 +62,14 @@ export async function evaluateLanguageExpansionInBuild(env = process.env, depend
  * The receipt binds that decision; it is not a cross-container dedup service.
  */
 export async function runLanguageExpansionBuild({planPath, planHash, manifestPath, manifestHash, shardID, ticketPath,
-  startReceiptPath, operation, allocationMicros, batchID, inputFileID, retainedResultsPath,
+  startReceiptPath, operation, allocationMicros, batchID, inputFileID, retainedResultsPath, selectedCaseID, expectedIdentityPath, expectedFilesPath, expectedScanPath,
   representativeReviewed = false, batchAccepted = false},
   {env = process.env, emit = e => process.stdout.write(JSON.stringify(e) + '\n'), client, fetchFn, claimStart} = {}) {
   let completed = false;
   try {
     if (env.VERCEL !== '1' || env.VERCEL_ENV !== 'production') fail('evaluation_requires_production_build');
     if (!/^[a-f0-9]{64}$/.test(planHash ?? '') || !/^[a-f0-9]{64}$/.test(manifestHash ?? '') || shardID !== manifestHash) fail('reviewed_fixed_shard_required');
-    for (const file of [planPath, manifestPath, ticketPath, startReceiptPath, retainedResultsPath].filter(Boolean)) {
+    for (const file of [planPath, manifestPath, ticketPath, startReceiptPath, retainedResultsPath, expectedIdentityPath, expectedFilesPath, expectedScanPath].filter(Boolean)) {
       if (/(^|\/)(public|static|\.vercel)(\/|$)/.test(file)) fail('private_bundle_path_required');
     }
     const [plan, manifest, ticket] = await Promise.all([readJSON(planPath), readJSON(manifestPath), readJSON(ticketPath)]);
@@ -84,7 +85,11 @@ export async function runLanguageExpansionBuild({planPath, planHash, manifestPat
     }
     const options = {plan, manifest, ticket, executionID: ticket.executionID, approvedHash: manifestHash, claimStart,
       client: client ?? openAIClient({apiKey: env.OPENAI_API_KEY, fetchFn}), emit, secret: env.OPENAI_API_KEY,
-      batchID, inputFileID, retainedResults: retainedResultsPath ? await readJSON(retainedResultsPath) : {}};
+      batchID, inputFileID, selectedCaseID,
+      expectedIdentity: expectedIdentityPath ? await readJSON(expectedIdentityPath) : undefined,
+      expectedFiles: expectedFilesPath ? await readJSON(expectedFilesPath) : undefined,
+      expectedScan: expectedScanPath ? await readJSON(expectedScanPath) : undefined,
+      retainedResults: retainedResultsPath ? await readJSON(retainedResultsPath) : {}};
     if (operation === 'standard' && manifest.transport === 'standard') await runStandard(options);
     else if (operation === 'submit' && manifest.transport === 'batch') await submitBatch(options);
     else if (operation === 'inspect' && manifest.transport === 'batch' && batchID) await inspectBatch(options);

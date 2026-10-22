@@ -4,7 +4,8 @@ import {GROUNDING_FORMAT} from '../../api/utils/song-library/study-grounding.js'
 import {hash, fail, MAX_PAYLOAD, emitRecord, payloadEvents, boundedSink} from './common.mjs';
 import {batchInput, validatePlan} from './plan.mjs';
 import {baseEvent} from './journal.mjs';
-import {reconciliationFor, terminalBatch} from './reconciliation.mjs';
+import {terminalBatch, terminalIdentity, scanReceipt, scanProjection} from './reconciliation.mjs';
+import {BATCH_RETRIEVAL, scanFile, fileProjection, boundedFetchStream, validateFileReceipt} from './batch-files.mjs';
 
 export async function validateManifest(plan, manifest, approvedHash) {
   await validatePlan(plan, manifest.planHash);
@@ -21,6 +22,8 @@ export async function validateManifest(plan, manifest, approvedHash) {
     if (JSON.stringify(expected) !== job.bodyJSON || JSON.stringify(job.body) !== job.bodyJSON || hash(job.bodyJSON) !== job.bodyHash ||
         Buffer.byteLength(job.bodyJSON) + 4096 > 24000 || job.reservedMicros !== reservationMicros(job.body) || job.reservedMicros > intent.reservedMicros) fail('frozen_body_changed');
   }
+  if (manifest.transport === 'batch' && (manifest.jobs.length > BATCH_RETRIEVAL.maxCases || !manifest.retrievalPolicy || hash(manifest.retrievalPolicy) !== hash(BATCH_RETRIEVAL) ||
+      Buffer.byteLength(batchInput(manifest)) > BATCH_RETRIEVAL.inputBytes)) fail('invalid_batch_retrieval_policy');
 }
 export function responseResult(plan, job, response, transport, error = null) {
   if (job.executionDisposition !== 'generate') fail('static_refusal_not_dispatchable');
@@ -147,43 +150,53 @@ export async function recoverBatch({manifest, inputFileID, client, emit, maxPage
   await control(manifest, emit, 'recover', 'known', batchFields(matches[0]));
   return matches[0];
 }
-export async function retrieveBatch({plan, manifest, approvedHash, batchID, inputFileID, client, emit, secret, retainedResults = {}}) {
+export async function retrieveBatch({plan, manifest, approvedHash, batchID, inputFileID, client, emit, secret,
+  selectedCaseID, expectedIdentity, expectedFiles = [], expectedScan, retainedResults = {}}) {
   emit = boundedSink(emit, secret);
   await validateManifest(plan, manifest, approvedHash);
-  const batch = await inspectBatch({manifest, batchID, inputFileID, client, emit});
+  if (manifest.transport !== 'batch' || !manifest.jobs.some(j => j.id === selectedCaseID)) fail('one_selected_batch_case_required');
+  if (!inputFileID) fail('known_batch_input_required');
+  const batch = batchIdentity(manifest, await client.inspect(batchID), inputFileID);
+  if (batch.id !== batchID) fail('batch_identity_unknown');
   if (!terminalBatch(batch.status)) fail('batch_not_terminal');
-  const seen = new Set(), files = [], results = {}; let bytes = 0;
-  for (const [role, fileID] of [['output', batch.output_file_id], ['error', batch.error_file_id]]) {
-    if (!fileID) continue;
-    const raw = await fileBytes(client, fileID, MAX_PAYLOAD - bytes); bytes += raw.length;
-    const lines = new TextDecoder('utf-8', {fatal: true}).decode(raw).split('\n');
-    if (lines.at(-1) === '') lines.pop();
-    for (const [lineIndex, line] of lines.entries()) {
-      const row = JSON.parse(line), job = manifest.jobs.find(j => j.id === row.custom_id);
-      if (!job || seen.has(row.custom_id)) fail('duplicate_or_unknown_batch_case');
-      seen.add(row.custom_id);
-      if (retainedResults[job.id]) {
-        const retained = retainedResults[job.id];
-        if (retained.bodyHash !== job.bodyHash || retained.definitionHash !== job.definitionHash || retained.rawLine !== line || retained.fileID !== fileID || retained.role !== role || retained.lineIndex !== lineIndex) fail('retained_batch_result_changed');
-        results[job.id] = retained;
-        continue;
-      }
-      const result = responseResult(plan, job, row.response?.body ?? null, 'batch', row.error ? 'batch_case_error' : row.response?.status_code !== 200 ? 'batch_http_error' : null);
-      Object.assign(result, {fileID, role, lineIndex, rawLine: line});
-      const retained = await output(manifest, job, result, emit, secret);
-      results[job.id] = retained;
-      if (retained.error === 'provider_echoed_credentials') fail('provider_echoed_credentials');
-    }
-    const receipt = {role, fileID, bytes: raw.length, payloadHash: hash(raw), count: lines.length, finalNewline: raw.at(-1) === 10};
-    await emitRecord(emit, {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_file', ...receipt});
-    files.push(receipt);
+  const identity = terminalIdentity(manifest, batchFields(batch));
+  if ((expectedIdentity && hash(terminalIdentity(manifest, expectedIdentity)) !== hash(identity)) ||
+      (expectedScan && expectedScan.identityHash !== hash(identity))) fail('batch_identity_changed');
+  if (expectedScan && (!Array.isArray(expectedScan.files) || expectedScan.version !== BATCH_RETRIEVAL.version)) fail('invalid_expected_scan');
+  if (!Array.isArray(expectedFiles) || new Set(expectedFiles.map(f => f.role)).size !== expectedFiles.length ||
+      expectedFiles.some(f => !['output', 'error'].includes(f.role) || f.fileID !== identity[f.role + 'FileID'] ||
+        f.version !== BATCH_RETRIEVAL.version || f.identityHash !== hash(identity))) fail('invalid_partial_file_pins');
+  for (const pin of [...expectedFiles, ...(expectedScan?.files ?? [])]) {
+    validateFileReceipt(pin);
+    if (pin.fileID !== identity[pin.role + 'FileID']) fail('batch_file_changed');
   }
-  // Keep partial successes on expiry/failure. Missing cases keep their full holds.
-  if (seen.size !== manifest.jobs.length) fail('missing_batch_cases_hold_unknown');
-  const reconciled = reconciliationFor(manifest, batchFields(batch), files, results);
-  await emitRecord(emit, {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_reconciled', ...reconciled});
+  await control(manifest, emit, 'inspect', 'known', batchFields(batch));
+  const seen = new Set(), files = [], rows = [], budget = {bytes: 0};
+  for (const [role, fileID] of [['output', identity.outputFileID], ['error', identity.errorFileID]]) {
+    if (!fileID) continue;
+    const scan = await scanFile({stream: await client.file(fileID), role, fileID, manifest, seen, budget, selectedCaseID});
+    const pins = [...expectedFiles.filter(f => f.role === role), ...(expectedScan?.files.filter(f => f.role === role) ?? [])];
+    if (pins.some(f => hash(fileProjection(f)) !== hash(fileProjection(scan.receipt)))) fail('batch_file_changed');
+    files.push(scan.receipt); rows.push(...scan.rows);
+    await emitRecord(emit, {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_file_scan',
+      version: BATCH_RETRIEVAL.version, identityHash: hash(identity), ...scan.receipt});
+    if (scan.selected) {
+      const {row, rawLine, descriptor} = scan.selected, job = manifest.jobs.find(j => j.id === selectedCaseID);
+      const result = responseResult(plan, job, row.response?.body ?? null, 'batch',
+        row.error != null ? 'batch_case_error' : row.response?.status_code !== 200 ? 'batch_http_error' : null);
+      Object.assign(result, {fileID, role, lineIndex: descriptor.lineIndex, rawLine, filePayloadHash: scan.receipt.payloadHash});
+      const safe = safeResult(result, secret), retained = retainedResults[job.id];
+      if (retained) { if (hash(safe) !== hash(retained)) fail('retained_batch_result_changed'); }
+      else await output(manifest, job, safe, emit, secret);
+      if (['provider_configuration_changed', 'provider_echoed_credentials'].includes(safe.error)) fail('stop_reconcile_unknown_or_configuration');
+    }
+  }
+  const receipt = scanReceipt(identity, files, rows);
+  if (expectedScan && hash(scanProjection(expectedScan)) !== hash(receipt)) fail('batch_scan_changed');
+  await emitRecord(emit, {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_scan', ...receipt});
   await control(manifest, emit, 'retrieve', 'retained', batchFields(batch));
-  return {cases: seen.size, rawBytes: bytes, status: batch.status};
+  // Complete scans never clear the independent local reconciliation gate.
+  return {cases: seen.size, selectedCaseID, rawBytes: budget.bytes, status: batch.status};
 }
 
 // No ambient global fetch: tests and build wiring must inject the transport.
@@ -191,7 +204,7 @@ export function openAIClient({apiKey, fetchFn}) {
   if (!apiKey || typeof fetchFn !== 'function') fail('explicit_sensitive_key_and_fetch_required');
   async function request(route, {method = 'GET', body, timeout = 30_000} = {}) {
     const response = await fetchFn('https://api.openai.com/v1/' + route, {method, headers: {Authorization: `Bearer ${apiKey}`, ...(typeof body === 'string' ? {'Content-Type': 'application/json'} : {})}, body, signal: AbortSignal.timeout(timeout)});
-    if (!response.ok) fail('provider_rejected');
+    if (!response.ok) { await response.body?.cancel(); fail('provider_rejected'); }
     return response;
   }
   const json = async (route, options) => {
@@ -206,6 +219,6 @@ export function openAIClient({apiKey, fetchFn}) {
     create: body => json('batches', {method: 'POST', body: JSON.stringify(body)}),
     inspect: id => json('batches/' + encodeURIComponent(id)),
     list: after => json('batches?limit=100' + (after ? '&after=' + encodeURIComponent(after) : '')),
-    file: async id => (await request('files/' + encodeURIComponent(id) + '/content')).body,
+    file: async id => boundedFetchStream((await request('files/' + encodeURIComponent(id) + '/content')).body),
   };
 }

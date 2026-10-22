@@ -4,6 +4,7 @@ import {explanationBody, selectionV2} from '../../api/utils/song-library/study-e
 import {digest} from '../../api/utils/song-library/store.js';
 import {modelPolicy, MODEL} from '../../api/utils/song-library/model-policy.js';
 import {SCHEMA, hash, fail, integer, codeHashes} from './common.mjs';
+import {BATCH_RETRIEVAL} from './batch-files.mjs';
 import {SOURCE_PROFILE, validateRouting, expectedSourceIDs, sourceDefinition, jobDefinition} from './routing.mjs';
 
 export const TAGS = ['ja', 'ko', 'pt', 'it', 'de', 'ru', 'vi', 'id', 'th', 'hi', 'hi-Latn'];
@@ -97,7 +98,7 @@ export async function preparePlan({corpus, approvedCorpusHash, routingManifest, 
     if (job.executionDisposition === 'static_refusal') Object.assign(job, {body: null, bodyJSON: null, bodyHash: null, reservedMicros: 0, refusalCode: 'unsupported_selected_language'});
   }
   if (jobs.length !== (mode === 'matrix728' ? 728 : 1440) || new Set(jobs.map(x => x.id)).size !== jobs.length) fail('matrix_count');
-  const plan = {schema: SCHEMA, mode, corpusHash: hash(corpus), sourceProfile: SOURCE_PROFILE, routingManifest, routingHash: approvedRoutingHash, codeHashes: await codeHashes(), sources, jobs, seedIDs,
+  const plan = {schema: SCHEMA, retrievalPolicy: BATCH_RETRIEVAL, mode, corpusHash: hash(corpus), sourceProfile: SOURCE_PROFILE, routingManifest, routingHash: approvedRoutingHash, codeHashes: await codeHashes(), sources, jobs, seedIDs,
     ceilingMicros: CEILING, confirmationNames, confirmationReserveMicros: confirmationNames.length * CONFIRMATION_RESERVE,
     maxReservedMicros: jobs.reduce((sum, job) => sum + job.reservedMicros, 0),
     coverage: {nominalDirections: 40, exactDirections: 44, translatedCells: 176, acceptanceCases: jobs.length, maxGenerationJobs: jobs.length - 4, staticRefusals: 4},
@@ -107,6 +108,7 @@ export async function preparePlan({corpus, approvedCorpusHash, routingManifest, 
   return plan;
 }
 export async function validatePlan(plan, approvedHash) {
+  if (!plan.retrievalPolicy || hash(plan.retrievalPolicy) !== hash(BATCH_RETRIEVAL)) fail('retrieval_policy_changed');
   if (plan.schema !== SCHEMA || hash(plan) !== approvedHash) fail('plan_changed');
   if (JSON.stringify(plan.codeHashes) !== JSON.stringify(await codeHashes())) fail('generation_code_changed');
   if (plan.ceilingMicros !== CEILING || !integer(plan.maxReservedMicros) || !['matrix728', 'full1440'].includes(plan.mode) ||
@@ -176,7 +178,7 @@ export function bindDependent(plan, job, result) {
   return {...job, ...frozen, translation, selection, dependencyResultHash: hash(result)};
 }
 export function shard(plan, caseIDs, results = {}, transport = 'standard') {
-  if (!['standard', 'batch'].includes(transport) || !caseIDs.length || new Set(caseIDs).size !== caseIDs.length || (transport === 'standard' && caseIDs.length > 4)) fail('invalid_shard');
+  if (!['standard', 'batch'].includes(transport) || !caseIDs.length || new Set(caseIDs).size !== caseIDs.length || (transport === 'standard' && caseIDs.length > 4) || (transport === 'batch' && caseIDs.length > BATCH_RETRIEVAL.maxCases)) fail('invalid_shard');
   const jobs = caseIDs.map(id => {
     let job = plan.jobs.find(j => j.id === id);
     if (!job && id.includes('--confirmation--')) {
@@ -191,8 +193,11 @@ export function shard(plan, caseIDs, results = {}, transport = 'standard') {
   });
   const names = jobs.filter(j => j.confirmationName).map(j => j.confirmationName);
   if (new Set(names).size !== names.length) fail('duplicate_confirmation_name');
-  return {schema: SCHEMA, planHash: hash(plan), transport, jobs, maxRawBytes: 1_048_576,
+  const manifest = {schema: SCHEMA, planHash: hash(plan), transport, jobs, maxRawBytes: 1_048_576,
+    ...(transport === 'batch' ? {retrievalPolicy: BATCH_RETRIEVAL} : {}),
     standardDeadlineSeconds: 4 * 270 + 300, maxBuildSeconds: 45 * 60};
+  if (transport === 'batch' && Buffer.byteLength(batchInput(manifest)) > BATCH_RETRIEVAL.inputBytes) fail('batch_input_limit');
+  return manifest;
 }
 export function batchInput(manifest) {
   return manifest.jobs.map(job => JSON.stringify({custom_id: job.id, method: 'POST', url: '/v1/responses', body: job.body})).join('\n') + '\n';

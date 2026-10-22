@@ -100,8 +100,8 @@ exact occurrence bindings/selection and routing under the fixed profile. Each
 case additionally binds its schedule, execution disposition and qualification.
 Plan unions reject changes under an existing case ID even when the production
 wire bytes are identical. The profile/routing/qualification must be reviewed and
-frozen before the paid seed. Old executor plans cannot be reused after a code
-change: no code-hash bypass is available.
+frozen before the paid seed. Old executor plans cannot execute after a code
+change. The validated handover below preserves their results without a code-hash bypass.
 
 `preparePlan` requires an explicit exact approved corpus hash. Plans retain code
 hashes (including prompt/recipe/parser files), actual `requestBody` and
@@ -225,14 +225,100 @@ even if every case already settled. A terminal build record or a retained-case
 receipt cannot clear this gate. Read-only exact-file recovery may complete the
 same reconciliation; there is no automatic release, create, retry or resubmit.
 
-Each retrieval operation accepts at most **1 MiB total raw output+error bytes**;
-Root sizes its frozen Batch shards accordingly. Exceeding this bound stops with
-unknown holds, preserving earlier retained file/case records. There is no automatic
-larger retrieval. Already retained rows can be supplied by `retainedResults` so a
-read-only recovery skips byte-identical completed records. A changed retained row
-fails. Every wrapper operation must stay below Root's 16 MiB output ceiling; the
-1 MiB retrieval cap leaves room for base64 chunks and control records. A wrapper
-SIGTERM/output-limit interruption is unknown, never resubmittable work.
+Batch retrieval policy `batch-files-1` is frozen in each new plan and Batch
+manifest. Construction, admission and build validation enforce at most **32
+cases**, unchanged exact input JSONL <=1 MiB, **64 MiB per file AND combined
+output+error**, **1 MiB per raw line**, **64 KiB input chunks**, and exactly one
+predeclared selected case per read. `maxRawBytes` remains the existing **1 MiB
+full case payload** bound. Standard bodies, caps, deadlines and local four-case
+limit are unchanged. These are two logical dependent phases split into fixed
+shards; each shard must reconcile before the next admission.
+
+A retrieval build accepts `selectedCaseID`, known Batch/input IDs, optional exact
+prior terminal identity and partial file pins (`expectedIdentity`, `expectedFiles`,
+`expectedScan`). Root freezes this descriptor with its exact deployment intent.
+The first terminal inspection establishes status/counts/both declared file IDs.
+All later reads must agree, including completed file pins from interrupted reads.
+Downloads are serial full-file GETs, with the existing deadlines. The adapter
+uses a bounded BYOB reader where supported; fallback reads reject chunks above
+64 KiB before copying. Failure/early exit cancels the underlying reader and
+releases its lock. No Range or compression assumption is made.
+
+The byte-framed scanner validates every row (fatal UTF-8, exact IDs, no duplicate
+across files, valid JSON envelope, CRLF and valid no-final-LF preserved), retaining
+one fixed line buffer, at most 32 descriptors and only the selected row. Each
+completed file emits `language_expansion_file_scan` with version, terminal
+identity hash, role/ID, exact bytes/SHA, row count, final-LF and coverage hash,
+**before** the selected result. The result additionally binds `filePayloadHash`.
+Only that case is emitted through the existing chunk protocol. Its full payload
+still includes raw row, provider response, parsed content, definitions, exact
+source bindings/selection and accounting. If its duplication exceeds 1 MiB,
+STOP with the inherited holds; no larger cap, easier selection, retry or lower
+production output limit is authorized. Completed file pins survive this failure.
+A later-file failure can retain an earlier selected result but never closes the
+shard barrier. Empty declared files still require their own receipt.
+
+At both EOFs, `language_expansion_scan` binds the complete terminal identity,
+both exact file receipts, sorted row-coverage hash/count and reconciled provider
+request counts. It is not `language_expansion_reconciled` and cannot clear
+`shardStates`. After separately recovering every selected case, Root invokes
+local `finalize`. It incrementally reconstructs every file in line-index order
+including raw CR and the final LF, checks all file/scan pins and coverage, and
+re-runs **production `responseResult`**, usage pricing and translation/Study
+parsers on every retained raw row. It compares complete result/source/selection/
+qualification identities and accounting, then appends `language_expansion_reconciled`.
+Every journal replay recomputes that same proof. Old file/reconciliation event
+formats are not accepted as new proof; they remain readable only by the retained
+old executable in a validated sealed handover prefix.
+
+A deliberately repeated read is first privately staged in full. `stage-repeat`
+validates exactly one complete selected payload, compares every prior chunk and
+completion byte-for-byte, and imports only missing payload records plus validated
+control/file/scan records. It does not collapse duplicate incoming records or log
+multiplicity. Direct imports still reject duplicate chunks/completions. A malformed
+or incomplete staged payload does not import anything; ordinary incremental
+`import` retains its verified prefix as before. No provider download holds the
+journal mutation lock. A scan/finalize never releases unknown-cost holds or a cost
+overrun, and configuration/credential failures still stop.
+
+Root's separate evaluation-only wrapper/collector must additionally qualify the
+unchanged paced <=1900-byte records, <=2,600,000 evaluator stdout bytes, actual
+installer/platform allowance, deployment identity and intentional nonzero build.
+The generic build configuration is outside this change. Local synthetic adapter,
+journal and CLI evidence is not remote recovery or Batch account entitlement.
+
+### Executor version handover
+
+Never edit an old frozen plan's code hashes. Before replacing the executable,
+retain an immutable selective copy of its exact source and the entire external
+global journal. Finish every active old execution and reconcile old Batch shards
+under that executable. Unknown *costs* and overruns may be carried, but remain
+blocking; unknown in-flight submissions and unreconciled Batch shards refuse
+handover. Freeze a **new** plan with current code hashes and identical generation
+source definitions, exact bodies, schedule/33 seeds, static refusals and named
+confirmation allocations. `handover` operates in the **same journal**, without
+`init`, ledger reset, result rewriting or resubmission.
+
+The handover records the old immutable executable path/hash set, all old plan/
+shard hashes, unchanged root identity, byte-exact journal prefix/chain tip and
+replayed snapshot hash. On each new snapshot it verifies the old executable's
+full enumerated `codeHashes`, replays the sealed prefix using that executable's
+own `validatePlan`/journal semantics in a temporary private view, validates the
+new plan with current code hashes, compares generation code/definitions/bodies,
+and replays only the new suffix. Old manifests/results/deployment/Batch/file IDs,
+actual/unknown costs and all reserves remain in the global state. The validated
+33 Standard outputs satisfy the new seed gate without resubmission. Appending new
+old-plan events after handover is refused. Keep that old executable available;
+it is required provenance, not a dispensable cache. If the old plan was frozen
+on the evaluation branch, its `package.json` pins that build command: retain
+those exact bytes and freeze the next plan under the same package configuration.
+Matching core modules alone does not match all code hashes; a normal-only
+archive correctly refuses an evaluation-package plan. The bridge compares
+package/dependency hashes too, with no exemption for wrapper changes. Root owns
+its separate evaluation configuration; this patch does not change it.
+This explicit one-hop bridge
+is for the unchanged legacy generation recipe, not authority for a future recipe
+or arbitrary ledger import. A later version requires its own reviewed handover.
 
 ## Commands (private Root paths; no live command in this milestone)
 
@@ -271,6 +357,7 @@ await runLanguageExpansionBuild({
   shardID: manifestHash, ticketPath, startReceiptPath,
   operation: 'standard', allocationMicros,
   // Batch only: batchID, inputFileID, representativeReviewed, batchAccepted,
+  // retrieval: selectedCaseID, expectedIdentityPath, expectedFilesPath, expectedScanPath,
   // optional retainedResultsPath (map of exact recovered case results)
 }, {env: process.env, fetchFn: globalThis.fetch, emit});
 ```
@@ -326,3 +413,18 @@ Official contracts inspected for this implementation:
 Account access/queue limits, accepted pricing and successful live recovery remain
 unverified. This milestone makes no default-tier latency, semantic qualification,
 deployment, native, phone-install or release claim.
+
+Local recovery examples (all paths private, no provider calls):
+
+```sh
+node scripts/evaluate-language-expansion.mjs stage-repeat --journal /private/root-journal --events /private/complete-selected-read.jsonl --approved-shard-hash SHARD_HASH --case-id CASE_ID
+node scripts/evaluate-language-expansion.mjs finalize --journal /private/root-journal --approved-shard-hash SHARD_HASH
+node scripts/evaluate-language-expansion.mjs handover --journal /private/root-journal --plan /private/new-plan.json --approved-plan-hash NEW_PLAN_HASH --legacy-code-root /private/immutable-old-executable
+```
+
+The local execute path takes `--case-id`, `--expected-identity`,
+`--expected-files` and `--expected-scan` (JSON files); its existing explicit
+Root live/allocation/ticket gate remains. The direct build config uses the
+corresponding `selectedCaseID` and `*Path` fields. The legacy opt-in bundle carries
+`selectedCaseID`, `expectedIdentity`, `expectedFiles`, `expectedScan` directly.
+Both build adapters validate before GET and retain terminal intentional failure.

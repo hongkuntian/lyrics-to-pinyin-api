@@ -2,7 +2,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {SCHEMA, hash, fail, integer, save, readJSON, recoverPayload} from './common.mjs';
 import {CEILING, CONFIRMATION_RESERVE, validatePlan, shard, bindDependent} from './plan.mjs';
-import {reconciliationFor, terminalBatch} from './reconciliation.mjs';
+import {reconciliationFor, terminalBatch, terminalIdentity, scanProjection} from './reconciliation.mjs';
+
+import {BATCH_RETRIEVAL, fileProjection, validateFileReceipt, freshPayloadRecords} from './batch-files.mjs';
+import {batchInput} from './plan.mjs';
+
+import {handoverState, handoverPlanLocked} from './handover.mjs';
 
 const events = {
   language_expansion_admitted: ['executionID'],
@@ -10,8 +15,10 @@ const events = {
   language_expansion_chunk: ['payloadHash', 'bytes', 'count', 'index', 'data'],
   language_expansion_complete: ['payloadHash', 'bytes', 'count'],
   language_expansion_control: ['operation', 'state', 'inputHash', 'inputFileID', 'batchID', 'outputFileID', 'errorFileID', 'status', 'requestCounts'],
+  language_expansion_file_scan: ['version', 'identityHash', 'role', 'fileID', 'bytes', 'payloadHash', 'count', 'finalNewline', 'coverageHash'],
+  language_expansion_scan: ['version', 'identityHash', 'files', 'rowCoverageHash', 'rowCount'],
   language_expansion_file: ['role', 'fileID', 'bytes', 'payloadHash', 'count', 'finalNewline'],
-  language_expansion_reconciled: ['inputFileID', 'batchID', 'outputFileID', 'errorFileID', 'status', 'requestCounts', 'files', 'rowCoverageHash', 'rowCount'],
+  language_expansion_reconciled: ['version', 'inputHash', 'identityHash', 'inputFileID', 'batchID', 'outputFileID', 'errorFileID', 'status', 'requestCounts', 'files', 'rowCoverageHash', 'rowCount'],
 };
 const common = ['schema', 'event', 'planHash', 'shardHash', 'caseID', 'bodyHash', 'definitionHash', 'reservedMicros', 'transport'];
 export function validateEvent(event, manifests) {
@@ -37,6 +44,25 @@ export function validateEvent(event, manifests) {
   }
   if (event.event === 'language_expansion_file' && (!['output', 'error'].includes(event.role) || !/^file-[A-Za-z0-9_-]+$/.test(event.fileID ?? '') ||
       !integer(event.bytes) || event.bytes > 1_048_576 || !integer(event.count) || typeof event.finalNewline !== 'boolean' || !/^[a-f0-9]{64}$/.test(event.payloadHash ?? ''))) fail('invalid_file_receipt');
+  if (['language_expansion_file', 'language_expansion_reconciled'].includes(event.event) && event.version !== BATCH_RETRIEVAL.version) fail('legacy_batch_receipt_decoding_only');
+  if (['language_expansion_file_scan', 'language_expansion_scan', 'language_expansion_reconciled'].includes(event.event)) {
+    if (event.transport !== 'batch' || event.version !== BATCH_RETRIEVAL.version) fail('invalid_batch_scan_version');
+    if (event.event === 'language_expansion_file_scan') {
+      if (!/^[a-f0-9]{64}$/.test(event.identityHash ?? '')) fail('invalid_scan_identity');
+      validateFileReceipt(event);
+    }
+    if (event.event === 'language_expansion_scan') {
+      if (!/^[a-f0-9]{64}$/.test(event.identityHash ?? '') || !/^[a-f0-9]{64}$/.test(event.rowCoverageHash ?? '') ||
+          !integer(event.rowCount) || event.rowCount !== manifest.jobs.length || !Array.isArray(event.files) || event.files.length > 2 ||
+          new Set(event.files.map(f => f.role)).size !== event.files.length) fail('invalid_batch_scan');
+      for (const f of event.files) {
+        if (Object.keys(f).sort().join() !== Object.keys(fileProjection(f)).sort().join()) fail('invalid_file_receipt');
+        validateFileReceipt(f);
+      }
+      if (event.files.reduce((n, f) => n + f.bytes, 0) > BATCH_RETRIEVAL.combinedBytes) fail('retrieval_operation_limit');
+    }
+  }
+
 }
 export async function initJournal(directory, {priorMicros = 0, unknownHeldMicros = 0} = {}) {
   if (![priorMicros, unknownHeldMicros].every(integer) || priorMicros + unknownHeldMicros > CEILING) fail('invalid_prior_accounting');
@@ -83,7 +109,8 @@ export async function snapshot(directory, {incoming = []} = {}) {
   const root = await readJSON(path.join(directory, 'root.json'));
   if (root.schema !== SCHEMA || root.ceilingMicros !== CEILING || ![root.priorMicros, root.unknownHeldMicros].every(integer)) fail('invalid_external_journal');
   const plans = await records(directory, 'plans'), manifests = await records(directory, 'shards'), rows = await entries(directory);
-  for (const plan of plans) await validatePlan(plan, hash(plan));
+  const inherited = await handoverState(directory, plans, rows);
+  for (const plan of plans) if (!inherited?.record.legacyPlanHashes.includes(hash(plan))) await validatePlan(plan, hash(plan));
   const jobs = new Map(), confirmations = new Set();
   for (const plan of plans) {
     for (const name of plan.confirmationNames) confirmations.add(name);
@@ -99,9 +126,14 @@ export async function snapshot(directory, {incoming = []} = {}) {
       disposition: 'static_refusal', reason: job.refusalCode, effectiveSelectionLanguage: 'uk', providerCalled: false,
       actualMicros: 0, accountedMicros: 0, sourceBindings: source.bindings, selection: source.selection, qualification: job.qualification}];
   }));
-  const result = {plans, manifests, events: [], states: {}, shardStates: {}, results: {}, staticRefusals, dependentFailures: {}, priorMicros: root.priorMicros, unknownHeldMicros: root.unknownHeldMicros};
-  for (const [eventIndex, value] of [...rows.map(r => r.value), ...incoming].entries()) {
+  let result = {plans, manifests, events: [], states: {}, shardStates: {}, results: {}, staticRefusals, dependentFailures: {}, priorMicros: root.priorMicros, unknownHeldMicros: root.unknownHeldMicros};
+  if (inherited) result = {...result, ...inherited.state, plans, manifests};
+  const startIndex = inherited?.record.prefixEvents ?? 0;
+  const values = [...rows.map(r => r.value), ...incoming];
+  for (let eventIndex = startIndex; eventIndex < values.length; eventIndex++) {
+    const value = values[eventIndex];
     try {
+      if (inherited?.record.legacyPlanHashes.includes(value.planHash) || (value.event === 'language_expansion_start' && inherited?.record.legacyShardHashes.includes(value.shardHash))) fail('legacy_executor_prefix_sealed');
       if (value.event === 'language_expansion_start') {
         const manifest = manifests.find(m => hash(m) === value.shardHash);
         if (!manifest || !value.executionID || Object.keys(value).sort().join() !== 'event,executionID,schema,shardHash' || value.schema !== SCHEMA || result.events.some(e => e.event === value.event && e.shardHash === value.shardHash)) fail('invalid_or_duplicate_start');
@@ -121,6 +153,10 @@ export async function snapshot(directory, {incoming = []} = {}) {
         if (!result.events.some(e => e.event === 'language_expansion_start' && e.shardHash === value.shardHash)) fail('unstarted_event');
         if (value.event === 'language_expansion_control' && value.transport === 'batch') {
           const controls = result.events.filter(e => e.event === value.event && e.shardHash === value.shardHash);
+          if (value.inputHash !== hash(batchInput(manifests.find(m => hash(m) === value.shardHash)))) fail('batch_identity_changed');
+          const manifest = manifests.find(m => hash(m) === value.shardHash);
+          const pinned = controls.find(e => e.operation === 'inspect' && e.state === 'known' && terminalBatch(e.status));
+          if (pinned && value.status && terminalBatch(value.status) && hash(terminalIdentity(manifest, pinned)) !== hash(terminalIdentity(manifest, value))) fail('batch_identity_changed');
           const prior = controls.findLast(e => e.batchID);
           if ((prior && value.batchID && prior.batchID !== value.batchID) ||
               controls.some(e => e.inputFileID && value.inputFileID && e.inputFileID !== value.inputFileID)) fail('batch_identity_changed');
@@ -138,23 +174,34 @@ export async function snapshot(directory, {incoming = []} = {}) {
           result.results[value.caseID] = output;
           result.states[value.caseID].state = output.actualMicros === null ? 'unknown_cost' : output.actualMicros > value.reservedMicros ? 'cost_overrun' : 'settled';
         }
-        if (value.event === 'language_expansion_file') {
+        if (['language_expansion_file_scan', 'language_expansion_scan'].includes(value.event)) {
           const manifest = manifests.find(m => hash(m) === value.shardHash);
-          const lines = manifest.jobs.map(j => result.results[j.id]).filter(r => r?.fileID === value.fileID && r.role === value.role).sort((a, b) => a.lineIndex - b.lineIndex);
-          if (lines.length !== value.count || lines.some((r, i) => r.lineIndex !== i || typeof r.rawLine !== 'string')) fail('incomplete_retained_file');
-          const raw = lines.map(r => r.rawLine).join('\n') + (value.finalNewline ? '\n' : '');
-          if (Buffer.byteLength(raw) !== value.bytes || hash(raw) !== value.payloadHash) fail('corrupt_retained_file');
+          const prior = result.events.filter(e => e.shardHash === value.shardHash);
+          const terminal = prior.findLast(e => e.event === 'language_expansion_control' && e.operation === 'inspect' && e.state === 'known');
+          if (!terminal || value.identityHash !== hash(terminalIdentity(manifest, terminal))) fail('batch_identity_changed');
+          const receipts = prior.filter(e => e.event === 'language_expansion_file_scan');
+          if (value.event === 'language_expansion_file_scan' && (value.fileID !== terminal[value.role + 'FileID'] || value.count > manifest.jobs.length)) fail('batch_file_changed');
+          if (value.event === 'language_expansion_file_scan' && receipts.some(e => e.role === value.role && hash(fileProjection(e)) !== hash(fileProjection(value)))) fail('batch_file_changed');
+          if (value.event === 'language_expansion_scan') {
+            const identity = terminalIdentity(manifest, terminal);
+            if (value.files.length !== [identity.outputFileID, identity.errorFileID].filter(Boolean).length ||
+                value.files.some(f => f.fileID !== identity[f.role + 'FileID'] || !receipts.some(e => hash(fileProjection(e)) === hash(f)))) fail('incomplete_batch_files');
+            const scans = prior.filter(e => e.event === value.event);
+            if (scans.some(e => hash(scanProjection(e)) !== hash(scanProjection(value)))) fail('batch_scan_changed');
+          }
         }
         if (value.event === 'language_expansion_control' && value.transport === 'batch' && ['inspect', 'recover'].includes(value.operation)) {
-          result.shardStates[value.shardHash] = {state: 'unresolved', batchID: value.batchID ?? null};
+          if (result.shardStates[value.shardHash]?.state !== 'reconciled') result.shardStates[value.shardHash] = {state: 'unresolved', batchID: value.batchID ?? null};
         }
         if (value.event === 'language_expansion_reconciled') {
           const manifest = manifests.find(m => hash(m) === value.shardHash);
           const controls = result.events.filter(e => e.shardHash === value.shardHash && e.event === 'language_expansion_control');
           const terminal = controls.findLast(e => e.operation === 'inspect' && e.state === 'known');
           if (!terminal || !terminalBatch(terminal.status)) fail('terminal_batch_identity_required');
-          const files = result.events.filter(e => e.shardHash === value.shardHash && e.event === 'language_expansion_file');
-          const expected = {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_reconciled', ...reconciliationFor(manifest, terminal, files, result.results)};
+          const files = result.events.filter(e => e.shardHash === value.shardHash && e.event === 'language_expansion_file_scan');
+          const scans = result.events.filter(e => e.shardHash === value.shardHash && e.event === 'language_expansion_scan');
+          const plan = plans.find(p => hash(p) === manifest.planHash);
+          const expected = {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_reconciled', ...reconciliationFor(manifest, terminal, files, result.results, scans, plan)};
           if (hash(expected) !== hash(value)) fail('batch_reconciliation_changed');
           result.shardStates[value.shardHash] = {state: 'reconciled', ...value};
         }
@@ -165,7 +212,7 @@ export async function snapshot(directory, {incoming = []} = {}) {
   const confirmationJobs = new Map();
   for (const manifest of manifests) {
     const plan = plans.find(p => hash(p) === manifest.planHash);
-    if (!plan || hash(shard(plan, manifest.jobs.map(j => j.id), result.results, manifest.transport)) !== hash(manifest)) fail('unregistered_or_changed_shard');
+    if (!plan || (!inherited?.record.legacyShardHashes.includes(hash(manifest)) && hash(shard(plan, manifest.jobs.map(j => j.id), result.results, manifest.transport)) !== hash(manifest))) fail('unregistered_or_changed_shard');
     for (const job of manifest.jobs.filter(j => j.confirmationName)) {
       if (confirmationJobs.has(job.confirmationName)) fail('duplicate_confirmation_name');
       confirmationJobs.set(job.confirmationName, job);
@@ -262,4 +309,42 @@ export async function importEvents(directory, incoming) {
     await appendMany(directory, incoming);
     return reconciled;
   });
+}
+
+export async function finalizeBatch(directory, shardHash) {
+  return exclusive(directory, async () => {
+    const state = await snapshot(directory), manifest = state.manifests.find(m => hash(m) === shardHash);
+    if (!manifest || manifest.transport !== 'batch') fail('registered_batch_required');
+    const prior = state.events.filter(e => e.shardHash === shardHash);
+    const terminal = prior.findLast(e => e.event === 'language_expansion_control' && e.operation === 'inspect' && e.state === 'known');
+    if (!terminal) fail('terminal_batch_identity_required');
+    const value = {...baseEvent(manifest, manifest.jobs[0]), event: 'language_expansion_reconciled',
+      ...reconciliationFor(manifest, terminal, prior.filter(e => e.event === 'language_expansion_file_scan'), state.results,
+        prior.filter(e => e.event === 'language_expansion_scan'), state.plans.find(p => hash(p) === manifest.planHash))};
+    await snapshot(directory, {incoming: [value]});
+    if (state.shardStates[shardHash]?.state !== 'reconciled') await append(directory, value);
+    return value;
+  });
+}
+export async function importReadReplay(directory, incoming, shardHash, caseID) {
+  return exclusive(directory, async () => {
+    const state = await snapshot(directory), manifest = state.manifests.find(m => hash(m) === shardHash);
+    const job = manifest?.jobs.find(j => j.id === caseID);
+    if (!job || manifest.transport !== 'batch' || incoming.some(e => e.shardHash !== shardHash || e.planHash !== manifest.planHash ||
+        ['language_expansion_admitted', 'language_expansion_submitting', 'language_expansion_start', 'language_expansion_reconciled'].includes(e.event))) fail('readonly_replay_required');
+    if (incoming.some(e => !['language_expansion_chunk', 'language_expansion_complete', 'language_expansion_control', 'language_expansion_file_scan', 'language_expansion_scan', 'language_expansion_terminal'].includes(e.event) ||
+        (e.event === 'language_expansion_control' && !['inspect', 'retrieve'].includes(e.operation)) ||
+        (e.event === 'language_expansion_terminal' && e.operation !== 'retrieve'))) fail('readonly_replay_required');
+    const payload = incoming.filter(e => ['language_expansion_chunk', 'language_expansion_complete'].includes(e.event));
+    const fresh = new Set(freshPayloadRecords(state.events, payload, baseEvent(manifest, job)));
+    const records = incoming.filter(e => !['language_expansion_chunk', 'language_expansion_complete'].includes(e.event) || fresh.has(e));
+    // Validate the entire repeat before importing any of its records.
+    await snapshot(directory, {incoming: records});
+    await appendMany(directory, records);
+    return {imported: records.length, comparedPayloadRecords: payload.length, freshPayloadRecords: fresh.size};
+  });
+}
+
+export async function handoverPlan(directory, plan, approvedHash, legacyCodeRoot) {
+  return exclusive(directory, () => handoverPlanLocked(directory, plan, approvedHash, legacyCodeRoot));
 }
