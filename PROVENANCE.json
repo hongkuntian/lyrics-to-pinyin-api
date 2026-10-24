@@ -1,0 +1,69 @@
+{
+  "schema": "lyrica-data-artifact-provenance-1",
+  "proposalOnly": true,
+  "backendSourceCommit": "9e6cab8c14d4e6238b37f402fe83e5baf6cb5d1d",
+  "engineDataRevisionAtBuild": "b6d045a2b1ea62ab8124b19c3d845ebd4fb669f6acbc9fa08f41ab5cd5a58965",
+  "publication": null,
+  "activationAuthorized": false,
+  "buildMetadataPolicy": "Verbatim inactive/unpublished packaged bytes remain BUILD metadata. A future verified publication record is separate and does not change those bytes, pins, or runtime admission.",
+  "sourceLockPath": "language-data/pronunciation/source-lock.json",
+  "compilers": [
+    {
+      "path": "scripts/compile-language-lexicons.mjs",
+      "backendSourceCommit": "9e6cab8c14d4e6238b37f402fe83e5baf6cb5d1d",
+      "bytes": 13128,
+      "sha256": "58c329274475320ba65e7c29365eb7c193d666fcabfb6ff1189b4bac68f872a3",
+      "gitBlobSHA1": "ebe0d180f4334a2c5c032f8a85a44b1e006124b7",
+      "sourceReferenceURL": "https://github.com/hongkuntian/lyrics-to-pinyin-api/blob/9e6cab8c14d4e6238b37f402fe83e5baf6cb5d1d/scripts/compile-language-lexicons.mjs",
+      "publiclyResolvableAtPreparation": false
+    },
+    {
+      "path": "scripts/compile-written-pronunciation-data.mjs",
+      "backendSourceCommit": "9e6cab8c14d4e6238b37f402fe83e5baf6cb5d1d",
+      "bytes": 1979,
+      "sha256": "545adeb4153577511781bcd3579a871a3cd5922d5c92691e7e208cd1faf2fa5c",
+      "gitBlobSHA1": "c49a8f1c7629fd117d438354b2acb2f4fc6cbb7a",
+      "sourceReferenceURL": "https://github.com/hongkuntian/lyrics-to-pinyin-api/blob/9e6cab8c14d4e6238b37f402fe83e5baf6cb5d1d/scripts/compile-written-pronunciation-data.mjs",
+      "publiclyResolvableAtPreparation": false
+    }
+  ],
+  "compilerExecution": {
+    "requiredNodeMajor": 24,
+    "dependencies": "Only Node built-ins for the lexical compiler; no package install required for its 197 outputs.",
+    "entryPoint": "compileLanguageLexicons({inputRoot, outputRoot})",
+    "commandTemplate": "node scripts/compile-language-lexicons.mjs --input-root \"$PINNED_INPUT_ROOT\" --output-root \"$NEW_OUTPUT_ROOT\"",
+    "conditions": "Run only from a separately owned checkout of the exact backendSourceCommit, with all source-lock inputs pre-staged and pinned. New output root must be outside maintained source. No download/compile was performed for this candidate.",
+    "engineManifestWarning": "--engine-manifest-only is a separate mutating backend operation requiring exact dependency/source closure; it is not required to reproduce the 197 lexical outputs and was not run."
+  },
+  "reusedDeterminismEvidence": {
+    "compiledOutputs": 197,
+    "compiledOutputBytes": 24452065,
+    "retainedReceiptSHA256": "2e826d8b60cf05157192a7d5b54b8537a90e88defa8cb83f9b3c9019554fc268",
+    "recompiledInThisPreparation": false
+  },
+  "sourceAvailability": "Backend source commit and compiler source links were not resolvable via unauthenticated public GitHub metadata at preparation. Root must make exact source reproducibility references accessible under separate source-publication authority, or document the limitation. This data-only tree contains no compiler code.",
+  "thaiQualification": {
+    "path": "language-data/pronunciation/thai-qualification.json",
+    "sha256": "11c64f26f0fe2314fc43f9b784b1e81209ade763f65f6df6ec4a66da00d3dcd4",
+    "exactRows": 48,
+    "exactEntryReferences": 72,
+    "automaticUseQualified": false,
+    "basis": "dual-model-intersection-proposal; no boundary, fluent, human, semantic-gloss, or acoustic certification",
+    "reviewInputSHA256": "7f6ed16c45c5ff0a4dd9e55486ea493dc28c3fbcceec61d1438d9b787046fc07",
+    "reproductionLimit": "Exact 48/72 output is included. The full 175-case private adjudication input is retained separately, not published here; its source-lock pin is required for full deterministic recompilation. No new corpus grade was performed."
+  },
+  "licenseBoundary": "CC-BY-SA-4.0 derivative data; wrapper/compiler MIT and dependency licenses remain distinct. No dependency runtime or test/example payload is included.",
+  "koromanDisposition": {
+    "engineeringDecision": "Preserve the exact 1150-byte source notice, all conflict markers, and source receipt; disclose the upstream condition separately. No legal clearance or author correction.",
+    "noticePath": "language-data/pronunciation/licenses/koroman-MIT.txt",
+    "receiptPath": "language-data/pronunciation/licenses/koroman-license-source.json",
+    "noticeSHA256": "8e140c804d0226d197db528f1653ede195ab254935b4fa18bc81f1ea455614ca",
+    "noticeBytes": 1150,
+    "sourceGitHead": "e529729b923f8a9d9acc62b2c9c0887b00e9bd88",
+    "profileActivation": false
+  },
+  "noticeRelocation": {
+    "notices/lyrica-wrapper-NOTICE.txt": "Verbatim historical references to LICENSE and licenses/ resolve through README links and the contents inventory.",
+    "notices/sanscript-source.json": "Verbatim sourceFile identifies the original runtime, which is deliberately absent; licenseFile LICENSE resolves here to sanscript-MIT.txt via README."
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema": "lyrica-language-lexicon-source-lock-1",
+  "thai": {
+    "path": "thai-qualification-r1/inputs/thai-kaikki.jsonl.gz",
+    "bytes": 7772643,
+    "sha256": "d44346ee866c898ec06a4af6fe232dcb996fcafce14cdb8dde8aa540d019f8c8",
+    "rawSHA256": "54f99aa88a65d3be58b3a169526af04fb07f2643685f47343dccd2b33ba0c259",
+    "sourceURL": "https://kaikki.org/dictionary/Thai/kaikki.org-dictionary-Thai.jsonl",
+    "snapshot": "2026-10-03 extraction; enwiktionary dump 2026-09-02",
+    "review": {
+      "path": "thai-adjudication/adjudication.json",
+      "bytes": 230133,
+      "sha256": "7f6ed16c45c5ff0a4dd9e55486ea493dc28c3fbcceec61d1438d9b787046fc07"
+    }
+  },
+  "hindi": {
+    "sourceURL": "https://github.com/google-research-datasets/dakshina/tree/99f211490f5ba5bcda8d48675371f5f8be5f7809",
+    "snapshot": "Dakshina v1.0; upstream documentation 99f211490f5ba5bcda8d48675371f5f8be5f7809",
+    "members": [
+      {
+        "url": "https://storage.googleapis.com/gresearch/dakshina/dakshina_dataset_v1.0.tar",
+        "member": "dakshina_dataset_v1.0/hi/lexicons/hi.translit.sampled.dev.tsv",
+        "rangeStart": 322258944,
+        "bytes": 125512,
+        "sha256": "62019ba0e046ceffd7211a2797daf2d2970da77586ee056dcecaa34c38392bce",
+        "path": "hindi-candidates/raw/hi.translit.sampled.dev.tsv"
+      },
+      {
+        "url": "https://storage.googleapis.com/gresearch/dakshina/dakshina_dataset_v1.0.tar",
+        "member": "dakshina_dataset_v1.0/hi/lexicons/hi.translit.sampled.train.tsv",
+        "rangeStart": 322385408,
+        "bytes": 1326377,
+        "sha256": "4b3f872d3363a91f949dfb640acab6a968ed7d2d65829a22af662c3e99ef7803",
+        "path": "hindi-candidates/raw/hi.translit.sampled.train.tsv"
+      },
+      {
+        "url": "https://storage.googleapis.com/gresearch/dakshina/dakshina_dataset_v1.0.tar",
+        "member": "dakshina_dataset_v1.0/hi/lexicons/hi.translit.sampled.test.tsv",
+        "rangeStart": 323712512,
+        "bytes": 128062,
+        "sha256": "37dccdd2ca18a520267588b472f293ce805a1444a5ca2a99169417da17d9bafd",
+        "path": "hindi-candidates/raw/hi.translit.sampled.test.tsv"
+      }
+    ]
+  },
+  "vietnamese": {
+    "path": "vietnamese/sources/vi-extract.jsonl.gz",
+    "bytes": 33773177,
+    "sha256": "566a1b6b941d5ec792ce5f79f1830250076a5d9d517c1f3d1aa04dd4dc02482d",
+    "sourceURL": "https://kaikki.org/dictionary/downloads/vi/vi-extract.jsonl.gz",
+    "snapshot": "Vietnamese-edition raw extract retained 2026-10-22; Last-Modified 2026-10-03; dump date unspecified"
+  }
+}

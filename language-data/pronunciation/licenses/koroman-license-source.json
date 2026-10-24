@@ -1,0 +1,9 @@
+{
+  "version": "1.0.16",
+  "gitHead": "e529729b923f8a9d9acc62b2c9c0887b00e9bd88",
+  "url": "https://raw.githubusercontent.com/gerosyab/koroman/e529729b923f8a9d9acc62b2c9c0887b00e9bd88/LICENSE",
+  "bytes": 1150,
+  "sha256": "8e140c804d0226d197db528f1653ede195ab254935b4fa18bc81f1ea455614ca",
+  "metadataSHA256": "dc8a074cdbfd62ec2846b92c0571b65ac4374eed592f1a9ebb26cf878854e7d9",
+  "purpose": "Full license for existing dependency only; no package/model/data download"
+}
