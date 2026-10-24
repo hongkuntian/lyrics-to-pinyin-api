@@ -1,0 +1,72 @@
+{
+  "name": "lyrics-to-pinyin-api",
+  "version": "2.0.0",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "description": "A generic romanization API supporting five core languages with music platform integrations",
+  "main": "api/romanize.js",
+  "scripts": {
+    "dev": "node scripts/dev-server.js",
+    "test": "npm run test:unit && npm run test:integration && npm run test:contract",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:integration": "node --test tests/integration/*.test.js",
+    "test:contract": "node --test tests/contracts/*.test.js",
+    "test:live": "node scripts/security-smoke.mjs",
+    "test:legacy": "node tests/api-tests.js",
+    "test:zh": "node tests/run-language-tests.js zh",
+    "test:ja": "node tests/run-language-tests.js ja",
+    "test:ko": "node tests/run-language-tests.js ko",
+    "test:ru": "node tests/run-language-tests.js ru",
+    "test:yue": "node tests/run-language-tests.js yue",
+    "test:music": "node tests/music-tests.js",
+    "build": "node scripts/build-output.mjs",
+    "start": "node scripts/dev-server.js",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@apple/app-store-server-library": "3.1.0",
+    "@upstash/redis": "^1.35.0",
+    "@vercel/functions": "^3.9.5",
+    "@vercel/queue": "0.8.0",
+    "chinese-conv": "^1.0.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.2.1",
+    "franc-min": "6.2.0",
+    "koroman": "1.0.16",
+    "kuroshiro": "1.2.0",
+    "kuroshiro-analyzer-kuromoji": "1.1.0",
+    "node-app-attest": "1.0.1",
+    "node-fetch": "^3.3.2",
+    "opencc-js": "1.4.2",
+    "pg": "^8.23.0",
+    "pinyin-pro": "^3.26.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@vercel/node": "24.0.2"
+  },
+  "engines": {
+    "node": "24.x"
+  },
+  "keywords": [
+    "romanization",
+    "pinyin",
+    "jyutping",
+    "romaji",
+    "lyrics",
+    "music",
+    "api",
+    "mandarin",
+    "cantonese",
+    "japanese",
+    "korean",
+    "russian"
+  ],
+  "author": "Your Name",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/lyrics-to-pinyin-api.git"
+  }
+}

@@ -1,0 +1,202 @@
+{
+  "schema": "lyrica-source-capsule-contents-1",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "PROVENANCE.json",
+      "mode": "100644",
+      "bytes": 6848,
+      "sha256": "201be934cf05d8b2916f0c4e615cf83db8d1b8dba10972c0d98f2a5d6940236b",
+      "gitBlobSHA1": "49fac2f7bcc143caabc894629cbf0e78f4300c58"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "bytes": 4446,
+      "sha256": "8a2be697de36e6197644fbcfd28c9933c9f8ecb105f7a1ae1faba1ece229b762",
+      "gitBlobSHA1": "54ccea56e9c6c890277437d1c2bdb13dc7bb30d2"
+    },
+    {
+      "path": "api/utils/pronunciation-aids.js",
+      "mode": "100644",
+      "bytes": 7350,
+      "sha256": "9370ef7249e5118d6b8b9881fb1bdbda5a9b7927dbf7157bd66d73bb0a74991d",
+      "gitBlobSHA1": "b6218bc5b4004eb6d1678d80d21c147df97d45bb"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/LICENSE",
+      "mode": "100644",
+      "bytes": 1076,
+      "sha256": "3fde80dedb5af769034636352369ac089bf575f74443bbd26ba8b5a0adaaae95",
+      "gitBlobSHA1": "818c1880eb643c3ec502e48f8a59ed9326413778"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/NOTICE",
+      "mode": "100644",
+      "bytes": 971,
+      "sha256": "fd7b386603128a2f3713a815f61726039fb736177bdb6e387704ee46e8f3f91c",
+      "gitBlobSHA1": "19757e97180bd62882a3168219494b61e1580f94"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/bound-written-annotation.js",
+      "mode": "100644",
+      "bytes": 6330,
+      "sha256": "fb7d7c2f31ce3e74ef1241cf87cdc8ab0d720edc05e7487989707e9a15869a23",
+      "gitBlobSHA1": "15488e2fa2cc23ebeebaf10beaf73c18e421c771"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/candidate-engines.js",
+      "mode": "100644",
+      "bytes": 4853,
+      "sha256": "7b912c1f8899f069e6b18602b09d9a45e9fa863169772f0bf1baaa7655cfb885",
+      "gitBlobSHA1": "60a86eaafadd1b46aba54bf8987c02ec94558138"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/engine-profiles.js",
+      "mode": "100644",
+      "bytes": 2970,
+      "sha256": "3c3a06dceb65055a44e6c219be35b4973a723eadc097acc7d3135c7fe92c07b8",
+      "gitBlobSHA1": "e3ee41b679a82527ec67d3a69ba5b4f5384f8960"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/hindi-written.js",
+      "mode": "100644",
+      "bytes": 3705,
+      "sha256": "80d537e3dc9f3ffde73a16bb817a8d8ff3318e1f7988ae46d44f072cd84e5f2c",
+      "gitBlobSHA1": "3eb17670ae9e1f43e8023f0a37c39e017ba297c2"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/japanese-guards.js",
+      "mode": "100644",
+      "bytes": 4221,
+      "sha256": "c0d5d8548f06d74633285dcd52dbe70d2ed711f11b6eeadec5ae2876b32e4fbc",
+      "gitBlobSHA1": "c097d1965197ce49b44fe042f5a9ff0f52ec9d82"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/japanese-rules.js",
+      "mode": "100644",
+      "bytes": 5953,
+      "sha256": "a0fc54e69b9d9a9389d240700c333ef5132a68b4679311238c9e7fdc56b1a50b",
+      "gitBlobSHA1": "eb16dab50c7feb451741eb77429df2be062f55ef"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/japanese-semantics.js",
+      "mode": "100644",
+      "bytes": 8567,
+      "sha256": "6e055b2377f4541c242c3368d54b51fdb6043889e983c190db283a13a35e79ff",
+      "gitBlobSHA1": "6c400c294b0e2e85e747981d97408a674673636e"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/japanese-v2.js",
+      "mode": "100644",
+      "bytes": 7870,
+      "sha256": "af4478be524e5acb9a4e33f3d309df85489d857351fce711b387a50baf44bd4a",
+      "gitBlobSHA1": "23c8e35df5d299df725ef8b62128a8164e12d48e"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/korean-v2.js",
+      "mode": "100644",
+      "bytes": 1898,
+      "sha256": "d3e98d70d3cd74f673fca329599bc5c588a1be5df429d60903988773780b24bb",
+      "gitBlobSHA1": "932eeaf1016a8780a72501b2f3d75589e59dfcd0"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/lexicon-runtime.js",
+      "mode": "100644",
+      "bytes": 11429,
+      "sha256": "c5074fce7705858e51279b6ea85bfd2ab3828c62f75d99d21ab5de9758c64a2f",
+      "gitBlobSHA1": "e68f7d7daebf194cd95813a8174a98969b51eabc"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/russian-written.js",
+      "mode": "100644",
+      "bytes": 3262,
+      "sha256": "1fe7a4955d1dff49a78977d976cc9ab0fa8f51ad64bf90e0de80a1e485280bb7",
+      "gitBlobSHA1": "78f96761aae5841c5b0beef35715ac24fda04ed9"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/source-spans.js",
+      "mode": "100644",
+      "bytes": 1133,
+      "sha256": "359d1a02bbcb048b6a153927ca608cf52cf89a8a1fae234f470c1bb91171503b",
+      "gitBlobSHA1": "4999731e388685abc779bdf7af6a64a0f8624787"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/vendor/sanscript-1.3.3/LICENSE",
+      "mode": "100644",
+      "bytes": 1088,
+      "sha256": "21135a12c7fb20f8a002b97f42c7eecd354137c9b8b4bf2b8b1ed1b1b0fcb748",
+      "gitBlobSHA1": "a9cf3230db01b017e995d10adba81ac6fc3b10b5"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/vendor/sanscript-1.3.3/provenance.json",
+      "mode": "100644",
+      "bytes": 731,
+      "sha256": "8fdb3444737e18a18513e052d6b95707b1b6bdae1880ce72742923d51da6415a",
+      "gitBlobSHA1": "38a71431d7312edb6a662c11c9a98de804d964a7"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/vendor/sanscript-1.3.3/sanscript.cjs",
+      "mode": "100644",
+      "bytes": 188729,
+      "sha256": "6dca053574abfb840823a2b014341468b7e247416d0e7754b6a49f76d24d0def",
+      "gitBlobSHA1": "c67ff08db5cad07a596d112b7397888191e79409"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/vietnamese-candidates.js",
+      "mode": "100644",
+      "bytes": 3647,
+      "sha256": "093e067de5656350d96bc291e7b29a608a77f80a3299380b28ddf7f34c5f07e6",
+      "gitBlobSHA1": "afead87d8e9d41855b6530ddeb6cf3c0fb84214d"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/vietnamese-scan.js",
+      "mode": "100644",
+      "bytes": 1165,
+      "sha256": "062f880e81375f539203d762d30d864773b075a694b3b970a6af4dedaf191446",
+      "gitBlobSHA1": "785fb918dca5fd3f9659896b353a0eae79b2fe7a"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/written-data-manifest.json",
+      "mode": "100644",
+      "bytes": 2776,
+      "sha256": "c3e69899e7b1b59afef973b93f709fc23c7ce5ded8c531d65a81b06aa866ad6e",
+      "gitBlobSHA1": "e2e0ebddff7e6eaee7e6134ef98a347b7e8cc009"
+    },
+    {
+      "path": "api/utils/pronunciation-v2/written-profiles.js",
+      "mode": "100644",
+      "bytes": 1444,
+      "sha256": "422aae1fb74d877201764aa7a0a973b22e3cb6a62af1642559b6056ac99e4a13",
+      "gitBlobSHA1": "a2edf4d04501b1d4365a368f9552fdcac46ec857"
+    },
+    {
+      "path": "package-lock.json",
+      "mode": "100644",
+      "bytes": 153629,
+      "sha256": "6d087fd1b1f89783fa98fb21d85800047264063a883aae39bb73affb64333e35",
+      "gitBlobSHA1": "83a27253ba8709c8a591c852fa6fdc80a67e24c0"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "bytes": 2123,
+      "sha256": "6e0c3dfb288781396844b374e5e3122c0194212cc1a440fd6c6601b850f95292",
+      "gitBlobSHA1": "d02bf322778b2f3aad5140fb79463eb5b37b4ad1"
+    },
+    {
+      "path": "scripts/compile-language-lexicons.mjs",
+      "mode": "100644",
+      "bytes": 13128,
+      "sha256": "58c329274475320ba65e7c29365eb7c193d666fcabfb6ff1189b4bac68f872a3",
+      "gitBlobSHA1": "ebe0d180f4334a2c5c032f8a85a44b1e006124b7"
+    },
+    {
+      "path": "scripts/compile-written-pronunciation-data.mjs",
+      "mode": "100644",
+      "bytes": 1979,
+      "sha256": "545adeb4153577511781bcd3579a871a3cd5922d5c92691e7e208cd1faf2fa5c",
+      "gitBlobSHA1": "c49a8f1c7629fd117d438354b2acb2f4fc6cbb7a"
+    }
+  ]
+}

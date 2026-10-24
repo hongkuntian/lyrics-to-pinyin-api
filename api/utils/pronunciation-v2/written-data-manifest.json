@@ -1,0 +1,74 @@
+{
+  "version": "written-pronunciation-data-1",
+  "profiles": [
+    {
+      "profileID": "ru-written",
+      "engineVersion": "lyrica-ru-written-1",
+      "inputs": [
+        {
+          "path": "api/utils/pronunciation-v2/bound-written-annotation.js",
+          "sha256": "fb7d7c2f31ce3e74ef1241cf87cdc8ab0d720edc05e7487989707e9a15869a23",
+          "bytes": 6330
+        },
+        {
+          "path": "api/utils/pronunciation-v2/russian-written.js",
+          "sha256": "1fe7a4955d1dff49a78977d976cc9ab0fa8f51ad64bf90e0de80a1e485280bb7",
+          "bytes": 3262
+        },
+        {
+          "path": "api/utils/pronunciation-v2/written-profiles.js",
+          "sha256": "422aae1fb74d877201764aa7a0a973b22e3cb6a62af1642559b6056ac99e4a13",
+          "bytes": 1444
+        },
+        {
+          "path": "scripts/compile-written-pronunciation-data.mjs",
+          "sha256": "545adeb4153577511781bcd3579a871a3cd5922d5c92691e7e208cd1faf2fa5c",
+          "bytes": 1979
+        }
+      ],
+      "dataRevision": "bc5ffa0e87fb9fae2bbcfc3dab3725a3a1b1bb51a9e164ba3a862d2f891b5a10"
+    },
+    {
+      "profileID": "hi-deva-written",
+      "engineVersion": "sanscript-1.3.3-lyrica-deva-written-1",
+      "inputs": [
+        {
+          "path": "api/utils/pronunciation-v2/bound-written-annotation.js",
+          "sha256": "fb7d7c2f31ce3e74ef1241cf87cdc8ab0d720edc05e7487989707e9a15869a23",
+          "bytes": 6330
+        },
+        {
+          "path": "api/utils/pronunciation-v2/hindi-written.js",
+          "sha256": "80d537e3dc9f3ffde73a16bb817a8d8ff3318e1f7988ae46d44f072cd84e5f2c",
+          "bytes": 3705
+        },
+        {
+          "path": "api/utils/pronunciation-v2/vendor/sanscript-1.3.3/LICENSE",
+          "sha256": "21135a12c7fb20f8a002b97f42c7eecd354137c9b8b4bf2b8b1ed1b1b0fcb748",
+          "bytes": 1088
+        },
+        {
+          "path": "api/utils/pronunciation-v2/vendor/sanscript-1.3.3/provenance.json",
+          "sha256": "8fdb3444737e18a18513e052d6b95707b1b6bdae1880ce72742923d51da6415a",
+          "bytes": 731
+        },
+        {
+          "path": "api/utils/pronunciation-v2/vendor/sanscript-1.3.3/sanscript.cjs",
+          "sha256": "6dca053574abfb840823a2b014341468b7e247416d0e7754b6a49f76d24d0def",
+          "bytes": 188729
+        },
+        {
+          "path": "api/utils/pronunciation-v2/written-profiles.js",
+          "sha256": "422aae1fb74d877201764aa7a0a973b22e3cb6a62af1642559b6056ac99e4a13",
+          "bytes": 1444
+        },
+        {
+          "path": "scripts/compile-written-pronunciation-data.mjs",
+          "sha256": "545adeb4153577511781bcd3579a871a3cd5922d5c92691e7e208cd1faf2fa5c",
+          "bytes": 1979
+        }
+      ],
+      "dataRevision": "1509deed046398edb0fb058439a471fb962a186ddda56913962be037e769ac97"
+    }
+  ]
+}

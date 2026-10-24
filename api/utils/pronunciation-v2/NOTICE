@@ -1,0 +1,13 @@
+New Lyrica engine wrappers, source-span validation, semantic projections, compiler
+and original test code: MIT, see LICENSE in this directory.
+Japanese rules/ALL-POS guards adapt the accepted Lyrica A+ beta3 research candidate.
+kuromoji 0.1.2: Apache-2.0; bundled mecab-ipadic 2.7.0-20070801 carries the separate
+NAIST/ICOT notice. kuroshiro 1.2.0 and kuroshiro-analyzer-kuromoji 1.1.0: MIT.
+koroman 1.0.16 by Donghe Youn: MIT. Installed package omits LICENSE; its full
+license was recovered from the npm-version gitHead-pinned primary repository,
+with source/byte/hash receipt in licenses/koroman-license-source.json. Existing
+dependency is reused, not copied/relicensed.
+Dependency tree/file pins and retained source notices live under
+language-data/pronunciation/. Dictionary-derived data and fixture reading values
+are CC-BY-SA-4.0, separately from wrapper code. See that directory's NOTICE.md
+and complete CC-BY-SA-4.0.html legal code. No audio license is conveyed.
