@@ -356,7 +356,7 @@ CREATE TABLE listening_v2.outbox (
   environment listening_v2.environment NOT NULL,
   job_id uuid NOT NULL,
   job_key listening_v2.identifier NOT NULL,
-  kind text NOT NULL CHECK (kind IN ('wake','execution','room_expiry','privacy_scrub','asset_delete')),
+  kind text NOT NULL CHECK (kind IN ('wake','execution','guard_cleanup','room_expiry','privacy_scrub','asset_delete')),
   room_id uuid,
   guard_id uuid,
   persona_id uuid,
@@ -392,6 +392,8 @@ CREATE TABLE listening_v2.outbox (
   CHECK ((kind IN ('wake','room_expiry') AND room_id IS NOT NULL AND guard_id IS NULL AND persona_id IS NULL AND asset_id IS NULL
       AND guard_revision IS NULL AND send_ordinal IS NULL AND privacy_generation IS NULL)
     OR (kind='execution' AND room_id IS NOT NULL AND guard_id IS NOT NULL AND guard_revision IS NOT NULL
+      AND send_ordinal IS NOT NULL AND persona_id IS NULL AND asset_id IS NULL AND privacy_generation IS NULL)
+    OR (kind='guard_cleanup' AND room_id IS NULL AND guard_id IS NOT NULL AND guard_revision IS NOT NULL
       AND send_ordinal IS NOT NULL AND persona_id IS NULL AND asset_id IS NULL AND privacy_generation IS NULL)
     OR (kind='privacy_scrub' AND persona_id IS NOT NULL AND privacy_generation IS NOT NULL
       AND room_id IS NULL AND guard_id IS NULL AND asset_id IS NULL AND guard_revision IS NULL AND send_ordinal IS NULL)

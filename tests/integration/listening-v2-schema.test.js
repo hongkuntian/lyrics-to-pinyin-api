@@ -164,6 +164,26 @@ test('End and direct room/user/credential deletion cannot cascade away indefinit
   assert.deepEqual((await db.query('SELECT * FROM listening_v2.output_guards')).rows,before);
 });
 
+test('runtime can enqueue guard-only cleanup after room deletion without widening account execution grants',async t=>{
+  const db=await fixture(t),g=guard(),r=room();
+  await insert(db,'output_guards',g);await insert(db,'rooms',r);
+  await db.query('DELETE FROM listening_v2.rooms WHERE environment=$1 AND session_id=$2',[env,r.session_id]);
+  const cleanup=job(r,{job_key:'cleanup:'+g.guard_id,kind:'guard_cleanup',room_id:null,
+    guard_id:g.guard_id,guard_revision:0,send_ordinal:0});
+  await db.exec('SET ROLE lyra_runtime_v1');
+  await insert(db,'outbox',cleanup);
+  for(const change of [{guard_id:null},{guard_revision:null},{send_ordinal:null},{room_id:r.session_id}]){
+    await constraint(insert(db,'outbox',{...cleanup,...change,job_id:randomUUID(),job_key:randomUUID()}));
+  }
+  await foreignKey(insert(db,'outbox',{...cleanup,job_id:randomUUID(),job_key:randomUUID(),guard_id:randomUUID()}));
+  await foreignKey(insert(db,'outbox',{...cleanup,environment:otherEnv,job_id:randomUUID(),job_key:randomUUID(),
+    payload:{version:2,environment:otherEnv}}));
+  await db.exec('RESET ROLE;SET ROLE lyra_account_v1');
+  await denied(insert(db,'outbox',{...cleanup,job_id:randomUUID(),job_key:randomUUID()}));
+  await db.exec('RESET ROLE');
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM listening_v2.outbox')).rows[0].n,1);
+});
+
 test('personas enforce immutable origin/dependency, finite actual deadline, generation changes, no resurrection and bounded registry bytes',async t=>{
   const db=await fixture(t),p=persona();await insert(db,'privacy_personas',p);
   await constraint(db.query('UPDATE listening_v2.privacy_personas SET original_key_id=$1',['other-key']));
