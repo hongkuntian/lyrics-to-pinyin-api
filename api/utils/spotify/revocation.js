@@ -5,11 +5,11 @@ import {enqueue} from './queue.js';
 // A pre-migration installation has no Spotify state to revoke.
 export async function revokeSpotifyInTransaction(db,selector,reason='ownerRevoked',now=Date.now()){
  if(!(await db.query("SELECT to_regclass('spotify_connections') AS name")).rows[0]?.name)return [];
- // Creation and adoption take the attested key before connection rows. Lock
- // keys even when no connection exists yet, so an in-flight enrollment cannot
- // appear between this revocation scan and an owner/key move.
- await db.query('SELECT key_id FROM app_attest_keys WHERE ($1::text IS NULL OR user_id=$1) AND ($2::text IS NULL OR key_id=$2) ORDER BY key_id FOR UPDATE',[selector.ownerID??null,selector.keyID??null]);
- const rows=(await db.query(`SELECT data FROM spotify_connections WHERE ($1::text IS NULL OR owner_id=$1) AND ($2::text IS NULL OR key_id=$2) AND ($3::text IS NULL OR credential_digest=$3) ORDER BY id FOR UPDATE`,[selector.ownerID??null,selector.keyID??null,selector.credentialDigest??null])).rows;
+ // Every real caller holds lockAuthWriter's user/token/key/session union.
+ // Owner-wide selectors require ALL owner keys, even when credentialDigest
+ // narrows only the connection scan. Never acquire an earlier auth lock here.
+ // Those user/key anchors also exclude new enrollment and owner moves.
+ const rows=(await db.query(`SELECT data FROM spotify_connections WHERE ($1::text IS NULL OR owner_id=$1) AND ($2::text IS NULL OR key_id=$2) AND ($3::text IS NULL OR credential_digest=$3) ORDER BY id COLLATE "C" FOR UPDATE`,[selector.ownerID??null,selector.keyID??null,selector.credentialDigest??null])).rows;
  const ids=[];
  for(const {data:c} of rows){const outbox=[];closeConnection(c,reason,now,(kind,id,data,due)=>outbox.push({kind,id,data,due}));
   await db.query('UPDATE spotify_connections SET data=$2,updated_at=now() WHERE id=$1',[c.id,JSON.stringify(c)]);

@@ -99,3 +99,24 @@ test('the separate account login can enroll and sign in but cannot change genera
   assert.deepEqual(await f.accounts.delete(active.user,{bundleID,challenge,identityToken:'i',authorizationCode:'c'}),{deleted:true});
   await f.db.query('RESET ROLE');
 });
+
+for(const loss of ['revoked','expired'])test('Apple sign-in rechecks source credential '+loss+' during external verification',async t=>{
+ const f=await fixture(t),g=await guest(f),current=await session(f,g);
+ const original=f.apple.authenticate;
+ f.apple.authenticate=async input=>{
+  if(loss==='revoked')await f.accounts.signOut(current.user);
+  else await f.db.query('UPDATE library_tokens SET expires_at=clock_timestamp() WHERE digest=$1',[current.user.credentialDigest]);
+  return original(input);
+ };
+ await assert.rejects(login(f,current.user),{code:'app_access_revoked',status:403});
+ assert.equal((await f.db.query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[g.key])).rows[0].user_id,current.user.id);
+ assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM account_identities')).rows[0].n),0);
+});
+test('guest credential keeps exact 90-day DB issuance deadline and ACK does not extend it',async t=>{
+ const f=await fixture(t),before=(await f.db.query('SELECT clock_timestamp() AS at')).rows[0].at,g=await guest(f);
+ const expiry=(await f.db.query('SELECT expires_at FROM library_tokens WHERE digest=$1',[digest(g.token)])).rows[0].expires_at;
+ const after=(await f.db.query('SELECT clock_timestamp() AS at')).rows[0].at;
+ assert.ok(+expiry>=+before+90*86400000&&+expiry<=+after+90*86400000);
+ await f.accounts.guest(g.body);
+ assert.equal(+(await f.db.query('SELECT expires_at FROM library_tokens WHERE digest=$1',[digest(g.token)])).rows[0].expires_at,+expiry);
+});

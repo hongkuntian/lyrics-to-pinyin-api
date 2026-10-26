@@ -135,3 +135,70 @@ test('concurrent unlimited admissions cannot exceed the monthly emergency cap',a
  await configureEmergencyBudget(db,{dailyMicros:100000,monthlyMicros:20000});
  await assert.rejects(store.claim(job.id),{code:'emergency_budget_exhausted'});
 });
+
+// Transparent SQL boundary instrumentation: every statement executes against
+// the actual fixture database. No fabricated query rows or auth permits.
+function authWriterDB(database,afterQuery=async()=>{}) {
+ return {query:(...args)=>database.query(...args),transaction:fn=>database.transaction(async tx=>fn({
+  async query(sql,args){const value=await tx.query(sql,args);await afterQuery(tx,sql);return value;}
+ }))};
+}
+test('expired pending challenges do not consume the eight live slots after a bounded sweep',async t=>{
+ const {auth,db}=await fixture(t);
+ await db.query(`INSERT INTO app_auth_challenges(digest,user_id,credential_digest,key_id,audience,bundle_id,purpose,expires_at)
+  SELECT lpad(n::text,64,'0'),'reader-a',(SELECT digest FROM library_tokens WHERE user_id='reader-a'),$1,'test',$2,'register',clock_timestamp()-interval '1 second'
+  FROM generate_series(1,250) n`,[keyID,bundleID]);
+ for(let i=0;i<8;i++)await auth.challenge('token-a',{keyID,bundleID,purpose:'register'});
+ await assert.rejects(auth.challenge('token-a',{keyID,bundleID,purpose:'register'}),{code:'rate_limited',status:429});
+ const count=(await db.query('SELECT count(*) AS n FROM app_auth_challenges WHERE NOT consumed AND expires_at>clock_timestamp()')).rows[0];
+ assert.equal(Number(count.n),8);
+});
+test('a challenge invocation removes at most 100 expired rows per relation and keeps live rows',async t=>{
+ const {auth,db}=await fixture(t);await enroll(auth);
+ await db.query(`INSERT INTO app_auth_challenges(digest,user_id,credential_digest,key_id,audience,bundle_id,purpose,expires_at)
+  SELECT lpad(n::text,64,'0'),'reader-b',(SELECT digest FROM library_tokens WHERE user_id='reader-b'),$1,'test',$2,'register',clock_timestamp()-interval '1 second'
+  FROM generate_series(1,250) n`,[keyID,bundleID]);
+ await db.query(`INSERT INTO app_auth_sessions(digest,key_id,credential_digest,audience,expires_at)
+  SELECT lpad(n::text,64,'0'),$1,(SELECT digest FROM library_tokens WHERE user_id='reader-a'),'test',clock_timestamp()-interval '1 second'
+  FROM generate_series(1,250) n`,[keyID]);
+ await auth.challenge('token-a',{keyID,bundleID,purpose:'session'});
+ for(const table of ['app_auth_challenges','app_auth_sessions']){
+  const count=(await db.query(`SELECT count(*) AS n FROM ${table} WHERE expires_at<=clock_timestamp()`)).rows[0];
+  assert.equal(Number(count.n),150,'one bounded batch for '+table);
+ }
+ assert.equal(Number((await db.query('SELECT count(*) AS n FROM app_auth_sessions WHERE expires_at>clock_timestamp()')).rows[0].n),1);
+});
+test('expiry cleanup failure is surfaced before challenge issuance, with rollback and no lost quota bound',async t=>{
+ const f=await fixture(t);await enroll(f.auth);
+ await f.db.query('UPDATE app_auth_sessions SET expires_at=clock_timestamp()');
+ const injected=new Error('maintenance-observer-failure');
+ const db=authWriterDB(f.store.db,async(_,sql)=>{if(/DELETE FROM app_auth_sessions/.test(sql))throw injected;});
+ const auth=new AppAuthStore(db,{policy});
+ await assert.rejects(auth.challenge('token-a',{keyID,bundleID,purpose:'session'}),e=>e===injected);
+ assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM app_auth_sessions')).rows[0].n),1);
+});
+for(const stage of ['challenge','register','session'])test(stage+' refuses credential expiry after its last write and rolls back',async t=>{
+ const f=await fixture(t);if(stage==='session')await enroll(f.auth);
+ const input={keyID,bundleID,purpose:stage==='session'?'session':'register'};
+ if(stage!=='challenge')Object.assign(input,await f.auth.challenge('token-a',input),{attestation:'Zml4dHVyZQ==',assertion:'Mg=='});
+ // Real SQL expiry, no fixture auth boolean or fake clock. Crossing it is
+ // deterministic at the write boundary; the final credential check must run.
+ const target=stage==='challenge'?'app_auth_challenges':stage==='register'?'app_attest_keys':'app_auth_sessions';
+ const db=authWriterDB(f.store.db,async(tx,sql)=>{
+  if(new RegExp('INSERT INTO '+target+'\\(').test(sql))await tx.query("UPDATE library_tokens SET expires_at=clock_timestamp() WHERE user_id='reader-a'");
+ });
+ const auth=new AppAuthStore(db,{policy,attestFn:()=>({publicKey:'fixture',receipt:Buffer.from('fixture')}),assertionFn:()=>2});
+ const before=(await f.db.query(`SELECT * FROM ${target} ORDER BY 1`)).rows;
+ await assert.rejects(auth[stage]('token-a',input),{code:'unauthorized'});
+ assert.deepEqual((await f.db.query(`SELECT * FROM ${target} ORDER BY 1`)).rows,before);
+ assert.equal((await f.db.query("SELECT expires_at FROM library_tokens WHERE user_id='reader-a'")).rows[0].expires_at,null);
+});
+test('same-credential renewal preserves key and credential, accepts nullable Apple expiry, and replaces only its bearer',async t=>{
+ const {auth,db}=await fixture(t);await db.query("UPDATE library_users SET access_kind='apple' WHERE id='reader-a'");
+ const old=await enroll(auth),next=await mint(auth,'token-a',2);
+ await assert.rejects(auth.authenticate(old.token),{code:'session_expired'});
+ assert.equal((await auth.authenticate(next.token)).id,'reader-a');
+ assert.equal((await db.query('SELECT sign_count,revoked FROM app_attest_keys')).rows[0].revoked,false);
+ assert.equal((await db.query("SELECT expires_at,revoked FROM library_tokens WHERE user_id='reader-a'")).rows[0].expires_at,null);
+ assert.equal((await db.query("SELECT revoked FROM library_tokens WHERE user_id='reader-a'")).rows[0].revoked,false);
+});

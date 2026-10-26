@@ -59,7 +59,7 @@ try {
   } else if(command==='disable-user') {
     await disableUser(db,values.id);console.log(JSON.stringify({userID:values.id,disabled:true}));
   } else if(command==='revoke-sessions') {
-    await revokeSessions(db,values.id);console.log(JSON.stringify({userID:values.id,sessionsRevoked:true}));
+    await db.transaction(tx=>revokeSessions(tx,values.id));console.log(JSON.stringify({userID:values.id,sessionsRevoked:true}));
   } else if(command==='revoke-key') {
     await revokeKey(db,values.id);console.log('App key and its sessions revoked.');
   } else if(command==='configure-reviews') {
