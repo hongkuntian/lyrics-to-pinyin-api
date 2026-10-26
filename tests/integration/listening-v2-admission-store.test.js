@@ -769,6 +769,58 @@ test('a retained scrubbed winner UUID defeats a stale pending approval atomicall
  assert.deepEqual(marker,[{actor_persona_id:null,payload:{}}]);assert.equal((await counts()).returning_grants,0);
 });
 
+for(const action of ['admission.remove','remembered.forget']){
+ test('review regression: '+action+' stays available with unrelated overdue admissions',async()=>{
+  const s=store(),id=await create(s),first=(await request(s,id)).result.admissionID;
+  await decide(s,id,first);await request(s,id,2);
+  const expiryJob=async()=>(await sql.query('SELECT * FROM listening_v2.outbox WHERE environment=$1 AND job_key=$2',
+   [env,`admission-expiry:${id}`])).rows[0];
+  const scheduled=await expiryJob();assert.equal(Number(scheduled.due_at_ms),start+120000);
+  const before=await row(id);await advance(start+120001);
+  const command=action==='admission.remove'
+   ?mutation(id,0,action,{memberID:uuid(2001),reason:'participation_closed'},{memberLeaseVersion:1})
+   :mutation(id,0,action,{grantID:uuid(3001)},{grantGeneration:1});
+  const result=await (action==='admission.remove'?lifecycleStore():s).execute(command);
+  assert.equal(result.status,'accepted');
+  const current=await row(id),job=await expiryJob();
+  assert.deepEqual(current.state.admission.pending,before.state.admission.pending);
+  assert.equal(job.state,'pending');assert.equal(Number(job.created_at_ms),clock);assert.equal(Number(job.due_at_ms),clock);
+  assert.equal(Number(job.claim_epoch),Number(scheduled.claim_epoch)+1);
+  assert.equal(current.end_event_reserved,true);assert.equal(current.terminal_reservation_bytes,8192);
+  if(action==='admission.remove'){
+   assert.equal(current.state.admission.members[1].status,'removed');
+   assert.equal(current.reserved_semantic_events,before.reserved_semantic_events-1);
+   assert.equal(current.reserved_receipts,before.reserved_receipts-1);
+  }else{
+   assert.equal((await sql.query('SELECT status FROM listening_v2.returning_grants WHERE grant_id=$1',[uuid(3001)])).rows[0].status,'revoked');
+   assert.equal(current.reserved_semantic_events,before.reserved_semantic_events);
+   assert.equal(current.reserved_receipts,before.reserved_receipts);
+  }
+  await lifecycleStore().execute(mutation(id,0,'admission.expire'));
+  assert.equal((await row(id)).state.admission.pending.length,0);assert.equal((await expiryJob()).state,'cancelled');
+ });
+}
+
+for(const phase of ['creation','update']){
+ test('review regression: '+phase+' wake watermarks decode decimal-string bigint rows',async()=>{
+  // Only the driver result representation changes. Actual SQL still executes
+  // in PGlite; this is not a real PostgreSQL driver/consumer receipt.
+  const driverDB={transaction:fn=>db.transaction(tx=>fn({query:async(text,params)=>{
+   const r=await tx.query(text,params);
+   if(/^\s*(INSERT INTO listening_v2.rooms|UPDATE listening_v2.rooms SET state=)/.test(text))
+    return {...r,rows:r.rows.map(value=>({...value,event_seq:String(value.event_seq)}))};
+   return r;
+  }}))};
+  const s=store({db:driverDB}),c=createInput(),{sessionID,...input}=c;
+  let result=await s.execute(input);
+  if(phase==='update')result=await s.execute(mutation(sessionID,0,'settings.update',{title:'Driver result'},{settingsRevision:0}));
+  const wake=(await sql.query('SELECT payload FROM listening_v2.outbox WHERE environment=$1 AND job_key=$2',
+   [env,`wake:${sessionID}`])).rows[0].payload;
+  assert.equal(typeof wake.eventSeq,'number');assert.equal(wake.eventSeq,result.result.eventSeq);
+  assert.equal(wake.eventSeq,Number((await row(sessionID)).event_seq));
+ });
+}
+
 // Last: damage only this disposable fixture after every positive case used the
 // maintained migration directly. Missing representation cannot enable writes.
 test('missing cooldown representation fails closed before room or receipt mutation',async()=>{

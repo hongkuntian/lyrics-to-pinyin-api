@@ -328,12 +328,12 @@ export function createAdmissionStore({db,environment,lockAuthorization,resolveFa
     Math.max(nowMS+day,s.expiresAtMS+day)]);
   }
   if(entries.length)await job(tx,s.sessionID,'wake',`wake:${s.sessionID}`,
-   {version:2,environment,sessionID:s.sessionID,eventSeq:room.event_seq},nowMS,nowMS);
+   {version:2,environment,sessionID:s.sessionID,eventSeq:decodeSafeUInt(room.event_seq)},nowMS,nowMS);
   if(c.action==='create')await job(tx,s.sessionID,'room_expiry',`room-expiry:${s.sessionID}`,
    {version:2,environment,sessionID:s.sessionID,scope:'room'},s.expiresAtMS,nowMS);
   if(s.pending.length){
    await job(tx,s.sessionID,'room_expiry',`admission-expiry:${s.sessionID}`,
-    {version:2,environment,sessionID:s.sessionID,scope:'admissions'},Math.min(...s.pending.map(p=>p.expiresAtMS)),nowMS);
+    {version:2,environment,sessionID:s.sessionID,scope:'admissions'},Math.max(nowMS,Math.min(...s.pending.map(p=>p.expiresAtMS))),nowMS);
   }else await tx.query(`UPDATE listening_v2.outbox SET state='cancelled',claim_epoch=claim_epoch+1,claim_nonce_hash=NULL,
    claim_until_ms=NULL,completed_at_ms=$3,delete_after_ms=$4 WHERE environment=$1 AND job_key=$2 AND state IN ('pending','claimed')`,
    [environment,`admission-expiry:${s.sessionID}`,nowMS,nowMS+day]);
