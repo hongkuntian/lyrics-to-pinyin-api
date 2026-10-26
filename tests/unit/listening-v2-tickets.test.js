@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {canonicalCommandHash,createCreationTickets} from '../../api/utils/listening-v2/tickets.js';
 
 const key={id:'fixture-key-1',secret:Buffer.alloc(32,23)};
+// Valid synthetic intents only. Production ingress supplies byte-capped raw JSON.
+const hash=value=>canonicalCommandHash(JSON.stringify(value));
 const context={environment:'preview-deployment-123',principalID:'guest-G',keyID:'attest-K',action:'create',
- bodyHash:canonicalCommandHash({provider:'appleMusic',storefront:'us',initialIntent:'none'}),sourceRecapRevision:null};
+ bodyHash:hash({provider:'appleMusic',storefront:'us',initialIntent:'none'}),sourceRecapRevision:null};
 function fixture(){let time=1700000000000;return {tickets:createCreationTickets({keys:[key],activeKeyID:key.id,now:()=>time}),advance(ms){time+=ms;}};}
 
 test('creation tickets allocate both IDs on the server and verify only the bound intent',()=>{
@@ -47,9 +49,9 @@ test('restart tickets bind the source recap revision and action separately',()=>
 test('canonical intent hashing sorts object keys while retaining arrays, Unicode and exact values',()=>{
  const left={payload:{title:'千千闋歌',order:['a','b']},expected:{queueRevision:12},action:'queue.move',version:2};
  const reordered={version:2,action:'queue.move',expected:{queueRevision:12},payload:{order:['a','b'],title:'千千闋歌'}};
- assert.equal(canonicalCommandHash(left),canonicalCommandHash(reordered));
+ assert.equal(hash(left),hash(reordered));
  for(const patch of [{...left,payload:{...left.payload,order:['b','a']}},{...left,expected:{queueRevision:13}},
-  {...left,payload:{...left.payload,title:'千千阙歌'}}])assert.notEqual(canonicalCommandHash(left),canonicalCommandHash(patch));
+  {...left,payload:{...left.payload,title:'千千阙歌'}}])assert.notEqual(hash(left),hash(patch));
  for(const value of [{n:NaN},{n:Infinity},{n:Number.MAX_SAFE_INTEGER+1},{n:undefined},{n:1n},new Date(),{x:'x'.repeat(16385)}]){
   assert.throws(()=>canonicalCommandHash(value),{code:'invalid_request'});
  }
@@ -57,12 +59,13 @@ test('canonical intent hashing sorts object keys while retaining arrays, Unicode
 });
 
 function boundedRejection(value){
+ const raw=JSON.stringify(value);
  const stringify=JSON.stringify,keys=Object.keys;
  let largestSerialization=0,largestKeyArray=0;
  try{
   JSON.stringify=(...args)=>{const result=stringify(...args);if(typeof result==='string')largestSerialization=Math.max(largestSerialization,Buffer.byteLength(result));return result;};
   Object.keys=(...args)=>{const result=keys(...args);largestKeyArray=Math.max(largestKeyArray,result.length);return result;};
-  assert.throws(()=>canonicalCommandHash(value),{code:'invalid_request'});
+  assert.throws(()=>canonicalCommandHash(raw),{code:'invalid_request'});
  }finally{JSON.stringify=stringify;Object.keys=keys;}
  assert(largestSerialization<=16384,`Allocated ${largestSerialization} serialized bytes before refusal`);
  assert(largestKeyArray<=4096,`Allocated ${largestKeyArray} keys before width refusal`);

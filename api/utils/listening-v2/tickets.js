@@ -20,11 +20,18 @@ function validateContext(value){
   (value.action==='create'?value.sourceRecapRevision!==null:!integer(value.sourceRecapRevision)))invalid();
 }
 
-/** Hash validated semantic intent, before adding its ticket. This is not authorization.
+/** Hash bounded raw JSON for validated semantic intent, before adding its ticket.
+ * Preparsed objects are deliberately refused: V8 eagerly enumerates their keys
+ * before a loop body can enforce width. A raw byte cap bounds parsing/enumeration.
+ * The HTTP ingress must also cap its stream before accumulation; Content-Length
+ * or serializing an unbounded req.body is not an admission proof.
+ * This is not authorization.
  * Object order is insignificant; array order, Unicode and exact integers remain significant.
  * Refuse values that JSON would silently drop/coerce and bound depth, nodes and bytes.
  */
-export function canonicalCommandHash(value){
+export function canonicalCommandHash(rawJSON){
+ if(typeof rawJSON!=='string'||rawJSON.length>16384||Buffer.byteLength(rawJSON)>16384)invalid();
+ let value;try{value=JSON.parse(rawJSON);}catch{invalid();}
  if(!object(value))invalid();
  const maxBytes=16384,maxNodes=4096,hash=createHash('sha256'),ancestors=new Set();let nodes=0,bytes=0;
  function write(text,size=Buffer.byteLength(text)){
