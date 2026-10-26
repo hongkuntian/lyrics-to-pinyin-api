@@ -94,6 +94,14 @@ function planShape(p, visits) {
     !integer(p.preimageSlot, visits.length - 1)) fail();
   if (p.mode === 'inverse' && p.path.length && p.path[0] !== visits[p.preimageSlot][1]) fail();
 }
+function navigationDeparture(s, c) {
+  const active = s.active, slot = active?.plan.preimageSlot;
+  if (!active || active.plan.mode === 'inverse' || slot === null ||
+      active.plan.path[0] !== c.occurrenceSlot || c.executionOrdinal !== active.ordinal) {
+    fail('navigation_conflict');
+  }
+  return s.visits[slot];
+}
 function header(s) {
   // Only branded/generated or already bounded-and-validated state reaches here.
   const {visits, ...h} = s;
@@ -147,7 +155,8 @@ function shape(s) {
         v[10].some(n => !integer(n, 10000)) || Buffer.byteLength(JSON.stringify(v)) + 1 > 192) fail();
     ids.add(v[0]);
     if (v[9] === 0 && v[3] !== v[2]) fail();
-    if (v[9] === 1 && (i === 0 || v[1] !== s.visits[i - 1][1] || v[3] !== s.visits[i - 1][3])) fail();
+    if (v[9] === 1 && !s.visits.slice(0, i).some(departure =>
+      departure[1] === v[1] && departure[3] === v[3])) fail();
     if (v[9] === 2) {
       // A delayed Back may depart from an older dispatched preimage, not the
       // chronological predecessor. Persisted pages are trusted: check possible
@@ -270,7 +279,8 @@ export function reduceVisitEscrow(s, rawCommandJSON, rawTrustedEvidenceJSON) {
       const observationDigest = sha(JSON.stringify(sample));
       if (c.observationSequence < s.observationSequence ||
           (c.observationSequence === s.observationSequence && observationDigest !== s.observationDigest)) fail('observation_conflict');
-      prove([], c.op === 'observe' && c.kind === 'back' ? s.active?.plan.profileHash ?? null : null);
+      prove([], c.op === 'observe' && ['back', 'restart'].includes(c.kind)
+        ? s.active?.plan.profileHash ?? null : null);
       if (c.observationSequence === s.observationSequence) return publish(s);
       const common = {observationSequence: c.observationSequence, observationDigest};
       if (c.op === 'progress') {
@@ -287,16 +297,14 @@ export function reduceVisitEscrow(s, rawCommandJSON, rawTrustedEvidenceJSON) {
       if (c.kind === 'forward') {
         if (c.targetVisitID !== null) fail();
       } else if (c.kind === 'restart') {
-        if (c.targetVisitID !== null || previous === null || s.visits[previous][1] !== c.occurrenceSlot) fail('navigation_conflict');
-        back = s.visits[previous][3];
+        const departure = navigationDeparture(s, c);
+        if (c.targetVisitID !== null || departure[1] !== c.occurrenceSlot) fail('navigation_conflict');
+        back = departure[3];
       } else {
         const target = findVisit(s, c.targetVisitID);
         if (s.visits[target][1] !== c.occurrenceSlot) fail('navigation_conflict');
         if (c.kind === 'back') {
-          const active = s.active, preimage = active?.plan.preimageSlot;
-          if (!active || active.plan.mode === 'inverse' || preimage === null ||
-              s.visits[preimage][3] !== target || active.plan.path[0] !== c.occurrenceSlot ||
-              c.executionOrdinal !== active.ordinal) fail('navigation_conflict');
+          if (navigationDeparture(s, c)[3] !== target) fail('navigation_conflict');
         }
         if (c.kind === 'undo' && (s.active?.plan.mode !== 'inverse' || s.active.plan.preimageSlot !== target)) fail('navigation_conflict');
         back = s.visits[target][3];

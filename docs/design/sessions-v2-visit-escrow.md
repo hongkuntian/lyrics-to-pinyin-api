@@ -176,10 +176,11 @@ Compact records follow the approved shape:
 ```
 
 `kindCode` is 0 forward, 1 restart, 2 Back, 3 Undo. Previous is always the prior
-committed ordinal; forward Back predecessor is that same ordinal. Restart
-requires the same current occurrence and inherits its Back predecessor. Back
-requires a non-inverse active plan, its exact execution ordinal and qualified
-profile, and the frozen dispatched preimage's Back target. That target's exact
+committed ordinal; forward Back predecessor is that same ordinal. Known restart
+and Back require a non-inverse active plan, its exact execution ordinal and
+qualified profile. Restart must match the frozen dispatched departure's exact
+occurrence and inherits that departure's Back predecessor, even when newer
+chronological visits have arrived. Back requires that departure's Back target. That target's exact
 observed UUID must resolve to the reported occurrence and the active path's first
 occurrence. Back inherits the target's ancestry, even if newer chronological
 visits have arrived since dispatch. Undo requires the active accepted inverse's frozen preimage target and
@@ -196,6 +197,16 @@ active plan refuses; neither an arbitrary old visit nor a false `kind:'back'`
 claim supplies a control. The trusted `navigation_cause` assertion must establish
 the exact start's causal mapping to that dispatched control. Structural checks
 and matching hashes do not themselves prove provider causality.
+
+For Z-A-B with restart B dispatched, old C may start before the restart lands.
+New B' keeps chronological previous C and Back predecessor A from the frozen B.
+An intervening forward start of the same occurrence is still a different visit;
+its Back ancestry must not replace the dispatched departure. Restart and Back
+share the frozen departure/path/ordinal checks and profile binding. Unknown or
+mismatched control causality cannot be repaired by relabeling a proven restart
+as forward. The trusted codec permits an earlier observed departure with the
+stored occurrence/ancestry; it does not reconstruct or authenticate provider
+causality after the active plan has been released.
 
 The adapter chooses Back versus restart using the qualified position rule; this
 module does not infer a three-second boundary from a guessed or stale sample.
