@@ -358,13 +358,13 @@ storage must preserve that provenance externally and bind all checkpoint pages.
 The internal version/field shapes stay unchanged; active desired preimage
 semantics and ordinal admission are stricter as described above. R1 checkpoints
 with an overcommitted ordinal budget now refuse `execution_capacity` intact.
-An R1 active desired plan with a null preimage cannot authorize a Back by
-guessing its departure from the newest visit. No migration/backfill, role
+An R1 active desired plan with a null preimage cannot authorize known Back or
+restart by guessing its departure from the newest visit. No migration/backfill, role
 expiration, history deletion or cap increase is supplied; retain original bytes
-for Root's integration review. This is an unshipped source candidate, not a
-claim of compatibility with previously deployed persistent data.
+for integration review. This module remains unused by live runtime; no
+compatibility claim is made for previously deployed persistent data.
 
-## Authored verification and handoff
+## Verification and retained handoffs
 
 `tests/unit/listening-v2-visit-escrow.test.js` contains synthetic domain cases for
 all old-prefix/new-subsequence continuations and every settlement split,
@@ -386,11 +386,31 @@ accepted retention across expiry/End, and overcommitted checkpoint refusal.
 Boundary setup uses explicitly trusted restoration fixtures for previously
 settled queue edits that emitted no visits, not executed 999-operation receipts.
 
-Worker authorization permits only `node --check` on the two new JS files.
-The test suite is authored but unexecuted. Root owns compilation/test execution,
-independent review, any integration changes, Full/main/publication and cleanup.
-Source files remain untracked, unstaged and uncommitted. The ignored
-`artifacts/sessions-v2-visit-escrow-r1/` directory remains byte-for-byte unchanged.
-`artifacts/sessions-v2-visit-escrow-r2/` retains before/after manifests, a sealed
-`red/` tests-only postimage/patch, complete final postimages, unapplied R1-relative
-and new-file patches, syntax-only receipts and one handoff inventory.
+R3 cases additionally cover delayed/no-advance restart, intervening starts of
+the same occurrence with different navigation ancestry, exact duplicate-history
+departure identity, independent restart checkpoint restoration, false binding or
+inverse-role claims, and Undo after restart across another natural advance.
+The original 37 tests remain an unchanged prefix of the 45-case file.
+
+Root executed identical new tests against the prior source and each repair.
+The delayed Back/ordinal regressions were red (28 passed, 9 failed), then green
+(37 passed). The restart regressions were red (38 passed, 7 failed), then green
+(45 passed), all with zero skips. The second pair ran directly from committed
+source inputs `5d5b514` and `1208622`; no provider or database was involved.
+Independent R3 review approved `1208622` with no P1/P2 or minor findings and
+confirmed the earlier fixes remain intact.
+
+Canonical dependency installation and the combined hermetic `npm test` gate
+passed **778 unit, 688 integration and 21 contract tests (1,487 total)**, zero
+failures/skips, on `1208622` in 105.905 seconds. The subsequent change updates
+only this verification contract; module, tests, dependencies and wire inputs
+remain identical. This is pure/local hermetic proof, not real provider/DB
+execution, authenticated mapping, ownership/Release, deployed roles, full room
+persistence or capability enablement. No V2 route or live capability is enabled.
+
+Original workers performed syntax-only checks and handed off three untracked
+files; Root committed and verified the assembled candidate. The ignored
+`artifacts/sessions-v2-visit-escrow-r1/` and `-r2/` payloads remain unchanged,
+including tests-first postimages, hashes and patches. Root's actual red/green,
+review and full-gate receipts remain outside disposable worktrees. Root owns
+remaining integration, publication and cleanup.
