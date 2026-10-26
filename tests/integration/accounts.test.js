@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {libraryDB} from '../helpers/library-db.js';
 import {AccountStore} from '../../api/utils/membership/accounts.js';
 import {MembershipStore} from '../../api/utils/membership/store.js';
@@ -80,6 +81,9 @@ test('public account HTTP rejects anonymous identity operations, surplus fields 
 });
 test('the separate account login can enroll and sign in but cannot change generation budgets or grants',async t=>{
   const f=await fixture(t);
+  // This partial-schema fixture must install the guarded anchor before late
+  // role provisioning; replay deliberately refuses an unmigrated database.
+  await f.db.exec(await readFile(new URL('../../db/032-auth-token-row-locks.sql',import.meta.url),'utf8'));
   await f.db.query('CREATE ROLE lyra_account_v1');
   await replayMembershipRoleGrants(f.db);
   await replayMembershipRoleGrants(f.db); // Late provisioning is idempotent.
