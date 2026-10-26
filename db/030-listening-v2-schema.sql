@@ -219,6 +219,7 @@ CREATE TABLE listening_v2.returning_grants (
   created_at_ms listening_v2.safe_uint NOT NULL,
   revoked_at_ms listening_v2.safe_uint,
   updated_at_ms listening_v2.safe_uint NOT NULL,
+  cooldown_until_ms listening_v2.safe_uint NOT NULL DEFAULT 0,
   PRIMARY KEY (environment,grant_id),
   UNIQUE (environment,host_install_scope,pair_digest),
   FOREIGN KEY (environment,host_persona_id) REFERENCES listening_v2.privacy_personas(environment,persona_id) ON DELETE RESTRICT,
@@ -232,7 +233,7 @@ CREATE TABLE listening_v2.returning_grants (
     OR (status='revoked' AND revoked_at_ms IS NOT NULL)),
   CHECK (octet_length(jsonb_build_array(environment,grant_id,host_install_scope,pair_digest,hmac_key_version,
     grant_generation,status,host_persona_id,host_privacy_generation,guest_persona_id,guest_privacy_generation,
-    approver_persona_id,approver_privacy_generation,approved_session_id,created_at_ms,revoked_at_ms,updated_at_ms)::text)<=1024)
+    approver_persona_id,approver_privacy_generation,approved_session_id,created_at_ms,revoked_at_ms,updated_at_ms,cooldown_until_ms)::text)<=1024)
 );
 CREATE INDEX returning_grants_host ON listening_v2.returning_grants (environment,host_install_scope,status,grant_id);
 CREATE INDEX returning_grants_host_persona ON listening_v2.returning_grants (environment,host_persona_id,grant_id);

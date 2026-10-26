@@ -81,6 +81,28 @@ test('fresh migration adds exactly eight relations, is environment fenced, and p
   for(const valid of ['production','development','test',env,otherEnv])await insert(db,'rooms',room({environment:valid}));
 });
 
+test('returning cooldown persists independently of active trust with narrow runtime ownership',async t=>{
+  const db=await fixture(t),p=persona();await insert(db,'privacy_personas',p);
+  const grant={environment:env,grant_id:randomUUID(),host_install_scope:hash(2),pair_digest:hash(14),hmac_key_version:1,status:'active',
+    host_persona_id:p.persona_id,host_privacy_generation:0,guest_persona_id:p.persona_id,guest_privacy_generation:0,
+    created_at_ms:now,updated_at_ms:now};
+  const initial=(await insert(db,'returning_grants',grant)).rows[0];
+  assert.equal(String(initial.cooldown_until_ms),'0');
+  const update=value=>db.query('UPDATE listening_v2.returning_grants SET cooldown_until_ms=$1 WHERE environment=$2 AND grant_id=$3 RETURNING status,grant_generation,revoked_at_ms,cooldown_until_ms',
+    [value,env,grant.grant_id]);
+  await db.exec('SET ROLE lyra_runtime_v1');
+  try{
+    const changed=(await update(now+60000)).rows[0];
+    assert.equal(changed.status,'active');assert.equal(String(changed.grant_generation),'0');assert.equal(changed.revoked_at_ms,null);
+    assert.equal(String(changed.cooldown_until_ms),String(now+60000));
+    await constraint(update('-1'));await constraint(update('9007199254740992'));
+    assert.equal(String((await update('9007199254740991')).rows[0].cooldown_until_ms),'9007199254740991');
+  }finally{await db.exec('RESET ROLE');}
+  await db.exec('SET ROLE lyra_account_v1');
+  try{await denied(update(0));}finally{await db.exec('RESET ROLE');}
+  assert.equal((await db.query('SELECT count(*)::int n FROM pg_tables WHERE schemaname=$1',['listening_v2'])).rows[0].n,8);
+});
+
 test('failed transactional migration leaves no partial schema/grants; fresh retry succeeds',async t=>{
   const db=await fixture(t,{apply:false});
   const fail=migration.replace(/COMMIT;\s*$/,'SELECT 1/0;\nCOMMIT;');
