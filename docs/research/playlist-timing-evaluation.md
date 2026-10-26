@@ -40,6 +40,14 @@ the aggregate improves. Sequential live results are sensitive to upstream
 availability and latency; use deterministic delayed-provider fixtures to prove
 the behavior change itself.
 
+To screen misses independently, run the same catalog benchmark on an explicitly
+retained miss subset with `--only-provider netease` (also `qq`, `kugou` or
+`lrclib`). This retains ordinary discovery, strict admission and provider
+deadlines, while removing competition from the combined schedule. The report is
+labelled an isolated diagnostic and cannot use the combined coverage acceptance
+flag. A source-positive miss becomes availability evidence for the next frozen
+cohort; do not count that diagnostic result as a combined-pipeline success.
+
 Freeze the source-positive private cohort before a subsequent acceptance run:
 
 ```sh

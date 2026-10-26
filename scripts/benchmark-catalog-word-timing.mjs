@@ -5,7 +5,12 @@ import {parseArgs} from 'node:util';
 import {resolve} from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {vocalCoverage,validTimingProvenance} from '../api/utils/vocal-timing.js';
-import {verifySpotifyBinding,sourceCapsule} from '../api/utils/song-library/spotify-recording.js';
+import {verifySpotifyBinding,sourceCapsule,independentProvider} from '../api/utils/song-library/spotify-recording.js';
+
+export function diagnosticProviders(getAvailable,provider){
+ if(!['netease','qq','kugou','lrclib'].includes(provider))throw new Error('invalid_diagnostic_provider');
+ return script=>getAvailable(script).filter(api=>independentProvider(api.name)===provider);
+}
 
 export function summarizeResponse(response,request) {
  const timing=response?.metadata?.lyric_timing,song=response?.song;
@@ -76,14 +81,21 @@ export function selectCatalogCases(corpus,ids) {
 }
 
 async function main(){
- const {values}=parseArgs({options:{corpus:{type:'string',default:'docs/research/measured-discovery-corpus.json'},'baseline-root':{type:'string'},out:{type:'string'},runs:{type:'string',default:'1'},concurrency:{type:'string',default:'1'},'minimum-available-rate':{type:'string'},'case-ids':{type:'string'}}});
+ const {values}=parseArgs({options:{corpus:{type:'string',default:'docs/research/measured-discovery-corpus.json'},'baseline-root':{type:'string'},out:{type:'string'},runs:{type:'string',default:'1'},concurrency:{type:'string',default:'1'},'minimum-available-rate':{type:'string'},'case-ids':{type:'string'},'only-provider':{type:'string'}}});
+ if(values['only-provider']&&values['minimum-available-rate']!==undefined)throw new Error('diagnostic_is_not_combined_coverage_acceptance');
  const original=JSON.parse(await readFile(values.corpus,'utf8')),corpus=values['case-ids']?selectCatalogCases(original,values['case-ids'].split(',')):original,modes=[];
  const roots=[...(values['baseline-root']?[['baseline',resolve(values['baseline-root'])]]:[]),['candidate',fileURLToPath(new URL('..',import.meta.url))]];
  for(const [id,root] of roots){
   const {createMusicRomanizeService}=await import(pathToFileURL(resolve(root,'api/music-romanize.js')));
-  modes.push({id,createService:()=>createMusicRomanizeService({redis:null,logger:{info(){},error(){}}})});
+  const {getAvailableAPIs}=await import(pathToFileURL(resolve(root,'api/music-apis/index.js')));
+  const overrides=values['only-provider']?{getAvailableAPIsFn:diagnosticProviders(getAvailableAPIs,values['only-provider'])}:{};
+  modes.push({id,createService:()=>createMusicRomanizeService({redis:null,logger:{info(){},error(){}},...overrides})});
  }
  const report=await runCatalogBenchmark({corpus,modes,runs:Number(values.runs),concurrency:Number(values.concurrency),onResult:r=>console.log(JSON.stringify(r))});
+ if(values['only-provider']){
+  report.kind='local-isolated-provider-discovery-diagnostic';report.provider=values['only-provider'];
+  report.limitations.push('Isolated provider discovery uses ordinary admission and provider deadlines, but bypasses the combined source schedule. A positive establishes admitted source availability, not combined pipeline or phone success.');
+ }
  if(values['minimum-available-rate']!==undefined)report.acceptance=coverageGate(report,corpus,Number(values['minimum-available-rate']));
  if(values.out)await writeFile(values.out,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({aggregate:report.aggregate,observedAvailable:report.observedAvailableCaseIDs.length,acceptance:report.acceptance}));

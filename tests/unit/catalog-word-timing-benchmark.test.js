@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runCatalogBenchmark,coverageGate,selectCatalogCases} from '../../scripts/benchmark-catalog-word-timing.mjs';
+import {runCatalogBenchmark,coverageGate,selectCatalogCases,diagnosticProviders} from '../../scripts/benchmark-catalog-word-timing.mjs';
 const sentinel='Invented lyric sentinel';
 const request={catalog_id:'123',artist:'Synthetic',title:'Synthetic',duration:30};
 const response={song:{id:42,duration:30},quality:{synced:true},metadata:{source:'NeteaseAPI',lyric_timing:{version:1,provider:'appleMusic',recordingID:'123',source:'netease:42:yrc',revision:'a'.repeat(64)}},
  lines:[{original:sentinel,timestamp:1,vocalTiming:{end:2,segments:[{text:sentinel,utf16Start:0,utf16Length:sentinel.length,start:1,end:2}]}}]};
 const mode=(id,body,status=200)=>({id,createService:()=>async(_,res)=>res.status(status).json(body)});
+test('isolated discovery diagnostics retain provider eligibility and cannot select another provider',()=>{
+ const net={name:'NeteaseAPI'},qq={name:'QQMusicAPI'},lrc={name:'LRCAPI'};
+ const available=script=>script==='zh'?[net,qq,lrc]:[qq,lrc];
+ assert.deepEqual(diagnosticProviders(available,'netease')('zh'),[net]);
+ assert.deepEqual(diagnosticProviders(available,'netease')('en'),[]);
+ assert.deepEqual(diagnosticProviders(available,'lrclib')('en'),[lrc]);
+ assert.throws(()=>diagnosticProviders(available,'spotify'),/invalid_diagnostic_provider/);
+});
 test('explicit live subsets cannot silently omit an unknown or duplicate requested case',()=>{
  const corpus={limitations:[],cases:[{caseID:'a'},{caseID:'b'},{caseID:'c'}]};
  assert.deepEqual(selectCatalogCases(corpus,['c','a']).cases.map(row=>row.caseID),['a','c']);
