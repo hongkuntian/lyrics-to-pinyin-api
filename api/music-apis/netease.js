@@ -8,6 +8,9 @@ import {hasCompleteMeasuredVocalTiming} from '../utils/lyric-selection.js';
 import {BoundedCache} from '../utils/bounded-cache.js';
 import {neteaseTitleEvidence,neteaseDescriptiveTitleMatches} from '../utils/netease-title-evidence.js';
 import {simplifyRecordingScript} from '../utils/recording-script.js';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
+const {neteaseArtistAliases}=require('../data/lyric-performers.json');
 const performerIDs=raw=>Array.isArray(raw?.artists)&&raw.artists.length>0&&raw.artists.length<=3
  &&raw.artists.every(p=>/^[1-9]\d{0,19}$/.test(String(p.id)))
  ?JSON.stringify(raw.artists.map(p=>String(p.id)).sort()):null;
@@ -202,6 +205,12 @@ export class NeteaseAPI extends BaseMusicAPI {
       const data=await fetchJSON(`${this.baseURL}/artist/detail?id=${id}`,context),artist=data.data?.artist;
       if(data.code!==200 || String(artist?.id)!==id) return [];
       const names=[artist.name,...(artist.alias || []),...(artist.transNames || [])].filter(name=>typeof name==='string' && name.trim());
+      // A reviewed alternate spelling belongs to one fresh provider artist,
+      // not arbitrary reordered names. Drift in either anchor fails closed.
+      const reviewed=neteaseArtistAliases.find(entry=>entry.id===id
+        &&normalizeRecordingText(entry.name)===normalizeRecordingText(artist.name)
+        &&names.some(name=>normalizeRecordingText(name)===normalizeRecordingText(entry.profileAlias)));
+      if(reviewed)names.push(...reviewed.aliases);
       // Catalogs sometimes omit Latin accents (Rene / René). Derive only this
       // spelling from this freshly verified artist ID, never from song titles
       // or arbitrary search labels. Other scripts keep their combining marks.

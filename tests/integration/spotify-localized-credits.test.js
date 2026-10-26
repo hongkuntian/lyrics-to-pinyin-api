@@ -17,18 +17,20 @@ const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',m
 const raw={id:64317,name:'因为爱情',artists:[{id:2116,name:'陈奕迅'},{id:9621,name:'王菲'}],
   album:{name:'Stranger Under My Skin'},duration:218277};
 const profiles={2116:{id:2116,name:'陈奕迅',alias:['Eason Chan']},9621:{id:9621,name:'王菲',alias:['Faye Wong','Shirley Wong']}};
-function fixture({song=raw,songs=[song],changeProfile=p=>p,lyricForID=()=> '[00:12]一起听这首歌\n[00:18]慢慢唱给你听'}={}) {
+function fixture({song=raw,songs=[song],performerProfiles=profiles,changeProfile=p=>p,lyricPayload=null,lyricForID=()=> '[00:12]一起听这首歌\n[00:18]慢慢唱给你听'}={}) {
   const calls=[];
   const fetchFn=async url=>{
     const u=new URL(url);calls.push(u);
-    if(u.pathname==='/artist/detail')return new Response(JSON.stringify({code:200,data:{artist:changeProfile(structuredClone(profiles[u.searchParams.get('id')]))}}));
+    if(u.pathname==='/artist/detail')return new Response(JSON.stringify({code:200,data:{artist:changeProfile(structuredClone(performerProfiles[u.searchParams.get('id')]))}}));
+    if(u.pathname==='/lyric/new'&&lyricPayload)return new Response(JSON.stringify(lyricPayload));
+    if(u.pathname==='/song/detail')return new Response(JSON.stringify({code:200,songs:[{id:song.id,name:song.name,ar:song.artists,al:song.album,dt:song.duration}]}));
     if(u.pathname==='/lyric')return new Response(JSON.stringify({code:200,lrc:{lyric:lyricForID(u.searchParams.get('id'))}}));
     return new Response(JSON.stringify({code:200,result:{songs}}));
   };
   const api=new NeteaseAPI(),search=api.searchSong.bind(api),lyrics=api.getLyrics.bind(api);
   api.searchSong=(a,t,c)=>search(a,t,{...c,fetchFn});
   api.getLyrics=(id,c)=>lyrics(id,{...c,fetchFn});
-  return {api,calls};
+  return {api,calls,fetchFn};
 }
 
 test('Spotify English contributor names resolve only through each independent provider artist ID',async()=>{
@@ -40,6 +42,76 @@ test('Spotify English contributor names resolve only through each independent pr
   assert.equal(calls.filter(u=>u.pathname==='/artist/detail').length,2);
   await api.searchSong(artist,title,context);
   assert.equal(calls.filter(u=>u.pathname==='/artist/detail').length,2);
+});
+
+// Metadata observed from Spotify and NetEase on 2026-10-26. Only the lyrics
+// below are invented; the two-second catalog duration discrepancy is real.
+const qianLiRecording={version:2,provider:'spotify',item_id:'3Pjp7lBM20zYzTlRurI6B7',metadata:{origin:'spotify',
+  title:'千里之外',artists:['Jay Chou','Fei Yu-ching'],album:'依然范特西',duration_ms:256372}};
+const qianLiSong={id:185880,name:'千里之外',artists:[{id:6452,name:'周杰伦'},{id:2747,name:'费玉清'}],
+  album:{name:'依然范特西'},duration:254373};
+const qianLiProfiles={6452:{id:6452,name:'周杰伦',alias:['Jay Chou','周董']},
+  2747:{id:2747,name:'费玉清',alias:['Yu-Ching Fei','张彦亭','小哥']}};
+const qianLiLyrics={code:200,lrc:{lyric:'[00:12]一起听\n[00:18]慢慢唱'},
+  yrc:{lyric:'[12000,2000](12000,1000,0)一起(13000,1000,0)听\n[18000,2000](18000,1000,0)慢慢(19000,1000,0)唱'}};
+const qianLiFixture=options=>fixture({song:qianLiSong,performerProfiles:qianLiProfiles,lyricPayload:qianLiLyrics,...options});
+
+test('reviewed Fei Yu-ching alias admits the exact duet through search and fresh source-ID lookup',async()=>{
+  const {api,calls}=qianLiFixture(),target=spotifySearchRequest(qianLiRecording);
+  const song=await api.searchSong(target.artist,target.title,target);
+  assert.equal(song.id,185880);
+  assert.deepEqual(song.creditedArtistNames,['Jay Chou','Fei Yu-ching']);
+  assert.equal(song.artist,'周杰伦 & 费玉清');
+  const {api:fresh,fetchFn}=qianLiFixture(),source=await fresh.getRecording(185880,{...target,fetchFn});
+  assert.deepEqual(source.song.creditedArtistNames,['Jay Chou','Fei Yu-ching']);
+  assert.ok(source.lyrics.lines.every(line=>line.vocalTiming));
+  assert.equal(calls.filter(u=>u.pathname==='/artist/detail').length,2);
+});
+
+test('reviewed artist aliases require the fresh provider ID, name and anchor alias without weakening recording checks',async()=>{
+  const target=spotifySearchRequest(qianLiRecording);
+  for(const options of [
+    {changeProfile:p=>p.id===2747?{...p,id:999}:p},
+    {changeProfile:p=>p.id===2747?{...p,name:'Other Singer'}:p},
+    {changeProfile:p=>p.id===2747?{...p,alias:['Other Singer']}:p},
+    {song:{...qianLiSong,artists:[qianLiSong.artists[0],{id:999,name:'费玉清'}]},
+      performerProfiles:{...qianLiProfiles,999:{...qianLiProfiles[2747],id:999}}},
+    {song:{...qianLiSong,name:'千里之外 (Live)'}},
+    {song:{...qianLiSong,duration:260000}},
+    {song:{...qianLiSong,artists:[qianLiSong.artists[0]]}}
+  ]) {
+    const {api}=qianLiFixture(options);
+    await assert.rejects(()=>api.searchSong(target.artist,target.title,target),{code:'recording_mismatch'});
+  }
+  const {api}=qianLiFixture();
+  await assert.rejects(()=>api.searchSong(target.artist,target.title,{...target,creditedArtistNames:['Chou Jay','Fei Yu-ching']}),
+    {code:'recording_mismatch'});
+});
+
+test('the reported Spotify duet keeps NetEase measured timing through acquisition, save and reopen',async t=>{
+  const {db,store}=await libraryDB();t.after(()=>db.close());
+  const {api}=qianLiFixture();
+  const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}},
+    resolveCatalogAliasesFn:()=>assert.fail('Spotify must not use Apple aliases')});
+  const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(service),
+    authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
+  const call=async body=>{
+    const res=createMockRes();await handler(createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res);return res;
+  };
+  const first=await call({action:'lyrics',recording:qianLiRecording,refresh:true});
+  assert.equal(first.statusCode,200);
+  const doc=first.body.document,response=doc.response;
+  assert.equal(response.song.id,185880);
+  assert.equal(response.quality.synced,true);
+  assert.deepEqual(response.lines.map(l=>l.timestamp),[12,18]);
+  assert.ok(response.lines.every(l=>l.vocalTiming?.segments.length===2));
+  assert.equal(doc.recordingBinding.source.provider,'netease');
+  const reopened=await call({action:'lyrics',recording:qianLiRecording});
+  assert.equal(reopened.statusCode,200);
+  assert.equal(reopened.body.document.id,doc.id);
+  assert.deepEqual(reopened.body.document.response.lines,response.lines);
+  verifySpotifyBinding(reopened.body.document.recordingBinding,qianLiRecording,sourceCapsule(response),SELECTION_REVISION,response,{durable:true});
+  assert.equal(Number((await store.usage()).jobs),0);
 });
 
 test('provider localization cannot drop or invent a contributor or accept wrong metadata',async()=>{
