@@ -25,7 +25,7 @@ export const SESSION_V2_REACTION_SET=freeze({revision:1,ids:['heart','fire','cla
 
 // canonicalCommandHash establishes raw-byte, numeric-token and structural bounds
 // before any protocol parsing. There is deliberately no preparsed-object API.
-function parseRaw(rawJSON){
+export function parseBoundedSessionJSON(rawJSON){
  canonicalCommandHash(rawJSON);
  // JSON.parse erases duplicate keys, including escaped aliases. Refuse these
  // ambiguous commands even though the foundational hasher permits them. This
@@ -93,7 +93,7 @@ function transportPayload(payload,expected,transportActor){
  * The returned command and semantic hash are bound by deep immutability.
  */
 export function validateCommand(rawJSON,{transportActor}={}){
- const command=parseRaw(rawJSON);
+ const command=parseBoundedSessionJSON(rawJSON);
  keys(command,['version','action','sessionID','commandID','expected','payload']);
  if(command.version!==2||!uuid(command.sessionID)||!uuid(command.commandID))invalid();
  const {action,expected,payload}=command;
@@ -135,7 +135,7 @@ export function validateCommand(rawJSON,{transportActor}={}){
 
 /** Exact shared recording tuple, not availability, a selection ticket or rights. */
 export function validateRecordingDescriptor(rawJSON){
- const recording=parseRaw(rawJSON);
+ const recording=parseBoundedSessionJSON(rawJSON);
  keys(recording,['provider','catalogID','storefront','versionMetadata','catalogRevision']);
  const {provider,catalogID,storefront,versionMetadata,catalogRevision}=recording;
  if(!['appleMusic','spotify'].includes(provider)||typeof catalogID!=='string'||

@@ -1,4 +1,5 @@
 import {types} from 'node:util';
+import {parseBoundedSessionJSON} from './protocol.js';
 
 const {isMap, isProxy} = types;
 const mapGet = Function.prototype.call.bind(Map.prototype.get);
@@ -16,8 +17,8 @@ function dataProperty(object, key) {
 }
 
 function copySlots(slots) {
-  // Reject proxies before any reflection, including revoked proxies. Read only
-  // own data descriptors: caller iterators, accessors and coercions never run.
+  // Only the bounded parser's output reaches reflection. Eager key enumeration
+  // cannot allocate an unbounded array from preparsed caller objects here.
   if (isProxy(slots) || !Array.isArray(slots) || Object.getPrototypeOf(slots) !== Array.prototype) invalid();
   const length = dataProperty(slots, 'length');
   if (length > 100 || Reflect.ownKeys(slots).length !== length + 1) invalid();
@@ -44,16 +45,26 @@ function copySlots(slots) {
   return copied;
 }
 
+function parseSlots(rawSlotsJSON) {
+  let projection;
+  try { projection = parseBoundedSessionJSON(rawSlotsJSON); }
+  catch { invalid(); } // Preserve this helper's content-free programming error.
+  if (Reflect.ownKeys(projection).length !== 1 || !Object.hasOwn(projection, 'slots')) invalid();
+  return copySlots(projection.slots);
+}
+
 /** Pure upcoming-only implementation of the approved fair(slots, turns, joins).
+ * rawSlotsJSON must encode exactly {slots: [four-field upcoming slots]}, <=16 KiB.
+ * Preparsed objects are never reflected upon, coerced or serialized by this API.
  * Maps are trusted server-domain snapshots, read without calling their methods.
  * Keys exactly match contributor UUID strings; missing observed counts mean zero.
  * Returns a frozen array of original occurrence UUID strings. See the fairness
  * design note for the upstream observation, pinning and toggle responsibilities.
  */
-export function fair(slots, observedTurns, firstJoinOrdinals) {
+export function fair(rawSlotsJSON, observedTurns, firstJoinOrdinals) {
   if (isProxy(observedTurns) || !isMap(observedTurns) ||
       isProxy(firstJoinOrdinals) || !isMap(firstJoinOrdinals)) invalid();
-  const copied = copySlots(slots);
+  const copied = parseSlots(rawSlotsJSON);
   const automatic = copied.filter(slot => slot.automatic).sort((a, b) => a.acceptanceSeq - b.acceptanceSeq);
   const contributors = new Map(), ranked = [];
   let consultedTurns = 0;
