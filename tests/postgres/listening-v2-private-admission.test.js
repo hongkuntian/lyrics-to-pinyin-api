@@ -429,10 +429,25 @@ async function commandFirst(f,{observerFailure=false,cancelRevoker=false}={}){
   // Command-first: release mutation, drain command AND blocked revoker query,
   // THEN roll back/release that revoker. Never queue ROLLBACK behind a held
   // UPDATE and wait for it before releasing the command (the old R1 bug).
-  hold.release();
-  try{if(first)await first;if(write)await write;}
-  finally{try{await rollbackRelease(r?.lease);}finally{cleanupScopes.delete(cleanup);}}
+  hold.release();const failures=[];
+  try{
+   // outcome() resolves rejections as data. Drain both before inspecting either
+   // so an unexpected failure cannot be hidden by the observer sentinel.
+   const [command,revocation]=await Promise.all([first,write]);
+   if(first)try{success(command);}catch(error){failures.push(error);}
+   if(write){
+    if(revocation.error)failures.push(revocation.error);
+    else try{assert.equal(revocation.value.rowCount,1);}catch(error){failures.push(error);}
+   }
+  }catch(error){failures.push(error);}
+  finally{
+   try{await rollbackRelease(r?.lease);}catch(error){failures.push(error);}
+   finally{cleanupScopes.delete(cleanup);}
+  }
+  if(failures.length===1)throw failures[0];
+  if(failures.length)throw new AggregateError(failures,'command-first cleanup failures');
  };cleanupScopes.add(cleanup);
+ let operationError;
  try{
   s=service(f,'command-first',{hold});
   first=outcome(s.execute(input));const held=await entered(hold,first);
@@ -448,7 +463,12 @@ async function commandFirst(f,{observerFailure=false,cancelRevoker=false}={}){
   if(observerFailure)throw new Error('injected observer failure after real command-first lock');
   hold.release();success(await first);assert.equal((await write).error,undefined);
   assert.equal((await write).value.rowCount,1);await r.lease.client.query('COMMIT');
- }finally{await cleanup();}
+ }catch(error){operationError=error;}
+ try{await cleanup();}catch(error){
+  if(operationError)throw new AggregateError([operationError,error],'command-first operation and cleanup failures');
+  throw error;
+ }
+ if(operationError)throw operationError;
  assert.equal(s.record.transactions.length,1);await quiescent();return {input,s};
 }
 
