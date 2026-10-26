@@ -1,0 +1,846 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lyrica.app/contracts/sessions-v2-command.schema.json",
+  "title": "Sessions V2 core room-mutation envelope only",
+  "description": "No route or capability is enabled. x-transportActor is supplied by the server, never by the command. Raw JSON admission also applies before schema validation. See docs/design/sessions-v2-wire-contract.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "action",
+    "sessionID",
+    "commandID",
+    "expected",
+    "payload"
+  ],
+  "properties": {
+    "version": {
+      "const": 2
+    },
+    "action": {
+      "enum": [
+        "queue.add",
+        "queue.move",
+        "queue.remove",
+        "settings.update",
+        "reaction.send",
+        "transport.request",
+        "transport.undo"
+      ]
+    },
+    "sessionID": {
+      "$ref": "#/$defs/uuid"
+    },
+    "commandID": {
+      "$ref": "#/$defs/uuid"
+    },
+    "expected": {
+      "type": "object"
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "action": {
+          "const": "queue.add"
+        },
+        "expected": {
+          "$ref": "#/$defs/queueExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/queueAddPayload"
+        }
+      }
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "queue.move"
+        },
+        "expected": {
+          "$ref": "#/$defs/queueExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/queueMovePayload"
+        }
+      }
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "queue.remove"
+        },
+        "expected": {
+          "$ref": "#/$defs/queueExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/queueRemovePayload"
+        }
+      }
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "settings.update"
+        },
+        "expected": {
+          "$ref": "#/$defs/settingsExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/settingsPayload"
+        }
+      }
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "reaction.send"
+        },
+        "expected": {
+          "$ref": "#/$defs/emptyExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/reactionPayload"
+        }
+      }
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.undo"
+        },
+        "expected": {
+          "$ref": "#/$defs/undoExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/undoPayload"
+        }
+      }
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.request"
+        },
+        "expected": {
+          "$ref": "#/$defs/initialTransportExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/startPayload"
+        }
+      },
+      "x-transportActor": "original_host"
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.request"
+        },
+        "expected": {
+          "$ref": "#/$defs/initialTransportExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/adopt_currentPayload"
+        }
+      },
+      "x-transportActor": "original_host"
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.request"
+        },
+        "expected": {
+          "$ref": "#/$defs/transportExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/resumePayload"
+        }
+      },
+      "x-transportActor": "original_host"
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.request"
+        },
+        "expected": {
+          "$ref": "#/$defs/transportExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/seekPayload"
+        }
+      },
+      "x-transportActor": "original_host"
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.request"
+        },
+        "expected": {
+          "$ref": "#/$defs/transportExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/backPayload"
+        }
+      },
+      "x-transportActor": "original_host"
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.request"
+        },
+        "expected": {
+          "$ref": "#/$defs/transportExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/backGuestPayload"
+        }
+      },
+      "x-transportActor": "guest"
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.request"
+        },
+        "expected": {
+          "$ref": "#/$defs/transportExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/pausePayload"
+        }
+      },
+      "x-transportActor": "original_host"
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.request"
+        },
+        "expected": {
+          "$ref": "#/$defs/transportExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/pauseGuestPayload"
+        }
+      },
+      "x-transportActor": "guest"
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.request"
+        },
+        "expected": {
+          "$ref": "#/$defs/transportExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/nextPayload"
+        }
+      },
+      "x-transportActor": "original_host"
+    },
+    {
+      "properties": {
+        "action": {
+          "const": "transport.request"
+        },
+        "expected": {
+          "$ref": "#/$defs/transportExpected"
+        },
+        "payload": {
+          "$ref": "#/$defs/nextGuestPayload"
+        }
+      },
+      "x-transportActor": "guest"
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "opaqueReference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^[\\x21-\\x7e]+$"
+    },
+    "emptyExpected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {}
+    },
+    "queueExpected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "queueRevision"
+      ],
+      "properties": {
+        "queueRevision": {
+          "$ref": "#/$defs/revision"
+        }
+      }
+    },
+    "settingsExpected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "settingsRevision"
+      ],
+      "properties": {
+        "settingsRevision": {
+          "$ref": "#/$defs/revision"
+        }
+      }
+    },
+    "queueAddPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "catalogSelectionID",
+        "placement"
+      ],
+      "properties": {
+        "catalogSelectionID": {
+          "$ref": "#/$defs/opaqueReference"
+        },
+        "placement": {
+          "enum": [
+            "next",
+            "end"
+          ]
+        }
+      }
+    },
+    "queueMovePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "occurrenceID",
+        "beforeOccurrenceID"
+      ],
+      "properties": {
+        "occurrenceID": {
+          "$ref": "#/$defs/uuid"
+        },
+        "beforeOccurrenceID": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "queueRemovePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "occurrenceID"
+      ],
+      "properties": {
+        "occurrenceID": {
+          "$ref": "#/$defs/uuid"
+        }
+      }
+    },
+    "settingsPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 320,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*$",
+          "x-maxUTF8Bytes": 320,
+          "allOf": [
+            {
+              "pattern": "\\S"
+            }
+          ],
+          "x-maxGraphemes": 80
+        },
+        "askBeforeJoin": {
+          "type": "boolean"
+        },
+        "takeTurns": {
+          "type": "boolean"
+        }
+      },
+      "minProperties": 1
+    },
+    "reactionPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "occurrenceID",
+        "visitID",
+        "transitionRevision",
+        "reactionSetRevision",
+        "reactionID"
+      ],
+      "properties": {
+        "occurrenceID": {
+          "$ref": "#/$defs/uuid"
+        },
+        "visitID": {
+          "$ref": "#/$defs/uuid"
+        },
+        "transitionRevision": {
+          "$ref": "#/$defs/revision"
+        },
+        "reactionSetRevision": {
+          "const": 1
+        },
+        "reactionID": {
+          "enum": [
+            "heart",
+            "fire",
+            "clap",
+            "laugh",
+            "microphone",
+            "teary_eyed"
+          ]
+        }
+      }
+    },
+    "reactionSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "ids"
+      ],
+      "properties": {
+        "revision": {
+          "const": 1
+        },
+        "ids": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "const": [
+            "heart",
+            "fire",
+            "clap",
+            "laugh",
+            "microphone",
+            "teary_eyed"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "transportExpected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorityEpoch",
+        "transitionRevision",
+        "queueRevision",
+        "occurrenceID",
+        "visitID"
+      ],
+      "properties": {
+        "authorityEpoch": {
+          "$ref": "#/$defs/revision"
+        },
+        "transitionRevision": {
+          "$ref": "#/$defs/revision"
+        },
+        "queueRevision": {
+          "$ref": "#/$defs/revision"
+        },
+        "occurrenceID": {
+          "$ref": "#/$defs/uuid"
+        },
+        "visitID": {
+          "$ref": "#/$defs/uuid"
+        }
+      }
+    },
+    "initialTransportExpected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorityEpoch",
+        "transitionRevision",
+        "queueRevision",
+        "occurrenceID",
+        "visitID"
+      ],
+      "properties": {
+        "authorityEpoch": {
+          "$ref": "#/$defs/revision"
+        },
+        "transitionRevision": {
+          "$ref": "#/$defs/revision"
+        },
+        "queueRevision": {
+          "$ref": "#/$defs/revision"
+        },
+        "occurrenceID": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visitID": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "occurrenceID": {
+              "type": "null"
+            },
+            "visitID": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "properties": {
+            "occurrenceID": {
+              "$ref": "#/$defs/uuid"
+            },
+            "visitID": {
+              "$ref": "#/$defs/uuid"
+            }
+          }
+        }
+      ]
+    },
+    "undoExpected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorityEpoch",
+        "transitionRevision",
+        "occurrenceID",
+        "visitID"
+      ],
+      "properties": {
+        "authorityEpoch": {
+          "$ref": "#/$defs/revision"
+        },
+        "transitionRevision": {
+          "$ref": "#/$defs/revision"
+        },
+        "occurrenceID": {
+          "$ref": "#/$defs/uuid"
+        },
+        "visitID": {
+          "$ref": "#/$defs/uuid"
+        }
+      }
+    },
+    "undoPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controlID"
+      ],
+      "properties": {
+        "controlID": {
+          "$ref": "#/$defs/uuid"
+        }
+      }
+    },
+    "recordingDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "catalogID",
+        "storefront",
+        "versionMetadata",
+        "catalogRevision"
+      ],
+      "properties": {
+        "provider": {
+          "enum": [
+            "appleMusic",
+            "spotify"
+          ]
+        },
+        "catalogID": {
+          "type": "string"
+        },
+        "storefront": {
+          "type": "string",
+          "pattern": "^[a-z]{2}$"
+        },
+        "versionMetadata": {
+          "$ref": "#/$defs/versionMetadata"
+        },
+        "catalogRevision": {
+          "$ref": "#/$defs/revision"
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "provider": {
+              "const": "appleMusic"
+            },
+            "catalogID": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,19}$"
+            }
+          }
+        },
+        {
+          "properties": {
+            "provider": {
+              "const": "spotify"
+            },
+            "catalogID": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9]{22}$"
+            }
+          }
+        }
+      ]
+    },
+    "versionMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "artist",
+        "album",
+        "durationMS"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*$",
+          "x-maxUTF8Bytes": 1200,
+          "allOf": [
+            {
+              "pattern": "\\S"
+            }
+          ]
+        },
+        "artist": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*$",
+          "x-maxUTF8Bytes": 2000,
+          "allOf": [
+            {
+              "pattern": "\\S"
+            }
+          ]
+        },
+        "album": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 300,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*$",
+          "x-maxUTF8Bytes": 1200
+        },
+        "durationMS": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 86400000
+        }
+      }
+    },
+    "startPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "targetOccurrenceID"
+      ],
+      "properties": {
+        "op": {
+          "const": "start"
+        },
+        "targetOccurrenceID": {
+          "$ref": "#/$defs/uuid"
+        }
+      }
+    },
+    "adopt_currentPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "sourceReference",
+        "origin"
+      ],
+      "properties": {
+        "op": {
+          "const": "adopt_current"
+        },
+        "sourceReference": {
+          "$ref": "#/$defs/opaqueReference"
+        },
+        "origin": {
+          "enum": [
+            "owned",
+            "following"
+          ]
+        }
+      }
+    },
+    "resumePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "resume"
+        }
+      }
+    },
+    "seekPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "positionMS"
+      ],
+      "properties": {
+        "op": {
+          "const": "seek"
+        },
+        "positionMS": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400000
+        }
+      }
+    },
+    "backPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "back"
+        }
+      }
+    },
+    "backGuestPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "holdProofVersion"
+      ],
+      "properties": {
+        "op": {
+          "const": "back"
+        },
+        "holdProofVersion": {
+          "const": 1
+        }
+      }
+    },
+    "pausePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "pause"
+        }
+      }
+    },
+    "pauseGuestPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "holdProofVersion"
+      ],
+      "properties": {
+        "op": {
+          "const": "pause"
+        },
+        "holdProofVersion": {
+          "const": 1
+        }
+      }
+    },
+    "nextPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op"
+      ],
+      "properties": {
+        "op": {
+          "const": "next"
+        }
+      }
+    },
+    "nextGuestPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "holdProofVersion"
+      ],
+      "properties": {
+        "op": {
+          "const": "next"
+        },
+        "holdProofVersion": {
+          "const": 1
+        }
+      }
+    }
+  },
+  "x-rawAdmission": {
+    "maxUTF8Bytes": 16384,
+    "numericTokens": "decimal-safe-integers-only",
+    "duplicateProperties": "refused"
+  }
+}

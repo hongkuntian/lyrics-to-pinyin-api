@@ -1,0 +1,2856 @@
+{
+  "version": 2,
+  "schemaRevision": 1,
+  "scope": "core-room-mutations-only-disabled",
+  "reactionSet": {
+    "revision": 1,
+    "ids": [
+      "heart",
+      "fire",
+      "clap",
+      "laugh",
+      "microphone",
+      "teary_eyed"
+    ]
+  },
+  "commands": [
+    {
+      "id": "queue-add-end",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "queue-add-next",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 0
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.2",
+          "placement": "next"
+        }
+      }
+    },
+    {
+      "id": "queue-move-before",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "queue.move",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "beforeOccurrenceID": "55555555-5555-4555-8555-555555555555"
+        }
+      }
+    },
+    {
+      "id": "queue-move-end",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "queue.move",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "beforeOccurrenceID": null
+        }
+      }
+    },
+    {
+      "id": "queue-remove",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "queue.remove",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333"
+        }
+      }
+    },
+    {
+      "id": "settings-patch",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 0
+        },
+        "payload": {
+          "title": "Together 今晚",
+          "askBeforeJoin": true,
+          "takeTurns": false
+        }
+      }
+    },
+    {
+      "id": "settings-false-is-present",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 1
+        },
+        "payload": {
+          "askBeforeJoin": false
+        }
+      }
+    },
+    {
+      "id": "settings-title-grapheme-boundary",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 1
+        },
+        "payload": {
+          "title": "👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤👩‍🎤"
+        }
+      }
+    },
+    {
+      "id": "reaction-heart",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "heart"
+        }
+      }
+    },
+    {
+      "id": "reaction-fire",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "fire"
+        }
+      }
+    },
+    {
+      "id": "reaction-clap",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "clap"
+        }
+      }
+    },
+    {
+      "id": "reaction-laugh",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "laugh"
+        }
+      }
+    },
+    {
+      "id": "reaction-microphone",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "microphone"
+        }
+      }
+    },
+    {
+      "id": "reaction-teary_eyed",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "teary_eyed"
+        }
+      }
+    },
+    {
+      "id": "host-start",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "start",
+          "targetOccurrenceID": "55555555-5555-4555-8555-555555555555"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "host-adopt_current",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "adopt_current",
+          "sourceReference": "capture.synthetic.1",
+          "origin": "owned"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "host-resume",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "resume"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "host-seek",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "seek",
+          "positionMS": 0
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "host-back",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "back"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "guest-back",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "back",
+          "holdProofVersion": 1
+        }
+      },
+      "transportActor": "guest"
+    },
+    {
+      "id": "host-pause",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "pause"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "guest-pause",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "pause",
+          "holdProofVersion": 1
+        }
+      },
+      "transportActor": "guest"
+    },
+    {
+      "id": "host-next",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "guest-next",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "holdProofVersion": 1
+        }
+      },
+      "transportActor": "guest"
+    },
+    {
+      "id": "host-adopt-following",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "adopt_current",
+          "sourceReference": "capture.synthetic.1",
+          "origin": "following"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "host-start-after-ended-visit",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "start",
+          "targetOccurrenceID": "55555555-5555-4555-8555-555555555555"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-undo",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "transport.undo",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "controlID": "55555555-5555-4555-8555-555555555555"
+        }
+      }
+    },
+    {
+      "id": "safe-revision-maximum",
+      "valid": true,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 9007199254740991
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "envelope-version",
+      "valid": false,
+      "command": {
+        "version": 1,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "envelope-action",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "envelope-host",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        },
+        "host": true
+      }
+    },
+    {
+      "id": "envelope-actorID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        },
+        "actorID": "caller"
+      }
+    },
+    {
+      "id": "envelope-batch",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        },
+        "batch": []
+      }
+    },
+    {
+      "id": "envelope-creationTicket",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        },
+        "creationTicket": "later"
+      }
+    },
+    {
+      "id": "missing-version",
+      "valid": false,
+      "command": {
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "missing-action",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "missing-sessionID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "missing-commandID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "missing-expected",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "missing-payload",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        }
+      }
+    },
+    {
+      "id": "invalid-sessionID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "not-a-uuid",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "invalid-commandID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "not-a-uuid",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-create",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "create",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-restart",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "restart",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-host.capture",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "host.capture",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-execution.claim",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "execution.claim",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-admission.request",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "admission.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-recap.read",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "recap.read",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-privacy.erase",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "privacy.erase",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-handoff.commit",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "handoff.commit",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-queue.batch",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.batch",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-transport.play",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.play",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "unsupported-capabilities",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "capabilities",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "revision--1",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": -1
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "revision-9007199254740992",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 9007199254740992
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "revision-1.5",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 1.5
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "revision-12",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": "12"
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "revision-None",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": null
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "wrong-expected-field",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12,
+          "settingsRevision": 1
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "extra-payload-identity",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end",
+          "contributorID": "33333333-3333-4333-8333-333333333333"
+        }
+      }
+    },
+    {
+      "id": "empty-selection",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "oversize-selection",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "selection-space",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "bad token",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "wrong-placement",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "play_now"
+        }
+      }
+    },
+    {
+      "id": "queue-add-recording",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end",
+          "recording": {}
+        }
+      }
+    },
+    {
+      "id": "queue-move-missing-null",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.move",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333"
+        }
+      }
+    },
+    {
+      "id": "queue-remove-move-field",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.remove",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "beforeOccurrenceID": null
+        }
+      }
+    },
+    {
+      "id": "settings-empty",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 0
+        },
+        "payload": {}
+      }
+    },
+    {
+      "id": "settings-v1-key",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 0
+        },
+        "payload": {
+          "title": "Together 今晚",
+          "askBeforeJoin": true,
+          "takeTurns": false,
+          "ask": true
+        }
+      }
+    },
+    {
+      "id": "settings-title-81",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 0
+        },
+        "payload": {
+          "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "askBeforeJoin": true,
+          "takeTurns": false
+        }
+      }
+    },
+    {
+      "id": "settings-title-utf8-324",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 0
+        },
+        "payload": {
+          "title": "á́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́",
+          "askBeforeJoin": true,
+          "takeTurns": false
+        }
+      }
+    },
+    {
+      "id": "settings-title-bidi",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 0
+        },
+        "payload": {
+          "title": "ab‮cd",
+          "askBeforeJoin": true,
+          "takeTurns": false
+        }
+      }
+    },
+    {
+      "id": "settings-title-control",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 0
+        },
+        "payload": {
+          "title": "ab\ncd",
+          "askBeforeJoin": true,
+          "takeTurns": false
+        }
+      }
+    },
+    {
+      "id": "settings-boolean-type",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 0
+        },
+        "payload": {
+          "title": "Together 今晚",
+          "askBeforeJoin": true,
+          "takeTurns": 0
+        }
+      }
+    },
+    {
+      "id": "reaction-unknown",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "cry"
+        }
+      }
+    },
+    {
+      "id": "reaction-emoji",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "❤️"
+        }
+      }
+    },
+    {
+      "id": "reaction-revision",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 2,
+          "reactionID": "teary_eyed"
+        }
+      }
+    },
+    {
+      "id": "reaction-null-visit",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": null,
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "teary_eyed"
+        }
+      }
+    },
+    {
+      "id": "reaction-expected-queue",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "teary_eyed"
+        }
+      }
+    },
+    {
+      "id": "reaction-missing-occurrenceID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "teary_eyed"
+        }
+      }
+    },
+    {
+      "id": "reaction-missing-visitID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1,
+          "reactionID": "teary_eyed"
+        }
+      }
+    },
+    {
+      "id": "reaction-missing-transitionRevision",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "reactionSetRevision": 1,
+          "reactionID": "teary_eyed"
+        }
+      }
+    },
+    {
+      "id": "reaction-missing-reactionSetRevision",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionID": "teary_eyed"
+        }
+      }
+    },
+    {
+      "id": "reaction-missing-reactionID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "reaction.send",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {},
+        "payload": {
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "transitionRevision": 7,
+          "reactionSetRevision": 1
+        }
+      }
+    },
+    {
+      "id": "host-tap-with-guest-hold",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "holdProofVersion": 1
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "guest-without-hold",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next"
+        }
+      },
+      "transportActor": "guest"
+    },
+    {
+      "id": "transport-no-server-actor",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next"
+        }
+      }
+    },
+    {
+      "id": "transport-unknown-server-actor",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next"
+        }
+      },
+      "transportActor": "host"
+    },
+    {
+      "id": "guest-start-refused",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "start",
+          "targetOccurrenceID": "55555555-5555-4555-8555-555555555555"
+        }
+      },
+      "transportActor": "guest"
+    },
+    {
+      "id": "guest-adopt_current-refused",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "adopt_current",
+          "sourceReference": "capture.synthetic.1",
+          "origin": "owned"
+        }
+      },
+      "transportActor": "guest"
+    },
+    {
+      "id": "guest-resume-refused",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "resume"
+        }
+      },
+      "transportActor": "guest"
+    },
+    {
+      "id": "guest-seek-refused",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "seek",
+          "positionMS": 0
+        }
+      },
+      "transportActor": "guest"
+    },
+    {
+      "id": "transport-misplaced-host",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "host": true
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-misplaced-actorID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "actorID": "33333333-3333-4333-8333-333333333333"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-misplaced-positionMS",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "positionMS": 1
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-misplaced-targetOccurrenceID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "targetOccurrenceID": "55555555-5555-4555-8555-555555555555"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-misplaced-sourceReference",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "sourceReference": "capture"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-misplaced-origin",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "origin": "owned"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-misplaced-playing",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "playing": false
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-misplaced-providerVerb",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "providerVerb": "play"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-unknown-toggle",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "toggle"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-unknown-play",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "play"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-unknown-previous",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "previous"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-unknown-shuffle",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "shuffle"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "guest-hold-version",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next",
+          "holdProofVersion": 2
+        }
+      },
+      "transportActor": "guest"
+    },
+    {
+      "id": "transport-missing-authorityEpoch",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-missing-transitionRevision",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-missing-queueRevision",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-missing-occurrenceID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "next"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "transport-missing-visitID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333"
+        },
+        "payload": {
+          "op": "next"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "initial-partial-null",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": null
+        },
+        "payload": {
+          "op": "start",
+          "targetOccurrenceID": "55555555-5555-4555-8555-555555555555"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "noninitial-null-resume",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "resume"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "noninitial-null-seek",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "seek",
+          "positionMS": 0
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "noninitial-null-back",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "back"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "noninitial-null-pause",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "pause"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "noninitial-null-next",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "next"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "seek-bound--1",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "seek",
+          "positionMS": -1
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "seek-bound-86400001",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "seek",
+          "positionMS": 86400001
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "seek-bound-1",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "seek",
+          "positionMS": "1"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "seek-bound-0.5",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "op": "seek",
+          "positionMS": 0.5
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "adopt-bad-origin",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.request",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "queueRevision": 12,
+          "occurrenceID": null,
+          "visitID": null
+        },
+        "payload": {
+          "op": "adopt_current",
+          "sourceReference": "capture",
+          "origin": "automatic"
+        }
+      },
+      "transportActor": "original_host"
+    },
+    {
+      "id": "undo-null-visit",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.undo",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": null
+        },
+        "payload": {
+          "controlID": "55555555-5555-4555-8555-555555555555"
+        }
+      }
+    },
+    {
+      "id": "undo-unrelated-revision",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.undo",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444",
+          "queueRevision": 12
+        },
+        "payload": {
+          "controlID": "55555555-5555-4555-8555-555555555555"
+        }
+      }
+    },
+    {
+      "id": "undo-hold-field",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "transport.undo",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "authorityEpoch": 2,
+          "transitionRevision": 7,
+          "occurrenceID": "33333333-3333-4333-8333-333333333333",
+          "visitID": "44444444-4444-4444-8444-444444444444"
+        },
+        "payload": {
+          "controlID": "55555555-5555-4555-8555-555555555555",
+          "holdProofVersion": 1
+        }
+      }
+    },
+    {
+      "id": "trailing-newline-sessionID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111\n",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "trailing-newline-commandID",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222\n",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "trailing-newline-selection",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "queue.add",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "queueRevision": 12
+        },
+        "payload": {
+          "catalogSelectionID": "selection.synthetic.1\n",
+          "placement": "end"
+        }
+      }
+    },
+    {
+      "id": "trailing-newline-title",
+      "valid": false,
+      "command": {
+        "version": 2,
+        "action": "settings.update",
+        "sessionID": "11111111-1111-4111-8111-111111111111",
+        "commandID": "22222222-2222-4222-8222-222222222222",
+        "expected": {
+          "settingsRevision": 0
+        },
+        "payload": {
+          "title": "Tonight\n",
+          "askBeforeJoin": true,
+          "takeTurns": false
+        }
+      }
+    }
+  ],
+  "recordings": [
+    {
+      "id": "apple-recording",
+      "valid": true,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "spotify-recording",
+      "valid": true,
+      "recording": {
+        "provider": "spotify",
+        "catalogID": "Ab12Cd34Ef56Gh78Ij90Kl",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "wrong-provider",
+      "valid": false,
+      "recording": {
+        "provider": "youtube",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "apple-spotify-id",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "Ab12Cd34Ef56Gh78Ij90Kl",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "apple-uri",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "appleMusic:123",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "apple-leading-zero",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "0123",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "numeric-id",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": 123,
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "wrong-storefront",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "US",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "missing-version",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {},
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "extra-isrc",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1,
+        "isrc": "USAA"
+      }
+    },
+    {
+      "id": "duration-low",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 999
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "duration-high",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 86400001
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "revision-unsafe",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 9007199254740992
+      }
+    },
+    {
+      "id": "title-blank",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": " ",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "extra-version",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000,
+          "edition": "live"
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "spotify-apple-id",
+      "valid": false,
+      "recording": {
+        "provider": "spotify",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "recording-missing-provider",
+      "valid": false,
+      "recording": {
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "recording-missing-catalogID",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "recording-missing-storefront",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "recording-missing-versionMetadata",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "recording-missing-catalogRevision",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        }
+      }
+    },
+    {
+      "id": "trailing-newline-catalogID",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890\n",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "trailing-newline-storefront",
+      "valid": false,
+      "recording": {
+        "provider": "appleMusic",
+        "catalogID": "1234567890",
+        "storefront": "us\n",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    },
+    {
+      "id": "spotify-id-trailing-newline",
+      "valid": false,
+      "recording": {
+        "provider": "spotify",
+        "catalogID": "Ab12Cd34Ef56Gh78Ij90Kl\n",
+        "storefront": "us",
+        "versionMetadata": {
+          "title": "Exact song",
+          "artist": "Exact artist",
+          "album": "Studio version",
+          "durationMS": 210000
+        },
+        "catalogRevision": 1
+      }
+    }
+  ],
+  "rawInvalid": [
+    {
+      "id": "numeric-1.0000000000000001",
+      "raw": "{\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":1.0000000000000001},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}}"
+    },
+    {
+      "id": "numeric-1e-1000",
+      "raw": "{\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":1e-1000},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}}"
+    },
+    {
+      "id": "numeric-1.0",
+      "raw": "{\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":1.0},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}}"
+    },
+    {
+      "id": "numeric-1e0",
+      "raw": "{\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":1e0},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}}"
+    },
+    {
+      "id": "numeric-9007199254740991.1",
+      "raw": "{\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":9007199254740991.1},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}}"
+    },
+    {
+      "id": "numeric-9007199254740992",
+      "raw": "{\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":9007199254740992},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}}"
+    },
+    {
+      "id": "overwritten-invalid-numeric",
+      "raw": "{\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":1e-1000,\"queueRevision\":12},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}}"
+    },
+    {
+      "id": "duplicate-version",
+      "raw": "{\"version\":1,\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":12},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}}"
+    },
+    {
+      "id": "escaped-duplicate-key",
+      "raw": "{\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":11,\"queue\\u0052evision\":12},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}}"
+    },
+    {
+      "id": "malformed-batch-root",
+      "raw": "[{\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":12},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}}]"
+    },
+    {
+      "id": "malformed-json",
+      "raw": "{\"version\":2,\"action\":\"queue.add\",\"sessionID\":\"11111111-1111-4111-8111-111111111111\",\"commandID\":\"22222222-2222-4222-8222-222222222222\",\"expected\":{\"queueRevision\":12},\"payload\":{\"catalogSelectionID\":\"selection.synthetic.1\",\"placement\":\"end\"}"
+    }
+  ]
+}
