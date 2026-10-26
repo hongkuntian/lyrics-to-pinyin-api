@@ -2,12 +2,17 @@
 import assert from 'node:assert/strict';
 const base='https://lyrics-to-pinyin-api.vercel.app';
 const results=[];
-for(const path of ['/api/music-romanize','/api/romanize','/api/song-library','/api/app-auth'].flatMap(p=>[p,p+'.js'])) {
+for(const path of ['/api/music-romanize','/api/romanize','/api/song-library','/api/app-auth']) {
   const headers={'Content-Type':'application/json'};
   const response=await fetch(base+path,{method:'POST',headers,body:'{}',redirect:'error',signal:AbortSignal.timeout(15000)});
   const body=await response.json();assert.equal(response.status,401,path);assert.equal(body.code,'unauthorized');
   assert.match(response.headers.get('cache-control'),/private.*no-store/);
   results.push({path,status:response.status,code:body.code});
+  // The explicit deployment manifest exposes extension-free canonical routes;
+  // its terminal 404 also fences legacy aliases instead of adding endpoints.
+  const alias=await fetch(base+path+'.js',{method:'POST',headers,body:'{}',redirect:'error',signal:AbortSignal.timeout(15000)});
+  assert.equal(alias.status,404,path+'.js');
+  results.push({path:path+'.js',status:alias.status});
 }
 for(const path of ['/api/music-romanize','/api/romanize','/api/song-library']) {
   const response=await fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer beta_fixture'},body:'{}',redirect:'error',signal:AbortSignal.timeout(15000)});
