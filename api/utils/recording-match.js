@@ -4,6 +4,7 @@ import {cleanLyrics} from './lyric-quality.js';
 import {neteaseDescriptiveTitleMatches} from './netease-title-evidence.js';
 import {validTimingTimestamp,sourceDurationResolution} from './vocal-timing.js';
 import {simplifyRecordingScript} from './recording-script.js';
+import {recoveredArtistNames} from './artist-alias-recovery.js';
 const require=createRequire(import.meta.url);
 const {artists:reviewedArtists}=require('../data/lyric-performers.json');
 const escapePattern=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -176,7 +177,9 @@ export function recordingScore(song, request) {
 }
 export function findRecording(songs, request) {
   if (!songs.length) return null;
-  const ranked = songs.map(song=>({song,score:recordingScore(song,request)})).filter(x=>x.score>=0).sort((a,b)=>b.score-a.score);
+  const ranked = songs.map(song=>({song,score:recordingScore(song,request),
+    recovery:request.recordingProvider==='spotify'&&song.artistAliasEvidence?1:0}))
+    .filter(x=>x.score>=0).sort((a,b)=>a.recovery-b.recovery||b.score-a.score);
   if (!ranked.length) {
     if(request.recordingProvider==='spotify')throw new RecordingMismatchError(spotifyMismatchReason(songs,request));
     const bareTitle=title=>normalizeRecordingText(stripTitleDescription(title).replace(/\(\s*(?:live|remastered?|重制版|重製版)\s*\)/giu,''));
@@ -185,7 +188,8 @@ export function findRecording(songs, request) {
       && JSON.stringify(recordingNames(song).credits)===JSON.stringify(recordingNames(request).credits));
     throw new RecordingMismatchError(versionConflict?'version_conflict':'recording_mismatch');
   }
-  const tied=ranked.filter(item=>Math.abs(item.score-ranked[0].score)<1e-9).map(item=>item.song);
+  // An explicit provider alias remains stronger than a recovered name order.
+  const tied=ranked.filter(item=>item.recovery===ranked[0].recovery&&Math.abs(item.score-ranked[0].score)<1e-9).map(item=>item.song);
   if (tied.some(song=>song.id!==tied[0].id && !equivalentLyrics(tied[0],song))) throw new RecordingMismatchError('duplicate_candidates');
   return tied.sort((a,b)=>String(a.id).localeCompare(String(b.id),'en',{numeric:true}))[0];
 }
@@ -257,7 +261,9 @@ export function sameSpotifyRecordingNames(song,request) {
   const requested=structuredNames(request);if(!requested||typeof song.title!=='string'||typeof request.title!=='string')return false;
   // An explicitly supplied invalid source array cannot fall back to flat text.
   if(song.creditedArtistNames!==undefined&&!structuredNames(song))return false;
-  const source=structuredNames(song),left=spotifyTitle(song.title),right=spotifyTitle(request.title);
+  const recovered=song.artistAliasEvidence===undefined?null:recoveredArtistNames(song,request);
+  if(song.artistAliasEvidence!==undefined&&!recovered)return false;
+  const source=recovered??structuredNames(song),left=spotifyTitle(song.title),right=spotifyTitle(request.title);
   if(left.title!==right.title&&!neteaseDescriptiveTitleMatches(song,request,normalizeRecordingText))return false;
   const known=[...requested,...(source??[])];
   // Protect complete known names before interpreting feature separators. New

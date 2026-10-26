@@ -492,6 +492,52 @@
           }
         }
       }
+    },
+    {
+      "caseID": "spotify-3Pjp7lBM20zYzTlRurI6B7",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/3Pjp7lBM20zYzTlRurI6B7",
+      "metadataCapturedAt": "2026-10-26",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3Pjp7lBM20zYzTlRurI6B7",
+          "metadata": {
+            "origin": "spotify",
+            "title": "千里之外",
+            "artists": [
+              "Jay Chou",
+              "Fei Yu-ching"
+            ],
+            "album": "依然范特西",
+            "duration_ms": 256372
+          }
+        }
+      }
+    },
+    {
+      "caseID": "spotify-6WOwRdX67b4VKujGIal4tK",
+      "platform": "spotify",
+      "metadataURL": "https://open.spotify.com/track/6WOwRdX67b4VKujGIal4tK",
+      "metadataCapturedAt": "2026-10-26",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "6WOwRdX67b4VKujGIal4tK",
+          "metadata": {
+            "origin": "spotify",
+            "title": "因為愛情",
+            "artists": [
+              "Eason Chan",
+              "Faye Wong"
+            ],
+            "album": "Stranger Under My Skin",
+            "duration_ms": 216893
+          }
+        }
+      }
     }
   ]
 }

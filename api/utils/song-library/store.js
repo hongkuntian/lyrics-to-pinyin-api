@@ -1,4 +1,4 @@
-import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,modelContextFromSource,sourceCapsule} from './spotify-recording.js';
+import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,modelContextFromSource,sourceCapsule,validSpotifyCandidate} from './spotify-recording.js';
 import {canonicalTarget} from './languages.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {currentTranslationSQL,publishRevision,revisions} from './revisions.js';
@@ -101,7 +101,7 @@ export class SongLibraryStore {
       const r=value.requestRecording,s=value.sourceCapsule;
       if(!isSpotifyRecording(r))throw new LibraryError('invalid_recording',400);
       const h=spotifyHashes(r,s,value.selectionRevision),binding=spotifyBinding(r,s,value.selectionRevision,value.response,{durable:true});
-      if(value.requestKey!==h.requestHash||value.id!==h.documentID||value.sourceHash!==h.sourceHash||value.recordingKey!==h.recordingKey
+      if(!validSpotifyCandidate(value.requestEvidence?.candidate,r)||value.requestKey!==h.requestHash||value.id!==h.documentID||value.sourceHash!==h.sourceHash||value.recordingKey!==h.recordingKey
         ||value.textRevision!==h.textRevision||value.timingRevision!==h.timingRevision||value.readingRevision!==h.readingRevision
         ||value.requestEvidence?.requestHash!==h.requestHash||value.requestEvidence?.sourceHash!==h.sourceHash
         ||value.canonicalRecordingID!=null||canonicalJSON(value.structure)!==canonicalJSON(s.structure)

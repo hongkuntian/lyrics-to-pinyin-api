@@ -3,6 +3,7 @@ import {LibraryError} from './store.js';
 import {validLyricStructure} from '../lyric-annotations.js';
 import {timingQuality} from '../lyric-selection.js';
 import {validTimingProvenance} from '../vocal-timing.js';
+import {recordingScore} from '../recording-match.js';
 
 const matchEvidence=new WeakMap();
 export function attachSpotifyMatchEvidence(response,candidate) {matchEvidence.set(response,structuredClone(candidate));return response;}
@@ -60,6 +61,12 @@ export function spotifySearchRequest(value) {
   const r=spotifyRecording(value),m=r.metadata;
   return {recordingProvider:'spotify',recordingItemID:r.item_id,creditedArtistNames:[...m.artists],artist:m.artists.join(' & '),title:m.title,
     ...(m.album!==undefined?{album:m.album}:{}),duration:m.duration_ms/1000,...(m.isrc?{isrc:m.isrc}:{}),...(m.explicit!==undefined?{explicit:m.explicit}:{})};
+}
+// Legacy source-only documents may predate structured candidate evidence.
+// When supplied, full credits and recovery proof must survive save/reopen.
+export function validSpotifyCandidate(candidate,recording) {
+  if(candidate?.creditedArtistNames===undefined&&candidate?.artistAliasEvidence===undefined)return true;
+  try{return recordingScore(candidate,spotifySearchRequest(recording))>=0;}catch{return false;}
 }
 const providers=new Map([['lrclib','lrclib'],['LRCAPI','lrclib'],['netease','netease'],['NeteaseAPI','netease'],['kugou','kugou'],['KugouAPI','kugou'],['qq','qq'],['QQMusicAPI','qq']]);
 export const independentProvider=value=>providers.get(value)??null;

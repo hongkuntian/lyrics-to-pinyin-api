@@ -68,9 +68,16 @@ export function coverageGate(report,corpus,minimum){
  return {passed:rate>=minimum,minimum,rate,complete:candidate.completeMeasured,attempts:expected};
 }
 
+export function selectCatalogCases(corpus,ids) {
+ if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length||ids.some(id=>!corpus.cases.some(row=>row.caseID===id)))
+  throw new Error('invalid_case_selection');
+ return {...corpus,cases:corpus.cases.filter(row=>ids.includes(row.caseID)),
+  limitations:[...corpus.limitations,`Explicit subset: ${ids.length} of ${corpus.cases.length} maintained cases; not a whole-corpus result.`]};
+}
+
 async function main(){
- const {values}=parseArgs({options:{corpus:{type:'string',default:'docs/research/measured-discovery-corpus.json'},'baseline-root':{type:'string'},out:{type:'string'},runs:{type:'string',default:'1'},concurrency:{type:'string',default:'1'},'minimum-available-rate':{type:'string'}}});
- const corpus=JSON.parse(await readFile(values.corpus,'utf8')),modes=[];
+ const {values}=parseArgs({options:{corpus:{type:'string',default:'docs/research/measured-discovery-corpus.json'},'baseline-root':{type:'string'},out:{type:'string'},runs:{type:'string',default:'1'},concurrency:{type:'string',default:'1'},'minimum-available-rate':{type:'string'},'case-ids':{type:'string'}}});
+ const original=JSON.parse(await readFile(values.corpus,'utf8')),corpus=values['case-ids']?selectCatalogCases(original,values['case-ids'].split(',')):original,modes=[];
  const roots=[...(values['baseline-root']?[['baseline',resolve(values['baseline-root'])]]:[]),['candidate',fileURLToPath(new URL('..',import.meta.url))]];
  for(const [id,root] of roots){
   const {createMusicRomanizeService}=await import(pathToFileURL(resolve(root,'api/music-romanize.js')));

@@ -9,6 +9,7 @@ import {BoundedCache} from '../utils/bounded-cache.js';
 import {neteaseTitleEvidence,neteaseDescriptiveTitleMatches} from '../utils/netease-title-evidence.js';
 import {simplifyRecordingScript} from '../utils/recording-script.js';
 import {createRequire} from 'node:module';
+import {buildArtistAliasEvidence,recoveredArtistNames,recoverySearchTitle} from '../utils/artist-alias-recovery.js';
 const require=createRequire(import.meta.url);
 const {neteaseArtistAliases}=require('../data/lyric-performers.json');
 const performerIDs=raw=>Array.isArray(raw?.artists)&&raw.artists.length>0&&raw.artists.length<=3
@@ -50,10 +51,20 @@ export class NeteaseAPI extends BaseMusicAPI {
   async searchSong(artist,title,context={}) {
     context.signal?.throwIfAborted();
     const request={artist,title,...context},records=new Map(),profiles=new Map(),hydrated=new Set();
+    const plausibleMetadata=song=>(recordingNames(song).title===recordingNames(request).title
+      ||context.recordingProvider==='spotify'&&neteaseDescriptiveTitleMatches(song,request,normalizeRecordingText))
+      &&Number.isFinite(song.duration)&&Number.isFinite(request.duration)
+      &&recordingScore({...song,title,artist,artistAliasEvidence:undefined,
+        ...(context.recordingProvider==='spotify'?{creditedArtistNames:request.creditedArtistNames}:{})},request)>=0;
     let lastMismatch;
     const select=async()=> {
       const songs=[...records.values()].map(entry=>entry.song);
       const spotify=context.recordingProvider==='spotify';
+      const unresolvedRecovery=()=>songs.some(song=>song.artistAliasEvidence)
+        &&!songs.some(song=>!song.artistAliasEvidence&&recordingScore(song,request)>=0)
+        &&[...records.values()].some(({song,raw})=>plausibleMetadata(song)&&raw.artists?.some(p=>
+          !recordingNames(request).credits.includes(normalizeRecordingText(p.name))&&!profiles.has(String(p.id))));
+      if(unresolvedRecovery()){lastMismatch=new RecordingMismatchError('duplicate_candidates');return null;}
       const described=spotify?songs.filter(song=>neteaseDescriptiveTitleMatches(song,request,normalizeRecordingText)
         &&Number.isFinite(song.duration)&&Number.isFinite(request.duration)
         &&recordingScore({...song,title,artist,creditedArtistNames:request.creditedArtistNames},request)>=0):[];
@@ -77,6 +88,11 @@ export class NeteaseAPI extends BaseMusicAPI {
         if(plausible.includes(song)||!performerIDs(raw)||!raw.artists.every(p=>profiles.has(String(p.id))))continue;
         await this.resolveArtistAliases(song,raw.artists,request,context,profiles);
       }
+      if(unresolvedRecovery()) {
+        // A profile budget is not proof that an unexamined plausible artist
+        // cannot match. Do not turn the verified prefix into a fuzzy winner.
+        lastMismatch=new RecordingMismatchError('duplicate_candidates');return null;
+      }
       try { return findRecording(songs,request); }
       catch(error) { if(error.code!=='recording_mismatch') throw error;lastMismatch=error; }
       const ranked=songs.map(song=>({song,score:recordingScore(song,request)})).filter(item=>item.score>=0).sort((a,b)=>b.score-a.score);
@@ -95,11 +111,13 @@ export class NeteaseAPI extends BaseMusicAPI {
       return null;
     };
     for(const limit of [30,100]) {
-      const data=await fetchJSON(`${this.baseURL}/search?limit=${limit}&keywords=${encodeURIComponent(simplifyRecordingScript(`${artist} ${searchTitle(title)}`))}`,context);
+      const recoveryTitle=limit===100&&recoverySearchTitle(request)&&![...records.values()].some(({song})=>plausibleMetadata(song));
+      const query=recoveryTitle?searchTitle(title):`${artist} ${searchTitle(title)}`;
+      const data=await fetchJSON(`${this.baseURL}/search?limit=${limit}&keywords=${encodeURIComponent(simplifyRecordingScript(query))}`,context);
       if(data.code!==200) throw new Error('NetEase search unavailable');
       for(const raw of data.result?.songs || []) if(!records.has(raw.id)) {
         const song={id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease',...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),...(context.recordingProvider==='spotify'?{creditedArtistNames:raw.artists?.map(x=>x.name),...(raw.isrc?{isrc:raw.isrc}:{})}:{})};
-        records.set(raw.id,{raw,song:withTitleEvidence(song,raw,'alias',request)});
+        records.set(raw.id,{raw,song:withTitleEvidence({...song,...(recoveryTitle?{searchRecovery:'title_only_fallback'}:{})},raw,'alias',request)});
       }
       const song=await select();if(song) return this.measuredRelease(song,records,request,context);
       if(context.signal?.aborted) throw Object.assign(new Error('Lookup cancelled'),{name:'AbortError'});
@@ -177,6 +195,15 @@ export class NeteaseAPI extends BaseMusicAPI {
         if(recordingScore(song,request)>=0&&performers.every(p=>/^\d{1,20}$/.test(String(p.id))&&typeof p.name==='string'&&p.name.trim()))
           context.onVerifiedArtistCredits?.({names:performers.map(p=>p.name),aliases:[...aliases]});
       } else song.artist=aliases.join(' & ');
+    } else if(spotify) {
+      const verifiedProfiles=new Map(await Promise.all(performers.map(async p=>[String(p.id),
+        profiles.has(String(p.id))?await profiles.get(String(p.id)):[p.name]])));
+      const evidence=buildArtistAliasEvidence(song,performers,request,verifiedProfiles);
+      if(evidence) {
+        song.artistAliasEvidence=evidence;
+        if(recordingScore(song,request)>=0)
+          context.onVerifiedArtistCredits?.({names:performers.map(p=>p.name),aliases:recoveredArtistNames(song,request)});
+      }
     }
   }
   async getRecording(id,context={}) {

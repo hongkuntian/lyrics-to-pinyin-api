@@ -1,11 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runCatalogBenchmark,coverageGate} from '../../scripts/benchmark-catalog-word-timing.mjs';
+import {runCatalogBenchmark,coverageGate,selectCatalogCases} from '../../scripts/benchmark-catalog-word-timing.mjs';
 const sentinel='Invented lyric sentinel';
 const request={catalog_id:'123',artist:'Synthetic',title:'Synthetic',duration:30};
 const response={song:{id:42,duration:30},quality:{synced:true},metadata:{source:'NeteaseAPI',lyric_timing:{version:1,provider:'appleMusic',recordingID:'123',source:'netease:42:yrc',revision:'a'.repeat(64)}},
  lines:[{original:sentinel,timestamp:1,vocalTiming:{end:2,segments:[{text:sentinel,utf16Start:0,utf16Length:sentinel.length,start:1,end:2}]}}]};
 const mode=(id,body,status=200)=>({id,createService:()=>async(_,res)=>res.status(status).json(body)});
+test('explicit live subsets cannot silently omit an unknown or duplicate requested case',()=>{
+ const corpus={limitations:[],cases:[{caseID:'a'},{caseID:'b'},{caseID:'c'}]};
+ assert.deepEqual(selectCatalogCases(corpus,['c','a']).cases.map(row=>row.caseID),['a','c']);
+ assert.ok(selectCatalogCases(corpus,['a']).limitations.at(-1).includes('1 of 3'));
+ for(const ids of [[],['a','unknown'],['a','a']])assert.throws(()=>selectCatalogCases(corpus,ids),/invalid_case_selection/);
+ assert.equal(corpus.cases.length,3);
+});
 test('catalog benchmark counts exact bound words separately from readable and observed availability',async()=>{
  const corpus={version:1,limitations:[],cases:[{caseID:'invented',platform:'apple',request}]};
  const line=structuredClone(response);delete line.metadata.lyric_timing;delete line.lines[0].vocalTiming;

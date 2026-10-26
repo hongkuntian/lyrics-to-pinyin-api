@@ -37,7 +37,7 @@ export function createSpotifyLyricsService(dependencies={}) {
     const response=entry?.response,candidate=entry?.candidate;
     try {
       if(!candidate||String(candidate.id)!==String(response?.song?.id)||recordingScore(candidate,spotifySearchRequest(r))<0)return false;
-      if(candidate.neteaseTitleEvidence&&(candidate.source!=='netease'||independentProvider(response.metadata?.source)!=='netease'
+      if((candidate.neteaseTitleEvidence||candidate.artistAliasEvidence)&&(candidate.source!=='netease'||independentProvider(response.metadata?.source)!=='netease'
         ||candidate.title!==response.song?.title?.original||candidate.artist!==response.song?.artist?.original))return false;
       if(rejectRecordingLyricsFn(response.lines.map(l=>({text:l.original})),spotifySearchRequest(r)))return false;
       if(hasEmbeddedLyricCredits(response,spotifySearchRequest(r)))return false;
@@ -145,6 +145,9 @@ export function createSpotifyLyricsService(dependencies={}) {
         const responseFor=candidate=>{if(!formatted.has(candidate)){const work=measure('format',()=>formatCandidate(candidate));formatted.set(candidate,req.lyricDelivery?.own?req.lyricDelivery.own(work):work);}return formatted.get(candidate);};
         const formatCandidate=async selected=>{
         const {song,lyrics,api}=selected,languageDetails=analyzeLyricLanguageFn(lyrics.lines.map(l=>l.text??''),{genres:[],verified:false});
+        if(song.artistAliasEvidence||song.searchRecovery)logger.info?.('spotify_lyrics_recovery',{requestID,
+          provider:independentProvider(api.name),sourceID:String(song.id),search:song.searchRecovery??'original',
+          policy:song.artistAliasEvidence?.policy??null,rules:song.artistAliasEvidence?.performers.map(p=>p.rule)??[]});
         const language=dependencies.detectLanguageFn?await detectLanguageFn(lyrics.lines.map(l=>l.text).join('\n')):languageDetails.primary;
         const system=getDefaultRomanizationSystemFn(dependencies.detectLanguageFn?language:languageDetails.pronunciation_language);
         const processor=system==='none'?null:getProcessorFn(language);
@@ -198,7 +201,8 @@ export function createSpotifyLyricsService(dependencies={}) {
         const ttlMs=lyricResponseLifetimeMs(response);
         // Late ordinary work cannot replace a newer explicit refresh in memory.
         const candidate={id:String(song.id),title:song.title,artist:song.artist,duration:song.duration,
-          ...(song.neteaseTitleEvidence?{source:'netease',neteaseTitleEvidence:structuredClone(song.neteaseTitleEvidence)}:{}),
+          ...(song.neteaseTitleEvidence||song.artistAliasEvidence?{source:'netease'}:{}),
+          ...Object.fromEntries(['neteaseTitleEvidence','artistAliasEvidence'].filter(k=>song[k]!==undefined).map(k=>[k,structuredClone(song[k])])),
           ...Object.fromEntries(['album','creditedArtistNames','isrc','explicit'].filter(k=>song[k]!==undefined).map(k=>[k,song[k]]))};
         const entry={response,candidate,metadata:{acquisition_started_at:acquisitionStartedAt}};
         if(canHint)verifiedContext=verifiedContext??contexts.spotify(r,response,acquisitionStartedAt);

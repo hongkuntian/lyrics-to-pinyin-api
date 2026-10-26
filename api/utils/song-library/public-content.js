@@ -1,4 +1,4 @@
-import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,sourceCapsule,spotifyHash} from './spotify-recording.js';
+import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,sourceCapsule,spotifyHash,validSpotifyCandidate} from './spotify-recording.js';
 import {LYRIC_NORMALIZATION_VERSION,publicLyricStructure,publicRawLyrics} from '../lyric-annotations.js';
 import {digest,LibraryError} from './store.js';
 import {isRejectedRecordingLyrics} from '../rejected-lyrics.js';
@@ -38,7 +38,7 @@ export function publicDocument(doc,request=null) {
     if(isRejectedRecordingLyrics(doc.response.lines.map(l=>({text:l.original})),request))throw new LibraryError('recording_mismatch');
     const h=spotifyHashes(request,doc.sourceCapsule,doc.selectionRevision),e=doc.requestEvidence;
     const binding=spotifyBinding(request,doc.sourceCapsule,doc.selectionRevision,doc.response,{durable:true});
-    if(doc.canonicalRecordingID!=null||canonicalJSON(e.source)!==canonicalJSON(binding.source)||canonicalJSON(e.match)!==canonicalJSON(binding.match)
+    if(!validSpotifyCandidate(e.candidate,request)||doc.canonicalRecordingID!=null||canonicalJSON(e.source)!==canonicalJSON(binding.source)||canonicalJSON(e.match)!==canonicalJSON(binding.match)
       ||e.requestHash!==h.requestHash||doc.requestKey!==h.requestHash||e.sourceHash!==h.sourceHash||doc.sourceHash!==h.sourceHash
       ||doc.id!==h.documentID||doc.recordingKey!==h.recordingKey||doc.textRevision!==h.textRevision||doc.timingRevision!==h.timingRevision||doc.readingRevision!==h.readingRevision
       ||canonicalJSON(doc.requestRecording)!==canonicalJSON(request)||canonicalJSON(doc.sourceCapsule)!==canonicalJSON(sourceCapsule(doc.response))
