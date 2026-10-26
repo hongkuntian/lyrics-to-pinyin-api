@@ -1,6 +1,22 @@
 # Manual PostgreSQL token-lock qualification
 
-Status: **SOURCE ONLY; AUTHORED, NOT EXECUTED.** The author ran only `node --check` on the test postimage. That checks JavaScript syntax without imports; it establishes no SQL, role, migration, concurrency or deployment result. Root owns review, application, local execution and all subsequent acceptance. V2 remains disabled.
+Status: Root executed the harness and completed its bounded source review. V2 remains disabled.
+
+## Root verification and deployment
+
+The combined backend gate executed at `84232418b983ccc5e74ff1ce67974f13a0b5ae0b`: **778 unit, 727 integration and 21 contract tests (1,526 total)**, zero failures/skips, 114.621 seconds after canonical `npm ci`. Two obsolete account/Spotify fixtures failed the first combined run; their corrected complete files passed 18 cases before the green full run. Independent source review approved that repair.
+
+Candidate `f084dbbeb6e873c904a06dd89581126a53bed9e6` adds only the manual PostgreSQL file and this document outside the hermetic globs; all hermetic inputs match the checked candidate. Root ran its **eight cases on actual PostgreSQL 17.11**, zero failures/skips, with observed-ACL restricted NOLOGIN roles, real migration/replay, AppAuthStore, SpotifyStore, current-auth and both AccountStore sign-out frontiers. Observer-failure controls drain both contenders. The first attempt safely refused preexisting fixed role names in an earlier owned cluster; those roles were untouched. The green attempt used a fresh private cluster, removed only its own databases/aliases and stopped the server. This supplements the writer's 111 affected PGlite passes and 42 actual owner-role PostgreSQL passes; six same-test foreign-digest failures on the earlier writer establish the repair's negative control.
+
+Independent reviews approve writer R2, migration R1, fixture R1 and this harness R1. Root separately reproduced the one-shot operator's target/proof/outcome defects with three synthetic VM failures, repaired them, obtained three VM passes and independent R2 approval. VM imports/filesystem/DBs were simulated; these are operator guard tests, not SQL evidence.
+
+Exact `032-auth-token-row-locks.sql` (SHA-256 `c19650a29438ebeea186203d954fee8e144a65ca6d42ad91bc38c18f1f7e5df6`) committed at **2026-10-26 19:57:05 UTC** on the qualified PG18.6 target. All 29 prior receipts matched. Fresh owner/runtime endpoint pins, shared advisory-lock namespace, cluster system identifier and database OID bound the operation to its inspected target. The operator exclusively reserved and synced its intent, source/proof digests and append-only commit journal before COMMIT; ambiguous outcomes never trigger reapplication. Selected evidence is retained outside disposable checkouts under `redesign-parity-20261025/auth-migration32-attempt-1/`.
+
+Live post-commit catalogs show the validated false-only Boolean constraint. Effective runtime authority is token SELECT and `UPDATE(auth_lock_anchor)` only, with no table UPDATE or existing-field UPDATE. A zero-row token lock and zero-row false-anchor UPDATE admit; existing-field UPDATE, INSERT and DELETE each refuse with `42501`. Those probes changed no credential row. Existing account zero-row user/token/key/session/connection locks also admitted. Neither 030 nor 031 was registered or applied.
+
+These are local synthetic real-method/concurrency tests plus live catalog, deployment identity and zero-row ACL checks. They do not establish live attestation/account/provider journeys, actual V2 command/receipt races, lifecycle withdrawal/scrubbing, output/Release safety, populated-history IO/latency or whole Sessions readiness. The source preparation and reusable execution prerequisites below preserve those limits.
+
+
 
 The proposed manual file is `tests/postgres/auth-token-lock-roles.test.js`, outside the normal hermetic test globs. Apply it at that repository-relative path before execution; artifact-relative imports are intentionally unusable. Inputs are backend commit `3c38ac20b9b43b9921535959bddd424dd7f3edc1`, parent `a54d9952e1bfec5c4837571fb4c25d0056f8a760`, source base `7c851bab92eca52abcf215bd77ede3a4f9b5cb90`. Authority is Sessions architecture R5, SHA-256 `7d4bd6a6d6b8b6c7be2044a2be61c0fd7841c1ba77d9e982bd592e7d1a24f049`. The [migration contract](auth-token-row-locks.md), [actual writer contract](sessions-v2-auth-writer-order.md) and [owned PostgreSQL contract](sessions-v2-postgres-qualification.md) remain separate prerequisites.
 

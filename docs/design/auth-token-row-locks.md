@@ -1,10 +1,9 @@
 # Auth token row-lock authority
 
-Status: SOURCE ONLY. Tests are **AUTHORED NOT EXECUTED**. This proposal supplies
-an unapplied migration, runner registration, grant replay and a dedicated test
-file. It changes no auth writer, route, response, capability or deployment.
-Root owns red/green execution, independent review, actual-role/concurrency
-qualification, application and publication.
+Status: implemented and qualified as the narrow prerequisite to the coordinated authentication writer.
+
+Root qualified the combined implementation with 1,526 hermetic passes and zero failures/skips, 42 actual owner-role PostgreSQL cases, and eight further restricted-role PostgreSQL cases. Exact migration 032 committed on the bound live PG18.6 target on 26 October 2026 before publishing the changed V1 writers. Runtime token locking now admits; existing token-field UPDATE, INSERT and DELETE remain denied. See [executed evidence and limits](auth-token-lock-postgres.md#root-verification-and-deployment). V2 capabilities remain disabled.
+
 
 ## Source and measured requirement
 
@@ -13,8 +12,9 @@ Sessions architecture, SHA-256
 `7d4bd6a6d6b8b6c7be2044a2be61c0fd7841c1ba77d9e982bd592e7d1a24f049`,
 backend AGENTS, migrations 001/021/025/028/029/030/031, actual migration/replay
 helpers, APP_AUTH deployment security and existing role/migration/auth tests.
-Maintained auth writers remain the supplied base; active author postimages
-are separate and were neither inspected nor changed.
+The original source author inspected that base independently. Root subsequently
+composed the reviewed writer and migration in one qualified candidate; the
+execution record above supersedes the initial source-only handoff status.
 
 Root's retained `runtime-auth-lock-privileges-1.json` at
 `/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/`
@@ -113,8 +113,8 @@ lyric documents do not project tokens. Existing named-column token inserts
 receive false by default. No existing token identity/revocation/expiry value
 is changed and no app local data migrates. An intentional internal SQL
 `SELECT * FROM library_tokens` after application will include the new column;
-future public code must continue explicit projections. Active R2 postimages
-remain outside this inspection; Root must check the combined candidate.
+future public code must continue explicit projections. Root checked the combined R2 candidate: public token projections remain
+explicit, including the conflict-time owner check. The anchor is not public DTO data.
 
 ## Authored proof and deployment gate
 
