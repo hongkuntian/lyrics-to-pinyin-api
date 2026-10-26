@@ -3213,6 +3213,40 @@
         },
         "metadataOnly": true
       }
+    },
+    {
+      "caseID": "reported-first-time-spotify",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "2PXhHrVL1HkKk4fto9D8zE",
+          "metadata": {
+            "origin": "spotify",
+            "title": "第一次",
+            "artists": [
+              "Michael Wong"
+            ],
+            "album": "十光年精選輯",
+            "duration_ms": 263333,
+            "isrc": "TWA450170203",
+            "explicit": false
+          }
+        }
+      },
+      "availabilityEvidence": {
+        "fromCaseID": "reported-first-time-spotify",
+        "observedAt": "2026-10-26",
+        "source": {
+          "provider": "NeteaseAPI",
+          "itemID": "85482",
+          "timing": "netease:85482:yrc"
+        },
+        "rows": 43,
+        "cues": 411,
+        "metadataOnly": true
+      }
     }
   ]
 }

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "kind": "observed_recording_metadata_with_invented_test_words",
+  "capturedAt": "2026-10-26",
+  "recording": {
+    "version": 2,
+    "provider": "spotify",
+    "item_id": "2PXhHrVL1HkKk4fto9D8zE",
+    "metadata": {
+      "origin": "spotify",
+      "title": "第一次",
+      "artists": ["Michael Wong"],
+      "album": "十光年精選輯",
+      "duration_ms": 263333,
+      "isrc": "TWA450170203",
+      "explicit": false
+    }
+  },
+  "providerRecord": {
+    "id": 85482,
+    "name": "第一次",
+    "artists": [{"id": 2842, "name": "光良"}],
+    "album": {"id": 8396, "name": "十光年"},
+    "duration": 263352
+  },
+  "artistProfile": {"id": 2842, "name": "光良", "alias": ["王光良", "Michael Wong"]},
+  "availabilityEvidence": {
+    "source": {"provider": "NeteaseAPI", "itemID": "85482", "timing": "netease:85482:yrc"},
+    "observedRows": 43,
+    "observedCues": 411,
+    "acousticVerified": false
+  }
+}

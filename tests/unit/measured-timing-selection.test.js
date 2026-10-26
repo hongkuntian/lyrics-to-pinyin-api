@@ -9,6 +9,53 @@ const until=async predicate=>{for(let i=0;i<100&&!predicate();i++)await new Prom
 const line={song:{id:7,duration:30},lyrics:{source:'lrclib',lines:[{text:'Synthetic first',timestamp:1},{text:'Synthetic second',timestamp:10}]}};
 const measured={song:{id:42,duration:30},lyrics:parseYRC('[1000,1000](1000,500,0)Synthetic (1500,500,0)first\n[10000,1000](10000,500,0)Synthetic (10500,500,0)second',{songId:42,duration:30})};
 const capable={name:'measured',supportsVocalTiming:true},plain={name:'line'};
+const untimed={...line,lyrics:{...line.lyrics,lines:line.lyrics.lines.map(l=>({...l,timestamp:null}))}};
+
+test('plain readable text cannot cancel an active measured source inside the existing word window',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const gate=deferred(),published=[];let settled=false,sourceSignal;
+ const work=hedgedLookup([plain,capable],async(api,signal)=>{
+  if(api===plain)return untimed;sourceSignal=signal;return gate.promise;
+ },{delayMs:1,untimedGraceMs:20,wordTimingGraceMs:200,chooseCandidate:chooseLyricCandidate,onCandidate:c=>published.push(c)})
+ .then(value=>{settled=true;return value;});
+ try {
+  await until(()=>published.includes(untimed)&&sourceSignal);
+  t.mock.timers.tick(21);await new Promise(r=>setImmediate(r));
+  assert.equal(settled,false);assert.equal(sourceSignal.aborted,false);assert.deepEqual(published,[untimed]);
+  gate.resolve(measured);assert.equal(await work,measured);assert.deepEqual(published,[untimed,measured]);
+ }finally{gate.resolve(null);await work;}
+});
+
+test('plain text preserves the existing line-to-word window, which later line progress cannot reset',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const first=deferred(),second=deferred(),third=deferred(),published=[];
+ const secondAPI={...capable},thirdAPI={...capable};
+ const work=hedgedLookup([plain,capable,secondAPI,thirdAPI],async api=>api===plain?untimed:api===capable?first.promise:api===secondAPI?second.promise:third.promise,
+  {untimedGraceMs:3,wordTimingGraceMs:10,chooseCandidate:chooseLyricCandidate,onCandidate:c=>published.push(c)});
+ await until(()=>published.length);t.mock.timers.tick(4);first.resolve(line);
+ await until(()=>published.includes(line));t.mock.timers.tick(4);second.resolve(structuredClone(line));
+ await until(()=>published.length===3);t.mock.timers.tick(6);assert.equal(await work,line);
+ third.resolve(measured);await new Promise(r=>setImmediate(r));assert.ok(!published.includes(measured));
+});
+
+test('unavailable words and cancellation preserve already-readable plain text without a second lookup',async t=>{
+ for(const cancel of [false,true]) {
+  const gate=deferred(),controller=new AbortController(),published=[];let calls=0;
+  const work=hedgedLookup([plain,capable],async api=>{calls++;return api===plain?untimed:gate.promise;},
+   {delayMs:1,untimedGraceMs:20,wordTimingGraceMs:1000,signal:controller.signal,chooseCandidate:chooseLyricCandidate,onCandidate:c=>published.push(c)});
+  await until(()=>published.length);if(cancel)controller.abort();else gate.resolve(null);
+  assert.equal(await work,untimed);gate.resolve(measured);await new Promise(r=>setImmediate(r));
+  assert.equal(calls,2);assert.deepEqual(published,[untimed]);
+ }
+});
+
+test('instrumental or non-capable fallback retains the ordinary untimed grace',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const gate=deferred(),published=[],instrumental={...untimed,lyrics:{instrumental:true,lines:[]}};
+ const work=hedgedLookup([plain,capable],async api=>api===plain?instrumental:gate.promise,
+  {untimedGraceMs:20,wordTimingGraceMs:200,onCandidate:c=>published.push(c)});
+ await until(()=>published.length);t.mock.timers.tick(20);assert.equal(await work,instrumental);gate.resolve(null);
+});
 
 test('validated measured cues improve complete line timing; malformed, unbound and partial cues do not',()=>{
  assert.equal(chooseLyricCandidate(line,measured),measured);

@@ -1,6 +1,8 @@
 name: Measured timing coverage
 
 on:
+  schedule:
+    - cron: '37 10 * * *'
   workflow_dispatch:
     inputs:
       minimum_complete_rate:
@@ -15,6 +17,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: measured-timing-coverage
+  cancel-in-progress: false
 
 jobs:
   live-provider-coverage:
@@ -31,12 +37,12 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Acquire and validate source-bound word timings
         env:
-          MINIMUM_RATE: ${{ inputs.minimum_complete_rate }}
-          REPETITIONS: ${{ inputs.runs }}
+          MINIMUM_RATE: ${{ inputs.minimum_complete_rate || '0.99' }}
+          REPETITIONS: ${{ inputs.runs || '1' }}
         run: >-
           node scripts/benchmark-catalog-word-timing.mjs
           --corpus docs/research/source-positive-word-timing-corpus.json
-          --runs "$REPETITIONS" --minimum-available-rate "$MINIMUM_RATE"
+          --runs "$REPETITIONS" --concurrency 2 --minimum-available-rate "$MINIMUM_RATE"
           --out measured-timing-coverage.json
       - uses: actions/upload-artifact@v4
         if: always()
