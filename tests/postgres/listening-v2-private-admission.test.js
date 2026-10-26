@@ -423,7 +423,7 @@ async function revocationFirst(f,{commit=true,observerFailure=false}={}){
  }finally{await cleanup();}
  assert.equal(s.record.transactions.length,1);await quiescent();return {pending:await pending,input,s};
 }
-async function commandFirst(f,{observerFailure=false}={}){
+async function commandFirst(f,{observerFailure=false,cancelRevoker=false}={}){
  const hold=barrier(),input=intention(f,'approve');let s,r,first,write;
  const cleanup=async()=>{
   // Command-first: release mutation, drain command AND blocked revoker query,
@@ -438,6 +438,13 @@ async function commandFirst(f,{observerFailure=false}={}){
   first=outcome(s.execute(input));const held=await entered(hold,first);
   assertWinner(f,held.provisional,'approve',[input]);
   r=await revoker(f,'revoke-after');write=outcome(r.write());await blocked('revoke-after',held.pid);
+  if(cancelRevoker){
+   assert.equal(observerFailure,true,'cancellation is only an observer-failure negative control');
+   // Cancel only the exact suite-owned revoker whose real lock was observed.
+   // The server emits the query error; no result or SQLSTATE is substituted.
+   assert.equal((await admin.query('SELECT pg_cancel_backend($1) AS cancelled',[r.pid])).rows[0].cancelled,true);
+   assert.equal((await write).error?.code,'57014','the actual blocked UPDATE must be cancelled');
+  }
   if(observerFailure)throw new Error('injected observer failure after real command-first lock');
   hold.release();success(await first);assert.equal((await write).error,undefined);
   assert.equal((await write).value.rowCount,1);await r.lease.client.query('COMMIT');
@@ -488,6 +495,17 @@ test('command first: real credential revoke waits, then all saved audiences lose
  });
  await t.test('observer failure drains mutation and revoker write before rollback/release',async()=>{
   const f=await seed();await assert.rejects(commandFirst(f,{observerFailure:true}),/injected observer failure/);
+  await quiescent();assert.equal((await snapshot()).command_receipts.length,1);
+  assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.people[1].credential])).rows[0].revoked,false);
+ });
+ await t.test('observer failure preserves an actual cancelled revoker UPDATE after drainage',async()=>{
+  const f=await seed();
+  await assert.rejects(commandFirst(f,{observerFailure:true,cancelRevoker:true}),error=>{
+   assert.ok(error instanceof AggregateError,'the observer sentinel must not hide an unexpected SQL failure');
+   assert.equal(error.errors.length,2);
+   assert.match(error.errors[0].message,/injected observer failure after real command-first lock/);
+   assert.equal(error.errors[1].code,'57014');return true;
+  });
   await quiescent();assert.equal((await snapshot()).command_receipts.length,1);
   assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.people[1].credential])).rows[0].revoked,false);
  });
