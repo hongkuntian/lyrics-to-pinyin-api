@@ -11,6 +11,8 @@ migrationNames.push('027-spotify-background.sql');
 // Explicit provider-source learning, independent from playback/catalog binding.
 migrationNames.push('028-selected-lyrics-learning.sql');
 migrationNames.push('029-listening-sessions.sql');
+// Public auth token row-lock admission; 030/031 deliberately remain unregistered.
+migrationNames.push('032-auth-token-row-locks.sql');
 export async function migrateLibrary(database) {
   return database.transaction(async db=> {
     await db.query("SET LOCAL lock_timeout='5s'");
