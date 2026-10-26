@@ -26,31 +26,72 @@ function validateContext(value){
  */
 export function canonicalCommandHash(value){
  if(!object(value))invalid();
- const ancestors=new Set();let nodes=0;
+ const maxBytes=16384,maxNodes=4096,hash=createHash('sha256'),ancestors=new Set();let nodes=0,bytes=0;
+ function write(text,size=Buffer.byteLength(text)){
+  if(bytes+size>maxBytes)invalid();bytes+=size;hash.update(text);
+ }
+ function quotedSize(text,limit){
+  if(text.length>limit)invalid();
+  let size=2;
+  for(let i=0;i<text.length;i++){
+   const code=text.charCodeAt(i);
+   if(code===34||code===92||[8,9,10,12,13].includes(code))size+=2;
+   else if(code<32)size+=6;
+   else if(code>=0xd800&&code<=0xdbff){
+    const next=text.charCodeAt(i+1);
+    if(next>=0xdc00&&next<=0xdfff){size+=4;i++;}else size+=6;
+   }else if(code>=0xdc00&&code<=0xdfff)size+=6;
+   else size+=code<128?1:code<2048?2:3;
+   if(size>limit)invalid();
+  }
+  if(size>limit)invalid();return size;
+ }
+ function string(text){const size=quotedSize(text,maxBytes-bytes);write(JSON.stringify(text),size);}
  function canonical(input,depth){
-  if(++nodes>4096||depth>24)invalid();
-  if(input===null||typeof input==='boolean')return input;
-  if(typeof input==='string'){if(Buffer.byteLength(input)>16384)invalid();return input;}
-  if(typeof input==='number'){if(!Number.isSafeInteger(input))invalid();return input;}
+  if(++nodes>maxNodes||depth>24)invalid();
+  if(input===null){write('null');return;}
+  if(typeof input==='boolean'){write(input?'true':'false');return;}
+  if(typeof input==='string'){string(input);return;}
+  if(typeof input==='number'){if(!Number.isSafeInteger(input))invalid();write(JSON.stringify(input));return;}
   if(typeof input!=='object'||ancestors.has(input))invalid();
   if(!Array.isArray(input)&&!object(input))invalid();
   ancestors.add(input);
-  let result;
   if(Array.isArray(input)){
-   if(Object.keys(input).length!==input.length)invalid();
-   result=Array.from(input,item=>canonical(item,depth+1));
-  }else{
-   result=Object.create(null);
-   for(const key of Object.keys(input).sort()){
-    if(['__proto__','prototype','constructor'].includes(key))invalid();
-    result[key]=canonical(input[key],depth+1);
+   if(input.length>maxNodes||Object.getPrototypeOf(input)!==Array.prototype)invalid();
+   for(const key in input)if(Object.hasOwn(input,key)&&(!/^(0|[1-9]\d*)$/.test(key)||Number(key)>=input.length))invalid();
+   write('[');
+   for(let i=0;i<input.length;i++){
+    const descriptor=Object.getOwnPropertyDescriptor(input,String(i));
+    if(!descriptor||!Object.hasOwn(descriptor,'value'))invalid();
+    if(i)write(',');canonical(descriptor.value,depth+1);
    }
+   write(']');
+  }else{
+   write('{');
+   // Collect only a bounded key set before sorting. Reserve their encoded
+   // size (including escaping), punctuation and a minimum byte per value.
+   // Never allocate Object.keys(input) for an arbitrarily wide object.
+   const keys=[];let minimumRemaining=1;
+   for(const key in input){
+    if(!Object.hasOwn(input,key))continue;
+    if(keys.length>=maxNodes)invalid();
+    if(['__proto__','prototype','constructor'].includes(key))invalid();
+    const descriptor=Object.getOwnPropertyDescriptor(input,key);
+    if(!descriptor||!Object.hasOwn(descriptor,'value'))invalid();
+    const size=quotedSize(key,maxBytes-bytes-minimumRemaining-2-(keys.length?1:0));
+    minimumRemaining+=size+2+(keys.length?1:0);
+    if(bytes+minimumRemaining>maxBytes)invalid();
+    keys.push(key);
+   }
+   keys.sort();
+   for(let i=0;i<keys.length;i++){
+    if(i)write(',');string(keys[i]);write(':');canonical(input[keys[i]],depth+1);
+   }
+   write('}');
   }
-  ancestors.delete(input);return result;
+  ancestors.delete(input);
  }
- const serialized=JSON.stringify(canonical(value,0));
- if(Buffer.byteLength(serialized)>16384)invalid();
- return createHash('sha256').update(serialized).digest('hex');
+ canonical(value,0);return hash.digest('hex');
 }
 
 /** Server-only signer. Callers cannot choose room/command UUIDs or ticket lifetime.

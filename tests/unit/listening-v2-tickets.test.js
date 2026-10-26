@@ -55,3 +55,26 @@ test('canonical intent hashing sorts object keys while retaining arrays, Unicode
  }
  const cycle={};cycle.self=cycle;assert.throws(()=>canonicalCommandHash(cycle),{code:'invalid_request'});
 });
+
+function boundedRejection(value){
+ const stringify=JSON.stringify,keys=Object.keys;
+ let largestSerialization=0,largestKeyArray=0;
+ try{
+  JSON.stringify=(...args)=>{const result=stringify(...args);if(typeof result==='string')largestSerialization=Math.max(largestSerialization,Buffer.byteLength(result));return result;};
+  Object.keys=(...args)=>{const result=keys(...args);largestKeyArray=Math.max(largestKeyArray,result.length);return result;};
+  assert.throws(()=>canonicalCommandHash(value),{code:'invalid_request'});
+ }finally{JSON.stringify=stringify;Object.keys=keys;}
+ assert(largestSerialization<=16384,`Allocated ${largestSerialization} serialized bytes before refusal`);
+ assert(largestKeyArray<=4096,`Allocated ${largestKeyArray} keys before width refusal`);
+}
+test('long property names refuse before allocating their oversized serialized form',()=>{
+ boundedRejection({['k'.repeat(262144)]:0});
+});
+test('aggregate escaped strings refuse before allocating a large complete serialization',()=>{
+ boundedRejection({values:Array(32).fill('\u0000'.repeat(16384))});
+});
+test('wide and deep JSON containers refuse before unbounded sorting or traversal',()=>{
+ boundedRejection(Object.fromEntries(Array.from({length:5000},(_,i)=>['key'+i,0])));
+ let deep={};for(let i=0;i<30;i++)deep={child:deep};boundedRejection(deep);
+ boundedRejection({values:Array(5000).fill(0)});
+});
