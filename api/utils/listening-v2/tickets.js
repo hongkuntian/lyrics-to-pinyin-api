@@ -31,6 +31,23 @@ function validateContext(value){
  */
 export function canonicalCommandHash(rawJSON){
  if(typeof rawJSON!=='string'||rawJSON.length>16384||Buffer.byteLength(rawJSON)>16384)invalid();
+ // Inspect every numeric token before JSON.parse can round it or discard an
+ // overwritten property. Skip quoted text/escapes; JSON.parse still owns full
+ // syntax validation. Both traversal and token copies are bounded by 16 KiB.
+ for(let i=0;i<rawJSON.length;i++){
+  const char=rawJSON[i];
+  if(char==='"'){
+   for(i++;i<rawJSON.length;i++){
+    if(rawJSON[i]==='\\')i++;
+    else if(rawJSON[i]==='"')break;
+   }
+  }else if(char==='-'||(char>='0'&&char<='9')){
+   const start=i;
+   while(i+1<rawJSON.length&&/[\d.eE+\-]/.test(rawJSON[i+1]))i++;
+   const token=rawJSON.slice(start,i+1);
+   if(!/^-?(0|[1-9]\d*)$/.test(token)||!Number.isSafeInteger(Number(token)))invalid();
+  }
+ }
  let value;try{value=JSON.parse(rawJSON);}catch{invalid();}
  if(!object(value))invalid();
  const maxBytes=16384,maxNodes=4096,hash=createHash('sha256'),ancestors=new Set();let nodes=0,bytes=0;

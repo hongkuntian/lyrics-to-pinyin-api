@@ -38,3 +38,19 @@ test('admitted raw JSON still rejects unsafe numbers, excessive depth, sparse sy
   assert.throws(()=>canonicalCommandHash(raw),{code:'invalid_request'});
  }
 });
+test('numeric source syntax cannot round or underflow into an admitted integer',()=>{
+ for(const token of ['1.0000000000000001','1e-1000','9007199254740991.1','1.0','1e0','-1.0000000000000001']){
+  assert.throws(()=>canonicalCommandHash('{"n":'+token+'}'),{code:'invalid_request'},token);
+ }
+ for(const token of ['0','-1','9007199254740991','-9007199254740991']){
+  assert.equal(canonicalCommandHash('{"n":'+token+'}'),createHash('sha256').update('{"n":'+token+'}').digest('hex'));
+ }
+ assert.doesNotThrow(()=>canonicalCommandHash('{"n":"1.0000000000000001"}'));
+});
+test('overwritten numeric tokens still obey admission while quoted escapes remain text',()=>{
+ for(const token of ['1.0000000000000001','1e-1000','9007199254740991.1']){
+  assert.throws(()=>canonicalCommandHash('{"n":'+token+',"n":1}'),{code:'invalid_request'});
+ }
+ const raw=JSON.stringify({quote:'\\"1e-1000',slash:'\\\\',key:'"',value:'1.0000000000000001'});
+ assert.doesNotThrow(()=>canonicalCommandHash(raw));
+});
