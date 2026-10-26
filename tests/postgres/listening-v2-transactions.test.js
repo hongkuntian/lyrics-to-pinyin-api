@@ -145,10 +145,31 @@ async function entered(hold,pending){
 }
 async function count(table){return Number((await pool.query('SELECT count(*) AS n FROM listening_v2.'+table)).rows[0].n);}
 async function revoker(name,table,column,value){
- const client=await pool.connect();await client.query('BEGIN');
- await client.query("SELECT set_config('application_name',$1,true)",['lyrica-local-'+name]);
- const pid=(await client.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
- return {client,pid,write:()=>client.query(`UPDATE public.${table} SET revoked=true WHERE ${column}=$1`,[value])};
+ const client=await pool.connect();
+ try{
+  await client.query('BEGIN');
+  await client.query("SELECT set_config('application_name',$1,true)",['lyrica-local-'+name]);
+  const pid=(await client.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+  return {client,pid,write:()=>client.query(`UPDATE public.${table} SET revoked=true WHERE ${column}=$1`,[value])};
+ }catch(error){try{await client.query('ROLLBACK');}finally{client.release();}throw error;}
+}
+async function commandFirstRevocation(table,column,value,{observe=blocked,onRevoker}={}){
+ const hold=barrier(),c=creation(),first=outcome(gateway('authorized',{onMutation:()=>hold.point()}).execute(input(c)));
+ let r,write;
+ try{
+  await entered(hold,first);r=await revoker('revoke-after',table,column,value);write=outcome(r.write());
+  onRevoker?.({client:r.client,first,write});
+  await observe('revoke-after',clients.get('authorized'));
+  hold.release();
+  assert.equal((await first).error,undefined);assert.equal((await write).error,undefined);await r.client.query('COMMIT');
+ }finally{
+  // The observer can fail while the revoker waits on the held mutation. Drain
+  // both operations before rolling back/releasing that client; no work outlives
+  // this ownership scope or reaches pool.end() with a borrowed client.
+  hold.release();await first;if(write)await write;
+  if(r)try{await r.client.query('ROLLBACK');}finally{r.client.release();}
+ }
+ return c;
 }
 
 test('concurrent exact creates block and return one committed room and receipt',{timeout:7000},async()=>{
@@ -157,7 +178,7 @@ test('concurrent exact creates block and return one committed room and receipt',
  try{
   await entered(hold,first);second=outcome(gateway('create-b').execute(input(c)));
   await blocked('create-b',clients.get('create-a'));
- }finally{hold.release();}
+ }finally{hold.release();await first;if(second)await second;}
  const [a,b]=await Promise.all([first,second]);assert.equal(a.error,undefined);assert.equal(b.error,undefined);
  assert.equal(a.value.replayed,false);assert.equal(b.value.replayed,true);
  assert.equal(calls,1);assert.equal(await count('rooms'),1);assert.equal(await count('command_receipts'),1);
@@ -170,34 +191,55 @@ test('concurrent changed-body retry waits then conflicts without another write',
  const a={authentication,rawCommand:JSON.stringify(command)},b={authentication,rawCommand:JSON.stringify({...command,payload:{...command.payload,catalogSelectionID:'different'}})};
  const hold=barrier(),first=outcome(gateway('mutation-a',{onMutation:()=>hold.point()}).execute(a));let second;
  try{await entered(hold,first);second=outcome(gateway('mutation-b').execute(b));await blocked('mutation-b',clients.get('mutation-a'));}
- finally{hold.release();}
+ finally{hold.release();await first;if(second)await second;}
  const [one,two]=await Promise.all([first,second]);assert.equal(one.error,undefined);assert.equal(two.error?.code,'conflict');
  assert.equal(calls,1);assert.equal(await count('command_receipts'),2);
 });
 
-test('credential revocation winning the lock denies the prepared bearer before writes',{timeout:7000},async()=>{
- const c=creation(),r=await revoker('revocation-first','library_tokens','digest',credential);let pending;
- try{
-  await r.write();pending=outcome(gateway('denied-auth').execute(input(c)));
-  await blocked('denied-auth',r.pid);await r.client.query('COMMIT');
- }finally{await r.client.query('ROLLBACK');r.client.release();}
- assert.equal((await pending).error?.code,'unauthorized');assert.equal(calls,0);
- assert.equal(await count('rooms'),0);assert.equal(await count('command_receipts'),0);
-});
-
 for(const [label,table,column,value] of [['credential','library_tokens','digest',credential],['exact session','app_auth_sessions','digest',hash(bearer)]]){
+ test(label+' revocation winning the lock denies the prepared bearer before writes',{timeout:7000},async()=>{
+  const c=creation(),r=await revoker('revocation-first',table,column,value);let pending;
+  try{
+   await r.write();pending=outcome(gateway('denied-auth').execute(input(c)));
+   await blocked('denied-auth',r.pid);await r.client.query('COMMIT');
+  }finally{
+   // Here the command is the blocked operation: release its revoker lock before
+   // draining it, including when observing the expected barrier fails.
+   try{await r.client.query('ROLLBACK');}finally{r.client.release();if(pending)await pending;}
+  }
+  assert.equal((await pending).error?.code,'unauthorized');assert.equal(calls,0);
+  assert.equal(await count('rooms'),0);assert.equal(await count('command_receipts'),0);
+ });
+
  test(label+' revocation waits for the authorized command, then denies saved receipt',{timeout:7000},async()=>{
-  const hold=barrier(),c=creation(),first=outcome(gateway('authorized',{onMutation:()=>hold.point()}).execute(input(c)));
-  let r,write;
-  try{
-   await entered(hold,first);r=await revoker('revoke-after',table,column,value);write=outcome(r.write());
-   await blocked('revoke-after',clients.get('authorized'));
-  }finally{hold.release();}
-  try{
-   assert.equal((await first).error,undefined);assert.equal((await write).error,undefined);await r.client.query('COMMIT');
-  }finally{await r.client.query('ROLLBACK');r.client.release();}
+  const c=await commandFirstRevocation(table,column,value);
   await assert.rejects(gateway('receipt-after-revocation').execute(input(c)),{code:'unauthorized'});
   assert.equal(calls,1);assert.equal(await count('rooms'),1);assert.equal(await count('command_receipts'),1);
+ });
+
+ test(label+' barrier observation failure drains operations and releases the revoker',{timeout:7000},async()=>{
+  let owned,releases=0,firstSettled=false,writeSettled=false;
+  try{
+   await assert.rejects(commandFirstRevocation(table,column,value,{
+    observe:async(name,pid)=>{await blocked(name,pid);throw new Error('injected barrier observation failure');},
+    onRevoker:ownership=>{
+     owned=ownership;const original=owned.client.release;
+     owned.client.release=(...args)=>{releases++;return original(...args);};
+     owned.first.then(()=>{firstSettled=true;});owned.write.then(()=>{writeSettled=true;});
+    }
+   }),/injected barrier observation failure/);
+   assert.equal(firstSettled,true,'the first operation must settle before failure returns');
+   assert.equal(writeSettled,true,'the blocked revocation must settle before failure returns');
+   assert.equal(releases,1,'the revoker lease must be returned on observer failure');
+   assert.equal(pool.waitingCount,0);assert.equal(pool.totalCount,pool.idleCount);
+   assert.equal((await pool.query(`SELECT revoked FROM public.${table} WHERE ${column}=$1`,[value])).rows[0].revoked,false);
+   const lingering=(await admin.query("SELECT pid FROM pg_stat_activity WHERE datname=$1 AND state='idle in transaction'",[databaseName])).rows;
+   assert.deepEqual(lingering,[]);
+  }finally{
+   // Rescue the owned fixture on the red implementation too. This is outside
+   // the assertions and cannot turn missing production cleanup into a pass.
+   if(owned){await owned.first;await owned.write;if(releases===0){await owned.client.query('ROLLBACK');owned.client.release();}}
+  }
  });
 }
 
@@ -210,7 +252,7 @@ test('pool client reuse cannot reuse a prior transaction auth scope',{timeout:70
   await client.query('BEGIN');const fresh=await currentAuth.discover({tx:client,authentication});
   const scope=await currentAuth.lock({tx:client,discovery:fresh});assert.equal(await scope.revalidate({tx:client}),true);
   await client.query('COMMIT');
- }finally{await client.query('ROLLBACK');client.release();}
+ }finally{try{await client.query('ROLLBACK');}finally{client.release();}}
 });
 
 test('private reducer output rolls back actual room and receipt writes',{timeout:7000},async()=>{
@@ -222,14 +264,14 @@ test('real database wall time crosses a credential deadline while mutation is he
  await pool.query("UPDATE public.library_tokens SET expires_at=clock_timestamp()+interval '1500 milliseconds'");
  authentication=await currentAuth.prepare(bearer);
  const hold=barrier(),pending=outcome(gateway('deadline',{onMutation:()=>hold.point()}).execute(input(creation())));
- try{await entered(hold,pending);await pool.query('SELECT pg_sleep(1.6)');}finally{hold.release();}
+ try{await entered(hold,pending);await pool.query('SELECT pg_sleep(1.6)');}finally{hold.release();await pending;}
  assert.equal((await pending).error?.code,'unauthorized');assert.equal(calls,1);
  assert.equal(await count('rooms'),0);assert.equal(await count('command_receipts'),0);
 });
 
 test('real database wall time cannot extend a held creation ticket deadline',{timeout:8000},async()=>{
  const hold=barrier(),pending=outcome(gateway('ticket-deadline',{onMutation:()=>hold.point()}).execute(input(creation(Date.now()-600000+1500))));
- try{await entered(hold,pending);await pool.query('SELECT pg_sleep(1.6)');}finally{hold.release();}
+ try{await entered(hold,pending);await pool.query('SELECT pg_sleep(1.6)');}finally{hold.release();await pending;}
  assert.equal((await pending).error?.code,'expired');assert.equal(calls,1);
  assert.equal(await count('rooms'),0);assert.equal(await count('command_receipts'),0);
 });

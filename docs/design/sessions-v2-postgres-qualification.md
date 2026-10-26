@@ -35,17 +35,18 @@ Keep the cluster's manifest/logs and test output with the checkpoint evidence. S
 
 The suite imports the actual `AppAuthStore.authenticate`, current-auth primitive and receipt gateway. It seeds synthetic users/credentials/attestation-key/session rows in the real schema. No App Attest verification, enrollment, Apple identity, provider or network service is invoked. Its composed receipt hook checks the actual bearer/auth rows and fixed synthetic key manifest; it has no retained persona, membership, consent, grant or output authority. It is deliberately not a production authorization hook.
 
-Ten checks cover:
+Thirteen checks cover:
 
 - Exact concurrent creation returning one committed room/receipt, and changed-body mutation retry returning conflict without a second write.
-- Both credential-revocation orderings and direct exact-session revocation, with current-authorized saved-receipt refusal afterward.
+- Both orderings of credential and exact-session revocation, with current-authorized saved-receipt refusal afterward.
+- Injected barrier-observation failures for both revocation types, proving pending-operation drainage, rollback, client release and absence of idle transactions before returning the error.
 - Transaction identity across pooled-client reuse and real rollback after private reducer output.
 - Actual server wall time crossing credential and creation-ticket deadlines during a held mutation, with all writes rolled back.
 - The existing V2 runtime/account grant metadata, including column-only account cleanup insertion, denied guard deletion and denied schema creation.
 
-Concurrency checks observe `pg_blocking_pids` and `wait_event_type='Lock'` before releasing the first transaction. The bounded polling is test coordination, not product retry logic. Deadline cases deliberately hold a mutation over a preset 1.5-second expiry and sample PostgreSQL wall time; they do not replace the source guard with a fixture clock or extend a product deadline. Every test database is synthetic and disposable.
+Concurrency checks observe `pg_blocking_pids` and `wait_event_type='Lock'` before releasing the first transaction. The bounded polling is test coordination, not product retry logic. Barrier ownership includes failure paths: mutation barriers release before their operations drain; revocation-first clients roll back before draining the commands waiting on their locks. Revoker acquisition and rollback paths release their clients even if a query fails. Deadline cases deliberately hold a mutation over a preset 1.5-second expiry and sample PostgreSQL wall time; they do not replace the source guard with a fixture clock or extend a product deadline. Every test database is synthetic and disposable.
 
-Root's initial run passed nine cases; its new table-wide account INSERT assertion was incorrect because the migration intentionally grants selected columns only. The corrected assertion preserves and checks that narrower policy. The final run passed **10/10, zero failures/skips**, on the reviewed runtime inputs `2afaa129e1e49f80b08e8a470bbdfd54e213868e`. Run logs, exact harness hashes and the local manifest remain outside Git.
+The revised suite passed **13/13, zero failures/skips**, on the reviewed runtime inputs `2afaa129e1e49f80b08e8a470bbdfd54e213868e`. Both injected-observer regressions first failed against the prior cleanup implementation, then passed with drainage and release in the encompassing ownership scope. The grant assertion checks the migration's narrow column permissions rather than requiring table-wide account INSERT. Run logs, exact harness hashes and the local manifest remain outside Git.
 
 ## Remaining qualification
 
