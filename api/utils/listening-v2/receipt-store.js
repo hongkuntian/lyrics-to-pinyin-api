@@ -136,9 +136,9 @@ export function createReceiptStore({db,environment,bindingKeys,activeBindingKeyV
 
  function parse(input){
   exact(input,['authentication','rawCommand'],['creationTicket']);
-  const authentication=input.authentication;
+  const authentication=input.authentication,rawCommand=input.rawCommand,encodedTicket=input.creationTicket;
   if(!object(authentication)||!opaque(authentication.principalID,128)||!opaque(authentication.keyID,256))fail('unauthorized');
-  const value=parseBoundedSessionJSON(input.rawCommand);
+  const value=parseBoundedSessionJSON(rawCommand);
   const isCreation=creation(value.action);
   exact(value,['version','action','expected','payload',...(isCreation?[]:['sessionID','commandID'])]);
   if(value.version!==2||!reducers.has(value.action)||!object(value.expected)||!object(value.payload))fail('invalid_request');
@@ -146,13 +146,13 @@ export function createReceiptStore({db,environment,bindingKeys,activeBindingKeyV
   if(isCreation){
    const sourceRecapRevision=value.action==='restart'?value.expected.sourceRecapRevision:null;
    if(value.action==='restart'&&(!Number.isSafeInteger(sourceRecapRevision)||sourceRecapRevision<0))fail('invalid_request');
-   bodyHash=canonicalCommandHash(input.rawCommand);
+   bodyHash=canonicalCommandHash(rawCommand);
    const context={environment,principalID:authentication.principalID,keyID:authentication.keyID,
     action:value.action,bodyHash,sourceRecapRevision};
-   ticket=preflightTickets.verify(input.creationTicket,context);
+   ticket=Object.freeze({...preflightTickets.verify(encodedTicket,context),encoded:encodedTicket});
    sessionID=ticket.sessionID;commandID=ticket.commandID;
   }else{
-   if(input.creationTicket!==undefined||!uuid(value.sessionID)||!uuid(value.commandID))fail('invalid_request');
+   if(encodedTicket!==undefined||!uuid(value.sessionID)||!uuid(value.commandID))fail('invalid_request');
    sessionID=value.sessionID.toLowerCase();commandID=value.commandID.toLowerCase();
    const {commandID:_,...semantic}=value;bodyHash=canonicalCommandHash(JSON.stringify(semantic));
   }
@@ -174,22 +174,38 @@ export function createReceiptStore({db,environment,bindingKeys,activeBindingKeyV
   if(answer!==true)fail();
  }
  function verifyTicket(ticket,command,authentication,bodyHash,time){
-  if(ticket)ticketsAt(()=>time).verify(ticket.encoded,{environment,principalID:authentication.principalID,
+  if(!ticket)return;
+  const current=ticketsAt(()=>time).verify(ticket.encoded,{environment,principalID:authentication.principalID,
    keyID:authentication.keyID,action:command.action,bodyHash,sourceRecapRevision:ticket.sourceRecapRevision});
+  if(current.sessionID!==command.sessionID||current.commandID!==command.commandID||
+   ['signingKeyID','nonce','issuedAtMS','notAfterMS'].some(field=>current[field]!==ticket[field]))fail('invalid_request');
  }
- async function transact({authentication,command,bodyHash,ticket},encodedTicket){
+ async function checkRetainedVersions(tx){
+  // At most four configured versions plus one unknown/empty successor. Each
+  // strict lower bound seeks through command_receipts_binding_versions rather
+  // than reading every row with an already recognized version.
+  let after=0;
+  for(let probe=0;probe<=versions.length;probe++){
+   const row=(await tx.query(`SELECT binding_key_version FROM listening_v2.command_receipts
+    WHERE environment=$1 AND binding_key_version>$2 ORDER BY binding_key_version LIMIT 1`,[environment,after])).rows[0];
+   if(!row)return;
+   const version=decodeSafeUInt(row.binding_key_version);
+   if(version<=after||!ring.has(version))fail();
+   after=version;
+  }
+  fail();
+ }
+ async function transact({authentication,command,bodyHash,ticket}){
   return db.transaction(async tx=>{
    if(!tx||typeof tx.query!=='function')fail();
    const permit=permitFor(await lockAuthorization({tx,authentication,environment,command,bindingKeyManifest}),authentication);
    const authContext={tx,command,room:null,receipt:null,phase:'locked',nowMS:await clock(tx)};
    await authorized(permit,authContext);
-   if(ticket)ticket={...ticket,encoded:encodedTicket};
    verifyTicket(ticket,command,authentication,bodyHash,authContext.nowMS);
    // There is no key registry in the eight-table foundation. Never silently
    // ignore a retained version: the operator must supply its original secret.
    // Exclusive authenticated key locking serializes old/new store instances.
-   if((await tx.query(`SELECT 1 FROM listening_v2.command_receipts WHERE environment=$1
-    AND NOT (binding_key_version=ANY($2::int[])) LIMIT 1`,[environment,versions])).rows.length)fail();
+   await checkRetainedVersions(tx);
    const room=await getRoom(tx,command.sessionID);
    const params=[environment,command.sessionID,command.commandID];
    const alternatives=versions.map(version=>{
@@ -262,7 +278,7 @@ export function createReceiptStore({db,environment,bindingKeys,activeBindingKeyV
  return Object.freeze({async execute(input){
   const parsed=parse(input);
   for(let attempt=0;attempt<3;attempt++){
-   try{return await transact(parsed,input.creationTicket);}
+   try{return await transact(parsed);}
    catch(error){
     if(error instanceof SessionV2Error)throw error;
     if(['40001','40P01'].includes(error?.code)){if(attempt<2)continue;fail('conflict');}

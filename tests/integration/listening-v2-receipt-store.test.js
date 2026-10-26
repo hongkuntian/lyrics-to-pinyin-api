@@ -12,9 +12,10 @@ import {SessionV2Error} from '../../api/utils/listening-v2/errors.js';
 const environment='preview:receipt-r1',otherEnvironment='preview:receipt-r1-b';
 const start=1800000000000,day=86400000,auth={principalID:'guest',keyID:'key',credentialDigest:'c'.repeat(64)};
 const binding1={version:1,secret:Buffer.alloc(32,11)},binding2={version:2,secret:Buffer.alloc(32,22)};
+const binding3={version:3,secret:Buffer.alloc(32,33)},binding4={version:65534,secret:Buffer.alloc(32,44)};
 const ticketKey={id:'ticket-1',secret:Buffer.alloc(32,33)};
 const digest=n=>n.toString(16).padStart(64,'0');
-let sql,clock,transactions,trace,calls,mutator,hookOverride,commitCheck,personaID;
+let sql,clock,transactions,trace,queries,calls,mutator,hookOverride,commitCheck,personaID;
 before(async()=>{
  sql=new PGlite();
  await sql.exec(await readFile(new URL('../../db/030-listening-v2-schema.sql',import.meta.url),'utf8'));
@@ -32,7 +33,7 @@ beforeEach(async()=>{
   INSERT INTO receipt_fixture_tokens VALUES('${auth.credentialDigest}','guest',false,${start+90*day});
   INSERT INTO receipt_fixture_keys VALUES('key','guest',false),('key-2','guest',false);
   INSERT INTO receipt_fixture_clock VALUES(${start});`);
- clock=start;transactions=0;trace=[];calls=0;hookOverride=null;commitCheck=null;personaID=null;
+ clock=start;transactions=0;trace=[];queries=[];calls=0;hookOverride=null;commitCheck=null;personaID=null;
  mutator=async({tx,command,nowMS})=>{
   calls++;
   if(['create','restart'].includes(command.action))await room(tx,command.sessionID,{at:nowMS});
@@ -46,7 +47,7 @@ const db={transaction:async fn=>{
  return sql.transaction(async tx=>{
   trace.push('transaction');
   const query=tx.query.bind(tx);
-  const connection={query:async(text,params)=>{trace.push(text);return query(text,params);}};
+  const connection={query:async(text,params)=>{trace.push(text);queries.push({text,params});return query(text,params);}};
   return fn(connection);
  });
 }};
@@ -61,7 +62,7 @@ async function lockAuthorization({tx,authentication,environment:env,bindingKeyMa
  await tx.query('SELECT digest FROM receipt_fixture_tokens WHERE digest=$1 FOR UPDATE',[credentialDigest]);
  await tx.query('SELECT id FROM receipt_fixture_keys WHERE id=$1 FOR UPDATE',[keyID]);
  for(const descriptor of bindingKeyManifest.keys){
-  const configured=[binding1,binding2].find(key=>key.version===descriptor.version);
+  const configured=[binding1,binding2,binding3,binding4].find(key=>key.version===descriptor.version);
   if(!configured||descriptor.verificationHash!==createHmac('sha256',configured.secret)
    .update(JSON.stringify(['sessions-v2.receipt-key-check',descriptor.version,env])).digest('hex'))throw new SessionV2Error('unavailable');
  }
@@ -313,6 +314,53 @@ test('key rotation searches retained versions, never rewrites replay identity, a
  await rejects(store().execute(m),'unavailable');assert.equal(calls,2);
 });
 
+test('key continuity reads remain bounded as unrelated retained receipt history grows',async t=>{
+ await sql.query(`INSERT INTO listening_v2.command_receipts(environment,session_id,principal_binding,key_binding,
+  command_id,binding_key_version,action,canonical_body_hash,status,created_at_ms,ticket_expires_at_ms,delete_after_ms)
+  SELECT $1,gen_random_uuid(),$2,$3,gen_random_uuid(),1,'create',$4,'refused',$5,$6,$7
+  FROM generate_series(1,2048)`,[environment,digest(91),digest(92),digest(93),start,start+600000,start+30*day]);
+ await sql.exec('ANALYZE listening_v2.command_receipts');
+ const c=creation(),s=store();await s.execute(c.input);
+ const probes=queries.filter(q=>/SELECT\s+(1|binding_key_version)\s+FROM\s+listening_v2\.command_receipts/i.test(q.text));
+ assert.ok(probes.length>0&&probes.length<=5,'continuity lookup has a fixed maximum of five version probes');
+ let visited=0;
+ function countVisited(plan){
+  visited+=(plan['Actual Rows']??0)+(plan['Rows Removed by Filter']??0);
+  for(const child of plan.Plans??[])countVisited(child);
+ }
+ for(const q of probes){
+  const explained=await sql.query('EXPLAIN (ANALYZE,FORMAT JSON) '+q.text,q.params);
+  countVisited(explained.rows[0]['QUERY PLAN'][0].Plan);
+ }
+ assert.ok(visited<=16,`continuity probes inspected ${visited} plan rows for 2048 unrelated receipts`);
+ t.diagnostic(`2048 unrelated receipts: ${probes.length} version probes, ${visited} visited plan rows`);
+ // Unknown versions anywhere in this environment still prevent a fresh replay
+ // namespace, even when the unknown receipt belongs to a different actor/room.
+ await sql.query(`UPDATE listening_v2.command_receipts SET binding_key_version=65535
+  WHERE command_id=(SELECT command_id FROM listening_v2.command_receipts WHERE principal_binding=$1 LIMIT 1)`,[digest(91)]);
+ queries=[];const before=calls;
+ await rejects(s.execute(mutation(c.sessionID)),'unavailable');assert.equal(calls,before);
+ assert.ok(queries.filter(q=>/SELECT\s+(1|binding_key_version)\s+FROM\s+listening_v2\.command_receipts/i.test(q.text)).length<=5);
+});
+
+test('four retained key versions need five probes and a fifth unknown version still refuses',async()=>{
+ const keys=[binding4,binding3,binding2,binding1];
+ async function historical(version){
+  await sql.query(`INSERT INTO listening_v2.command_receipts(environment,session_id,principal_binding,key_binding,
+   command_id,binding_key_version,action,canonical_body_hash,status,created_at_ms,ticket_expires_at_ms,delete_after_ms)
+   VALUES($1,$2,$3,$4,$5,$6,'create',$7,'refused',$8,$9,$10)`,
+  [environment,randomUUID(),digest(94),digest(95),randomUUID(),version,digest(96),start,start+600000,start+30*day]);
+ }
+ for(const key of keys)await historical(key.version);
+ const c=creation(),s=store({bindingKeys:keys,activeBindingKeyVersion:binding4.version});
+ await s.execute(c.input);
+ const probes=()=>queries.filter(q=>/SELECT\s+binding_key_version\s+FROM\s+listening_v2\.command_receipts/i.test(q.text));
+ assert.equal(probes().length,5);assert.equal(calls,1);
+ await historical(65535);queries=[];
+ await rejects(s.execute(c.input),'unavailable');
+ assert.equal(probes().length,5);assert.equal(calls,1);
+});
+
 test('principal changes cannot read old actor results and configured keys are copied rather than mutated in place',async()=>{
  const c=creation(),key={version:1,secret:Buffer.from(binding1.secret)},ticket={id:ticketKey.id,secret:Buffer.from(ticketKey.secret)};
  const s=store({bindingKeys:[key],ticketKeys:[ticket]});await s.execute(c.input);
@@ -383,6 +431,31 @@ test('only serialization/deadlock failures retry, at most twice, with the same c
  await rejects(store().execute(mutation(id)),'conflict');assert.equal(attempts,3);assert.equal(transactions,3);
  transactions=0;mutator=async()=>{throw Object.assign(new Error('ambiguous connection loss'),{code:'08006'});};
  await rejects(store().execute(mutation(id)),'unavailable');assert.equal(transactions,1);
+});
+
+test('a caller-replaced ticket cannot renew the original intent after a rolled-back attempt',async()=>{
+ const c=creation(),original=mutator;let attempts=0,replacement;
+ mutator=async args=>{
+  const value=await original(args);
+  if(++attempts===1)throw Object.assign(new Error('synthetic serialization'),{code:'40001'});
+  return value;
+ };
+ const retryDB={transaction:async fn=>{
+  try{return await db.transaction(fn);}
+  catch(error){
+   if(error.code==='40001'){
+    await advance(sql,c.notAfterMS);
+    replacement=creation();
+    c.input.creationTicket=replacement.input.creationTicket;
+   }
+   throw error;
+  }
+ }};
+ await rejects(store({db:retryDB}).execute(c.input),'expired');
+ assert.notEqual(replacement.sessionID,c.sessionID);
+ assert.notEqual(replacement.commandID,c.commandID);
+ assert.equal(transactions,2);assert.equal(calls,1);
+ assert.equal(await count('rooms'),0);assert.equal(await count('command_receipts'),0);
 });
 
 test('safe uint decoding rejects rounding, alternative syntax and overflow before Number conversion',()=>{

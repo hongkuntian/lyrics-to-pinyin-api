@@ -275,6 +275,7 @@ CREATE TABLE listening_v2.command_receipts (
 );
 CREATE UNIQUE INDEX command_receipts_creation ON listening_v2.command_receipts
   (environment,principal_binding,key_binding,command_id) WHERE action IN ('create','restart');
+CREATE INDEX command_receipts_binding_versions ON listening_v2.command_receipts (environment,binding_key_version);
 CREATE INDEX command_receipts_retention ON listening_v2.command_receipts (environment,delete_after_ms,session_id,principal_binding,key_binding,command_id);
 CREATE INDEX command_receipts_actor ON listening_v2.command_receipts (environment,actor_persona_id,session_id,principal_binding,key_binding,command_id);
 CREATE INDEX command_receipts_room ON listening_v2.command_receipts (environment,room_id,principal_binding,key_binding,command_id);
