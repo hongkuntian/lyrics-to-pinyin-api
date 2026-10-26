@@ -625,3 +625,127 @@ test('R2 F2: trusted restore refuses overcommitted ordinal reservations without 
   assert.equal(result.ok, false); assert.equal(result.code, 'execution_capacity'); assert.equal(result.state, null);
   roundTrip(s); // Unaltered two-role reservation is valid at 998.
 });
+
+// R3: known restart is bound to its dispatched departure, not latest chronology.
+function restartFixture(residual = [0, 1, 2, 3], path = [2, 3]) {
+  let s = open(residual);
+  for (const x of [0, 1, 2]) s = observe(s, x);
+  return dispatch(reserve(s, path, {inverse: {
+    planID: id(99103), path: [2, 3], preimageVisitID: s.visits[2][0],
+  }}));
+}
+function restartCommand(s, preimage, changes = {}) {
+  return backCommand(s, preimage, {kind: 'restart', targetVisitID: null, ...changes});
+}
+for (const advance of [false, true]) {
+  test(`R3: frozen restart preserves departure ancestry with ${advance ? 'old C advancing' : 'no old advance'}`, () => {
+    let s = restartFixture();
+    const oldB = s.visits[2];
+    if (advance) s = observe(s, 3, {executionOrdinal: 0});
+    const history = s.visits, remaining = s.remaining, funded = total(s);
+    s = act(s, restartCommand(s, oldB));
+    assert.deepEqual(s.visits.slice(0, history.length), history);
+    assert.deepEqual(s.visits.at(-1).slice(1, 4), [2, history.length - 1, 1]);
+    assert.equal(s.visits.at(-1)[9], 1);
+    assert.equal(s.active.plan.preimageSlot, 2);
+    assert.deepEqual(s.visits[2], oldB);
+    assert.equal(s.remaining, remaining - 1); assert.equal(total(s), funded);
+    s = roundTrip(s);
+    s = roundTrip(release(s, [3], {openUndoAtMS: 0}));
+    assert.equal(s.active, null); assert.equal(s.visits.at(-1)[3], 1);
+    assert.equal(s.promise.postimageSlot, s.visits.length - 1);
+  });
+}
+
+test('R3: intervening same-occurrence forward start cannot replace frozen restart visit identity', () => {
+  let s = restartFixture([0, 1, 2, 2, 3]);
+  const frozen = s.visits[2];
+  s = observe(s, 2, {executionOrdinal: 0});
+  assert.equal(s.visits[3][3], 2); // A distinct observed B, whose Back is old B.
+  const history = s.visits;
+  s = act(s, restartCommand(s, frozen));
+  assert.deepEqual(s.visits.slice(0, 4), history);
+  assert.deepEqual(s.visits[4].slice(1, 4), [2, 3, 1]);
+  assert.notEqual(s.visits[4][3], history[3][3]);
+  roundTrip(release(roundTrip(s), [3]));
+});
+
+test('R3: restart uses exact latest dispatched preimage among earlier identical occurrences', () => {
+  let s = open([0, 1, 2, 3, 2, 3]);
+  for (const x of [0, 1, 2, 3, 2]) s = observe(s, x);
+  const frozen = s.visits[4]; assert.equal(frozen[3], 3);
+  s = dispatch(reserve(s, [2, 3], {inverse: {
+    planID: id(99104), path: [2, 3], preimageVisitID: frozen[0],
+  }}));
+  s = observe(s, 3, {executionOrdinal: 0});
+  s = act(s, restartCommand(s, frozen));
+  assert.deepEqual(s.visits.at(-1).slice(1, 4), [2, 5, 3]);
+  assert.equal(s.active.plan.preimageSlot, 4);
+  assert.notEqual(s.visits.at(-1)[3], s.visits[2][3]);
+  roundTrip(release(roundTrip(s), [3]));
+});
+
+test('R3: independently persisted delayed restart ancestry restores before and after Release', () => {
+  let s = observe(restartFixture(), 3, {executionOrdinal: 0});
+  const command = restartCommand(s, s.visits[2]);
+  s = observe(s, 2); // Build a bounded checkpoint without accepting restart first.
+  const encoded = encodeVisitEscrow(s), h = JSON.parse(encoded.header);
+  const page = JSON.parse(encoded.pages[0]);
+  page.visits[4][3] = 1; page.visits[4][9] = 1;
+  h.observationDigest = hash(JSON.stringify(['observe', command.observationSequence,
+    command.visitID, command.occurrenceSlot, command.observedAtMS, command.startPositionMS,
+    command.authorityEpoch, command.transitionRevision, command.executionOrdinal,
+    command.kind, command.targetVisitID]));
+  const restored = admitted(restoreVisitEscrow(JSON.stringify(h), JSON.stringify(page)));
+  assert.deepEqual(restored.visits.map(v => v[1]), [0, 1, 2, 3, 2]);
+  assert.deepEqual(restored.visits[4].slice(1, 4), [2, 3, 1]);
+  roundTrip(release(roundTrip(restored), [3]));
+  page.visits[4][3] = 0; // No earlier B has this navigation ancestry.
+  assert.equal(restoreVisitEscrow(JSON.stringify(h), JSON.stringify(page)).ok, false);
+});
+
+test('R3: restart rejects mismatched target path, ordinal, profile and absent causal proof unchanged', () => {
+  const s = restartFixture(), b = s.visits[2];
+  refused(s, restartCommand(s, b, {targetVisitID: b[0]}), 'navigation_conflict');
+  refused(s, restartCommand(s, b, {occurrenceSlot: 1}), 'navigation_conflict');
+  refused(s, restartCommand(s, b, {executionOrdinal: 0}), 'navigation_conflict');
+  const wrongPath = restartFixture([0, 1, 2, 3], [3]);
+  refused(wrongPath, restartCommand(wrongPath, wrongPath.visits[2]), 'navigation_conflict');
+  const command = restartCommand(s, b), raw = JSON.stringify({expectedRevision: s.revision, ...command});
+  const qualified = JSON.parse(proof('observe', raw)), before = encodeVisitEscrow(s);
+  const wrongProfile = reduceVisitEscrow(s, raw, JSON.stringify({...qualified, profileHash: 'c'.repeat(64)}));
+  assert.equal(wrongProfile.ok, false); assert.equal(wrongProfile.code, 'qualification_required');
+  assert.equal(wrongProfile.state, s);
+  const unboundCause = reduceVisitEscrow(s, raw, JSON.stringify({...qualified,
+    assertions: qualified.assertions.filter(x => x !== 'navigation_cause')}));
+  assert.equal(unboundCause.ok, false); assert.equal(unboundCause.code, 'qualification_required');
+  assert.equal(unboundCause.state, s); assert.deepEqual(encodeVisitEscrow(s), before);
+});
+
+test('R3: unbound current occurrence and an active inverse cannot masquerade as restart', () => {
+  let idle = open([0, 1, 2, 2]);
+  for (const x of [0, 1, 2]) idle = observe(idle, x);
+  refused(idle, restartCommand(idle, idle.visits[2]), 'navigation_conflict');
+  let s = restartFixture(); const b = s.visits[2];
+  s = act(s, restartCommand(s, b));
+  s = release(s, [3], {openUndoAtMS: 0});
+  s = act(s, {op: 'accept_undo', promiseID: s.promise.plan.id, nowMS: 1});
+  s = dispatch(s);
+  refused(s, restartCommand(s, b), 'navigation_conflict');
+});
+
+test('R3: Undo after delayed restart also retains preimage ancestry across another natural advance', () => {
+  let s = restartFixture(); const b = s.visits[2];
+  s = observe(s, 3, {executionOrdinal: 0});
+  s = act(s, restartCommand(s, b));
+  s = release(s, [3], {openUndoAtMS: 0});
+  s = act(s, {op: 'accept_undo', promiseID: s.promise.plan.id, nowMS: 1});
+  s = dispatch(s);
+  s = observe(s, 3, {executionOrdinal: 1});
+  const chronology = s.visits;
+  s = observe(s, 2, {kind: 'undo', targetVisitID: b[0]});
+  assert.deepEqual(s.visits.slice(0, chronology.length), chronology);
+  assert.deepEqual(s.visits.at(-1).slice(1, 4), [2, chronology.length - 1, 1]);
+  assert.equal(s.visits.at(-1)[9], 3);
+  roundTrip(release(roundTrip(s), []));
+});
