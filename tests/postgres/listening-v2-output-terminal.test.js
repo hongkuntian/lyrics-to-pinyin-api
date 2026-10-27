@@ -64,6 +64,20 @@ const SOURCE_PINS=/* ROOT refresh only changed independently reviewed inputs. */
  "docs/design/sessions-v2-output-terminal.md": "064da7ed3e07237dc028098a5257bd207e6dc9ab09bb842e9d89983133002522",
  "docs/design/sessions-v2-storage-schema.md": "74505c3ff057410dad4cbac5cb068e362c2a40ecd460b6299a7bf636a3720780"
 };
+// This extension may run only on the exact approved disabled component or its descendant.
+const CLAIMS_BASE='76ebb0215fce3d446b3966c70843b43b89d5adf1';
+const CLAIMS_PINS={
+ "api/utils/listening-v2/terminal-claims.js": "7515903163b32ec31c6e417a447cb2c6a12f04509fd6698a84f79743ba284d3f",
+ "api/utils/listening-v2/terminal-codec.js": "602c60e226caf67dbff8991f62afb5c59f245a0d859a42d0993aa456e9b76301",
+ "api/utils/listening-v2/privacy-codec.js": "f4ab488efed5e80ea03ade63d715b80bb42886c20e1502ed0c52612bd7f19879",
+ "api/utils/listening-v2/protocol.js": "4369c15340ea2e4a11a1afbab3407541103a816e015f7ad355243a2d18885fee",
+ "api/utils/listening-v2/tickets.js": "84c3b8ff87773fc61dbe07f7cfbc6c25a8c7f84a93275ae22bf321912759d046",
+ "api/utils/listening-v2/errors.js": "dac70423b7f56295f3b6d1fed410a87edda06432dbf8fd892ed84e98170d049c",
+ "api/utils/song-library/database.js": "7528363c2bc1c20cbba389fb5bdc7686c13f6b15e3ca3ce540e19140c83e7e3d",
+ "docs/design/sessions-v2-architecture.md": "7d4bd6a6d6b8b6c7be2044a2be61c0fd7841c1ba77d9e982bd592e7d1a24f049",
+ "docs/design/sessions-v2-auth-output-terminal-plan.md": "d169891ee418cce32ce810d349a38640f1c67d8bd098102a58e585b8a5fedc5a",
+ "docs/design/sessions-v2-terminal-claims.md": "eef7a6aaf1e3259053a17b0b1390f4f7c88e0a812ca6a33486c58b3c6345bcde"
+};
 // Exact changed-input refresh is resolved from Root's supplied immutable commit.
 const refreshPinPaths=['scripts/library-migrations.js','scripts/membership-role-grants.js','tests/postgres/auth-token-lock-roles.test.js','db/035-listening-account-delete-privileges.sql'];
 const root=fileURLToPath(new URL('../../',import.meta.url));
@@ -105,6 +119,12 @@ async function preflight(){
  for(const path of refreshPinPaths){
   const pin=sha(execFileSync('git',['show',expected+':'+path],{cwd:root,env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}}));
   assert.equal(sha(await sql(path)),pin,'Root-approved refreshed source pin: '+path);
+ }
+ git('merge-base','--is-ancestor',CLAIMS_BASE,expected);
+ git('ls-files','--error-unmatch',...Object.keys(CLAIMS_PINS),'docs/design/sessions-v2-terminal-claims-postgres.md');
+ for(const [path,pin] of Object.entries(CLAIMS_PINS)){
+  assert.equal(sha(execFileSync('git',['show',CLAIMS_BASE+':'+path],{cwd:root,env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}})),pin,'immutable terminal-claims pin: '+path);
+  assert.equal(sha(await sql(path)),pin,'applied terminal-claims pin: '+path);
  }
  const registry=await sql('scripts/library-migrations.js');
  assert.ok(!registry.includes('034-listening-v2-output-terminal-support.sql'),'034 must stay unregistered');
@@ -742,6 +762,279 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   for(const text of trace)assert.doesNotMatch(text,/listening_v2\./,'default-off actual method does not activate V2 writers');
   // SQL-seeded normal auth rows, not actual App Attest enrollment or Apple IO.
  }
+ // SOURCE-ONLY qualification extension: actual pinned claim/failure methods.
+ // All hooks below belong to this closed manual fixture, never the store API.
+ const claimsUnavailable=error=>{
+  assert.equal(error?.code,'unavailable');assert.equal(error.message,'unavailable');assert.equal(error.status,503);
+  assert.equal(error.cause,undefined);assert.equal(error.detail,undefined);assert.equal(error.query,undefined);return true;
+ };
+ const claimsOK=outcome=>{assert.equal(outcome.error,undefined);};
+ const claimsRefused=outcome=>{assert.ok(outcome.error);claimsUnavailable(outcome.error);};
+ const claimsHandle=outcome=>{
+  claimsOK(outcome);assert.ok(outcome.value);assert.ok(Object.isFrozen(outcome.value));
+  assert.equal(Object.getPrototypeOf(outcome.value),null);assert.deepEqual(Reflect.ownKeys(outcome.value),[]);
+ };
+ const claimsNull=outcome=>{claimsOK(outcome);assert.equal(outcome.value,null);};
+ function claimsPreserved(before,after,changed=[]){
+  assert.deepEqual(Object.keys(after).sort(),Object.keys(before).sort());
+  for(const field of Object.keys(before))if(!changed.includes(field))assert.deepEqual(after[field],before[field],field);
+ }
+ function claimsAdapter(h,create,environment,{role=runtime,label='tc',afterSQL}={}){
+  const records=[];
+  const db={query:(text,args)=>h.tx(role,label,tx=>tx.query(text,args)),transaction:async fn=>{
+   const record={trace:[]};records.push(record);
+   try{
+    const value=await h.tx(role,label,fn,{trace:record.trace,afterSQL:async(text,client,args,result)=>{
+     if(text==='SELECT txid_current()::text AS xid'){
+      const identity=await first(client,'SELECT pg_backend_pid() AS pid,txid_current()::text AS xid,'+
+       'current_user AS role,current_database() AS database');
+      assert.equal(identity.role,role);assert.equal(identity.database,h.name);
+      assert.equal(result.rows[0].xid,identity.xid);Object.assign(record,identity);
+     }
+     if(afterSQL)await afterSQL(text,client,args,result,record);
+    }});
+    record.committed=true;return value;
+   }catch(error){record.error=error;throw error;}
+  }};
+  const store=create({db,coordinatorEnvironment:environment});
+  assert.equal(records.length,0,'constructor is inert');
+  assert.deepEqual(Object.keys(store).sort(),['claimNext','failClaim']);
+  return {store,records}; // Fixture-local only; no handle unpacking or runtime API.
+ }
+ function claimsTransactions(adapter){
+  for(const r of adapter.records){
+   if(r.committed){
+    assert.equal(r.trace.at(-1),'COMMIT');
+    if(r.trace.some(q=>/UPDATE listening_v2\.outbox/.test(q)))
+     assert.match(r.trace.at(-2),/UPDATE listening_v2\.outbox/,'store final mutation immediately precedes wrapper COMMIT');
+   }
+   for(const q of r.trace)assert.doesNotMatch(q,/listening_v2\.(rooms|output_guards|privacy_personas|returning_grants|semantic_events|command_receipts)/);
+  }
+ }
+ const claimsEnvironment=label=>'preview:tc-'+runID.slice(0,12)+'-'+label;
+ async function claimsSeed(h,environment,label,{offset=0,retryMS=600000}={}){
+  const j=await job(h,payload({kind:'credential',value:sha('tc-'+runID+'-'+label)},{environment}));
+  j.created_at_ms-=2000;j.due_at_ms-=1000-offset;j.retry_until_ms=await clock(h)+retryMS;
+  await h.tx(account,'tc-seed',tx=>insert(tx,j));return j;
+ }
+ // Every new barrier path validates every full-operation outcome even if an
+ // observer/assertion fails. Drain before quiescence, pool.end and database drop.
+ async function claimsScope(h,body){
+  const holds=[],pending=[],failures=[];let value;
+  const scope={hold(){const hold=signal();holds.push(hold);h.holds.add(hold);return hold;},
+   start(work,validate){const outcome=h.outcome(Promise.resolve().then(work));pending.push({outcome,validate});return outcome;}};
+  try{value=await body(scope);}catch(error){failures.push(error);}
+  finally{
+   for(const hold of holds){hold.release();h.holds.delete(hold);}
+   await Promise.all(pending.map(p=>p.outcome));
+   for(const p of pending)try{p.validate(await p.outcome);}catch(error){failures.push(error);}
+   try{await quiescent(h);}catch(error){failures.push(error);}
+  }
+  if(failures.length)throw aggregate(failures,'terminal claims observer/outcome/cleanup failure');return value;
+ }
+ const claimsObserver=()=>{throw new Error('injected actual terminal claims observer failure');};
+ async function claimsSkipLocked(h,create,single,injectObserver){
+  const name=(single?'one':'two')+(injectObserver?'fault':'normal'),env=claimsEnvironment(name);
+  const firstJob=await claimsSeed(h,env,name+'-first');
+  const secondJob=single?null:await claimsSeed(h,env,name+'-second',{offset:1});
+  const initial=imageRow(await get(h,firstJob));let a,b,ownerPID,contenderPID;
+  const attempt=claimsScope(h,async s=>{
+   const hold=s.hold();
+   a=claimsAdapter(h,create,env,{label:'tc-owner',afterSQL:async(q,client,args,result,r)=>{
+    if(/FOR UPDATE OF o SKIP LOCKED/.test(q)){
+     assert.equal(result.rows.length,1);assert.equal(JSON.parse(result.rows[0].raw_envelope).job_id,firstJob.job_id);
+     ownerPID=r.pid;await hold.point();
+    }
+   }});
+   b=claimsAdapter(h,create,env,{label:'tc-contender'});
+   const owner=s.start(()=>a.store.claimNext(),claimsHandle);await entered(hold,owner);
+   const contender=s.start(()=>b.store.claimNext(),single?claimsNull:claimsHandle);
+   await bounded(contender,2500,'actual SKIP LOCKED did not finish while first selection held');
+   contenderPID=b.records[0].pid;assert.notEqual(ownerPID,contenderPID);
+   // The locked first selection is still pending in another committed snapshot.
+   assert.deepEqual(imageRow(await get(h,firstJob)),initial);
+   if(secondJob){const r=imageRow(await get(h,secondJob));assert.equal(r.state,'claimed');assert.equal(r.attempt_count,1);}
+   t.diagnostic(JSON.stringify({terminalClaimsCase:single?'one-debit':'skip-locked-second',injectObserver,ownerPID,contenderPID}));
+   if(injectObserver)claimsObserver();
+  });
+  if(injectObserver)await assert.rejects(attempt,{message:'injected actual terminal claims observer failure'});else await attempt;
+  const after=imageRow(await get(h,firstJob));assert.equal(after.state,'claimed');assert.equal(after.attempt_count,1);
+  assert.equal(numeric(after.claim_epoch),1);claimsPreserved(initial,after,['state','attempt_count','claim_epoch','claim_nonce_hash','claim_until_ms']);
+  assert.equal(await b.store.claimNext(),null,'live claimed row cannot incur another debit');
+  claimsTransactions(a);claimsTransactions(b);await quiescent(h);
+ }
+ async function claimsPermissionsRollback(h,create,footprint){
+  const env=claimsEnvironment('rollback-'+footprint),j=await claimsSeed(h,env,'rollback-'+footprint);
+  const initial=await get(h,j),acl=(await h.query(`SELECT r.rolname,
+   has_table_privilege(r.oid,'listening_v2.outbox','UPDATE') AS can_update
+   FROM pg_roles r WHERE r.rolname=ANY($1::text[]) ORDER BY 1`,[roles])).rows;
+  assert.deepEqual(acl,[{rolname:account,can_update:false},{rolname:runtime,can_update:true}]);
+  const denied=claimsAdapter(h,create,env,{role:account});
+  await assert.rejects(denied.store.claimNext(),claimsUnavailable);
+  assert.equal(denied.records.length,1);assert.equal(denied.records[0].error?.code,'42501');
+  await code(h.as(account,"UPDATE listening_v2.outbox SET state='claimed' WHERE environment=$1 AND job_id=$2",[env,j.job_id]),'42501');
+  assert.deepEqual(await get(h,j),initial);
+  let fault='claim',mutated=0;
+  const actual=claimsAdapter(h,create,env,{afterSQL:async(q,client,args,result)=>{
+   if(/UPDATE listening_v2\.outbox/.test(q)&&fault){
+    assert.equal(result.rows.length,1);mutated++;
+    assert.equal(JSON.parse(result.rows[0].raw_envelope).state,fault==='claim'?'claimed':'pending');
+    throw new Error('injected after actual '+fault+' mutation');
+   }
+  }});
+  await assert.rejects(actual.store.claimNext(),claimsUnavailable);assert.equal(mutated,1);
+  assert.deepEqual(await get(h,j),initial,'uncommitted actual claim reserves no debit');
+  fault=null;const handle=await actual.store.claimNext();claimsHandle({value:handle});
+  const claimed=await get(h,j),r=imageRow(claimed);assert.equal(r.attempt_count,1);assert.equal(numeric(r.claim_epoch),1);
+  const alien=claimsAdapter(h,create,env);await assert.rejects(alien.store.failClaim(handle),claimsUnavailable);
+  assert.equal(alien.records.length,0,'other store cannot adopt a handle');
+  fault='failure';await assert.rejects(actual.store.failClaim(handle),claimsUnavailable);assert.equal(mutated,2);
+  assert.deepEqual(await get(h,j),claimed,'failure SQL and speculative settlement roll back together');
+  fault=null;assert.deepEqual(await actual.store.failClaim(handle),{status:'pending'});
+  const settled=imageRow(await get(h,j));assert.equal(settled.attempt_count,1);assert.equal(numeric(settled.claim_epoch),1);
+  claimsPreserved(r,settled,['state','claim_nonce_hash','claim_until_ms']);
+  await assert.rejects(actual.store.failClaim(handle),claimsUnavailable);
+  const committed=actual.records.filter(x=>x.committed);assert.notEqual(committed[0].xid,committed.at(-1).xid);
+  assert.deepEqual((await h.query(`SELECT r.rolname,has_table_privilege(r.oid,'listening_v2.outbox','UPDATE') AS can_update
+   FROM pg_roles r WHERE r.rolname=ANY($1::text[]) ORDER BY 1`,[roles])).rows,acl);
+  claimsTransactions(actual);await quiescent(h);
+  t.diagnostic(JSON.stringify({terminalClaimsCase:'permissions-and-rollback',footprint,claimFaults:1,failureFaults:1}));
+ }
+ async function claimsTen(h,create){
+  const env=claimsEnvironment('ten'),j=await claimsSeed(h,env,'ten'),initial=imageRow(await get(h,j));
+  // A real nonterminal kind in this namespace and an earlier other namespace.
+  const old=await job(h,{version:2,environment:env,selector:{kind:'credential',value:sha('tc-old-'+runID)},invalidatedAtMS:0,cursor:null});
+  old.kind='privacy_dependency';old.job_key='privacy-dependency:'+old.job_id;
+  old.created_at_ms=j.created_at_ms;old.due_at_ms=j.due_at_ms-1;
+  await h.tx(account,'tc-old-kind',tx=>insert(tx,old));const oldImage=await get(h,old);
+  const other=await claimsSeed(h,claimsEnvironment('other'),'other',{offset:-500}),otherImage=await get(h,other);
+  const actual=claimsAdapter(h,create,env);let handle;
+  for(let n=1;n<=9;n++){
+   handle=await actual.store.claimNext();assert.ok(handle);
+   assert.deepEqual(await actual.store.failClaim(handle),{status:'pending'});
+   const r=imageRow(await get(h,j));assert.equal(r.attempt_count,n);assert.equal(numeric(r.claim_epoch),n);
+   claimsPreserved(initial,r,['state','attempt_count','claim_epoch']);
+  }
+  handle=await actual.store.claimNext();assert.ok(handle);const live=await get(h,j),r=imageRow(live);
+  assert.equal(r.state,'claimed');assert.equal(r.attempt_count,10);assert.equal(numeric(r.claim_epoch),10);
+  const otherStore=claimsAdapter(h,create,env);assert.equal(await otherStore.store.claimNext(),null);
+  assert.deepEqual(await get(h,j),live,'live10 remains available to a future qualified semantic store');
+  assert.deepEqual(await actual.store.failClaim(handle),{status:'dead'});
+  const dead=imageRow(await get(h,j));assert.equal(dead.state,'dead');assert.equal(dead.attempt_count,10);
+  assert.equal(numeric(dead.claim_epoch),10);assert.equal(dead.claim_nonce_hash,null);assert.equal(dead.claim_until_ms,null);
+  assert.equal(dead.delete_after_ms,dead.completed_at_ms+DAY);
+  claimsPreserved(initial,dead,['state','attempt_count','claim_epoch','completed_at_ms','delete_after_ms']);
+  const deadImage=await get(h,j);assert.equal(await actual.store.claimNext(),null);
+  await assert.rejects(actual.store.failClaim(handle),claimsUnavailable);assert.deepEqual(await get(h,j),deadImage);
+  assert.deepEqual(await get(h,old),oldImage);assert.deepEqual(await get(h,other),otherImage);
+  claimsTransactions(actual);await quiescent(h);
+  t.diagnostic(JSON.stringify({terminalClaimsCase:'live10-then-explicit-death',count:10,epoch:10}));
+ }
+ async function claimsPausePastDeadline(client,deadline){
+  // Exact numeric SQL comparisons, one bounded controlled pause on this same
+  // runtime client. Neither Date nor a store clock override grants permission.
+  const before=await first(client,'SELECT (extract(epoch FROM clock_timestamp())*1000)::text AS ms,'+
+   'extract(epoch FROM clock_timestamp())*1000<$1::numeric AS before_deadline',[deadline]);
+  assert.equal(before.before_deadline,true,'selection/context must demonstrably precede original deadline');
+  await client.query('SELECT pg_sleep(LEAST(2::numeric,GREATEST(0::numeric,'+
+   '($1::numeric-extract(epoch FROM clock_timestamp())*1000+20)/1000))::double precision)',[deadline]);
+  const after=await first(client,'SELECT (extract(epoch FROM clock_timestamp())*1000)::text AS ms,'+
+   'extract(epoch FROM clock_timestamp())*1000>=$1::numeric AS reached_deadline',[deadline]);
+  assert.equal(after.reached_deadline,true,'observed DB time must cross original deadline before final store SQL');
+  return {beforeMS:before.ms,afterMS:after.ms,originalRetryUntilMS:deadline};
+ }
+ async function claimsDeadlines(h,create){
+  for(const operation of ['claim','failure']){
+   const env=claimsEnvironment('deadline-'+operation),j=await claimsSeed(h,env,'deadline-'+operation,{retryMS:1500});
+   let armed=operation==='claim',timing;
+   const actual=claimsAdapter(h,create,env,{afterSQL:async(q,client,args,result)=>{
+    if(armed&&(operation==='claim'?/FOR UPDATE OF o SKIP LOCKED/.test(q):q==='SELECT txid_current()::text AS xid')){
+     if(operation==='claim'){
+      assert.equal(result.rows.length,1);assert.equal(JSON.parse(result.rows[0].raw_envelope).job_id,j.job_id);
+     }
+     armed=false;timing=await claimsPausePastDeadline(client,j.retry_until_ms);
+    }
+   }});
+   const initial=imageRow(await get(h,j));let expectedCount=0;
+   if(operation==='claim')assert.equal(await actual.store.claimNext(),null);
+   else{
+    const handle=await actual.store.claimNext();assert.ok(handle);expectedCount=1;armed=true;
+    assert.deepEqual(await actual.store.failClaim(handle),{status:'dead'});
+   }
+   assert.ok(timing);const dead=imageRow(await get(h,j));assert.equal(dead.state,'dead');
+   assert.equal(dead.attempt_count,expectedCount);assert.equal(numeric(dead.claim_epoch),expectedCount);
+   assert.ok(dead.completed_at_ms>=j.retry_until_ms);assert.equal(dead.delete_after_ms,dead.completed_at_ms+DAY);
+   claimsPreserved(initial,dead,['state','attempt_count','claim_epoch','completed_at_ms','delete_after_ms']);
+   claimsTransactions(actual);await quiescent(h);
+   t.diagnostic(JSON.stringify({terminalClaimsCase:'original-deadline-crossing',operation,...timing}));
+  }
+ }
+ async function claimsExpiredOrderings(h,create){
+  const fixtures=[];
+  // Four real claims expire in parallel; no trigger bypass or lease/count edit.
+  for(const ordering of ['failure-first','successor-first'])for(const injectObserver of [false,true]){
+   const name=ordering+(injectObserver?'fault':'normal'),env=claimsEnvironment(name);
+   const j=await claimsSeed(h,env,name),control={active:false,hold:null,started:signal()};
+   const old=claimsAdapter(h,create,env,{afterSQL:async(q,client,args,result,r)=>{
+    if(control.active&&q==='SELECT txid_current()::text AS xid')control.started.enter(r.pid);
+    if(control.hold&&/UPDATE listening_v2\.outbox/.test(q))await control.hold.point();
+   }}),handle=await old.store.claimNext();
+   assert.ok(handle);const claimed=await get(h,j),r=imageRow(claimed);
+   assert.equal(r.attempt_count,1);assert.equal(numeric(r.claim_epoch),1);
+   fixtures.push({ordering,injectObserver,env,j,old,handle,claimed,control,until:numeric(r.claim_until_ms)});
+  }
+  await quiescent(h);
+  const latest=Math.max(...fixtures.map(f=>f.until)),remaining=Math.max(0,latest-await clock(h)+20);
+  assert.ok(remaining<=30050,'only the real fixed 30s lease wait is permitted');
+  await bounded(new Promise(resolve=>setTimeout(resolve,remaining)),31000,'actual lease wait exceeded safety bound');
+  for(const f of fixtures){
+   const measured=await first(h,'SELECT extract(epoch FROM clock_timestamp())*1000>=$1::numeric AS expired,'+
+    'extract(epoch FROM clock_timestamp())*1000<$2::numeric AS retry_live',[f.until,f.j.retry_until_ms]);
+   assert.deepEqual(measured,{expired:true,retry_live:true});assert.deepEqual(await get(h,f.j),f.claimed);
+   let successor,ownerPID,contenderPID,owner,contender,witness;
+   const attempt=claimsScope(h,async s=>{
+    const hold=s.hold();f.control.active=true;
+    if(f.ordering==='failure-first'){
+     // Lock the exact old row with the actual failClaim UPDATE, before COMMIT.
+     f.control.hold=hold;
+     owner=s.start(()=>f.old.store.failClaim(f.handle),o=>{claimsOK(o);assert.deepEqual(o.value,{status:'pending'});});
+     await entered(hold,owner);ownerPID=f.old.records.at(-1).pid;
+     successor=claimsAdapter(h,create,f.env);
+     contender=s.start(()=>successor.store.claimNext(),claimsNull);
+     await bounded(contender,2500,'reclaim failed to skip actual failure-held row');contenderPID=successor.records.at(-1).pid;
+     assert.notEqual(ownerPID,contenderPID);
+    }else{
+     successor=claimsAdapter(h,create,f.env,{afterSQL:async(q,client,args,result,r)=>{
+      if(/FOR UPDATE OF o SKIP LOCKED/.test(q)){
+       assert.equal(result.rows.length,1);assert.equal(result.rows[0].raw_envelope,f.claimed.image);
+       ownerPID=r.pid;await hold.point();
+      }
+     }});
+     owner=s.start(()=>successor.store.claimNext(),claimsHandle);await entered(hold,owner);
+     contender=s.start(()=>f.old.store.failClaim(f.handle),claimsRefused);
+     const started=f.control.started;
+     contenderPID=await entered(started,contender);
+     witness=await blocked(h,ownerPID,contenderPID);
+     assert.equal(witness.wait_event_type,'Lock');assert.ok(witness.blockers.includes(ownerPID));
+    }
+    t.diagnostic(JSON.stringify({terminalClaimsCase:'expired-'+f.ordering,injectObserver:f.injectObserver,ownerPID,contenderPID,expired:measured.expired,
+     ...(witness?{wait:witness.wait_event_type,blockers:witness.blockers}:{})}));
+    if(f.injectObserver)claimsObserver();
+   });
+   if(f.injectObserver)await assert.rejects(attempt,{message:'injected actual terminal claims observer failure'});else await attempt;
+   if(f.ordering==='failure-first'){
+    const settled=imageRow(await get(h,f.j));assert.equal(settled.state,'pending');assert.equal(settled.attempt_count,1);
+    assert.equal(numeric(settled.claim_epoch),1);claimsPreserved(imageRow(f.claimed),settled,['state','claim_nonce_hash','claim_until_ms']);
+    claimsHandle({value:await successor.store.claimNext()});
+   }
+   const next=await get(h,f.j),r=imageRow(next);assert.equal(r.state,'claimed');assert.equal(r.attempt_count,2);
+   assert.equal(numeric(r.claim_epoch),2);assert.notEqual(r.claim_nonce_hash,imageRow(f.claimed).claim_nonce_hash);
+   claimsPreserved(imageRow(f.claimed),r,['attempt_count','claim_epoch','claim_nonce_hash','claim_until_ms']);
+   await assert.rejects(f.old.store.failClaim(f.handle),claimsUnavailable);assert.deepEqual(await get(h,f.j),next);
+   claimsTransactions(f.old);claimsTransactions(successor);await quiescent(h);
+  }
+ }
+
 
  try{
   const marker=await preflight(); // No pg/application import or connection before refusal gates.
@@ -765,6 +1058,7 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   assert.ok(Number((await first(admin,'SHOW server_version_num')).server_version_num)>=170000);
   clusterLease=(await first(admin,'SELECT pg_try_advisory_lock(71309,32026) AS owned')).owned;
   assert.equal(clusterLease,true,'another fixed-role qualification owns the cluster');
+  const {createTerminalClaims}=await import('../../api/utils/listening-v2/terminal-claims.js');
   const {parseTerminalPayload}=await import('../../api/utils/listening-v2/terminal-codec.js');
   const {AccountStore}=await import('../../api/utils/membership/accounts.js');
   const {AppAuthStore}=await import('../../api/utils/app-auth/store.js');
@@ -780,7 +1074,13 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   for(const footprint of ['minimal','observed'])await useDatabase(footprint,async h=>{
    await schema(h,footprint);await representation(h,footprint,parseTerminalPayload);
    await replayBoundary(h,replayMembershipRoleGrants);
+   await claimsPermissionsRollback(h,createTerminalClaims,footprint);
    if(footprint==='observed'){
+    for(const single of [false,true])for(const injectObserver of [false,true])
+     await claimsSkipLocked(h,createTerminalClaims,single,injectObserver);
+    await claimsTen(h,createTerminalClaims);
+    await claimsDeadlines(h,createTerminalClaims);
+    await claimsExpiredOrderings(h,createTerminalClaims);
     await rowSimulation(h);await failuresAndHandoff(h);
     for(const kind of ['insert','claim','refund']){
      await race(h,kind);
