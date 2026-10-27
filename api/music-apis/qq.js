@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import {BaseMusicAPI} from './base.js';
+import {qqLanguageObservations,bindProviderLanguageObservations} from '../utils/provider-language-evidence.js';
 import {cleanLyrics} from '../utils/lyric-quality.js';
 import {parseLRC} from '../utils/lrc.js';
 import {decryptQRC} from '../utils/vendor/qq-qrc-codec.js';
@@ -18,6 +19,7 @@ const mismatch=()=>new RecordingMismatchError();
 // Only a fresh structured detail binds display labels to these source IDs.
 // Copied/serialized song properties are evidence, not alias authority.
 const boundLabels=new WeakMap();
+const languageEvidence=new WeakMap();
 const explicitSheets=new WeakSet();
 function cancelled(signal){if(signal?.aborted)throw Object.assign(new Error('Lookup cancelled'),{name:'AbortError'});}
 
@@ -197,7 +199,9 @@ function validateHeaders(raw,song,context) {
  }
  return labels;
 }
-const clean=(value,song)=>cleanLyrics(value,{duration:song.duration,title:song.title,artist:song.artist});
+const clean=(value,song)=>bindProviderLanguageObservations(
+ cleanLyrics(value,{duration:song.duration,title:song.title,artist:song.artist}),song,languageEvidence.get(song),
+ {field:'/data/lyric',format:value.timingSource?.source?.endsWith(':qrc')?'qrc':'lrc'});
 function compatibleVersions(song,request) {
  // Apple name scoring predates clean/explicit album markers. QQ must retain
  // every rendition marker even when a primary/display title moved it to album.
@@ -286,6 +290,7 @@ async function fastDiscover(query,request,context,records,responses,state) {
    if(Number.isSafeInteger(raw.interval)&&raw.interval>0&&raw.interval<=7200&&Math.abs(raw.interval-request.duration)>3){state.excluded.add(value);continue;}
    state.unresolved=true;continue;
   }
+  languageEvidence.set(core,qqLanguageObservations(core.id,detail.data));
   records.set(value,core);
   if(!song&&compatible(core,request))state.unresolved=true;
   responses.set(value,batch[`lyric_${value}`]??null);
@@ -368,6 +373,7 @@ export class QQMusicAPI extends BaseMusicAPI {
   const response=batch.details;if(!object(response))throw providerError();
   if(response.code!==0||!object(response.data))throw providerError();const song=metadata(response.data.track_info,true);
   if(!song||song.id!==value||!compatible(song,context))throw mismatch();
+  languageEvidence.set(song,qqLanguageObservations(song.id,response.data));
   bindSheetPermission(song,context);
   const lyrics=await fetchLyrics(song,context,batch.lyric??null);return {song,lyrics};
  }

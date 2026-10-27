@@ -1,4 +1,5 @@
 import {francAll} from 'franc-min';
+import {resolveProviderLanguageEvidence} from './provider-language-evidence.js';
 
 const toTag={eng:'en',spa:'es',fra:'fr',por:'pt',deu:'de',ita:'it',rus:'ru',ukr:'uk',bul:'bg',srp:'sr',hrv:'hr',pol:'pl',ces:'cs',slk:'sk',nld:'nl',swe:'sv',dan:'da',fin:'fi',nor:'no',nob:'nb',ron:'ro',hun:'hu',tur:'tr',ell:'el',ara:'ar',pes:'fa',urd:'ur',hin:'hi',ben:'bn',tam:'ta',tel:'te',mar:'mr',tha:'th',vie:'vi',ind:'id',tgl:'tl',heb:'he',jpn:'ja',kor:'ko',cmn:'zh',yue:'yue',cat:'ca',lit:'lt',lav:'lv',est:'et',sqi:'sq',kaz:'kk',uzn:'uz',aze:'az',bel:'be',mal:'ml',kan:'kn',guj:'gu',pan:'pa',nep:'ne',sin:'si',khm:'km',mya:'my',amh:'am',swh:'sw'};
 const scriptsOf=text=>[
@@ -19,7 +20,7 @@ function classify(text) {
  if(best==='und'||score-second<margin)return {language:'und',confidence:'unknown',scripts};
  return {language:toTag[best]??best,confidence:'estimated',scripts};
 }
-export function analyzeLyricLanguage(lines,{genres=[],verified=false}={}) {
+export function analyzeLyricLanguage(lines,{genres=[],verified=false,providerEvidence,providerSource}={}) {
  const text=lines.join('\n'),overall=classify(text),scripts=[...new Set(lines.flatMap(scriptsOf))];
  const rows=lines.map(line=>classify(line));
  const languages=[...new Set(rows.filter(r=>r.language!=='und').map(r=>r.language))];
@@ -40,7 +41,9 @@ export function analyzeLyricLanguage(lines,{genres=[],verified=false}={}) {
    else if(mandarin){pronunciation='zh';basis='catalog_category';}
   }
  }
- return {version:1,primary:pronunciation==='yue'?'yue':overall.language,languages:mixed?languages:[pronunciation==='yue'?'yue':overall.language],
+ const result={version:1,primary:pronunciation==='yue'?'yue':overall.language,languages:mixed?languages:[pronunciation==='yue'?'yue':overall.language],
   scripts,mixed,confidence:overall.confidence,pronunciation_language:pronunciation,pronunciation_basis:basis,
   lines:rows.map((row,index)=>({sourceID:`L${String(index+1).padStart(4,'0')}`,language:row.language,confidence:row.confidence}))};
+ if(providerEvidence!==undefined)result.provider_evidence=resolveProviderLanguageEvidence(lines,result,providerEvidence,providerSource);
+ return result;
 }

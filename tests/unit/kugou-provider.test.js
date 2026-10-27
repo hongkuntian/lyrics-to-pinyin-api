@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {KugouAPI} from '../../api/music-apis/kugou.js';
 import {encodeKRC} from '../helpers/kugou-krc.js';
+import {analyzeLyricLanguage} from '../../api/utils/lyric-language.js';
 
 const request={artist:'林小雨',title:'窗前',duration:120,album:'清晨'};
 const raw='[ar:林小雨]\n[ti:窗前]\n[00:00.00]窗前 - 林小雨\n[00:12.00]今天窗前有只猫\n[01:40.00]它在等清晨';
@@ -16,6 +17,27 @@ function context(candidates,lyrics={},extra={}) {
   }};
 }
 const search=(ctx,values={})=>new KugouAPI().searchSong(values.artist ?? request.artist,values.title ?? request.title,ctx);
+
+test('Kugou language declarations use the existing search and own selected lyric body without another call',async()=>{
+ const before=context([candidate()]),after=context([candidate('10',{language:'俄语'})]);
+ const a=await search(before),b=await search(after);
+ assert.deepEqual(b.lyricsData.lines,a.lyricsData.lines);
+ assert.deepEqual(after.calls.map(c=>c.url.toString()),before.calls.map(c=>c.url.toString()));assert.equal(after.calls.length,2);
+ const result=analyzeLyricLanguage(b.lyricsData.lines.map(l=>l.text),{providerEvidence:b.lyricsData.providerLanguageEvidence,providerSource:{provider:'kugou',id:'10'}});
+ assert.equal(result.provider_evidence.decision.status,'disagreement');assert.equal(result.provider_evidence.decision.candidate,'ru');
+ assert.equal(result.provider_evidence.observations[0].raw,'俄语');assert.ok(!JSON.stringify(result).includes('public-candidate-key'));
+});
+test('same-ID conflicting Kugou labels remain optional conflicts, not new recording failures or first-label wins',async()=>{
+ const ctx=context([candidate('10',{language:'俄语'}),candidate('10',{language:'日语'})]);const song=await search(ctx);
+ assert.equal(ctx.calls.length,2);assert.equal(song.id,'10');
+ const result=analyzeLyricLanguage(song.lyricsData.lines.map(l=>l.text),{providerEvidence:song.lyricsData.providerLanguageEvidence,providerSource:{provider:'kugou',id:'10'}});
+ assert.equal(result.provider_evidence.decision.status,'declaration_conflict');assert.equal(result.provider_evidence.observations.length,2);
+});
+test('malformed optional Kugou language cannot take out an otherwise valid readable source',async()=>{
+ const ctx=context([candidate('10',{language:{toString:'invalid provider object'}})]),song=await search(ctx);
+ assert.equal(ctx.calls.length,2);assert.equal(song.lyricsData.lines.length,2);
+ assert.equal(song.lyricsData.providerLanguageEvidence.unusable,true);
+});
 
 test('manual discovery retains alternative versions without weakening automatic matching or exposing capabilities',async()=>{
   const ctx=context([candidate('10'),candidate('11',{song:'窗前 (Live)',duration:135000,product_from:'ugc'})]);
