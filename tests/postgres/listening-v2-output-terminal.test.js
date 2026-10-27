@@ -57,7 +57,7 @@ const SOURCE_PINS=/* ROOT refresh only changed independently reviewed inputs. */
  "tests/postgres/listening-v2-transactions.test.js": "1587283e9bb14f9da535a2c1b713b115d83a73b54d55ba2126c4206fcd9845da",
  "scripts/library-migrations.js": "b2bcfb3ea471555c048f9258b45f745f8ef56cbdfcda08cbbdd2ed0d1e40b422",
  "scripts/membership-role-grants.js": "6c92eaf3fb68a69c66d2d182afacebfce87cdf8ed5d9d98c659c2c9c95dd8117",
- "db/034-listening-v2-output-terminal-support.sql": "28dbfb344fc782a35c96ea896f6c17092607280f193eed166b5dfc13b8776cab",
+ "db/034-listening-v2-output-terminal-support.sql": "4d32025362129d89242c5060febe957c6ad726acd01b855a1dc173a04532d6f4",
  "api/utils/listening-v2/terminal-codec.js": "602c60e226caf67dbff8991f62afb5c59f245a0d859a42d0993aa456e9b76301",
  "tests/unit/listening-v2-terminal-codec.test.js": "e1ce66ffc4932f9253aad01840d33b6f41552e76cc4ce03558ab5e994dee52f5",
  "tests/integration/listening-v2-output-terminal-schema.test.js": "f72dc50b9892cb4f41ff34632c2bc1d918f00046f1c90f00ab589217394c11b8",

@@ -121,6 +121,11 @@ BEGIN
   FOREACH role_name IN ARRAY ARRAY['lyra_runtime_v1','lyra_account_v1'] LOOP
     SELECT oid INTO role_oid FROM pg_catalog.pg_roles WHERE rolname=role_name;
     IF NOT FOUND THEN CONTINUE; END IF;
+    -- Owners may revoke their ordinary ACL privileges and later regrant them.
+    -- Reject ownership authority itself, not only the post-REVOKE ACL result.
+    IF EXISTS (SELECT 1 FROM pg_catalog.pg_roles r JOIN pg_catalog.pg_class c ON c.oid=key_table
+      WHERE r.oid=role_oid AND (r.rolsuper OR c.relowner=r.oid OR pg_catalog.pg_has_role(r.oid,c.relowner,'MEMBER')))
+    THEN RAISE EXCEPTION 'v2_install_metadata_residual_privilege' USING ERRCODE='23514'; END IF;
     FOREACH action IN ARRAY ARRAY['INSERT','UPDATE'] LOOP
       -- Snapshot effective rights before narrowing this action. Never infer
       -- runtime rights from the smaller 030-only fixture or fabricate new ones.
