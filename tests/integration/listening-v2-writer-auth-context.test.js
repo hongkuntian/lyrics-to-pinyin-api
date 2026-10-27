@@ -20,8 +20,9 @@ const sibling=Buffer.alloc(32,2).toString('base64'),foreign=Buffer.alloc(32,3).t
 let db,adapter,auth,source,bearer,trace,intercept;
 before(async()=>{
  db=new PGlite();
- assert.equal(migrationNames.length,30);
- assert.ok(migrationNames.every(n=>!/^03[01]-/.test(n)));
+ assert.equal(migrationNames.length,31);
+ assert.equal(migrationNames.at(-1),'035-listening-account-delete-privileges.sql');
+ assert.ok(migrationNames.every(n=>!/^03[0134]-/.test(n)));
  for(const name of migrationNames)await db.exec(await readFile(new URL('../../db/'+name,import.meta.url),'utf8'));
  adapter={query:(...a)=>db.query(...a),transaction:fn=>db.transaction(fn)};
 });

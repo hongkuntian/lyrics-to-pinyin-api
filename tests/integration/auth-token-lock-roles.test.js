@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
-import {migrateLibrary,migrationNames} from '../../scripts/library-migrations.js';
+import {migrateLibrary as migrateRegistered,migrationNames} from '../../scripts/library-migrations.js';
 import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.js';
 
 // AUTHORED NOT EXECUTED. Apply this file at its repository-relative path first.
@@ -11,6 +11,13 @@ import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.j
 // actual public migrations plus a synthetic NOLOGIN role with SELECT(tokens)
 // and no token UPDATE. No account/auth service, V2 schema or live pool is used.
 const name='032-auth-token-row-locks.sql',anchor='auth_lock_anchor';
+const correction='035-listening-account-delete-privileges.sql';
+// Preserve every historical 032 assertion on its exact registered prefix.
+async function migrateLibrary(database){
+ const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>n!==correction));
+ try{return await migrateRegistered(database);}
+ finally{migrationNames.splice(0,migrationNames.length,...saved);}
+}
 const publicNames=[
  '001-song-library.sql','002-dashboard-views.sql','003-correction-foundation.sql',
  '004-correction-dashboard.sql','005-correction-batches.sql','006-batch-dashboard.sql',
@@ -100,8 +107,8 @@ async function privilegeSnapshot(db){
   WHERE n.nspname='public' AND c.relkind='r' ORDER BY relation,a.attnum`)).rows;
 }
 
-test('manifest adds only 032 immediately after 029 and leaves 030/031 unregistered',()=>{
- assert.deepEqual(migrationNames,[...publicNames,name]);
+test('manifest preserves historical prefix, adds 035 after 032 and leaves 030/031/033/034 unregistered',()=>{
+ assert.deepEqual(migrationNames,[...publicNames,name,correction]);
 });
 
 test('minimal observed-role fixture reproduces 42501 before 032 and admits real row locks afterwards',async t=>{

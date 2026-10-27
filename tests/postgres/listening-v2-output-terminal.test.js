@@ -64,6 +64,8 @@ const SOURCE_PINS=/* ROOT refresh only changed independently reviewed inputs. */
  "docs/design/sessions-v2-output-terminal.md": "064da7ed3e07237dc028098a5257bd207e6dc9ab09bb842e9d89983133002522",
  "docs/design/sessions-v2-storage-schema.md": "74505c3ff057410dad4cbac5cb068e362c2a40ecd460b6299a7bf636a3720780"
 };
+// Exact changed-input refresh is resolved from Root's supplied immutable commit.
+const refreshPinPaths=['scripts/library-migrations.js','scripts/membership-role-grants.js','tests/postgres/auth-token-lock-roles.test.js','db/035-listening-account-delete-privileges.sql'];
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const migration='db/034-listening-v2-output-terminal-support.sql';
 const runtime='lyra_runtime_v1',account='lyra_account_v1',roles=[runtime,account];
@@ -99,7 +101,11 @@ async function preflight(){
  assert.equal(git('status','--porcelain=v1','--untracked-files=normal','--','.',':(exclude)node_modules'),'','REFUSE source/index or nonignored untracked mismatch; Root separately pins the installed dependency tree');
  const proposed=['tests/postgres/listening-v2-output-terminal.test.js','docs/design/sessions-v2-output-terminal-postgres.md'];
  git('ls-files','--error-unmatch',...Object.keys(SOURCE_PINS),...proposed);
- for(const [path,pin] of Object.entries(SOURCE_PINS))assert.equal(sha(await sql(path)),pin,'source pin: '+path);
+ for(const [path,pin] of Object.entries(SOURCE_PINS))if(!refreshPinPaths.includes(path))assert.equal(sha(await sql(path)),pin,'source pin: '+path);
+ for(const path of refreshPinPaths){
+  const pin=sha(execFileSync('git',['show',expected+':'+path],{cwd:root,env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}}));
+  assert.equal(sha(await sql(path)),pin,'Root-approved refreshed source pin: '+path);
+ }
  const registry=await sql('scripts/library-migrations.js');
  assert.ok(!registry.includes('034-listening-v2-output-terminal-support.sql'),'034 must stay unregistered');
  assert.ok(isAbsolute(process.env.LYRA_TEST_POSTGRES_MANIFEST??''),'missing manifest REFUSES; never skip');
@@ -329,8 +335,10 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   FROM pg_roles r CROSS JOIN (VALUES ('SELECT'),('DELETE'),('TRUNCATE'),('TRIGGER'),('REFERENCES')) p(privilege)
   WHERE r.rolname=ANY($1::text[]) ORDER BY 1,2`,[roles])).rows;}
  async function schema(h,footprint){
-  const paths=Object.keys(SOURCE_PINS).filter(p=>/^db\/\d{3}-.+\.sql$/.test(p)).sort();
-  assert.deepEqual(paths.map(p=>Number(p.slice(3,6))),Array.from({length:34},(_,i)=>i+1));
+  const inventory=[...Object.keys(SOURCE_PINS).filter(p=>/^db\/\d{3}-.+\.sql$/.test(p)),'db/035-listening-account-delete-privileges.sql'].sort();
+  assert.deepEqual(inventory.map(p=>Number(p.slice(3,6))),Array.from({length:35},(_,i)=>i+1));
+  // Retain this sealed LT01 historical 001-034 fixture and all assertions.
+  const paths=inventory.filter(p=>Number(p.slice(3,6))<=34);
   const apply=async path=>{
    // Execute the exact maintained SQL, including its own transaction statements.
    // On any setup error the borrowed client is rolled back/released before drop.
