@@ -127,7 +127,7 @@ BEGIN
       SELECT array_agg(a.attname::text ORDER BY a.attnum) INTO allowed_columns
       FROM pg_catalog.pg_attribute a WHERE a.attrelid=key_table AND a.attnum>0
         AND a.attname IN ('key_id','user_id','audience','bundle_id','environment','public_key','receipt','sign_count','revoked','created_at')
-        AND pg_catalog.has_column_privilege(role_oid,key_table,a.attnum::integer,action);
+        AND pg_catalog.has_column_privilege(role_oid,key_table,a.attnum,action);
       EXECUTE pg_catalog.format('REVOKE %s ON TABLE public.app_attest_keys FROM %I',action,role_name);
       EXECUTE pg_catalog.format('REVOKE %s (sessions_install_binding_version,sessions_authority_generation) ON TABLE public.app_attest_keys FROM %I',action,role_name);
       FOREACH column_name IN ARRAY COALESCE(allowed_columns,ARRAY[]::text[]) LOOP
