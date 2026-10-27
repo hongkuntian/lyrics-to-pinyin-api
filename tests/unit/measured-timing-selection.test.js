@@ -72,30 +72,44 @@ test('validated measured cues improve complete line timing; malformed, unbound a
  assert.equal(chooseLyricCandidate(replacement,measured),replacement);
 });
 
-test('line-synced lyrics publish immediately while the capable lookup remains eligible to improve them',async()=>{
- const gate=deferred(),published=[];let settled=false;
+test('line-synced lyrics publish immediately while the capable lookup remains eligible to improve them',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const gate=deferred(),ready=deferred(),published=[];let settled=false;
  const work=hedgedLookup([capable,plain],async api=>api===capable?gate.promise:line,
-  {delayMs:1,wordTimingGraceMs:1000,chooseCandidate:chooseLyricCandidate,onCandidate:c=>{published.push(c);}}).then(value=>{settled=true;return value;});
+  {delayMs:1,wordTimingGraceMs:1000,chooseCandidate:chooseLyricCandidate,onCandidate:c=>{published.push(c);ready.resolve(c);}}).then(value=>{settled=true;return value;});
  try {
-  await until(()=>published.includes(line));assert.equal(settled,false);
+  t.mock.timers.tick(1);assert.equal(await ready.promise,line);assert.equal(settled,false);
   gate.resolve(measured);assert.equal(await work,measured);assert.deepEqual(published,[line,measured]);
  }finally{gate.resolve(measured);await work;}
 });
 
-test('unavailable measured source returns the readable line candidate without waiting for grace',async()=>{
- const gate=deferred(),published=[];
+test('unavailable measured source returns the readable line candidate without waiting for grace',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const gate=deferred(),ready=deferred(),published=[];
  const work=hedgedLookup([capable,plain],async api=>api===capable?gate.promise:line,
-  {delayMs:1,wordTimingGraceMs:1000,onCandidate:c=>published.push(c)});
- await until(()=>published.length);gate.resolve(null);assert.equal(await work,line);
+  {delayMs:1,wordTimingGraceMs:1000,onCandidate:c=>{published.push(c);ready.resolve(c);}});
+ try{
+  t.mock.timers.tick(1);assert.equal(await ready.promise,line);gate.resolve(null);assert.equal(await work,line);
+ }finally{gate.resolve(null);await work;}
 });
 
-test('upgrade timeout or cancellation fences a late measured result',async()=>{
+test('upgrade timeout or cancellation fences a late measured result',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
  for(const cancel of [false,true]){
-  const gate=deferred(),published=[],controller=new AbortController();
+  const gate=deferred(),ready=deferred(),published=[],controller=new AbortController();let settled=false;
   const work=hedgedLookup([capable,plain],async api=>api===capable?gate.promise:line,
-   {delayMs:1,wordTimingGraceMs:5,signal:controller.signal,onCandidate:c=>published.push(c)});
-  await until(()=>published.length);if(cancel)controller.abort();assert.equal(await work,line);
-  gate.resolve(measured);await new Promise(r=>setImmediate(r));assert.deepEqual(published,[line]);
+   {delayMs:1,wordTimingGraceMs:5,signal:controller.signal,onCandidate:c=>{published.push(c);ready.resolve(c);}})
+   .then(value=>{settled=true;return value;});
+  try{
+   t.mock.timers.tick(1);assert.equal(await ready.promise,line);assert.equal(settled,false);
+   if(cancel)controller.abort();
+   else{
+    t.mock.timers.tick(4);await Promise.resolve();assert.equal(settled,false);
+    t.mock.timers.tick(1);
+   }
+   assert.equal(await work,line);
+   gate.resolve(measured);await new Promise(r=>setImmediate(r));assert.deepEqual(published,[line]);
+  }finally{controller.abort();gate.resolve(measured);await work;}
  }
 });
 
