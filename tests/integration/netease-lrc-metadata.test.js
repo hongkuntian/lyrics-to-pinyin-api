@@ -18,14 +18,14 @@ test('NetEase leading structured LRC credits never become untimed vocal rows or 
  assert.equal(lyrics.timingSource,undefined);assert.ok(lyrics.lines.every(l=>l.vocalTiming===undefined));
  assert.equal(parseLRC(raw).length,13,'the generic LRC parser remains unchanged');
 });
-test('only bounded leading provider metadata is excluded; unknown, malformed and later JSON remains readable',()=>{
+test('bounded provider containers are excluded at every position; unknown and malformed JSON remains readable',()=>{
  const api=new NeteaseAPI();
  for(const prefix of ['{"unknown":"sung words"}',JSON.stringify({t:'0',c:[{tx:'words'}]}),
   JSON.stringify({t:0,c:[{text:'words'}]}),'{broken',JSON.stringify({t:0,c:[]}),
   JSON.stringify({t:0,c:[{tx:'words',extra:'unknown'}]}),JSON.stringify({t:0,c:[{tx:'x'.repeat(2001)}]})])
   assert.deepEqual(api.parseLyrics(prefix+'\n'+vocals),parseLRC(prefix+'\n'+vocals));
- assert.deepEqual(api.parseLyrics(vocals+'\n'+header()),parseLRC(vocals+'\n'+header()));
- assert.deepEqual(api.parseLyrics('ordinary untimed words\n'+header()+'\n'+vocals),parseLRC('ordinary untimed words\n'+header()+'\n'+vocals));
+ assert.deepEqual(api.parseLyrics(vocals+'\n'+header()),parseLRC(vocals));
+ assert.deepEqual(api.parseLyrics('ordinary untimed words\n'+header()+'\n'+vocals),parseLRC('ordinary untimed words\n'+vocals));
  assert.deepEqual(api.parseLyrics('\uFEFF\n[ar:Invented Artist]\n'+header(-1000)+'\n'+vocals),parseLRC(vocals));
  const excess=Array.from({length:33},()=>header()).join('\n')+'\n'+vocals;
  assert.equal(api.parseLyrics(excess).length,3,'metadata count bound fails closed rather than hiding more content');
