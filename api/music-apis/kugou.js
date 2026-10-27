@@ -7,10 +7,12 @@ import {cleanLyrics} from '../utils/lyric-quality.js';
 import {decodeKRC,parseKRC} from '../utils/kugou-krc.js';
 import {sameRecordingNames,recordingScore,findRecording,RecordingMismatchError,normalizeRecordingText,searchTitle} from '../utils/recording-match.js';
 import {simplifyRecordingScript} from '../utils/recording-script.js';
+import {kugouLanguageObservations,mergeLanguageObservations,bindProviderLanguageObservations} from '../utils/provider-language-evidence.js';
 
 const origin='https://lyrics.kugou.com';
 const maxBytes=512*1024;
 const official='官方推荐歌词';
+const languageEvidence=new WeakMap();
 const albumVersionMarkers=[
   /\blive\b|\bconcert\b|现场|演唱会/iu,
   /\bremaster(?:ed)?\b|重制/iu,
@@ -88,7 +90,8 @@ function lyricsBody(data,song) {
   validateHeaders(raw,song);
   const parsed=parseLRC(raw);
   if(parsed.some(line=>line.timestamp!=null && (!Number.isFinite(line.timestamp) || line.timestamp<0 || line.timestamp>song.duration))) throw new RecordingMismatchError();
-  const result=cleanLyrics({lines:parsed.filter(line=>!header(line.text,song)),source:'kugou',songId:song.id},{duration:song.duration});
+  const result=bindProviderLanguageObservations(cleanLyrics({lines:parsed.filter(line=>!header(line.text,song)),source:'kugou',songId:song.id},{duration:song.duration}),
+    song,languageEvidence.get(song),{field:'/content',format:'lrc'});
   if(!result?.lines.length) throw new RecordingMismatchError();
   return result;
 }
@@ -104,8 +107,8 @@ async function fetchLyrics(entry,context) {
       validateHeaders(raw,entry.song);
       const parsed=parseKRC(raw,{songId:entry.song.id,duration:entry.song.duration});
       if(parsed) {
-        const result=cleanLyrics({...parsed,lines:parsed.lines.filter(l=>!header(l.text,entry.song))},
-          {duration:entry.song.duration,title:entry.song.title,artist:entry.song.artist});
+        const result=bindProviderLanguageObservations(cleanLyrics({...parsed,lines:parsed.lines.filter(l=>!header(l.text,entry.song))},
+          {duration:entry.song.duration,title:entry.song.title,artist:entry.song.artist}),entry.song,languageEvidence.get(entry.song),{field:'/content',format:'krc'});
         if(result?.lines.length)return result;
       }
     }
@@ -150,7 +153,7 @@ async function lyricCandidates(query,context={}) {
     ...(Number.isFinite(context.duration)&&context.duration>0?{duration:Math.round(context.duration*1000)}:{})},context);
   if(!Array.isArray(data.candidates)||data.candidates.length>100)throw providerError();
   const records=new Map();
-  for(const raw of data.candidates) {
+  for(const [index,raw] of data.candidates.entries()) {
     if(!raw||!/^\d{1,20}$/.test(String(raw.id??''))||String(raw.id).startsWith('0')
       ||typeof raw.song!=='string'||!raw.song.trim()||raw.song.length>500
       ||typeof raw.singer!=='string'||!raw.singer.trim()||raw.singer.length>1024
@@ -159,6 +162,9 @@ async function lyricCandidates(query,context={}) {
     const song={source:'kugou',id:String(raw.id),title:raw.song,artist:raw.singer,duration:raw.duration/1000};
     const existing=records.get(song.id);
     if(existing&&(JSON.stringify(existing.song)!==JSON.stringify(song)||existing.key!==raw.accesskey))throw providerError();
+    const evidence=kugouLanguageObservations(song.id,raw,index);
+    if(existing){languageEvidence.set(existing.song,mergeLanguageObservations(languageEvidence.get(existing.song),evidence));continue;}
+    languageEvidence.set(song,evidence);
     records.set(song.id,{song,key:raw.accesskey});
   }
   return records;
@@ -184,17 +190,20 @@ export class KugouAPI extends BaseMusicAPI {
     if(!Array.isArray(data.candidates) || data.candidates.length>100) throw providerError();
     if(!data.candidates.length) return null;
     const records=new Map();
-    for(const raw of data.candidates) {
+    for(const [index,raw] of data.candidates.entries()) {
       if(!raw || typeof raw!=='object' || raw.product_from!==official || typeof raw.singer!=='string' || typeof raw.song!=='string'
         || !Number.isFinite(raw.duration) || raw.duration<=0 || Math.abs(raw.duration/1000-context.duration)>1
         || !/^\d{1,20}$/.test(String(raw.id ?? '')) || typeof raw.accesskey!=='string' || !/^[A-Za-z0-9_-]{1,256}$/.test(raw.accesskey)
-        || /伴奏|instrumental|karaoke/iu.test(raw.language || '')) continue;
+        || /伴奏|instrumental|karaoke/iu.test(typeof raw.language==='string'?raw.language:'')) continue;
       const song={source:'kugou',id:String(raw.id),title:raw.song,artist:raw.singer,duration:raw.duration/1000,...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),...(context.recordingProvider==='spotify'?{
         ...(raw.creditedArtistNames!==undefined?{creditedArtistNames:raw.creditedArtistNames}:{}),
         ...(raw.isrc?{isrc:raw.isrc}:{})}:{})};
       if(!sameRecordingNames(song,request) || !preservesAlbumVersion(song,request) || recordingScore(song,request)<0) continue;
       const previous=records.get(song.id);
       if(previous && (JSON.stringify(previous.song)!==JSON.stringify(song) || previous.key!==raw.accesskey)) throw new RecordingMismatchError();
+      const evidence=kugouLanguageObservations(song.id,raw,index);
+      if(previous){languageEvidence.set(previous.song,mergeLanguageObservations(languageEvidence.get(previous.song),evidence));continue;}
+      languageEvidence.set(song,evidence);
       records.set(song.id,{song,key:raw.accesskey,score:recordingScore(song,request)});
     }
     const ranked=[...records.values()].sort((a,b)=>b.score-a.score);

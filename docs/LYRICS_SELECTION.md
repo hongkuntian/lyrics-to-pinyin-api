@@ -29,6 +29,12 @@ Live Lyrics rendering. It supplies no replacement words, Apple aliases or timing
 
 ## Usable lyrics and instrumentals
 
+Provider-declared language is optional evidence, not a recording or timing
+criterion. Complete measured timing keeps its existing priority even when a
+language declaration is absent, broad or contradictory. At the response-size
+limit, optional language diagnostics give way before measured cues. See
+[PROVIDER_LANGUAGE_EVIDENCE.md](PROVIDER_LANGUAGE_EVIDENCE.md).
+
 Explicit production-credit lines and instrumental placeholder prose are excluded from vocal lyrics. Invalid or out-of-duration timestamps become untimed text. A credit-only synced field can fall back to a usable plain transcription. Only an explicit provider instrumental flag (including NetEase's fixed full “纯音乐，请欣赏” marker) with no vocal text yields `quality.instrumental: true`, `quality.synced: false`, and `lines: []`. Do not count these as lyric coverage.
 
 ## Recording-bound timing correction

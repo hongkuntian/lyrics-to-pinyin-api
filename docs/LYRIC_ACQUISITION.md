@@ -1,5 +1,12 @@
 # Verified lyric acquisition reuse
 
+Provider language evidence is captured from existing QQ detail/QRC and Kugou
+search responses without a serial metadata request. It never changes timing
+eligibility or provider ordering. Incomplete source-ID hints schedule
+request-owned readable formatting concurrently with continued discovery inside
+the original deadline. See [PROVIDER_LANGUAGE_EVIDENCE.md](PROVIDER_LANGUAGE_EVIDENCE.md)
+for the optional contract, conflict rules, bounds and cache policy.
+
 Milestone 2 keeps the `progressive-v1` delivery contract and all legacy JSON
 responses unchanged. The backend now reuses verified discovery context, overlaps
 one bounded discovery with catalog work, and shares eligible source work within

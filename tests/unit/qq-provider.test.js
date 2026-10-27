@@ -4,6 +4,7 @@ import {getEventListeners} from 'node:events';
 import {readFileSync} from 'node:fs';
 import {Response} from 'node-fetch';
 import {QQMusicAPI} from '../../api/music-apis/qq.js';
+import {analyzeLyricLanguage} from '../../api/utils/lyric-language.js';
 const f=JSON.parse(readFileSync(new URL('../fixtures/qrc-codec-fixtures.json',import.meta.url)));
 // Fixed encrypted vectors contain synthetic First/Second rows only.
 const bilingualQRC={
@@ -55,13 +56,37 @@ function context(rows=[candidate()],lyrics={},extra={}) {
    if(entry.method==='get_song_detail_yqq') {
     const raw=(extra.fastRows??rows).find(r=>r.songid===param.song_id)??rows[0];
     result[key]={code:0,data:{track_info:{id:raw.detailID??raw.songid,mid:raw.detailMID??raw.songmid,name:raw.songname,title:raw.detailTitle??raw.songname,subtitle:raw.subtitle??'',interval:raw.interval,
-     album:{id:raw.albumid,mid:raw.albummid,name:raw.albumname,...(raw.detailAlbumTitle!==undefined?{title:raw.detailAlbumTitle}:{})},singer:raw.singer,...(raw.explicit!==undefined?{explicit:raw.explicit}:{})}}};
+     album:{id:raw.albumid,mid:raw.albummid,name:raw.albumname,...(raw.detailAlbumTitle!==undefined?{title:raw.detailAlbumTitle}:{})},singer:raw.singer,...(raw.explicit!==undefined?{explicit:raw.explicit}:{}),
+     ...(Object.hasOwn(raw,'language')?{language:raw.language}:{})},...(Object.hasOwn(raw,'languageInfo')?{info:{lan:raw.languageInfo}}:{})}};
    }else result[key]=lyric(param);
   }
   return answer(result,url);
  }};
 }
 const search=ctx=>new QQMusicAPI().searchSong(ctx.artist,ctx.title,ctx);
+
+test('QQ captures source language from the existing detail/QRC batch without extra requests or changed word cues',async()=>{
+ const plain=candidate(),declared=candidate('123',{language:3,languageInfo:{title:'歌曲语种',content:[{id:5,value:'日语'}]}});
+ for(const mode of ['search','id']){
+  const before=context([plain],{}, {fastRows:[plain]}),after=context([declared],{}, {fastRows:[declared]});
+  const acquire=async ctx=>mode==='id'?(await new QQMusicAPI().getRecording('123',ctx)).lyrics:(await search(ctx)).lyricsData;
+  const a=await acquire(before),b=await acquire(after);
+  assert.deepEqual(b.lines,a.lines);assert.deepEqual(b.timingSource,a.timingSource);
+  assert.deepEqual(after.calls.map(c=>[c.url.toString(),c.payload]),before.calls.map(c=>[c.url.toString(),c.payload]));
+  assert.equal(after.calls.length,mode==='id'?1:2);
+  const result=analyzeLyricLanguage(b.lines.map(l=>l.text),{providerEvidence:b.providerLanguageEvidence,providerSource:{provider:'qq',id:'123'}});
+  assert.equal(result.provider_evidence.decision.candidate,'ja');
+  assert.deepEqual(result.provider_evidence.observations.map(o=>o.raw),[{id:5,value:'日语'},3]);
+  assert.ok(!JSON.stringify(result.provider_evidence).includes('qqMID'));
+ }
+});
+test('QQ malformed optional language metadata retains readable measured lyrics in the same one batch',async()=>{
+ const row=candidate('123',{language:['not an enum'],languageInfo:{title:'歌曲语种',content:[{id:5,value:'日语'}]}}),ctx=context([row]);
+ const {lyrics}=await new QQMusicAPI().getRecording('123',ctx);
+ assert.ok(lyrics.lines.every(l=>l.vocalTiming));assert.equal(ctx.calls.length,1);
+ const result=analyzeLyricLanguage(lyrics.lines.map(l=>l.text),{providerEvidence:lyrics.providerLanguageEvidence,providerSource:{provider:'qq',id:'123'}});
+ assert.equal(result.provider_evidence.decision.status,'unusable');
+});
 
 test('QQ allowed outer sheet suffixes revalidate the entire remaining caption against the strict source core',async()=>{
  for(const [key,explicit] of [['badAwardCaption',undefined],['badExplicitCaption',true]]) {

@@ -5,6 +5,7 @@ import {streamResponse,frames} from '../helpers/stream-http.js';
 import {createMockRes} from '../helpers/mock-http.js';
 import {makeDocument} from '../../api/utils/song-library/document.js';
 import {LYRIC_SELECTION_REVISION} from '../../api/utils/lyric-annotations.js';
+import {parseYRC} from '../../api/utils/netease-yrc.js';
 const request={catalog_id:'123',storefront:'us',artist:'Artist',title:'Song',album:'Album',duration:240,language:'zh'};
 const song={id:42,artist:'Artist',title:'Song',album:'Album',duration:240,source:'lrclib'};
 const words={lines:[{text:'一起唱',timestamp:12},{text:'向前走',timestamp:30}]};
@@ -150,6 +151,27 @@ test('capability is derived from registry and curated timing remains non-upgrade
  const ordinary=fixture();assert.equal((await ordinary.call(ordinary.make())).body.metadata.word_timing_upgrade_supported,false);
  const f=fixture({applyTimingCorrectionFn:async c=>({...c,timingCorrection:{status:'replacement',id:'reviewed'}})});f.api.supportsVocalTiming=true;
  const corrected=await f.call(f.make());assert.equal(corrected.statusCode,200);assert.equal(corrected.body.metadata.word_timing_upgrade_supported,false);
+});
+
+for(const provider of ['apple','spotify'])test(`${provider}: incomplete hint formatting cannot occupy the discovery opportunity for measured words`,async()=>{
+ const f=fixture(),r=provider==='apple'?{...request}:{recording:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Song',artists:['Artist'],album:'Album',duration_ms:240000}}};
+ f.api.name='NeteaseAPI';f.api.supportsVocalTiming=true;
+ assert.equal((await f.call(f.make(),r)).statusCode,200);f.clearContent();f.reset();
+ const formatting=gate(),release=gate();
+ f.deps.getProcessorFn=()=>({romanize:async text=>{if(text==='提示候选'){formatting.resolve();await release.promise;}return {romanized:text};}});
+ f.api.getRecording=async()=>{f.stats.id++;return {song:{...song},lyrics:{lines:[{text:'提示候选',timestamp:12},{text:'候选未完成',timestamp:30}]}};};
+ f.api.searchSong=async()=>{f.stats.search++;return {...song};};
+ f.api.getLyrics=async()=>{f.stats.lyrics++;return parseYRC('[1000,1000](1000,1000,0)全新词句\n[5000,1000](5000,1000,0)再次合唱',{songId:42,duration:240});};
+ const res=streamResponse(),work=f.call(f.make(),{...r,options:{delivery:'progressive-v1'}},res);
+ await formatting.promise;await tick();
+ const discoveryBeforeFormattingRelease=f.stats.search;
+ release.resolve();await work;
+ assert.equal(discoveryBeforeFormattingRelease,1,'discovery starts before the readable hint formatter is released');
+ assert.equal(f.stats.id,1);assert.equal(f.stats.search,1);assert.equal(f.stats.lyrics,1);
+ const events=frames(res);assert.equal(events.at(-1).event,'complete');
+ assert.equal(events.at(-1).response.lines[0].original,'全新词句');
+ assert.ok(events.at(-1).response.lines.every(line=>line.vocalTiming));
+ assert.ok(events.filter(e=>e.event==='readable').every(e=>e.response.lines[0].original==='全新词句'));
 });
 
 test('NetEase failed hint and fallback share the original provider deadline',async t=>{

@@ -17,6 +17,7 @@ import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,needs
 import {hedgedLookup} from './hedged-lookup.js';
 import {isRejectedRecordingLyrics} from './rejected-lyrics.js';
 import {analyzeLyricLanguage} from './lyric-language.js';
+import {providerLanguageSource,PROVIDER_LANGUAGE_EVIDENCE_VERSION} from './provider-language-evidence.js';
 import {LYRIC_SELECTION_REVISION,LYRIC_NORMALIZATION_VERSION,hasEmbeddedLyricCredits,publicRawLyrics} from './lyric-annotations.js';
 import {BoundedCache} from './bounded-cache.js';
 import {waitUntil} from '@vercel/functions';
@@ -31,7 +32,7 @@ export function createSpotifyLyricsService(dependencies={}) {
     getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,
     getCachedFn=getCached,setCachedFn=setLyricsCached,providerTimeoutMs=6000,cacheTimeoutMs=300,hedgeDelayMs=350,untimedGraceMs=2500,wordTimingGraceMs=providerTimeoutMs,
     rejectRecordingLyricsFn=isRejectedRecordingLyrics,analyzeLyricLanguageFn=analyzeLyricLanguage,waitUntilFn=waitUntil,logger=console,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800,neteaseSourceHintBudgetMs=2500}=dependencies;
-  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,sourceNames:NETEASE_TITLE_CAPABILITY,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY,vocalSelection:VOCAL_SELECTION_CAPABILITY}});
+  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,sourceNames:NETEASE_TITLE_CAPABILITY,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY,vocalSelection:VOCAL_SELECTION_CAPABILITY,languageEvidence:PROVIDER_LANGUAGE_EVIDENCE_VERSION}});
   const cache=new BoundedCache(),inflight=new Map();let latestStart=0;
   const validCached=(entry,r)=>{
     const response=entry?.response,candidate=entry?.candidate;
@@ -68,7 +69,7 @@ export function createSpotifyLyricsService(dependencies={}) {
       // ephemeral acquisition path; saved library sources keep their existing
       // contract until that route negotiates the expanded source set too.
       const sourceVersion=options.lyric_sources_version??1;
-      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}:${NETEASE_TITLE_CAPABILITY}:sources-${sourceVersion}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
+      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}:${NETEASE_TITLE_CAPABILITY}:${PROVIDER_LANGUAGE_EVIDENCE_VERSION}:sources-${sourceVersion}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const send=result=>{if(result.candidate)attachSpotifyMatchEvidence(result.body,result.candidate);res.setHeader('X-Lyrics-Cache',result.cache??'MISS');return reply(result.status,result.body);};
       const cached=!options.refresh&&cache.get(key);
       if(cached&&validate('cache_validation',()=>validCached(cached,r)))return send({status:200,body:cached.response,candidate:cached.candidate,cache:'MEMORY'});
@@ -127,7 +128,9 @@ export function createSpotifyLyricsService(dependencies={}) {
                 hintCandidate=await validateSource(fresh.song,fresh.lyrics);
                 if(hintCandidate){
                   if(!api.supportsVocalTiming||!needsTimingDiscovery(hintCandidate))return hintCandidate;
-                  await publishCandidate(hintCandidate);
+                  // Request ownership settles this work; readable formatting
+                  // cannot consume the source's remaining discovery budget.
+                  req.lyricDelivery?.own(publishCandidate(hintCandidate).catch(()=>{}));
                 }
               }catch(error){logger.info?.('spotify_lyrics_lookup',{provider:independentProvider(api.name),reason:error.reason??'source_hint_rejected'});}signal.throwIfAborted();}
               return chooseLyricCandidate(hintCandidate,await validateSource(await measure(`${label}_search`,()=>api.searchSong(artist,title,{...context,signal,...(independentProvider(api.name)==='netease'?{onVerifiedArtistCredits}:{})}))));
@@ -144,7 +147,8 @@ export function createSpotifyLyricsService(dependencies={}) {
         const formatted=new WeakMap();
         const responseFor=candidate=>{if(!formatted.has(candidate)){const work=measure('format',()=>formatCandidate(candidate));formatted.set(candidate,req.lyricDelivery?.own?req.lyricDelivery.own(work):work);}return formatted.get(candidate);};
         const formatCandidate=async selected=>{
-        const {song,lyrics,api}=selected,languageDetails=analyzeLyricLanguageFn(lyrics.lines.map(l=>l.text??''),{genres:[],verified:false});
+        const {song,lyrics,api}=selected,languageDetails=analyzeLyricLanguageFn(lyrics.lines.map(l=>l.text??''),{genres:[],verified:false,
+          providerEvidence:lyrics.providerLanguageEvidence,providerSource:providerLanguageSource(api.name,song.id)});
         if(song.artistAliasEvidence||song.searchRecovery)logger.info?.('spotify_lyrics_recovery',{requestID,
           provider:independentProvider(api.name),sourceID:String(song.id),search:song.searchRecovery??'original',
           policy:song.artistAliasEvidence?.policy??null,rules:song.artistAliasEvidence?.performers.map(p=>p.rule)??[]});

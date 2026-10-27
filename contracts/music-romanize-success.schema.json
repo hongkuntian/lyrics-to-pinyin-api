@@ -556,6 +556,396 @@
                   }
                 }
               }
+            },
+            "provider_evidence": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "version",
+                "source",
+                "body",
+                "observations",
+                "decision",
+                "semantic_sha256"
+              ],
+              "properties": {
+                "version": {
+                  "const": "provider-language-evidence-1"
+                },
+                "source": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "provider",
+                    "id"
+                  ],
+                  "properties": {
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "qq",
+                        "kugou",
+                        "unknown"
+                      ]
+                    },
+                    "id": {
+                      "type": "string",
+                      "maxLength": 20,
+                      "pattern": "^(?:[1-9]\\d{0,19})?$"
+                    }
+                  }
+                },
+                "body": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "track_role",
+                    "field",
+                    "format",
+                    "text_sha256",
+                    "scripts",
+                    "script_method"
+                  ],
+                  "properties": {
+                    "track_role": {
+                      "type": "string",
+                      "enum": [
+                        "original_slot",
+                        "translated",
+                        "phonetic",
+                        "unknown"
+                      ]
+                    },
+                    "field": {
+                      "type": "string",
+                      "enum": [
+                        "/data/lyric",
+                        "/content",
+                        "unknown"
+                      ]
+                    },
+                    "format": {
+                      "type": "string",
+                      "enum": [
+                        "lrc",
+                        "qrc",
+                        "krc",
+                        "unknown"
+                      ]
+                    },
+                    "text_sha256": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "scripts": {
+                      "type": "array",
+                      "maxItems": 16,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "string",
+                        "maxLength": 16
+                      }
+                    },
+                    "script_method": {
+                      "const": "legacy-presence-v1"
+                    }
+                  }
+                },
+                "observations": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "operation",
+                      "field",
+                      "namespace",
+                      "scope",
+                      "subject",
+                      "raw",
+                      "observed_at",
+                      "interpretation",
+                      "language"
+                    ],
+                    "properties": {
+                      "operation": {
+                        "type": "string",
+                        "enum": [
+                          "get_song_detail_yqq",
+                          "/search"
+                        ]
+                      },
+                      "field": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "pattern": "^/(?:data/(?:track_info/language|info/lan/content/[0-7])|candidates/(?:[0-9]|[1-9][0-9])/language)$"
+                      },
+                      "namespace": {
+                        "type": "string",
+                        "enum": [
+                          "qq.track_info.language",
+                          "qq.info.lan.category",
+                          "kugou.search.language"
+                        ]
+                      },
+                      "scope": {
+                        "const": "song"
+                      },
+                      "subject": {
+                        "const": "source_language"
+                      },
+                      "raw": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 256,
+                            "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "value"
+                            ],
+                            "properties": {
+                              "id": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 256,
+                                    "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "value": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 256,
+                                    "pattern": "^[^\\u0000-\\u001f\\u007f]*$"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "observed_at": {
+                        "type": "string",
+                        "maxLength": 24,
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+                      },
+                      "interpretation": {
+                        "type": "string",
+                        "enum": [
+                          "specific",
+                          "broad",
+                          "unknown",
+                          "empty",
+                          "uninterpreted_enum"
+                        ]
+                      },
+                      "language": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "ja",
+                          "ko",
+                          "de",
+                          "ru",
+                          "th",
+                          "id",
+                          "es",
+                          "pt",
+                          "it",
+                          "vi",
+                          "en",
+                          null
+                        ]
+                      }
+                    },
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": {
+                            "interpretation": {
+                              "const": "specific"
+                            }
+                          },
+                          "required": [
+                            "interpretation"
+                          ]
+                        },
+                        "then": {
+                          "properties": {
+                            "language": {
+                              "type": "string",
+                              "enum": [
+                                "ja",
+                                "ko",
+                                "de",
+                                "ru",
+                                "th",
+                                "id",
+                                "es",
+                                "pt",
+                                "it",
+                                "vi",
+                                "en"
+                              ]
+                            }
+                          }
+                        },
+                        "else": {
+                          "properties": {
+                            "language": {
+                              "type": "null"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "decision": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "candidate",
+                    "reasons"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "absent",
+                        "unusable",
+                        "unspecific",
+                        "declaration_conflict",
+                        "declared_only",
+                        "agreement",
+                        "disagreement"
+                      ]
+                    },
+                    "candidate": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "ja",
+                        "ko",
+                        "de",
+                        "ru",
+                        "th",
+                        "id",
+                        "es",
+                        "pt",
+                        "it",
+                        "vi",
+                        "en",
+                        null
+                      ]
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "maxItems": 2,
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "source_binding_mismatch",
+                          "body_not_original_slot",
+                          "invalid_optional_metadata",
+                          "different_specific_labels",
+                          "no_unique_specific_declaration",
+                          "optional_metadata_size_limit"
+                        ]
+                      }
+                    }
+                  },
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": {
+                          "status": {
+                            "enum": [
+                              "declared_only",
+                              "agreement",
+                              "disagreement"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "status"
+                        ]
+                      },
+                      "then": {
+                        "properties": {
+                          "candidate": {
+                            "type": "string",
+                            "enum": [
+                              "ja",
+                              "ko",
+                              "de",
+                              "ru",
+                              "th",
+                              "id",
+                              "es",
+                              "pt",
+                              "it",
+                              "vi",
+                              "en"
+                            ]
+                          }
+                        }
+                      },
+                      "else": {
+                        "properties": {
+                          "candidate": {
+                            "type": "null"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "semantic_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              }
             }
           }
         },
