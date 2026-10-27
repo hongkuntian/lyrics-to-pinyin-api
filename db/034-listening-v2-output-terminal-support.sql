@@ -41,6 +41,107 @@ REVOKE ALL ON FUNCTION listening_v2.protect_install_metadata() FROM PUBLIC;
 CREATE TRIGGER app_attest_keys_sessions_metadata_protect
   BEFORE INSERT OR UPDATE OR DELETE ON public.app_attest_keys
   FOR EACH ROW EXECUTE FUNCTION listening_v2.protect_install_metadata();
+-- LT01: no qualified enrollment or generation-CAS consumer exists yet. Keep
+-- this exact privilege-only block replayable without any DDL/data or callback.
+DO $sessions_install_metadata_privileges$
+DECLARE
+  key_table oid; role_oid oid; metadata_count integer; expected_count integer;
+  role_name text; column_name text; action text; allowed_columns text[];
+BEGIN
+  key_table=pg_catalog.to_regclass('public.app_attest_keys');
+  IF key_table IS NULL OR NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class WHERE oid=key_table AND relkind='r'
+      AND NOT relispartition AND NOT relrowsecurity AND NOT relforcerowsecurity
+      AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_inherits WHERE inhrelid=key_table OR inhparent=key_table)
+  ) THEN RAISE EXCEPTION 'v2_install_privilege_catalog_mismatch' USING ERRCODE='23514'; END IF;
+  SELECT count(*) INTO metadata_count FROM pg_catalog.pg_attribute
+    WHERE attrelid=key_table AND attnum>0 AND NOT attisdropped
+      AND attname IN ('sessions_install_binding_version','sessions_authority_generation');
+  IF metadata_count NOT IN (0,2) THEN
+    RAISE EXCEPTION 'v2_install_privilege_catalog_mismatch' USING ERRCODE='23514';
+  END IF;
+  expected_count=10+metadata_count;
+  IF (SELECT count(*) FROM pg_catalog.pg_attribute WHERE attrelid=key_table AND attnum>0)<>expected_count
+    OR EXISTS (
+      SELECT 1 FROM pg_catalog.pg_attribute a JOIN pg_catalog.pg_type t ON t.oid=a.atttypid
+      LEFT JOIN pg_catalog.pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
+      WHERE a.attrelid=key_table AND a.attnum>0 AND (
+        a.attisdropped OR a.atttypmod<>-1 OR a.attndims<>0 OR a.attgenerated<>'' OR a.attidentity<>''
+        OR NOT a.attislocal OR a.attinhcount<>0 OR a.attcollation<>t.typcollation
+        OR (CASE a.attname
+          WHEN 'key_id' THEN a.atttypid='pg_catalog.text'::regtype AND a.attnotnull AND d.oid IS NULL
+          WHEN 'user_id' THEN a.atttypid='pg_catalog.text'::regtype AND a.attnotnull AND d.oid IS NULL
+          WHEN 'audience' THEN a.atttypid='pg_catalog.text'::regtype AND a.attnotnull AND d.oid IS NULL
+          WHEN 'bundle_id' THEN a.atttypid='pg_catalog.text'::regtype AND a.attnotnull AND d.oid IS NULL
+          WHEN 'environment' THEN a.atttypid='pg_catalog.text'::regtype AND a.attnotnull AND d.oid IS NULL
+          WHEN 'public_key' THEN a.atttypid='pg_catalog.text'::regtype AND a.attnotnull AND d.oid IS NULL
+          WHEN 'receipt' THEN a.atttypid='pg_catalog.bytea'::regtype AND a.attnotnull AND d.oid IS NULL
+          WHEN 'sign_count' THEN a.atttypid='pg_catalog.int8'::regtype AND a.attnotnull AND d.oid IS NOT NULL
+            AND pg_catalog.regexp_replace(pg_catalog.pg_get_expr(d.adbin,d.adrelid,false),'[()[:space:]'']|::bigint','','g')='0'
+          WHEN 'revoked' THEN a.atttypid='pg_catalog.bool'::regtype AND a.attnotnull AND d.oid IS NOT NULL
+            AND pg_catalog.pg_get_expr(d.adbin,d.adrelid,false)='false'
+          WHEN 'created_at' THEN a.atttypid='pg_catalog.timestamptz'::regtype AND a.attnotnull AND d.oid IS NOT NULL
+            AND pg_catalog.pg_get_expr(d.adbin,d.adrelid,false)='now()'
+          WHEN 'sessions_install_binding_version' THEN a.atttypid='pg_catalog.int2'::regtype AND NOT a.attnotnull AND d.oid IS NULL
+          WHEN 'sessions_authority_generation' THEN a.atttypid=pg_catalog.to_regtype('listening_v2.safe_uint') AND a.attnotnull AND d.oid IS NOT NULL
+            AND pg_catalog.regexp_replace(pg_catalog.pg_get_expr(d.adbin,d.adrelid,false),'[()[:space:]'']|::bigint|::listening_v2[.]safe_uint','','g')='0'
+          ELSE false END) IS NOT TRUE
+      )
+    ) THEN RAISE EXCEPTION 'v2_install_privilege_catalog_mismatch' USING ERRCODE='23514'; END IF;
+  IF metadata_count=0 THEN
+    -- Construction-off V1 databases need no V2 schema. Partial 034 never looks
+    -- absent merely because both fields were dropped from a drifted catalog.
+    IF pg_catalog.to_regprocedure('listening_v2.protect_install_metadata()') IS NOT NULL
+      OR EXISTS (SELECT 1 FROM pg_catalog.pg_trigger WHERE tgrelid=key_table AND tgname='app_attest_keys_sessions_metadata_protect')
+      OR EXISTS (SELECT 1 FROM pg_catalog.pg_constraint WHERE conrelid=key_table AND conname='app_attest_keys_sessions_binding_version')
+    THEN RAISE EXCEPTION 'v2_install_privilege_catalog_mismatch' USING ERRCODE='23514'; END IF;
+    RETURN;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_type t JOIN pg_catalog.pg_constraint c ON c.contypid=t.oid
+    WHERE t.oid=pg_catalog.to_regtype('listening_v2.safe_uint') AND t.typtype='d' AND t.typbasetype='pg_catalog.int8'::regtype
+      AND t.typtypmod=-1 AND NOT t.typnotnull AND t.typdefaultbin IS NULL
+      AND c.conname='safe_uint_check' AND c.contype='c' AND c.convalidated
+      AND (SELECT count(*) FROM pg_catalog.pg_constraint WHERE contypid=t.oid)=1
+      AND pg_catalog.regexp_replace(pg_catalog.pg_get_expr(c.conbin,0,false),'[()[:space:]'']|::bigint','','g')='VALUE>=0ANDVALUE<=9007199254740991'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_constraint c JOIN pg_catalog.pg_attribute a ON a.attrelid=c.conrelid
+    WHERE c.conrelid=key_table AND c.conname='app_attest_keys_sessions_binding_version' AND c.contype='c'
+      AND c.convalidated AND NOT c.connoinherit AND c.conislocal AND c.coninhcount=0 AND NOT c.condeferrable AND NOT c.condeferred
+      AND a.attname='sessions_install_binding_version' AND c.conkey=ARRAY[a.attnum]::smallint[]
+      AND pg_catalog.regexp_replace(pg_catalog.pg_get_expr(c.conbin,c.conrelid,false),'[()[:space:]]','','g')='sessions_install_binding_version=1'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_trigger g JOIN pg_catalog.pg_proc p ON p.oid=g.tgfoid
+    WHERE g.tgrelid=key_table AND g.tgname='app_attest_keys_sessions_metadata_protect'
+      AND g.tgtype=31 AND g.tgenabled='O' AND NOT g.tgisinternal AND g.tgparentid=0
+      AND g.tgnargs=0 AND g.tgattr=''::int2vector AND g.tgqual IS NULL AND g.tgconstraint=0
+      AND p.oid=pg_catalog.to_regprocedure('listening_v2.protect_install_metadata()')
+      AND NOT p.prosecdef AND p.proconfig=ARRAY['search_path=pg_catalog']::text[]
+  ) THEN RAISE EXCEPTION 'v2_install_privilege_catalog_mismatch' USING ERRCODE='23514'; END IF;
+  FOREACH role_name IN ARRAY ARRAY['lyra_runtime_v1','lyra_account_v1'] LOOP
+    SELECT oid INTO role_oid FROM pg_catalog.pg_roles WHERE rolname=role_name;
+    IF NOT FOUND THEN CONTINUE; END IF;
+    FOREACH action IN ARRAY ARRAY['INSERT','UPDATE'] LOOP
+      -- Snapshot effective rights before narrowing this action. Never infer
+      -- runtime rights from the smaller 030-only fixture or fabricate new ones.
+      SELECT array_agg(a.attname::text ORDER BY a.attnum) INTO allowed_columns
+      FROM pg_catalog.pg_attribute a WHERE a.attrelid=key_table AND a.attnum>0
+        AND a.attname IN ('key_id','user_id','audience','bundle_id','environment','public_key','receipt','sign_count','revoked','created_at')
+        AND pg_catalog.has_column_privilege(role_oid,key_table,a.attnum::integer,action);
+      EXECUTE pg_catalog.format('REVOKE %s ON TABLE public.app_attest_keys FROM %I',action,role_name);
+      EXECUTE pg_catalog.format('REVOKE %s (sessions_install_binding_version,sessions_authority_generation) ON TABLE public.app_attest_keys FROM %I',action,role_name);
+      FOREACH column_name IN ARRAY COALESCE(allowed_columns,ARRAY[]::text[]) LOOP
+        EXECUTE pg_catalog.format('GRANT %s (%I) ON TABLE public.app_attest_keys TO %I',action,column_name,role_name);
+      END LOOP;
+      -- PUBLIC/inheritance/owner/superuser rights cannot be subtracted with a
+      -- column REVOKE. Refuse/roll back, never alter an unknown third-party role.
+      IF pg_catalog.has_column_privilege(role_oid,key_table,'sessions_install_binding_version',action)
+        OR pg_catalog.has_column_privilege(role_oid,key_table,'sessions_authority_generation',action)
+      THEN RAISE EXCEPTION 'v2_install_metadata_residual_privilege' USING ERRCODE='23514'; END IF;
+    END LOOP;
+  END LOOP;
+END $sessions_install_metadata_privileges$;
+
 
 CREATE FUNCTION listening_v2.terminal_payload_valid(p jsonb) RETURNS boolean
 LANGUAGE plpgsql IMMUTABLE SECURITY INVOKER SET search_path=pg_catalog AS $$

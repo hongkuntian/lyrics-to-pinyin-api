@@ -180,10 +180,10 @@ test('legacy NULL/0 metadata and SQL-seeded known v1 preimages: immutable tuple/
  await denied(asRole(db,'lyra_runtime_v1',()=>db.query('UPDATE public.app_attest_keys SET sessions_authority_generation=0 WHERE key_id=$1',[key])));
 });
 
-test('real restricted-role default-off guest/ACK/register/session/signIn/signOut/delete retain NULL/0',async t=>{
+for(const restricted of [false,true])test('real default-off auth NULL/0; restricted='+restricted,async t=>{
  const db=await fixture(t,{footprint:'observed'});
- const adapter=role=>({query:(...a)=>asRole(db,role,()=>db.query(...a)),
-  transaction:fn=>asRole(db,role,()=>db.transaction(fn))});
+ const adapter=role=>restricted?({query:(...a)=>asRole(db,role,()=>db.query(...a)),
+  transaction:fn=>asRole(db,role,()=>db.transaction(fn))}):({query:(...a)=>db.query(...a),transaction:fn=>db.transaction(fn)});
  await db.exec('UPDATE public.membership_settings SET public_access_enabled=true');
  const policy={audience:'test',environment:'development',prefix:'ABCDEFGHIJ',bundles:['test.lyrica']},bundleID=policy.bundles[0];
  const options={policy,attestFn:()=>({publicKey:'external-crypto-only',receipt:Buffer.from('crypto')}),
@@ -207,7 +207,18 @@ test('real restricted-role default-off guest/ACK/register/session/signIn/signOut
  const a=await accounts.signIn(g.user,{...nonce,bundleID,identityToken:'external',authorizationCode:'external'},handle);
  const signed=await session(a.credential,keyID,2);
  const delNonce=await accounts.challenge({purpose:'delete',bundleID},signed.user);
- await accounts.delete(signed.user,{...delNonce,bundleID,identityToken:'external',authorizationCode:'external'},await accounts.prepareWriterAuthentication(signed.token));
+ const deletion=async()=>accounts.delete(signed.user,{...delNonce,bundleID,identityToken:'external',authorizationCode:'external'},await accounts.prepareWriterAuthentication(signed.token));
+ if(restricted){
+  // Measured BEFORE LT01: 029 grants account DELETE but no SELECT(user_id)
+  // on listening_rate_windows. Keep that real refusal/rollback visible; do not
+  // invent a fixture grant or claim restricted account deletion is qualified.
+  const image=async()=>{const result={};for(const table of ['library_users','library_tokens','app_attest_keys','app_auth_sessions',
+   'account_identities','account_nonces','listening_rooms','listening_rate_windows'])
+   result[table]=(await db.query('SELECT to_jsonb(t) AS r FROM '+table+' t ORDER BY to_jsonb(t)::text')).rows;return result;};
+  const before=await image();
+  await assert.rejects(deletion(),e=>e.code==='42501'&&e.message.includes('listening_rate_windows'));
+  assert.deepEqual(await image(),before,'the preexisting restricted deletion refusal rolls back every auth/listening write');
+ }else assert.deepEqual(await deletion(),{deleted:true});
  // Separate guest signOut avoids reusing deliberately revoked C.
  const cg=await session(credential,second,1).catch(e=>{assert.ok(['unauthorized','session_expired'].includes(e.code));return null;});
  assert.equal(cg,null,'signIn revoked shared old C');

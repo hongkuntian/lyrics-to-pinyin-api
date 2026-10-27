@@ -52,17 +52,17 @@ const SOURCE_PINS=/* ROOT refresh only changed independently reviewed inputs. */
  "api/utils/listening-v2/privacy-writers.js": "9c6db7c5bd3c3cc4bff34c1b46cc53ca68d6571a443d33bbcf26eb0b98954f34",
  "api/utils/app-auth/store.js": "2692755072094fb0907dd0721396c38f0190cf0a595f2c40dd16400f7dbbc6aa",
  "api/utils/membership/accounts.js": "15a7fa51080bb68081a193c7e4c7c0bd72126ecf602b796518b21ecc473465ab",
- "tests/postgres/auth-token-lock-roles.test.js": "69a74c781e9a7d69158c34ab78de3590a0415d9303a98965897383ad18b5182c",
+ "tests/postgres/auth-token-lock-roles.test.js": "1be3eec67027e3d5eeef6925483dd33213cb68d0501f0398e0d8defa610d8cbd",
  "tests/postgres/listening-v2-auth-writers.test.js": "9838194eb27c4e1e08cfe50f7f9a8fe4290835c77911417ca74459398e337f44",
  "tests/postgres/listening-v2-transactions.test.js": "1587283e9bb14f9da535a2c1b713b115d83a73b54d55ba2126c4206fcd9845da",
  "scripts/library-migrations.js": "b2bcfb3ea471555c048f9258b45f745f8ef56cbdfcda08cbbdd2ed0d1e40b422",
- "scripts/membership-role-grants.js": "b46070f7eb7a3abd1f36ef5ac5adfe1b18ac8ee03aaa5c4b96c44fd7adb53d0c",
- "db/034-listening-v2-output-terminal-support.sql": "217cd4b7b48809ea438a33dd6c14e0eebd2f46446c2763fff1ce493b49a1fc54",
+ "scripts/membership-role-grants.js": "6c92eaf3fb68a69c66d2d182afacebfce87cdf8ed5d9d98c659c2c9c95dd8117",
+ "db/034-listening-v2-output-terminal-support.sql": "66773cca9dbc989daed7e2c756f0c5e1fadbd296c16a0cd12eff57cc3592e3dc",
  "api/utils/listening-v2/terminal-codec.js": "602c60e226caf67dbff8991f62afb5c59f245a0d859a42d0993aa456e9b76301",
  "tests/unit/listening-v2-terminal-codec.test.js": "e1ce66ffc4932f9253aad01840d33b6f41552e76cc4ce03558ab5e994dee52f5",
- "tests/integration/listening-v2-output-terminal-schema.test.js": "5d8550595cd8fdd5cfdd91e6afb8ebc621b5717f7c7e2a1d22818c4cfe70f2fd",
- "docs/design/sessions-v2-output-terminal.md": "d9f212ee87058518c3fab6842517233011a4f44be08a75d5a549a16f9ab227a3",
- "docs/design/sessions-v2-storage-schema.md": "7b780ffcd4016cf97fdcf3855383580608741443cb2d1110e56a60fe403a220f"
+ "tests/integration/listening-v2-output-terminal-schema.test.js": "f72dc50b9892cb4f41ff34632c2bc1d918f00046f1c90f00ab589217394c11b8",
+ "docs/design/sessions-v2-output-terminal.md": "064da7ed3e07237dc028098a5257bd207e6dc9ab09bb842e9d89983133002522",
+ "docs/design/sessions-v2-storage-schema.md": "74505c3ff057410dad4cbac5cb068e362c2a40ecd460b6299a7bf636a3720780"
 };
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const migration='db/034-listening-v2-output-terminal-support.sql';
