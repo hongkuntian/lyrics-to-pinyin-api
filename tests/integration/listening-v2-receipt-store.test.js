@@ -491,3 +491,37 @@ test('unknown action and ambiguous/unbounded wire shape refuse before transactio
   await rejects(s.execute({authentication:auth,rawCommand}),'invalid_request');
  assert.equal(transactions,0);
 });
+
+
+// Tests-first discriminator for the exact030/gateway roomless privacy.erase gap.
+// On b88 the first execute reaches not_found before its trusted reducer. Root
+// must retain that observed red; this worker has not imported or run the suite.
+test('standalone privacy.erase commits room_id NULL with thirty-day receipt, no room lookup or counters',async()=>{
+ const id=randomUUID(),m=mutation(id,{action:'privacy.erase',expected:{privacyGeneration:1},payload:{scope:'my_sessions_persona',confirmed:true}});
+ mutator=async({room:actual,command})=>{calls++;assert.equal(actual,null);assert.equal(command.sessionID,id);return {status:'accepted',result:{privacyGeneration:2}};};
+ const first=await store().execute(m);assert.equal(first.replayed,false);assert.equal(calls,1);
+ const r=(await sql.query('SELECT * FROM listening_v2.command_receipts')).rows[0];assert.equal(r.room_id,null);
+ assert.equal(r.action,'privacy.erase');assert.equal(decodeSafeUInt(r.delete_after_ms),start+30*day);
+ assert.equal(queries.filter(x=>/FROM listening_v2.rooms|UPDATE listening_v2.rooms/.test(x.text)).length,0);
+ assert.equal((await store().execute(m)).replayed,true);assert.equal(calls,1);
+ const c=JSON.parse(m.rawCommand);await rejects(store().execute({...m,rawCommand:JSON.stringify({...c,expected:{privacyGeneration:2}})}),'conflict');
+ await sql.exec("UPDATE receipt_fixture_keys SET revoked=true WHERE id='key'");await rejects(store().execute(m),'unauthorized');
+});
+test('standalone privacy.erase ignores a coincident expired/capped room and cannot consume its reserve',async()=>{
+ const id=randomUUID();await room(sql,id,{expires_at_ms:start+1,receipt_count:29999,reserved_receipts:1});
+ clock=start+2;await sql.query('UPDATE receipt_fixture_clock SET ms=$1',[clock]);const before=(await sql.query('SELECT * FROM listening_v2.rooms')).rows;
+ const m=mutation(id,{action:'privacy.erase'});mutator=async({room:actual})=>{calls++;assert.equal(actual,null);return {status:'accepted',result:{privacyGeneration:2}};};
+ await store().execute(m);assert.deepEqual((await sql.query('SELECT * FROM listening_v2.rooms')).rows,before);
+ assert.equal((await sql.query('SELECT room_id FROM listening_v2.command_receipts')).rows[0].room_id,null);
+ mutator=async()=>({status:'accepted',result:{},consumeReservedReceipt:true});
+ await rejects(store().execute(mutation(id,{action:'privacy.erase'})),'unavailable');assert.deepEqual((await sql.query('SELECT * FROM listening_v2.rooms')).rows,before);
+});
+test('standalone privacy.erase keeps binding-key continuity and post-write deadline rollback',async()=>{
+ const m=mutation(randomUUID(),{action:'privacy.erase'});
+ mutator=async()=>{calls++;return {status:'accepted',result:{privacyGeneration:2}};};await store().execute(m);
+ assert.equal((await store({bindingKeys:[binding1,binding2],activeBindingKeyVersion:2}).execute(m)).replayed,true);assert.equal(calls,1);
+ await rejects(store({bindingKeys:[binding2],activeBindingKeyVersion:2}).execute(m),'unavailable');
+ const m2=mutation(randomUUID(),{action:'privacy.erase'});commitCheck=async({tx})=>advance(tx,start+90*day);
+ await rejects(store().execute(m2),'unauthorized');assert.equal(await count('command_receipts'),1);
+ assert.equal(decodeSafeUInt(await dbClock(sql)),start);
+});

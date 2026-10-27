@@ -24,17 +24,19 @@ export function createAccountHandler({store,authStore,logger=console}={}) {
           typeof body.authorizationCode!=='string'||!body.authorizationCode||body.authorizationCode.length>4096)))throw new LibraryError('invalid_request',400);
       const accounts=store??new AccountStore(accountDatabase());
       const authenticated=body.action!=='guest'&&!(body.action==='challenge'&&body.purpose==='guest');
-      let user;
+      let user,authentication;
       if(authenticated){const token=bearer(req);if(!token?.startsWith('lyra_s_'))throw new LibraryError('unauthorized',401);
-        const auth=authStore??new AppAuthStore(accounts.db);user=await auth.authenticate(token);await auth.limit(user.id);}
+        const auth=authStore??new AppAuthStore(accounts.db);user=await auth.authenticate(token);await auth.limit(user.id);
+        // Keep the exact bearer private; account DTOs and challenge/guest policy stay V1.
+        if(['apple','delete','signOut'].includes(body.action))authentication=await accounts.prepareWriterAuthentication(token);}
       let result;
       if(body.action==='challenge')result=await accounts.challenge(body,user,
         // Only Vercel's overwritten client-IP header is trusted in deployment.
         process.env.VERCEL?req.headers?.['x-vercel-forwarded-for']?.split(',')[0]:req.socket?.remoteAddress);
       else if(body.action==='guest')result=await accounts.guest(body);
-      else if(body.action==='apple')result=await accounts.signIn(user,body);
-      else if(body.action==='delete')result=await accounts.delete(user,body);
-      else result=await accounts.signOut(user);
+      else if(body.action==='apple')result=await accounts.signIn(user,body,authentication);
+      else if(body.action==='delete')result=await accounts.delete(user,body,authentication);
+      else result=await accounts.signOut(user,authentication);
       return res.status(200).json({version:1,...result});
     }catch(error){return authError(res,error,logger);}
   };

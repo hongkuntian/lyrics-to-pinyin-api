@@ -36,13 +36,15 @@ const clock=async tx=>uint((await tx.query(`WITH privacy_clock AS MATERIALIZED (
  SELECT floor(extract(epoch FROM at)*1000)::text AS now_ms FROM privacy_clock`)).rows[0].now_ms);
 const ref=p=>({id:p.persona_id,generation:uint(p.privacy_generation)});
 const personaSQL=`SELECT environment,persona_id,original_principal_id,original_key_id,controller_kind,controller_principal_id,
- controller_key_id,privacy_generation,status,guest_credential_digest,guest_credential_expires_at_ms,created_at_ms,updated_at_ms
+ controller_key_id,privacy_generation,status,guest_credential_digest,guest_credential_expires_at_ms,created_at_ms,updated_at_ms,
+ controller_privacy_epoch,private_transfer_from_generation
  FROM listening_v2.privacy_personas WHERE environment=$1 AND persona_id=ANY($2::uuid[]) ORDER BY persona_id`;
 const keysSQL=`SELECT key_id,user_id,bundle_id,audience,environment,revoked FROM public.app_attest_keys
  WHERE key_id=ANY($1::text[]) ORDER BY key_id COLLATE "C"`;
 const currentPersonasSQL=`WITH privacy_clock AS MATERIALIZED (SELECT clock_timestamp() AS at)
  SELECT p.persona_id,p.privacy_generation,p.status,p.controller_kind,p.controller_principal_id,p.controller_key_id,
  p.original_principal_id,p.original_key_id,p.guest_credential_digest,p.guest_credential_expires_at_ms,p.created_at_ms,
+ p.controller_privacy_epoch,u.sessions_privacy_epoch AS current_controller_epoch,
  u.id AS controller_id,u.access_kind,u.disabled,k.key_id,k.user_id AS key_owner,k.revoked AS key_revoked,
  k.bundle_id,k.audience,k.environment AS attest_environment,t.digest AS token_digest,t.user_id AS token_owner,t.revoked AS token_revoked,
  CASE WHEN t.expires_at IS NULL THEN NULL ELSE floor(extract(epoch FROM t.expires_at)*1000)::text END AS token_expires_ms,
@@ -155,7 +157,8 @@ export function createPrivateAdmissionService(options){
      expires<=created||expires-created>guestLifetime||actualExpiry!==expires||nowMS>=expires)fail('unauthorized');
     notAfterMS=Math.min(notAfterMS,expires);
    }else if(r.controller_kind!=='apple'||r.access_kind!=='apple'||r.controller_key_id!==null||
-    r.guest_credential_digest!==null||r.guest_credential_expires_at_ms!==null)fail('unauthorized');
+    r.guest_credential_digest!==null||r.guest_credential_expires_at_ms!==null||
+    uint(r.controller_privacy_epoch)!==uint(r.current_controller_epoch))fail('unauthorized');
   }return notAfterMS;
  }
  function addPositive(plan,reference){
@@ -224,6 +227,17 @@ export function createPrivateAdmissionService(options){
   const ids=sorted([...plan.positive.keys(),...state.members.map(x=>x.persona.id),...state.pending.map(x=>x.persona.id),state.originalHost.persona.id]);
   const personaRows=(await tx.query(personaSQL,[environment,ids])).rows;
   if(personaRows.length!==ids.length)fail();personaRows.forEach(p=>plan.personas.set(p.persona_id,p));
+  // Only a server-retained, branded terminal reference may cross the exact
+  // one-time private bridge. This never maps caller revisions, active leases,
+  // asset/write capabilities or principal/key-bound G command receipts to A.
+  if(mode==='admissionRead'&&target&&historical.has(target)){
+   const p=plan.personas.get(target.persona.id);
+   if(p?.controller_kind==='apple'&&p.controller_principal_id===authentication.principalID&&
+    p.private_transfer_from_generation!==null&&uint(p.private_transfer_from_generation)===target.persona.generation&&
+    uint(p.privacy_generation)>target.persona.generation){
+    actor=ref(p);plan.actor=actor;plan.positive.set(actor.id,actor);
+   }
+  }
   const keyIDs=sorted([...personaRows.map(p=>p.original_key_id),authentication.keyID,state.originalHost.install.keyID]);
   const keyRows=(await tx.query(keysSQL,[keyIDs])).rows;
   if(keyRows.length!==keyIDs.length)fail();keyRows.forEach(k=>plan.keys.set(k.key_id,k));plan.knownKeys=keyIDs;

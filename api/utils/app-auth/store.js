@@ -1,4 +1,5 @@
 import {randomBytes} from 'node:crypto';
+import {createAuthPrivacyWriters} from '../listening-v2/privacy-writers.js';
 import {digest,LibraryError,lockAuthWriter} from '../song-library/store.js';
 import {attest,assertion} from './verification.js';
 const first=async(db,sql,args=[])=>(await db.query(sql,args)).rows[0]??null;
@@ -14,7 +15,14 @@ export function authPolicy(env=process.env) {
   return {audience,environment,prefix,bundles};
 }
 export class AppAuthStore {
-  constructor(db,{policy,attestFn=attest,assertionFn=assertion}={}) {this.db=db;this.policy=policy??authPolicy();this.attestFn=attestFn;this.assertionFn=assertionFn;}
+  #privacyWriters;
+  constructor(db,{policy,attestFn=attest,assertionFn=assertion,sessionsPrivacy}={}) {
+    this.db=db;this.policy=policy??authPolicy();this.attestFn=attestFn;this.assertionFn=assertionFn;
+    this.#privacyWriters=createAuthPrivacyWriters(db,sessionsPrivacy);
+    // No underlying credential/key/user reenable exists in challenge/register/
+    // session. Their real SQL and shared anchors stay unchanged. Same-C bearer
+    // replacement is lifecycle-neutral; never emit a closure for session expiry.
+  }
   async credential(token,db=this.db) {
     const row=await first(db,`SELECT u.id,t.digest FROM library_tokens t JOIN library_users u ON u.id=t.user_id
       WHERE t.digest=$1 AND NOT t.revoked AND NOT u.disabled AND (t.expires_at IS NULL OR t.expires_at>clock_timestamp())`,[digest(token)]);

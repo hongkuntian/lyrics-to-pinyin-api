@@ -175,3 +175,27 @@ test('same-owner revoked digest rotation keeps exact '+(expiry===null?'nullable'
  const once=await rotationState(f.db);assert.equal(await f.store.createUser('reader-a','token-a'),undefined);
  assert.deepEqual(await rotationState(f.db),once,'same-owner retry is idempotent, with no deadline extension');
 });
+
+test('actual createUser construction-off rotation stays usable without lifecycle schema',async t=>{
+ const {store,db}=await fixture(t);await store.createUser('reader-a','token-a');
+ assert.equal((await store.authenticate('token-a')).id,'reader-a');
+ assert.equal((await db.query("SELECT to_regclass('listening_v2.privacy_personas') AS name")).rows[0].name,null);
+});
+
+// IBR1-01: the existing supplied cleanup callback receives its store instance.
+// Real createUser SQL commits before callback; do not turn a postcommit receiver
+// error into an apparent failed credential rotation.
+test('IBR1-01 configured rotation preserves supplied cleanup receiver after actual COMMIT',async t=>{
+ const f=await libraryDB();t.after(()=>f.db.close());const {readFile}=await import('node:fs/promises');
+ for(const name of ['027-spotify-background.sql','032-auth-token-row-locks.sql','030-listening-v2-schema.sql',
+  '031-listening-v2-lifecycle-support.sql','033-listening-v2-lifecycle-composition.sql'])
+  await f.db.exec(await readFile(new URL('../../db/'+name,import.meta.url),'utf8'));
+ await f.db.query("UPDATE library_users SET access_kind='guest' WHERE id='reader-a'");
+ await f.db.query("UPDATE library_tokens SET expires_at=clock_timestamp()+interval '90 days' WHERE user_id='reader-a'");
+ let receiver,calls=0,returned,error;
+ const configured=new SongLibraryStore(f.store.db,{sessionsPrivacy:{coordinatorEnvironment:'test'},
+  spotifyCleanupFn:async function(database,ids){receiver=this;calls++;assert.equal(this.db,database);assert.deepEqual(ids,[]);}});
+ try{returned=await configured.createUser('reader-a','receiver-next-token');}catch(e){error=e;}
+ assert.equal((await f.store.authenticate('receiver-next-token')).id,'reader-a','actual credential COMMIT is already durable');
+ assert.equal(calls,1);assert.equal(receiver,configured);assert.equal(error,undefined);assert.equal(returned,undefined);
+});

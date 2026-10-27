@@ -1,3 +1,4 @@
+import {createAuthPrivacyWriters} from '../listening-v2/privacy-writers.js';
 import {isSpotifyRecording,spotifyHashes,spotifyBinding,canonicalJSON,modelContextFromSource,sourceCapsule,validSpotifyCandidate} from './spotify-recording.js';
 import {canonicalTarget} from './languages.js';
 import {createHash,randomUUID} from 'node:crypto';
@@ -28,47 +29,71 @@ const publicJob=row=>({id:row.id,state:row.state,documentID:row.document_id,targ
 // deliberately permits legacy child-row FK KEY SHARE while excluding every
 // cooperating writer and current-auth's FOR UPDATE. User IDs never change.
 const authWriterOrder=values=>[...new Set(values)].sort((a,b)=>Buffer.compare(Buffer.from(a),Buffer.from(b)));
-export async function lockAuthWriter(db,{userIDs,credentialDigests=[],keyIDs=[],allTokens=false,allKeys=false,sessions=false}) {
+export async function lockAuthWriter(db,{userIDs,credentialDigests=[],keyIDs=[],allTokens=false,allKeys=false,sessions=false,authScopeLimit}) {
+  if(authScopeLimit!==undefined&&authScopeLimit!==64)throw new LibraryError('sessions_privacy_unavailable',503);
   const owners=authWriterOrder(userIDs),users=new Set(owners),keys=new Map();
+  const limit=authScopeLimit===64?' LIMIT 65':'';
   for(const id of owners)await db.query('SELECT id FROM library_users WHERE id=$1 FOR NO KEY UPDATE',[id]);
-  const tokenIDs=authWriterOrder([...credentialDigests,...(allTokens?(await db.query('SELECT digest FROM library_tokens WHERE user_id=ANY($1::text[])',[owners])).rows.map(x=>x.digest):[])]);
+  const tokenIDs=authWriterOrder([...credentialDigests,...(allTokens?(await db.query('SELECT digest FROM library_tokens WHERE user_id=ANY($1::text[])'+limit,[owners])).rows.map(x=>x.digest):[])]);
+  if(authScopeLimit===64&&tokenIDs.length>64)throw new LibraryError('sessions_privacy_deferred',409);
   for(const id of tokenIDs) {
     const row=await first(db,'SELECT digest,user_id FROM library_tokens WHERE digest=$1 FOR UPDATE',[id]);
     if(row&&!users.has(row.user_id))throw new LibraryError('app_access_revoked',403);
   }
   // User anchors protect enumeration, absent-key registration and owner moves.
   // A stale exact-key owner is refused; never append that new owner's lock.
-  const ids=authWriterOrder([...keyIDs,...(allKeys?(await db.query('SELECT key_id FROM app_attest_keys WHERE user_id=ANY($1::text[])',[owners])).rows.map(x=>x.key_id):[])]);
+  const ids=authWriterOrder([...keyIDs,...(allKeys?(await db.query('SELECT key_id FROM app_attest_keys WHERE user_id=ANY($1::text[])'+limit,[owners])).rows.map(x=>x.key_id):[])]);
+  if(authScopeLimit===64&&ids.length>64)throw new LibraryError('sessions_privacy_deferred',409);
   for(const id of ids) {
     const row=await first(db,'SELECT * FROM app_attest_keys WHERE key_id=$1 FOR UPDATE',[id]);
     if(row&&!users.has(row.user_id))throw new LibraryError('app_access_revoked',403);
     keys.set(id,row);
   }
-  if(sessions&&ids.length)await db.query('SELECT digest FROM app_auth_sessions WHERE key_id=ANY($1::text[]) ORDER BY digest COLLATE "C" FOR UPDATE',[ids]);
+  if(sessions&&ids.length){
+    const selected=await db.query('SELECT digest FROM app_auth_sessions WHERE key_id=ANY($1::text[]) ORDER BY digest COLLATE "C"'+limit+' FOR UPDATE',[ids]);
+    if(authScopeLimit===64&&selected.rows.length>64)throw new LibraryError('sessions_privacy_deferred',409);
+  }
   return {keys};
 }
 
 export class SongLibraryStore {
-  constructor(db) { this.db=db; }
+  #privacyWriters;
+  #spotifyCleanup;
+  constructor(db,{sessionsPrivacy,spotifyCleanupFn}={}) {
+    this.db=db;this.#privacyWriters=createAuthPrivacyWriters(db,sessionsPrivacy);this.#spotifyCleanup=spotifyCleanupFn;
+  }
   async configure({enabled,dailyMicros,monthlyMicros,userDaily=10,userMonthly=50}) {
     if(typeof enabled!=='boolean' || [dailyMicros,monthlyMicros,userDaily,userMonthly].some(x=>!Number.isSafeInteger(x)||x<0)) throw new LibraryError('invalid_budget',400);
     await this.db.query('UPDATE library_settings SET enabled=$1,daily_micros=$2,monthly_micros=$3,user_daily=$4,user_monthly=$5 WHERE id=1',[enabled,dailyMicros,monthlyMicros,userDaily,userMonthly]);
   }
   async createUser(id,token) {
     if(typeof id!=='string'||!id.trim()||id.length>128||typeof token!=='string'||!token) throw new LibraryError('invalid_user',400);
+    // Optional lifecycle work must not add a store -> Spotify service module
+    // initialization cycle. Resolve it only on the configured operation,
+    // outside the transaction and before acquiring any auth/connection locks.
+    let spotify;
+    if(this.#privacyWriters){
+      try{spotify=await import('../spotify/revocation.js');}
+      catch{throw new LibraryError('sessions_privacy_unavailable',503);}
+    }
+    let spotifyCleanup=[];
     await this.db.transaction(async db=> {
       await db.query('INSERT INTO library_users(id) VALUES($1) ON CONFLICT DO NOTHING',[id]);
       // A token owner is immutable. Reject a foreign collision before acquiring
       // any foreign credential; keep all existing data semantics on rotation.
       const existing=await first(db,'SELECT user_id FROM library_tokens WHERE digest=$1',[digest(token)]);
       if(existing && existing.user_id!==id) throw new LibraryError('token_collision');
-      try { await lockAuthWriter(db,{userIDs:[id],credentialDigests:[digest(token)],allTokens:true}); }
+      try { await lockAuthWriter(db,{userIDs:[id],credentialDigests:[digest(token)],allTokens:true,
+        ...(this.#privacyWriters?{allKeys:true,sessions:true,authScopeLimit:64}:{})}); }
       catch(error) {
         // In this token-only scope the helper's owner refusal is a digest
         // collision discovered after the initial read. Keep createUser's API.
         if(error instanceof LibraryError && error.code==='app_access_revoked')throw new LibraryError('token_collision');
         throw error;
       }
+      const spotifyPlan=this.#privacyWriters?await spotify.prepareSpotifyRevocationInTransaction(db,{ownerID:id},'credentialRotated'):null;
+      const privacyPlan=this.#privacyWriters?await this.#privacyWriters.prepareRotation(db,id,digest(token)):null;
+      if(privacyPlan)await this.#privacyWriters.applyBeforeAuth(db,privacyPlan);
       await db.query('UPDATE library_tokens SET revoked=true WHERE user_id=$1',[id]);
       // An absent digest has no row lock. The unique constraint arbitrates
       // concurrent inserts; only its existing owner may un-revoke that row.
@@ -76,7 +101,13 @@ export class SongLibraryStore {
         ON CONFLICT(digest) DO UPDATE SET revoked=false
         WHERE library_tokens.user_id=EXCLUDED.user_id RETURNING digest`,[digest(token),id]);
       if(!issued)throw new LibraryError('token_collision'); // Roll back ALL rotation writes.
+      if(privacyPlan){
+        spotifyCleanup=await spotify.persistSpotifyRevocationInTransaction(db,spotifyPlan);
+        await this.#privacyWriters.persistAfterAuth(db,privacyPlan);
+        await this.#privacyWriters.verifyPostimage(db,privacyPlan);
+      }
     });
+    if(this.#privacyWriters)await (this.#spotifyCleanup===undefined?spotify.flushSpotifyCleanup:this.#spotifyCleanup).call(this,this.db,spotifyCleanup);
   }
   async configureUserAccess(id,{unlimitedGeneration}) {
     if(typeof id!=='string'||!id.trim()||id.length>128||typeof unlimitedGeneration!=='boolean') throw new LibraryError('invalid_user_access',400);

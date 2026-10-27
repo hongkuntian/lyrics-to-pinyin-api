@@ -66,7 +66,7 @@ async function snapshot(){const rows={};for(const table of ['rooms','privacy_per
  rows[table]=(await sql.query(`SELECT to_jsonb(t) AS row FROM listening_v2.${table} t ORDER BY to_jsonb(t)::text`)).rows;return rows;}
 async function refusesUnchanged(work,code){const prior=await snapshot();await assert.rejects(work,{code});assert.deepEqual(await snapshot(),prior);}
 before(async()=>{
- sql=new PGlite();for(const file of ['001-song-library.sql','021-app-auth.sql','025-memberships.sql','030-listening-v2-schema.sql'])
+ sql=new PGlite();for(const file of ['001-song-library.sql','021-app-auth.sql','025-memberships.sql','030-listening-v2-schema.sql','033-listening-v2-lifecycle-composition.sql'])
  await sql.exec(await readFile(new URL('../../db/'+file,import.meta.url),'utf8'));
  await sql.query(`INSERT INTO listening_v2.output_guards(environment,guard_id,provider,binding_key_version,account_binding,connection_lineage,output_scope,
  scope_kind,original_install_scope,created_at_ms,updated_at_ms,bootstrap_state,lane_state,send_ordinal,execution_id,
@@ -170,7 +170,7 @@ test('new identity or room reference after nonlocking discovery aborts without l
 test('controller drift and retained installation metadata substitution fail closed',async()=>{
  let changed=false;fault=async({text,tx})=>{if(!changed&&text.includes('library_users')&&text.includes('FOR UPDATE')){
  changed=true;await tx.query(`UPDATE listening_v2.privacy_personas SET controller_kind='apple',controller_principal_id=$2,
- controller_key_id=NULL,guest_credential_digest=NULL,guest_credential_expires_at_ms=NULL,privacy_generation=2 WHERE persona_id=$1`,[pid(1),user(2)]);
+ controller_key_id=NULL,guest_credential_digest=NULL,guest_credential_expires_at_ms=NULL,privacy_generation=2,private_transfer_from_generation=1 WHERE persona_id=$1`,[pid(1),user(2)]);
  }};
  await refusesUnchanged(()=>service().execute(command(0)),'conflict');fault=null;
  const state=(await room()).state.admission;state.pending[0].install.bundleID='forged.bundle';await saveState(state);
@@ -271,7 +271,7 @@ test('current Apple A can read exact-generation private history after original G
  const s=service();await s.execute(command(0));await s.execute(leave(1));
  await sql.query("UPDATE library_users SET access_kind='apple' WHERE id=ANY($1::text[])",[[user(2),user(3)]]);
  await sql.query(`UPDATE listening_v2.privacy_personas SET controller_kind='apple',controller_principal_id=$2,controller_key_id=NULL,
- guest_credential_digest=NULL,guest_credential_expires_at_ms=NULL,privacy_generation=2 WHERE persona_id=$1`,[pid(1),user(2)]);
+ guest_credential_digest=NULL,guest_credential_expires_at_ms=NULL,privacy_generation=2,private_transfer_from_generation=1 WHERE persona_id=$1`,[pid(1),user(2)]);
  await sql.query('UPDATE library_tokens SET revoked=true WHERE user_id=$1',[user(1)]);
  await sql.query('UPDATE app_attest_keys SET user_id=$2,revoked=true WHERE key_id=$1',[key(1),user(3)]);
  // This explicit SQL fixture represents a later coordinated lifecycle rewrite;
@@ -285,10 +285,19 @@ test('current Apple A can read exact-generation private history after original G
  await assert.rejects(s.readAdmission({...query(1),bearer:bearer(2)}),{code:'unauthorized'});
 });
 test('transfer without retained generation provenance refuses old private history and never maps old write rights',async()=>{
- const s=service();await s.execute(command(0));await s.execute(leave(1));
+ const s=service();
  await sql.query("UPDATE library_users SET access_kind='apple' WHERE id=$1",[user(2)]);
- await sql.query(`UPDATE listening_v2.privacy_personas SET controller_kind='apple',controller_principal_id=$2,controller_key_id=NULL,
- guest_credential_digest=NULL,guest_credential_expires_at_ms=NULL,privacy_generation=2 WHERE persona_id=$1`,[pid(1),user(2)]);
+ // A direct legacy Apple row with no transfer provenance is distinct from a
+ // valid new guest->Apple transition, whose 033 trigger requires the bridge.
+ await sql.query('DELETE FROM listening_v2.privacy_personas WHERE persona_id=$1',[pid(1)]);
+ await sql.query(`INSERT INTO listening_v2.privacy_personas(environment,persona_id,original_principal_id,original_key_id,
+ controller_kind,controller_principal_id,privacy_generation,created_at_ms,updated_at_ms)
+ VALUES($1,$2,$3,$4,'apple',$5,2,$6,$6)`,[env,pid(1),user(1),key(1),user(2),start]);
+ const state=(await room()).state.admission;await saveState({...state,pending:[]});
+ await sql.query(`INSERT INTO listening_v2.semantic_events(environment,session_id,event_id,seq,lane,lane_seq,state_version,type,
+ actor_persona_id,actor_privacy_generation,payload,server_at_ms,delete_after_ms)
+ VALUES($1,$2,$3,1,'semantic',1,1,'admission.terminal',$4,1,$5,$6,$7)`,
+ [env,roomID,rid(1),pid(1),{version:2,status:'denied',pairDigest:pairDigest(1),decidedByMemberID:mid(0)},start,start+day]);
  await refusesUnchanged(()=>s.readAdmission({...query(1),bearer:bearer(2)}),'unauthorized');
  await refusesUnchanged(()=>s.execute(cancel(1)),'unauthorized');
 });
@@ -348,4 +357,43 @@ test('pending approval cannot commit after its exact admission deadline even whi
   assert.equal((await tx.query('SELECT clock_timestamp()>=to_timestamp($1::numeric/1000) AS due',[oldStart+120000])).rows[0].due,true);
  }};
  await refusesUnchanged(()=>service().execute(command(0)),'unauthorized');assert(crossed);
+});
+
+test('Apple controller epoch withdraws supported private projections and saved outcomes with cleanup stopped',async()=>{
+ await seedPerson(4,{kind:'apple'});const initial=(await room()).state.admission;
+ await saveState({...initial,pending:[pending(4)]});
+ const s=service(),input=command(0,'admission.decide',{requestID:rid(4),decision:'deny'});
+ await s.execute(input);assert.equal((await s.readAdmission(query(4))).admission.status,'denied');
+ await sql.query('UPDATE library_users SET sessions_privacy_epoch=sessions_privacy_epoch+1 WHERE id=$1',[user(4)]);
+ assert.equal((await sql.query('SELECT status FROM listening_v2.privacy_personas WHERE persona_id=$1',[pid(4)])).rows[0].status,'live');
+ assert.equal((await sql.query("SELECT count(*)::int n FROM listening_v2.outbox WHERE kind IN ('privacy_dependency','privacy_scrub')")).rows[0].n,0);
+ await refusesUnchanged(()=>s.readAdmission(query(4)),'unauthorized');
+ await refusesUnchanged(()=>s.execute(input),'unauthorized');
+ const changed={...input,rawCommand:input.rawCommand.replace('deny','approve')};
+ await refusesUnchanged(()=>s.execute(changed),'unauthorized');
+});
+test('actual controller epoch recheck after receipt insertion rolls the entire private mutation back',async()=>{
+ await seedPerson(4,{kind:'apple'});const initial=(await room()).state.admission;
+ await saveState({...initial,pending:[pending(4)]});let advanced=false;
+ fault=async({text,tx})=>{if(!advanced&&text.includes('INSERT INTO listening_v2.command_receipts')){
+  advanced=true;await tx.query('UPDATE library_users SET sessions_privacy_epoch=sessions_privacy_epoch+1 WHERE id=$1',[user(4)]);
+ }};
+ await refusesUnchanged(()=>service().execute(command(0,'admission.decide',{requestID:rid(4),decision:'deny'})),'unauthorized');
+ assert(advanced);assert.equal(Number((await sql.query('SELECT sessions_privacy_epoch FROM library_users WHERE id=$1',[user(4)])).rows[0].sessions_privacy_epoch),0);
+});
+test('only the exact retained transfer bridge maps stored private history; old writes and G receipts stay denied',async()=>{
+ const s=service();await s.execute(command(0));const left=leave(1);await s.execute(left);
+ await sql.query("UPDATE library_users SET access_kind='apple' WHERE id=ANY($1::text[])",[[user(2),user(3)]]);
+ await sql.query(`UPDATE listening_v2.privacy_personas SET controller_kind='apple',controller_principal_id=$2,controller_key_id=NULL,
+ guest_credential_digest=NULL,guest_credential_expires_at_ms=NULL,privacy_generation=2,private_transfer_from_generation=1 WHERE persona_id=$1`,[pid(1),user(2)]);
+ await sql.query('UPDATE library_tokens SET revoked=true WHERE user_id=$1',[user(1)]);
+ await sql.query('UPDATE app_attest_keys SET user_id=$2,revoked=true WHERE key_id=$1',[key(1),user(3)]);
+ // The stored terminal reference remains generation1; no event/HMAC rewrite.
+ assert.equal(Number((await sql.query('SELECT actor_privacy_generation FROM listening_v2.semantic_events WHERE event_id=$1',[rid(1)])).rows[0].actor_privacy_generation),1);
+ assert.equal((await s.readAdmission({...query(1),bearer:bearer(2)})).admission.status,'admitted');
+ await refusesUnchanged(()=>s.readReceipt({...left,bearer:bearer(2)}),'unauthorized');
+ await refusesUnchanged(()=>s.execute({...cancel(1),bearer:bearer(2)}),'unauthorized');
+ await refusesUnchanged(()=>s.readAdmission({...query(1),bearer:bearer(3)}),'unauthorized');
+ await sql.query('UPDATE library_users SET sessions_privacy_epoch=1 WHERE id=$1',[user(2)]);
+ await refusesUnchanged(()=>s.readAdmission({...query(1),bearer:bearer(2)}),'unauthorized');
 });
