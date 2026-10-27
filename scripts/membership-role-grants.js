@@ -12,6 +12,12 @@ export async function replayMembershipRoleGrants(db) {
     if(matches.length!==1)throw new Error('membership_privilege_block_mismatch');
     blocks.push(matches[0][1]+';');
   }
+  // The optional V1 listening family is absent together or catalog-checked.
+  // Grant only its account DELETE predicate column; never replay 027/029.
+  const listeningSQL=await readFile(new URL('../db/035-listening-account-delete-privileges.sql',import.meta.url),'utf8');
+  const listeningMatches=[...listeningSQL.matchAll(/^DO \$listening_account_delete_privileges\$\n([\s\S]*?)\nEND \$listening_account_delete_privileges\$;/gm)];
+  if(listeningMatches.length!==1)throw new Error('listening_account_delete_privilege_block_mismatch');
+  blocks.push(listeningMatches[0][1]+'\nEND;');
   // This narrow, catalog-checked block returns unchanged on genuine V1-only
   // schemas and refuses partial 034. Never replay 034's DDL or table data.
   const sql=await readFile(new URL('../db/034-listening-v2-output-terminal-support.sql',import.meta.url),'utf8');
