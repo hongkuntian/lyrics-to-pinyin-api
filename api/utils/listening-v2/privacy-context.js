@@ -3,7 +3,7 @@ import {types} from 'node:util';
 import {AppAuthStore} from '../app-auth/store.js';
 import {createCurrentAuthContext,decodeAuthTimeMS} from './auth-context.js';
 import {createAdmissionStore} from './admission-store.js';
-import {restoreAdmissionState,validateAdmissionCommand} from './admission.js';
+import {restoreRetainedAdmissionState,validateAdmissionCommand} from './admission.js';
 import {parseBoundedSessionJSON} from './protocol.js';
 import {SessionV2Error} from './errors.js';
 
@@ -13,7 +13,7 @@ const digest=v=>typeof v==='string'&&/^[0-9a-f]{64}$/.test(v);
 const uint=decodeAuthTimeMS,MAX=Number.MAX_SAFE_INTEGER,guestLifetime=7776000000;
 const actions=new Set(['admission.decide','admission.cancel','leave']);
 const installFields=['principalID','keyID','bundleID','audience','attestEnvironment'];
-const sameInstall=(a,b)=>installFields.every(k=>a[k]===b[k]);
+const sameInstall=(a,b)=>Boolean(a&&b&&installFields.every(k=>a[k]===b[k]));
 const sameRef=(a,b)=>a?.id===b?.id&&a?.generation===b?.generation;
 const sorted=xs=>[...new Set(xs)].sort((a,b)=>Buffer.compare(Buffer.from(a),Buffer.from(b)));
 const frozen=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(frozen);Object.freeze(value);}return value;};
@@ -37,7 +37,7 @@ const clock=async tx=>uint((await tx.query(`WITH privacy_clock AS MATERIALIZED (
 const ref=p=>({id:p.persona_id,generation:uint(p.privacy_generation)});
 const personaSQL=`SELECT environment,persona_id,original_principal_id,original_key_id,controller_kind,controller_principal_id,
  controller_key_id,privacy_generation,status,guest_credential_digest,guest_credential_expires_at_ms,created_at_ms,updated_at_ms,
- controller_privacy_epoch,private_transfer_from_generation
+ controller_privacy_epoch,private_transfer_from_generation,withdrawn_at_ms,scrub_due_at_ms
  FROM listening_v2.privacy_personas WHERE environment=$1 AND persona_id=ANY($2::uuid[]) ORDER BY persona_id`;
 const keysSQL=`SELECT key_id,user_id,bundle_id,audience,environment,revoked FROM public.app_attest_keys
  WHERE key_id=ANY($1::text[]) ORDER BY key_id COLLATE "C"`;
@@ -65,7 +65,7 @@ export function createPrivateAdmissionService(options){
  const environment=options.environment;
  if(!options.db||typeof options.db.query!=='function'||typeof options.db.transaction!=='function')fail();
  const queryDB=options.db.query.bind(options.db),transactionDB=options.db.transaction.bind(options.db);
- const scopes=new WeakMap(),readable=new WeakSet(),historical=new WeakSet();
+ const scopes=new WeakMap(),readable=new WeakSet(),historical=new WeakSet(),negativeTerminals=new WeakSet();
  const db={query:queryDB,transaction:fn=>transactionDB(async tx=>{try{return await fn(tx);}finally{scopes.delete(tx);}})};
  closed(options.policy,['audience','environment','prefix','bundles']);array(options.policy.bundles,32);
  const policy=frozen(structuredClone(options.policy));
@@ -100,12 +100,20 @@ export function createPrivateAdmissionService(options){
  };
  const getRoom=async(tx,id,lock=false)=>(await tx.query(`SELECT * FROM listening_v2.rooms WHERE environment=$1 AND session_id=$2${lock?' FOR UPDATE':''}`,
   [environment,id])).rows[0]??null;
- const stateOf=room=>{if(!room)fail('not_found');const s=restoreAdmissionState(JSON.stringify(room.state.admission));
+ const stateOf=room=>{if(!room)fail('not_found');const s=restoreRetainedAdmissionState(JSON.stringify(room.state.admission));
+  if(s.privacyRedaction===2){
+   closed(room.state,['occurrences','visits','admission','admissionStore']);
+   if(!Array.isArray(room.state.occurrences)||room.state.occurrences.length||!Array.isArray(room.state.visits)||room.state.visits.length)fail();
+  }
+  const host=s.originalHost.persona;
   if(s.environment!==environment||s.sessionID!==room.session_id||s.status!==room.status||s.originalHost.scope!==room.host_install_scope||
-   s.originalHost.persona.id!==room.host_persona_id||s.originalHost.persona.generation!==uint(room.host_privacy_generation)||
+   (host===null?room.host_persona_id!==null||room.host_privacy_generation!==null:
+    host.id!==room.host_persona_id||host.generation!==uint(room.host_privacy_generation))||
    s.inviteGeneration!==uint(room.invite_generation)||s.settings.revision!==uint(room.settings_revision))fail();return s;};
  const roomFingerprint=r=>r===null?'null':signature([r.session_id,r.status,String(r.state_version),String(r.session_revision),
-  String(r.settings_revision),String(r.invite_generation),r.host_install_scope,r.host_persona_id,String(r.host_privacy_generation),r.state.admission]);
+  String(r.settings_revision),String(r.invite_generation),r.host_install_scope,r.host_persona_id,String(r.host_privacy_generation),
+  r.state,r.privacy_persona_ids,String(r.reserved_semantic_events),String(r.reserved_receipts),String(r.semantic_event_count),
+  String(r.reaction_event_count),String(r.receipt_count),String(r.event_seq),String(r.updated_at_ms)]);
  async function receipts(tx,authentication,c,lock=false){
   const args=[environment,c.sessionID,c.commandID];
   const alternatives=[...bindings].sort(([a],[b])=>a-b).map(([version,secret])=>{
@@ -121,7 +129,13 @@ export function createPrivateAdmissionService(options){
   actor_persona_id,actor_privacy_generation FROM listening_v2.semantic_events
   WHERE environment=$1 AND event_id=$2 AND session_id=$3 AND type='admission.terminal'`,[environment,id,sessionID])).rows[0]??null;}
  function terminalFact(event){
-  if(!event||!event.actor_persona_id||event.actor_privacy_generation===null)fail('unauthorized');
+  if(!event)fail('unauthorized');
+  if(event.actor_persona_id===null&&event.actor_privacy_generation===null){
+   // Actor-free retained UUID is a NEGATIVE marker, not a canonical terminal
+   // identity. Its remaining payload can never be promoted or projected here.
+   const negative=frozen({id:event.event_id});negativeTerminals.add(negative);return negative;
+  }
+  if(!event.actor_persona_id||event.actor_privacy_generation===null)fail('unauthorized');
   const p=event.payload;closed(p,['version','status','pairDigest'],['memberID','memberLeaseVersion','decidedByMemberID']);
   if(p.version!==2||!['admitted','denied','cancelled','expired'].includes(p.status)||!digest(p.pairDigest))fail();
   if(p.status==='admitted'){if(!uuid(p.memberID)||uint(p.memberLeaseVersion)<1)fail();}
@@ -165,22 +179,38 @@ export function createPrivateAdmissionService(options){
   if(!reference||!uuid(reference.id))fail('unauthorized');const generation=uint(reference.generation),prior=plan.positive.get(reference.id);
   if(prior&&prior.generation!==generation)fail('unauthorized');plan.positive.set(reference.id,{id:reference.id,generation});
  }
+ function negativeReference(p,reference){
+  const generation=uint(p.privacy_generation),old=reference.generation;
+  if(generation===old)return true;
+  if(p.status==='withdrawn'&&old<MAX&&generation===old+1)return true;
+  const from=p.private_transfer_from_generation;
+  return from!==null&&uint(from)===old&&
+   (p.controller_kind==='apple'&&p.status==='live'&&old<MAX&&generation===old+1||
+    p.status==='withdrawn'&&old<MAX-1&&generation===old+2);
+ }
  function checkReferences(plan,state){
   for(const item of [...state.members,...state.pending]){
+   if(item.persona===null)continue; // Already validated closed NEGATIVE tombstone.
    const p=plan.personas.get(item.persona.id);if(!p||!plan.knownKeys.includes(item.install.keyID))fail('conflict');
    if(p.original_principal_id!==item.install.principalID||p.original_key_id!==item.install.keyID)fail();
-   if(item.status==='left'||item.status==='removed'){
-    if(uint(p.privacy_generation)<item.persona.generation)fail();
+   // Retained origin metadata, never the current key owner's identity. Missing
+   // metadata fails even when this reference supplies no positive authority.
+   if(!sameInstall(installation(p,plan.keys.get(p.original_key_id)),item.install))fail();
+   const historical=item.status==='left'||item.status==='removed';
+   if(historical||plan.departure&&!sameRef(item.persona,plan.actor)){
+    if(!negativeReference(p,item.persona))fail();
    }else{
     if(!sameRef(plan.positive.get(item.persona.id),item.persona))fail('conflict');
-    // Current controller authority for private history is weaker than an
-    // active installation. A moved/revoked key cannot be newly admitted or
-    // remain a source of active room rights, even while A retains history.
     const key=plan.keys.get(p.original_key_id);
     if(p.controller_principal_id!==p.original_principal_id||key?.user_id!==p.original_principal_id||key.revoked!==false)fail('unauthorized');
-    if(!sameInstall(installation(p,plan.keys.get(p.original_key_id)),item.install))fail();
    }
   }
+ }
+ async function refuseNegative(tx,authentication){
+  // Discovery has touched no lower locks. Even a redacted result uses the one
+  // exact current S/C/K/principal pass before its minimal existing refusal.
+  const discovery=await currentAuth.discover({tx,authentication});
+  const auth=await currentAuth.lock({tx,discovery});await auth.revalidate({tx});fail('unauthorized');
  }
  async function compose(tx,authentication,operation,suppliedManifest){
   if(scopes.has(tx))fail();
@@ -195,6 +225,8 @@ export function createPrivateAdmissionService(options){
   for(const id of targetIDs){if(!uuid(id))fail();const e=await terminal(tx,id,c.sessionID);if(e)plan.events.set(id,e);}
   const target=state.pending.find(p=>p.id===c.payload.requestID)??(plan.events.has(c.payload.requestID)?terminalFact(plan.events.get(c.payload.requestID)):null);
   plan.target=target;
+  if(target&&negativeTerminals.has(target)||[...plan.events.values()].some(e=>e.actor_persona_id===null&&e.actor_privacy_generation===null)||
+   receipt&&(receipt.actor_persona_id===null||receipt.actor_privacy_generation===null))return refuseNegative(tx,authentication);
   let actor;
   if(receipt){if(!receipt.actor_persona_id||receipt.actor_privacy_generation===null)fail('unauthorized');
    actor={id:receipt.actor_persona_id,generation:uint(receipt.actor_privacy_generation)};
@@ -207,7 +239,8 @@ export function createPrivateAdmissionService(options){
   }
   plan.actor=actor;addPositive(plan,actor);
   const writing=mode==='execute'&&!receipt;
-  if(writing){for(const item of [...state.members,...state.pending])if(!['left','removed'].includes(item.status))addPositive(plan,item.persona);}
+  plan.departure=writing&&['leave','admission.cancel'].includes(c.action);
+  if(writing&&!plan.departure){for(const item of [...state.members,...state.pending])if(!['left','removed'].includes(item.status))addPositive(plan,item.persona);}
   // Only exact targeted outcomes are collected. The historical cleanup mirror
   // and unrelated terminal event history never select live auth dependencies.
   for(const id of targetIDs){
@@ -224,7 +257,8 @@ export function createPrivateAdmissionService(options){
    for(const side of ['host','guest','approver'])if(plan.grant?.[side+'_persona_id'])
     addPositive(plan,{id:plan.grant[side+'_persona_id'],generation:uint(plan.grant[side+'_privacy_generation'])});
   }
-  const ids=sorted([...plan.positive.keys(),...state.members.map(x=>x.persona.id),...state.pending.map(x=>x.persona.id),state.originalHost.persona.id]);
+  const ids=sorted([...plan.positive.keys(),...[...state.members,...state.pending].filter(x=>x.persona!==null).map(x=>x.persona.id),
+   ...room.privacy_persona_ids,...(state.originalHost.persona?[state.originalHost.persona.id]:[])]);
   const personaRows=(await tx.query(personaSQL,[environment,ids])).rows;
   if(personaRows.length!==ids.length)fail();personaRows.forEach(p=>plan.personas.set(p.persona_id,p));
   // Only a server-retained, branded terminal reference may cross the exact
@@ -238,7 +272,7 @@ export function createPrivateAdmissionService(options){
     actor=ref(p);plan.actor=actor;plan.positive.set(actor.id,actor);
    }
   }
-  const keyIDs=sorted([...personaRows.map(p=>p.original_key_id),authentication.keyID,state.originalHost.install.keyID]);
+  const keyIDs=sorted([...personaRows.map(p=>p.original_key_id),authentication.keyID,...(state.originalHost.install?[state.originalHost.install.keyID]:[])]);
   const keyRows=(await tx.query(keysSQL,[keyIDs])).rows;
   if(keyRows.length!==keyIDs.length)fail();keyRows.forEach(k=>plan.keys.set(k.key_id,k));plan.knownKeys=keyIDs;
   const users=[],tokens=[];
