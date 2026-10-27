@@ -8,6 +8,9 @@ import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {fixture,user} from '../helpers/spotify.js';
 import {AccountStore} from '../../api/utils/membership/accounts.js';
+import {AppAuthStore} from '../../api/utils/app-auth/store.js';
+import {libraryDB} from '../helpers/library-db.js';
+import {digest} from '../../api/utils/song-library/store.js';
 
 test('a result after poll lease expiry retries the predecessor instead of acknowledging a dead chain',async t=>{
  const f=await fixture(t),{credential}=await f.enroll();await f.arm(credential);
@@ -114,25 +117,43 @@ test('delivery exhaustion cannot close a foreign environment/client or a replace
 });
 
 test('owner revocation locks attested keys before connection rows even before any grant exists',async t=>{
- const f=await fixture(t),secondKey=Buffer.alloc(32,1).toString('base64');
- await f.db.query('INSERT INTO app_attest_keys(key_id,user_id,bundle_id,environment) VALUES($1,$2,$3,$4)',[secondKey,user.id,user.bundleID,user.environment]);
+ const f=await libraryDB();t.after(()=>f.db.close());
+ await f.db.exec(await readFile(new URL('../../db/027-spotify-background.sql',import.meta.url),'utf8'));
+ await f.db.exec(await readFile(new URL('../../db/032-auth-token-row-locks.sql',import.meta.url),'utf8'));
+ const policy={audience:'fixture',environment:'development',prefix:'ABCDEFGHIJ',bundles:['com.hongkuntian.Lyra']},bundleID=policy.bundles[0];
+ const keyID=Buffer.alloc(32,9).toString('base64'),secondKey=Buffer.alloc(32,1).toString('base64');
+ const auth=new AppAuthStore(f.store.db,{policy,attestFn:()=>({publicKey:'proof',receipt:Buffer.from('proof')}),assertionFn:({assertion})=>Number(assertion.toString())});
+ for(const key of [keyID,secondKey]){
+  const registration=await auth.challenge('token-a',{keyID:key,bundleID,purpose:'register'});
+  await auth.register('token-a',{keyID:key,bundleID,...registration,attestation:'cHJvb2Y='});
+ }
+ const challenge=await auth.challenge('token-a',{keyID,bundleID,purpose:'session'});
+ const session=await auth.session('token-a',{keyID,bundleID,...challenge,assertion:Buffer.from('1').toString('base64')});
+ const user=await auth.authenticate(session.token);
+ const keyState=(await f.db.query('SELECT * FROM app_attest_keys ORDER BY key_id COLLATE "C"')).rows;
  const queries=[],cleanups=[];
- const db={query:(...args)=>f.sql.query(...args),transaction:fn=>f.sql.transaction(tx=>fn({query:async(sql,args=[])=>{
+ const db={query:(...args)=>f.store.db.query(...args),transaction:fn=>f.store.db.transaction(tx=>fn({query:async(sql,args=[])=>{
   queries.push({sql,args:structuredClone(args)});return tx.query(sql,args);
  }}))};
- const accounts=new AccountStore(db,{policy:{audience:'fixture',environment:user.environment,prefix:'ABCDEFGHIJ',bundles:[user.bundleID]},
+ const accounts=new AccountStore(db,{policy,
   spotifyCleanupFn:async(_db,ids)=>{assert.equal(_db,db);cleanups.push(structuredClone(ids));}});
- assert.deepEqual(await accounts.signOut(user),{signedOut:true});
- const owner=queries.findIndex(row=>row.sql.includes('FROM library_users')&&row.sql.includes('FOR NO KEY UPDATE'));
- const token=queries.findIndex(row=>row.sql.includes('FROM library_tokens')&&row.sql.includes('FOR UPDATE'));
- const keys=queries.map((row,index)=>({row,index})).filter(({row})=>row.sql.includes('FROM app_attest_keys')&&row.sql.includes('FOR UPDATE'));
+ const authentication=await accounts.prepareWriterAuthentication(session.token);
+ assert.deepEqual(await accounts.signOut(user,authentication),{signedOut:true});
+ // Match the exact lock tables, including the writer's explicit public schema.
+ const owner=queries.findIndex(row=>/FROM (?:public\.)?library_users\b/.test(row.sql)&&row.sql.includes('FOR NO KEY UPDATE'));
+ const token=queries.findIndex(row=>/FROM (?:public\.)?library_tokens\b/.test(row.sql)&&row.sql.includes('FOR UPDATE'));
+ const keys=queries.map((row,index)=>({row,index})).filter(({row})=>/FROM (?:public\.)?app_attest_keys\b/.test(row.sql)&&row.sql.includes('FOR UPDATE'));
  const connection=queries.findIndex(row=>row.sql.includes('FROM spotify_connections')&&row.sql.includes('FOR UPDATE'));
+ const sessions=queries.map((row,index)=>({row,index})).filter(({row})=>/FROM (?:public\.)?app_auth_sessions\b/.test(row.sql)&&row.sql.includes('FOR UPDATE'));
  assert(owner>=0&&token>owner);assert.equal(keys.length,2);
  assert(keys.every(({index})=>index>token&&connection>index));
  assert.deepEqual(keys.map(({row})=>row.args),[user.keyID,secondKey].sort((a,b)=>Buffer.compare(Buffer.from(a),Buffer.from(b))).map(id=>[id]));
+ assert.equal(sessions.length,1);assert.deepEqual(sessions[0].row.args,[digest(session.token)]);
+ assert(sessions.every(({index})=>keys.every(key=>key.index<index)&&connection>index));
  assert.match(queries[connection].sql,/ORDER BY id COLLATE "C" FOR UPDATE/);
  assert.deepEqual(queries[connection].args,[user.id,null,user.credentialDigest]);
  assert.equal((await f.db.query('SELECT revoked FROM library_tokens WHERE digest=$1',[user.credentialDigest])).rows[0].revoked,true);
  assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM spotify_connections')).rows[0].n),0);
  assert.deepEqual(cleanups,[[]]);
+ assert.deepEqual((await f.db.query('SELECT * FROM app_attest_keys ORDER BY key_id COLLATE "C"')).rows,keyState);
 });

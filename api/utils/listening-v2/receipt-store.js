@@ -11,6 +11,8 @@ const opaque=(value,max)=>typeof value==='string'&&value.length>0&&value.length<
 const statuses=['accepted','executing','applied','refused','expired','uncertain','cancelled'];
 const publicCodes=['invalid_request','unauthorized','forbidden','not_found','conflict','expired','rate_limited','unavailable'];
 const creation=action=>action==='create'||action==='restart';
+// One closed standalone action uses session_id as its private actor namespace.
+const standalone=action=>action==='privacy.erase';
 const thirtyDays=2592000000;
 
 /** pg normally returns int8 as decimal text. Validate before any Number coercion.
@@ -206,7 +208,7 @@ export function createReceiptStore({db,environment,bindingKeys,activeBindingKeyV
    // ignore a retained version: the operator must supply its original secret.
    // Exclusive authenticated key locking serializes old/new store instances.
    await checkRetainedVersions(tx);
-   const room=await getRoom(tx,command.sessionID);
+   const room=standalone(command.action)?null:await getRoom(tx,command.sessionID);
    const params=[environment,command.sessionID,command.commandID];
    const alternatives=versions.map(version=>{
     params.push(version,binding(version,'principal',authentication.principalID),binding(version,'key',authentication.keyID));
@@ -230,7 +232,7 @@ export function createReceiptStore({db,environment,bindingKeys,activeBindingKeyV
     return response(receipt,true);
    }
    if(creation(command.action)){if(room)fail('conflict');}
-   else {
+   else if(!standalone(command.action)){
     if(!room)fail('not_found');
     if(room.status!=='active'||context.nowMS>=room.expires_at_ms)fail('expired');
    }
@@ -238,14 +240,15 @@ export function createReceiptStore({db,environment,bindingKeys,activeBindingKeyV
     actorPersonaID:permit.actorPersonaID,actorPrivacyGeneration:permit.actorPrivacyGeneration});
    exact(outcome,['status','result'],['consumeReservedReceipt'],'unavailable');
    if(!statuses.includes(outcome.status)||
-    (outcome.consumeReservedReceipt!==undefined&&typeof outcome.consumeReservedReceipt!=='boolean'))fail();
+    (outcome.consumeReservedReceipt!==undefined&&typeof outcome.consumeReservedReceipt!=='boolean')||
+    (standalone(command.action)&&outcome.consumeReservedReceipt!==undefined))fail();
    const result=redactedResult(outcome.result);
    // Newly inserted creation room is now visible on this same connection.
-   const finalRoom=await getRoom(tx,command.sessionID);
+   const finalRoom=standalone(command.action)?null:await getRoom(tx,command.sessionID);
    if(creation(command.action)){
     if(['refused','expired','cancelled'].includes(outcome.status)){if(finalRoom)fail();}
     else if(!finalRoom||finalRoom.created_at_ms<ticket.issuedAtMS)fail();
-   }else if(!finalRoom)fail();
+   }else if(!standalone(command.action)&&!finalRoom)fail();
    const writtenAt=await clock(tx);
    let deleteAfter=add(writtenAt,thirtyDays);
    if(finalRoom){

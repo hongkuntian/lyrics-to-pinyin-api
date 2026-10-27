@@ -7,6 +7,7 @@ import {SongLibraryStore} from '../../api/utils/song-library/store.js';
 import {makeSelectedDocument,selectedTextHash,validateSelectedDocument,SELECTED_SOURCE_REVISION} from '../../api/utils/song-library/selected-source.js';
 import {reserveExplanation,claimExplanation,finishExplanation} from '../../api/utils/song-library/study-store.js';
 import {AccountStore} from '../../api/utils/membership/accounts.js';
+import {AppAuthStore} from '../../api/utils/app-auth/store.js';
 import {appleTimingRequest} from '../../api/utils/song-library/apple-vocal-timing.js';
 
 async function selected({itemID='123',timestamp=3,text='Sing the exact source words.'}={}) {
@@ -218,9 +219,18 @@ test('account deletion removes only that account selected links and cannot recov
   await db.query("UPDATE library_users SET access_kind='apple' WHERE id='reader-a'");
   await db.query("INSERT INTO account_identities(subject_hash,user_id,app_account_token) VALUES('selected-subject','reader-a',$1)",[randomUUID()]);
   await db.query('UPDATE membership_settings SET public_access_enabled=true');
-  const accounts=new AccountStore(store.db,{policy:{bundles:['com.test.Lyrica']},apple:{authenticate:async()=>({subjectHash:'selected-subject',refreshTokenEncrypted:'proof'}),revoke:async()=>{}},spotifyCleanupFn:async()=>{}});
-  const user={id:'reader-a',keyID:'selected-key'},input={bundleID:'com.test.Lyrica',...(await accounts.challenge({purpose:'delete',bundleID:'com.test.Lyrica'},user))};
-  assert.deepEqual(await accounts.delete(user,input),{deleted:true});
+  await db.exec(await readFile(new URL('../../db/032-auth-token-row-locks.sql',import.meta.url),'utf8'));
+  const policy={audience:'test',environment:'development',prefix:'9ESZX68J8U',bundles:['com.test.Lyrica']},bundleID=policy.bundles[0],keyID=Buffer.alloc(32,31).toString('base64');
+  const auth=new AppAuthStore(store.db,{policy,attestFn:()=>({publicKey:'proof',receipt:Buffer.from('proof')}),assertionFn:({assertion})=>Number(assertion.toString())});
+  const registration=await auth.challenge('token-a',{keyID,bundleID,purpose:'register'});
+  await auth.register('token-a',{keyID,bundleID,...registration,attestation:'cHJvb2Y='});
+  const challenge=await auth.challenge('token-a',{keyID,bundleID,purpose:'session'});
+  const session=await auth.session('token-a',{keyID,bundleID,...challenge,assertion:Buffer.from('1').toString('base64')});
+  const user=await auth.authenticate(session.token);
+  const accounts=new AccountStore(store.db,{policy,apple:{authenticate:async()=>({subjectHash:'selected-subject',refreshTokenEncrypted:'proof'}),revoke:async()=>{}},spotifyCleanupFn:async()=>{}});
+  const input={bundleID,...(await accounts.challenge({purpose:'delete',bundleID},user))};
+  const authentication=await accounts.prepareWriterAuthentication(session.token);
+  assert.deepEqual(await accounts.delete(user,input,authentication),{deleted:true});
   assert.deepEqual((await db.query('SELECT user_id FROM selected_source_access')).rows.map(x=>x.user_id),['reader-b']);
   await assert.rejects(store.reserve(request(doc)),unavailable);
   await assert.rejects(reserveExplanation(store.db,study(doc)),unavailable);
