@@ -102,11 +102,17 @@ export function attachVocalTiming(response,lyrics,{provider,recordingID,sourceID
  // Language diagnostics are optional. Drop them before measured word cues at
  // the durable limit, so enrichment cannot make an existing timed source lose
  // its timing. Remaining oversized word data still falls back to readability.
- if(response.metadata.language_details?.provider_evidence&&Buffer.byteLength(JSON.stringify(response))>160_000){
+ omitOversizedLanguageEvidence(response);
+ if(Buffer.byteLength(JSON.stringify(response))>160_000)stripVocalTiming(response);
+ return response;
+}
+// Final callers may add recording bindings after attachVocalTiming. Apply the
+// same optional-data priority again at that final serialized boundary.
+export function omitOversizedLanguageEvidence(response) {
+ if(response.metadata?.language_details?.provider_evidence&&Buffer.byteLength(JSON.stringify(response))>160_000){
   const {provider_evidence,...details}=response.metadata.language_details;
   response.metadata.language_details=details;
  }
- if(Buffer.byteLength(JSON.stringify(response))>160_000)stripVocalTiming(response);
  return response;
 }
 export function stripVocalTiming(response) {

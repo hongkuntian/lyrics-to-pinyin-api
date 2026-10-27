@@ -1,6 +1,6 @@
 import {withLyricsDelivery} from './lyrics-delivery.js';
 import {NETEASE_ACQUISITION_CACHE_CAPABILITY} from './netease-yrc.js';
-import {attachVocalTiming,stripVocalTiming} from './vocal-timing.js';
+import {attachVocalTiming,stripVocalTiming,omitOversizedLanguageEvidence} from './vocal-timing.js';
 import {createVerifiedContextCache} from './verified-lyric-context.js';
 import {hintedRecording} from './source-hint.js';
 import {randomUUID} from 'node:crypto';
@@ -176,6 +176,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         attachVocalTiming(response,lyrics,{provider:'spotify',recordingID:r.item_id,sourceID:song.id});
         const capsule=sourceCapsule(response);
         response.recordingBinding=spotifyBinding(r,capsule,LYRIC_SELECTION_REVISION,response);
+        omitOversizedLanguageEvidence(response);
         if(Buffer.byteLength(JSON.stringify(response))>160_000&&response.metadata.lyric_timing){
           stripVocalTiming(response);response.recordingBinding=spotifyBinding(r,sourceCapsule(response),LYRIC_SELECTION_REVISION,response);
         }
