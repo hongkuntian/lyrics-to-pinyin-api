@@ -36,7 +36,7 @@ const sourcePins={
  "api/utils/listening/model.js": "154e7cf816619735d0930aded1eab1cd0ee574934075cf35865fbc35b903ecd5",
  "api/utils/listening/store.js": "2814ddcdcc95934b6b0fe6b945042ac422c4f3f9becafcb513a78a698da3d3f4",
  "api/utils/lyric-annotations.js": "bd2c25e30b9d15a2f4639126567ce61308d2cd307611d0f889ab384763e4e957",
- "api/utils/lyric-language.js": "68ea0189e51347ac6a1e83bbf46e555480e3481f84d2e7f2f003e4138f6f7a2d",
+ "api/utils/lyric-language.js": "e16db0efaf0cded166656b2867b0a3cd734337226e69741843f42b5ca8b9feac",
  "api/utils/lyric-notices.js": "81a09582bd460a94115518f243e8f964110baec31b13a67df351ec7730e55bde",
  "api/utils/lyric-quality.js": "c7ddea52aa758f02d8aa16ad15b645d2f28c0ccda9102bec77dc24f73c983f29",
  "api/utils/lyric-selection.js": "551647dc70180ab363c31a9c4c98519a2e2be5f1ac27c40d1bd5883891d55fd7",
@@ -71,7 +71,7 @@ const sourcePins={
  "api/utils/spotify/service.js": "ff21d2dbb9397f0c2dee28f7e8002ffdd6ccd03cbf85cb0bfdf28b2c47981d08",
  "api/utils/spotify/store.js": "e2e5d65e0bfd37b4fbe0baf0a45f63af6e1c3d375971a0790f5568cf1119a30d",
  "api/utils/spotify/vault.js": "c2cc7e473b985c7438d7a4f2927548303721a7ec0ac92b8539e7193db24bb68d",
- "api/utils/vocal-timing.js": "735674ead638c55a69b49e3a0393795b2ce171b2366b1afb0e4592b994d250b0",
+ "api/utils/vocal-timing.js": "3b165f435cfc4fc5f4ba6dea4482be59b2f4163c0aee714ca122f85351be213c",
  "db/001-song-library.sql": "f1386620cf96a317ccb76f03593f74d5b2fe21150bd7ec8a6858dac853c42fd3",
  "db/002-dashboard-views.sql": "221eba47bf1bf05a90e6d49e6cd64a944c66fca0a13c9bc6318c5be487f1c2a3",
  "db/003-correction-foundation.sql": "ef52d21ef6d6a8c1221c139ff6dbae8c075515637f2ee596534a81891266630e",
@@ -103,7 +103,7 @@ const sourcePins={
  "db/029-listening-sessions.sql": "fe9adc6d732edbc9175ed4a2823f6e84821f760099bcf72957da6a8a7a09afc8",
  "db/032-auth-token-row-locks.sql": "c19650a29438ebeea186203d954fee8e144a65ca6d42ad91bc38c18f1f7e5df6",
  "scripts/library-migrations.js": "b2bcfb3ea471555c048f9258b45f745f8ef56cbdfcda08cbbdd2ed0d1e40b422",
- "scripts/membership-role-grants.js": "b46070f7eb7a3abd1f36ef5ac5adfe1b18ac8ee03aaa5c4b96c44fd7adb53d0c"
+ "scripts/membership-role-grants.js": "6c92eaf3fb68a69c66d2d182afacebfce87cdf8ed5d9d98c659c2c9c95dd8117"
 };
 const aclMetadataSHA256='7ee564f93b162fc2b75d6ed791622414c2e44449ff776cc61705644b433e1972';
 const existingTokenFields=['digest','user_id','revoked','created_at','expires_at'];
@@ -411,8 +411,14 @@ async function lateReplay(h){
  assert.deepEqual(await tokens(h),before);assert.deepEqual(await tuples(h),physical);
  const exact=await readFile(new URL('../../db/'+migration,import.meta.url),'utf8');
  const block=exact.match(/DO \$\$ BEGIN[\s\S]*?END \$\$;/g)?.filter(text=>text.includes('pg_roles')&&text.includes('GRANT '));
- assert.equal(block?.length,1);assert.equal(trace.filter(row=>row.text===block[0]).length,2);
- for(const {text} of trace){assert.match(text,/^DO \$\$ BEGIN/);assert.doesNotMatch(text,/\b(?:ALTER TABLE|CREATE (?:TABLE|SCHEMA|ROLE)|INSERT INTO|DELETE FROM|TRUNCATE)\b/);}
+ assert.equal(block?.length,1);
+ const body=block[0].slice('DO $$ '.length,-' $$;'.length)+';';
+ assert.equal(trace.length,2,'one atomic statement per actual replay call');
+ for(const {text} of trace){
+  assert.equal(text.split(body).length-1,1,'unchanged 032 body occurs exactly once per replay');
+  assert.match(text,/^DO \$membership_role_replay\$\nBEGIN\n/);
+  assert.ok(text.endsWith('\nEND $membership_role_replay$;'));
+  assert.doesNotMatch(text,/\b(?:ALTER TABLE|CREATE (?:TABLE|SCHEMA|ROLE)|INSERT INTO|DELETE FROM|TRUNCATE)\b/);}
  await lockWitness(h,true);await leastPrivilege(h,true);
  // Cover actual PG rollback semantics with meaningful missing/default/check
  // drift, rather than copying every embedded-engine catalog permutation.
