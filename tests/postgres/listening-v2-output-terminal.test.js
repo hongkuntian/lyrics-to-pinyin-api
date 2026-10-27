@@ -1,4 +1,5 @@
-// MANUAL ONLY. Source authored AFTER frozen 034; no tests-first/red claim.
+// MANUAL ONLY. Original harness followed frozen 034. LT01 assertions were
+// sealed before the proposed privilege correction; Root owns semantic red/green.
 // Root applies maintained sources and pins an independently approved candidate.
 // Row simulations below are not terminal-store, source, enrollment or Release proof.
 import test from 'node:test';
@@ -55,6 +56,7 @@ const SOURCE_PINS=/* ROOT refresh only changed independently reviewed inputs. */
  "tests/postgres/listening-v2-auth-writers.test.js": "9838194eb27c4e1e08cfe50f7f9a8fe4290835c77911417ca74459398e337f44",
  "tests/postgres/listening-v2-transactions.test.js": "1587283e9bb14f9da535a2c1b713b115d83a73b54d55ba2126c4206fcd9845da",
  "scripts/library-migrations.js": "b2bcfb3ea471555c048f9258b45f745f8ef56cbdfcda08cbbdd2ed0d1e40b422",
+ "scripts/membership-role-grants.js": "b46070f7eb7a3abd1f36ef5ac5adfe1b18ac8ee03aaa5c4b96c44fd7adb53d0c",
  "db/034-listening-v2-output-terminal-support.sql": "217cd4b7b48809ea438a33dd6c14e0eebd2f46446c2763fff1ce493b49a1fc54",
  "api/utils/listening-v2/terminal-codec.js": "602c60e226caf67dbff8991f62afb5c59f245a0d859a42d0993aa456e9b76301",
  "tests/unit/listening-v2-terminal-codec.test.js": "e1ce66ffc4932f9253aad01840d33b6f41552e76cc4ce03558ab5e994dee52f5",
@@ -172,7 +174,7 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
  }
  async function newDatabase(label){
   const name='lyrica_terminal_'+runID+'_'+label;
-  assert.match(name,/^lyrica_terminal_[a-f0-9]{32}_(minimal|observed)$/);
+  assert.match(name,/^lyrica_terminal_[a-f0-9]{32}_(minimal|observed|late)$/);
   const h={name,created:false,tagged:false,oid:null,pool:null,ended:false,
    borrowed:new Set(),pending:new Set(),holds:new Set(),poolErrors:[]};
   databases.add(h); // Before CREATE or any setup assertion, so outer finally owns it.
@@ -315,6 +317,17 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   for(const [key,text] of Object.entries(queries))result[key]=(await h.query(text)).rows;
   return result;
  }
+ const oldKeyColumns=['key_id','user_id','audience','bundle_id','environment','public_key','receipt','sign_count','revoked','created_at'];
+ const metadataColumns=['sessions_install_binding_version','sessions_authority_generation'];
+ async function keyRights(h){return (await h.query(`SELECT r.rolname,a.attname,p.privilege,
+  has_column_privilege(r.oid,a.attrelid,a.attnum,p.privilege) AS allowed
+  FROM pg_roles r CROSS JOIN pg_attribute a CROSS JOIN (VALUES ('SELECT'),('INSERT'),('UPDATE'),('REFERENCES')) p(privilege)
+  WHERE r.rolname=ANY($1::text[]) AND a.attrelid='public.app_attest_keys'::regclass
+  AND a.attname=ANY($2::text[]) ORDER BY 1,2,3`,[roles,oldKeyColumns])).rows;}
+ async function keyTableRights(h){return (await h.query(`SELECT r.rolname,p.privilege,
+  has_table_privilege(r.oid,'public.app_attest_keys',p.privilege) AS allowed
+  FROM pg_roles r CROSS JOIN (VALUES ('SELECT'),('DELETE'),('TRUNCATE'),('TRIGGER'),('REFERENCES')) p(privilege)
+  WHERE r.rolname=ANY($1::text[]) ORDER BY 1,2`,[roles])).rows;}
  async function schema(h,footprint){
   const paths=Object.keys(SOURCE_PINS).filter(p=>/^db\/\d{3}-.+\.sql$/.test(p)).sort();
   assert.deepEqual(paths.map(p=>Number(p.slice(3,6))),Array.from({length:34},(_,i)=>i+1));
@@ -331,7 +344,7 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   for(const path of paths.filter(p=>Number(p.slice(3,6))<=29))await apply(path);
   if(footprint==='observed')await reconstructObserved(h);
   for(const path of paths.filter(p=>Number(p.slice(3,6))>=30&&p!==migration))await apply(path);
-  const before=await catalog(h);await apply(migration);const after=await catalog(h);
+  const before=await catalog(h),rights=await keyRights(h),tableRights=await keyTableRights(h);await apply(migration);const after=await catalog(h);
   // Text preservation of the two intentionally replaced closed sets, in
   // addition to the real pre/post PG catalog comparison below.
   const oldDDL=await sql('db/031-listening-v2-lifecycle-support.sql'),newDDL=await sql(migration);
@@ -347,10 +360,14 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
    if(old.relation==='listening_v2.outbox'&&['outbox_lifecycle_kind','outbox_lifecycle_references'].includes(old.conname))continue;
    assert.ok(after.constraints.some(r=>JSON.stringify(r)===JSON.stringify(old)),old.conname);
   }
+  const comparable=(key,r)=>['columns','tables'].includes(key)&&r.nspname==='public'&&r.relname==='app_attest_keys'
+   ?Object.fromEntries(Object.entries(r).filter(([field])=>field!=='acl')):r;
   for(const key of ['indexes','columns','tables','functions','domains'])
-   for(const old of before[key])assert.ok(after[key].some(r=>JSON.stringify(r)===JSON.stringify(old)),key+':'+JSON.stringify(old));
+   for(const old of before[key])assert.ok(after[key].some(r=>JSON.stringify(comparable(key,r))===JSON.stringify(comparable(key,old))),key+':'+JSON.stringify(old));
   assert.equal(after.columns.length-before.columns.length,2);
-  assert.deepEqual(after.tables,before.tables,'no old table ACL/owner/RLS mutation');
+  assert.deepEqual(after.tables.map(r=>comparable('tables',r)),before.tables.map(r=>comparable('tables',r)));
+  assert.deepEqual(await keyRights(h),rights,'preserve actual-role effective rights on every old key column');
+  assert.deepEqual(await keyTableRights(h),tableRights,'preserve old SELECT/DELETE and unrelated table privileges');
   const relations=(await h.query("SELECT tablename FROM pg_tables WHERE schemaname='listening_v2' ORDER BY 1")).rows.map(r=>r.tablename);
   assert.deepEqual(relations,['command_receipts','outbox','output_guards','privacy_personas','private_profile_assets','returning_grants','rooms','semantic_events']);
   const functions=(await h.query("SELECT p.proname,p.prosecdef,p.proconfig,p.provolatile,"+
@@ -503,29 +520,42 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   const seed=(role,key,version)=>h.as(role,
    'INSERT INTO public.app_attest_keys(key_id,user_id,audience,bundle_id,environment,public_key,receipt,sessions_install_binding_version) '+
    "VALUES($1,$2,'terminal-pg-test','test.lyrica','development','synthetic-not-attestation',''::bytea,$3)",[key,id,version]);
-  const legacy='unknown-'+randomUUID();await seed(account,legacy,null);await seed(account,key,1);
+  // Explicit metadata syntax fixtures are migration-owner-only, never enrollment.
+  const ownerSeed=(key,version)=>h.query(
+   'INSERT INTO public.app_attest_keys(key_id,user_id,audience,bundle_id,environment,public_key,receipt,sessions_install_binding_version) '+
+   "VALUES($1,$2,'terminal-pg-test','test.lyrica','development','synthetic-not-attestation',''::bytea,$3)",[key,id,version]);
+  const legacy='unknown-'+randomUUID();await ownerSeed(legacy,null);await ownerSeed(key,1);
   for(const role of roles){
    const privilege=(await h.query("SELECT has_table_privilege($1,'public.app_attest_keys','INSERT') AS ins,"+
     "has_table_privilege($1,'public.app_attest_keys','UPDATE') AS upd,"+
     "has_column_privilege($1,'public.app_attest_keys','sessions_authority_generation','UPDATE') AS generation,"+
     "has_column_privilege($1,'public.app_attest_keys','sessions_install_binding_version','INSERT') AS provenance",[role])).rows[0];
-   const inherited=role===account||footprint==='observed';
-   assert.deepEqual(privilege,{ins:inherited,upd:inherited,generation:inherited,provenance:inherited});
-   if(inherited){
-    // Valid representation writes REALLY succeed through old table ACLs.
-    await h.as(role,'UPDATE public.app_attest_keys SET sessions_authority_generation=sessions_authority_generation+1 WHERE key_id=$1',[key]);
-    const freshKey=Buffer.alloc(32,role===runtime?21:22).toString('base64');
-    await seed(role,freshKey,1);
-   }else await code(h.as(role,'UPDATE public.app_attest_keys SET sessions_authority_generation=1 WHERE key_id=$1',[key]),'42501');
+   assert.deepEqual(privilege,{ins:false,upd:false,generation:false,provenance:false});
+   for(const column of metadataColumns)for(const action of ['INSERT','UPDATE'])
+    assert.equal((await first(h,'SELECT has_column_privilege($1,$2,$3,$4) AS ok',[role,'public.app_attest_keys',column,action])).ok,false);
+   await code(h.as(role,'UPDATE public.app_attest_keys SET sessions_authority_generation=1 WHERE key_id=$1',[key]),'42501');
+   await code(h.as(role,'UPDATE public.app_attest_keys SET sessions_install_binding_version=NULL WHERE key_id=$1',[key]),'42501');
+   await code(seed(role,Buffer.alloc(32,role===runtime?21:22).toString('base64'),1),'42501');
+   const oldWrites=role===account||footprint==='observed',freshKey='lt01-old-'+role;
+   const oldInsert=()=>h.as(role,'INSERT INTO public.app_attest_keys(key_id,user_id,audience,bundle_id,environment,public_key,receipt) '+
+    "VALUES($1,$2,'terminal-pg-test','test.lyrica','development','old-column-fixture',''::bytea)",[freshKey,id]);
+   if(oldWrites){
+    await oldInsert();
+    assert.deepEqual(await first(h,'SELECT sessions_install_binding_version AS v,sessions_authority_generation::text AS g FROM public.app_attest_keys WHERE key_id=$1',[freshKey]),{v:null,g:'0'});
+    for(const column of oldKeyColumns)assert.equal((await h.as(role,'UPDATE public.app_attest_keys SET '+column+'='+column+' WHERE key_id=$1',[freshKey])).rowCount,1);
+    await h.as(role,"UPDATE public.app_attest_keys SET revoked=true,public_key='',receipt=''::bytea,sign_count=1 WHERE key_id=$1",[freshKey]);
+   }else await code(oldInsert(),'42501');
   }
   // Account has actual DELETE capability; 23514 therefore proves the trigger.
   assert.equal((await first(h,"SELECT has_table_privilege($1,'public.app_attest_keys','DELETE') AS ok",[account])).ok,true);
   for(const [field,value] of [['key_id','changed'],['bundle_id','changed'],['audience','changed'],['environment','production'],
-   ['sessions_install_binding_version',null],['sessions_authority_generation',0]])
+   ])
    await code(h.as(account,'UPDATE public.app_attest_keys SET '+field+'=$2 WHERE key_id=$1',[key,value]),'23514');
-  await code(h.as(account,'UPDATE public.app_attest_keys SET sessions_install_binding_version=1 WHERE key_id=$1',[legacy]),'23514');
-  await h.as(account,'UPDATE public.app_attest_keys SET sessions_authority_generation=$2 WHERE key_id=$1',[key,MAX]);
-  await code(h.as(account,'UPDATE public.app_attest_keys SET sessions_authority_generation=$2 WHERE key_id=$1',[key,'9007199254740992']),'23514');
+  await code(h.query('UPDATE public.app_attest_keys SET sessions_install_binding_version=1 WHERE key_id=$1',[legacy]),'23514');
+  await code(h.query('UPDATE public.app_attest_keys SET sessions_install_binding_version=NULL WHERE key_id=$1',[key]),'23514');
+  await h.query('UPDATE public.app_attest_keys SET sessions_authority_generation=$2 WHERE key_id=$1',[key,MAX]);
+  await code(h.query('UPDATE public.app_attest_keys SET sessions_authority_generation=0 WHERE key_id=$1',[key]),'23514');
+  await code(h.query('UPDATE public.app_attest_keys SET sessions_authority_generation=$2 WHERE key_id=$1',[key,'9007199254740992']),'23514');
   await code(h.as(account,'DELETE FROM public.app_attest_keys WHERE key_id=$1',[key]),'23514');
   await h.as(account,'DELETE FROM public.app_attest_keys WHERE key_id=$1',[legacy]);
   const smoke=await job(h,payload({...selectors.installation,value:sha('role-smoke-'+footprint)}));
@@ -535,8 +565,7 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   await claim(h,smoke);assert.equal((await publish(h,smoke)).rowCount,1);
   const settled=imageRow(await get(h,smoke));assert.equal(settled.attempt_count,0);
   assert.equal(settled.state,'published');assert.equal(numeric(settled.claim_epoch),2);
-  t.diagnostic('LT-01 '+footprint+': account'+(footprint==='observed'?' and reconstructed runtime':'')+
-   ' inherit metadata INSERT/UPDATE; no new-column 42501 or provenance/least-privilege closure is claimed.');
+  t.diagnostic('LT01 '+footprint+': metadata INSERT/UPDATE withheld; old-column writes and account DELETE23514 exercised. No provenance claim.');
  }
  async function rowSimulation(h){
   const j=await job(h);await h.tx(account,'initial',tx=>insert(tx,j));
@@ -624,6 +653,42 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   await h.tx(runtime,'old-progress',tx=>update(tx,old,{state:'pending',...clear,payload:{...oldPayload,cursor:['preview:z',UUID]}}));
   assert.equal(imageRow(await get(h,old)).attempt_count,1,'old cumulative privacy accounting stays unchanged');
  }
+ async function replayBoundary(h,replay){
+  const id='lt01-replay-'+randomUUID(),key=Buffer.alloc(32,55).toString('base64');
+  await h.query('INSERT INTO public.library_users(id) VALUES($1)',[id]);
+  // Owner-only syntactic anchor. Fresh key per database; never verified enrollment.
+  await h.query('INSERT INTO public.app_attest_keys(key_id,user_id,audience,bundle_id,environment,public_key,receipt,sessions_install_binding_version) '+
+   "VALUES($1,$2,'terminal-pg-test','test.lyrica','development','fixture-only',''::bytea,1)",[key,id]);
+  const withheld=async()=>{
+   for(const role of roles){
+    await code(h.as(role,'UPDATE public.app_attest_keys SET sessions_authority_generation=sessions_authority_generation+1 WHERE key_id=$1',[key]),'42501');
+    await code(h.as(role,'INSERT INTO public.app_attest_keys(key_id,user_id,audience,bundle_id,environment,public_key,receipt,sessions_install_binding_version) '+
+     "VALUES($1,$2,'terminal-pg-test','test.lyrica','development','fixture-only',''::bytea,1)",
+     [Buffer.alloc(32,role===runtime?56:57).toString('base64'),id]),'42501');
+   }
+  };
+  const lease=await h.acquire();let statements=0;
+  try{
+   const ownerPID=(await first(lease.client,'SELECT pg_backend_pid() AS pid')).pid;
+   await replay({query:async text=>{
+    // Real pg.Client WITHOUT BEGIN: each return is an actual autocommit
+    // boundary. A split 025 GRANT then corrective REVOKE exposes metadata here.
+    const result=await lease.client.query(text);statements++;
+    await h.tx(account,'replay-independent-client',async tx=>{
+     assert.notEqual((await first(tx,'SELECT pg_backend_pid() AS pid')).pid,ownerPID);
+    });
+    await withheld();return result;
+   }});
+   assert.equal(statements,1,'the replay is one indivisible server statement');
+  }finally{await h.release(lease);}
+  const before=await keyRights(h);
+  await h.tx(null,'replay-existing-tx',async tx=>{
+   await replay(tx);await withheld(); // Distinct client while replay tx is uncommitted.
+  });
+  await withheld();assert.deepEqual(await keyRights(h),before);
+  assert.deepEqual(await first(h,'SELECT sessions_install_binding_version AS v,sessions_authority_generation::text AS g FROM public.app_attest_keys WHERE key_id=$1',[key]),{v:1,g:'0'});
+  await quiescent(h);
+ }
  async function defaultOffFinalizer(h,AccountStore,AppAuthStore){
   const policy={audience:'terminal-pg-test',environment:'development',prefix:'ABCDEFGHIJ',bundles:['test.lyrica']};
   const id='terminal-method-'+randomUUID(),key=Buffer.alloc(32,31).toString('base64');
@@ -645,7 +710,12 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   let drift=true;
   const db=adapter(account,{trace,afterSQL:async(text,client)=>{
    if(drift&&/^UPDATE library_tokens SET revoked=true WHERE digest=\$1$/.test(text)){
-    await client.query('UPDATE app_attest_keys SET sessions_authority_generation=sessions_authority_generation+1 WHERE key_id=$1',[key]);
+    // Owner-only same-client fixture injection, inside the actual writer tx.
+    // Restore the tested role BEFORE the real final verifier; never grant it back.
+    await client.query('RESET ROLE');
+    try{await client.query('UPDATE app_attest_keys SET sessions_authority_generation=sessions_authority_generation+1 WHERE key_id=$1',[key]);}
+    finally{await client.query('SET LOCAL ROLE '+account);}
+    assert.equal((await first(client,'SELECT current_user AS role')).role,account);
    }
   }});
   const beforeConstruction=trace.length;
@@ -687,15 +757,21 @@ test('manual actual PostgreSQL: disabled output-terminal representations',{timeo
   assert.ok(Number((await first(admin,'SHOW server_version_num')).server_version_num)>=170000);
   clusterLease=(await first(admin,'SELECT pg_try_advisory_lock(71309,32026) AS owned')).owned;
   assert.equal(clusterLease,true,'another fixed-role qualification owns the cluster');
-  await createRoles();
   const {parseTerminalPayload}=await import('../../api/utils/listening-v2/terminal-codec.js');
   const {AccountStore}=await import('../../api/utils/membership/accounts.js');
   const {AppAuthStore}=await import('../../api/utils/app-auth/store.js');
+  const {replayMembershipRoleGrants}=await import('../../scripts/membership-role-grants.js');
+  // Actual roles are provisioned only AFTER 034 in this disposable database.
+  await useDatabase('late',async h=>{
+   await schema(h,'late');await createRoles();
+   await replayBoundary(h,replayMembershipRoleGrants);
+  });
   t.diagnostic(JSON.stringify({sourceCommit:marker.sourceCommit,base:BASE,version,systemIdentifier:marker.systemIdentifier,
    scope:'local reconstructed roles and row simulations; no deployed-role/source/enrollment/semantic/Release qualification'}));
   // Sequential explicit databases distinguish minimal DDL from reconstructed ACLs.
   for(const footprint of ['minimal','observed'])await useDatabase(footprint,async h=>{
    await schema(h,footprint);await representation(h,footprint,parseTerminalPayload);
+   await replayBoundary(h,replayMembershipRoleGrants);
    if(footprint==='observed'){
     await rowSimulation(h);await failuresAndHandoff(h);
     for(const kind of ['insert','claim','refund']){

@@ -215,9 +215,12 @@ test('role absence creates no login; actual grant replay repairs late provisioni
  await replayMembershipRoleGrants(recording);await replayMembershipRoleGrants(recording);
  const text=await sql(name),block=text.match(/DO \$\$ BEGIN[\s\S]*?END \$\$;/g)?.filter(b=>b.includes('pg_roles')&&b.includes('GRANT '));
  assert.equal(block?.length,1);
- assert.equal(calls.filter(call=>call===block[0]).length,2,'actual helper replays 032 grant exactly once per call');
+ const body=block[0].slice('DO $$ '.length,-' $$;'.length)+';';
+ assert.equal(calls.length,2,'one atomic statement per actual replay call');
  for(const call of calls){
-  assert.match(call,/^DO \$\$ BEGIN/);
+  assert.equal(call.split(body).length-1,1,'unchanged 032 body occurs exactly once per replay');
+  assert.match(call,/^DO \$membership_role_replay\$\nBEGIN\n/);
+  assert.ok(call.endsWith('\nEND $membership_role_replay$;'));
   assert.doesNotMatch(call,/\b(?:ALTER TABLE|CREATE (?:TABLE|SCHEMA|ROLE)|INSERT INTO|DELETE FROM|TRUNCATE(?: TABLE)?)\b/);
   assert.doesNotMatch(call,/\bUPDATE\s+(?:public\.)?library_tokens\s+SET\b/);
  }

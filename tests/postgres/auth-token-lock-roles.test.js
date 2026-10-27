@@ -411,8 +411,14 @@ async function lateReplay(h){
  assert.deepEqual(await tokens(h),before);assert.deepEqual(await tuples(h),physical);
  const exact=await readFile(new URL('../../db/'+migration,import.meta.url),'utf8');
  const block=exact.match(/DO \$\$ BEGIN[\s\S]*?END \$\$;/g)?.filter(text=>text.includes('pg_roles')&&text.includes('GRANT '));
- assert.equal(block?.length,1);assert.equal(trace.filter(row=>row.text===block[0]).length,2);
- for(const {text} of trace){assert.match(text,/^DO \$\$ BEGIN/);assert.doesNotMatch(text,/\b(?:ALTER TABLE|CREATE (?:TABLE|SCHEMA|ROLE)|INSERT INTO|DELETE FROM|TRUNCATE)\b/);}
+ assert.equal(block?.length,1);
+ const body=block[0].slice('DO $$ '.length,-' $$;'.length)+';';
+ assert.equal(trace.length,2,'one atomic statement per actual replay call');
+ for(const {text} of trace){
+  assert.equal(text.split(body).length-1,1,'unchanged 032 body occurs exactly once per replay');
+  assert.match(text,/^DO \$membership_role_replay\$\nBEGIN\n/);
+  assert.ok(text.endsWith('\nEND $membership_role_replay$;'));
+  assert.doesNotMatch(text,/\b(?:ALTER TABLE|CREATE (?:TABLE|SCHEMA|ROLE)|INSERT INTO|DELETE FROM|TRUNCATE)\b/);}
  await lockWitness(h,true);await leastPrivilege(h,true);
  // Cover actual PG rollback semantics with meaningful missing/default/check
  // drift, rather than copying every embedded-engine catalog permutation.

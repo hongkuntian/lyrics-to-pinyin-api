@@ -6,6 +6,7 @@ import {PGlite} from '@electric-sql/pglite';
 import {AccountStore} from '../../api/utils/membership/accounts.js';
 import {AppAuthStore} from '../../api/utils/app-auth/store.js';
 import {parseTerminalPayload} from '../../api/utils/listening-v2/terminal-codec.js';
+import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.js';
 
 // AUTHORED ONLY; Root executes. Actual DDL, no schema/query mocks or terminal
 // store callbacks. Manual outbox transitions characterize ROWS, never an actual
@@ -32,16 +33,36 @@ const repair={rootJobID:U,predecessorJobID:U,originalCreatedAtMS:0,originalRetry
 const one=async(db,sql,args=[])=>(await db.query(sql,args)).rows[0];
 const rejected=p=>assert.rejects(p,e=>['23514','23502','22003','22P02','23503'].includes(e.code));
 const denied=p=>assert.rejects(p,{code:'42501'}),duplicate=p=>assert.rejects(p,{code:'23505'});
-async function fixture(t,{apply=true}={}){
+async function fixture(t,{apply=true,footprint='minimal',lateRoles=false}={}){
  const db=new PGlite();t.after(()=>db.close());
  // All fixture roles precede conditional 027/029/032/033/034 grants.
- await db.exec(`CREATE ROLE lyra_runtime_v1 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+ const createRoles=()=>db.exec(`CREATE ROLE lyra_runtime_v1 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
  CREATE ROLE lyra_account_v1 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
  CREATE ROLE terminal_untrusted NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;`);
+ if(!lateRoles)await createRoles();
  for(const name of names)await db.exec(await sqlFile(name));
+ if(!lateRoles&&footprint==='observed')await observedRuntime(db);
  if(apply)await db.exec(await sqlFile(migrationName));
+ if(lateRoles){await createRoles();if(footprint==='observed')await observedRuntime(db);}
  return db;
 }
+async function observedRuntime(db){
+ // Exact public-table map retained by the manual PG harness; fixture only.
+ const map={app_attest_keys:'SELECT,INSERT,UPDATE',app_auth_challenges:'SELECT,INSERT,UPDATE,DELETE',
+  app_auth_sessions:'SELECT,INSERT,UPDATE,DELETE',library_settings:'SELECT',library_tokens:'SELECT',
+  library_users:'SELECT',membership_settings:'SELECT',spotify_connections:'SELECT,INSERT,UPDATE,DELETE',
+  spotify_outbox:'SELECT,INSERT,UPDATE,DELETE',spotify_snapshot_capabilities:'SELECT,INSERT,UPDATE,DELETE'};
+ for(const [table,rights] of Object.entries(map))await db.exec('GRANT '+rights+' ON public.'+table+' TO lyra_runtime_v1');
+ await db.exec('GRANT UPDATE(auth_window,auth_count,refresh_window,refresh_count) ON public.library_users TO lyra_runtime_v1');
+ await db.exec('GRANT UPDATE(enabled,review_enabled) ON public.library_settings TO lyra_runtime_v1');
+}
+const oldKeyColumns=['key_id','user_id','audience','bundle_id','environment','public_key','receipt','sign_count','revoked','created_at'];
+const metadataColumns=['sessions_install_binding_version','sessions_authority_generation'];
+async function keyRights(db){return (await db.query(`SELECT r.rolname,a.attname,p.privilege,
+ has_column_privilege(r.oid,a.attrelid,a.attnum,p.privilege) AS allowed
+ FROM pg_roles r CROSS JOIN pg_attribute a CROSS JOIN (VALUES ('SELECT'),('INSERT'),('UPDATE'),('REFERENCES')) p(privilege)
+ WHERE r.rolname IN ('lyra_runtime_v1','lyra_account_v1') AND a.attrelid='public.app_attest_keys'::regclass
+ AND a.attname=ANY($1::text[]) ORDER BY 1,2,3`,[oldKeyColumns])).rows;}
 async function asRole(db,role,fn){await db.exec('SET ROLE '+role);try{return await fn();}finally{await db.exec('RESET ROLE');}}
 async function insert(db,row){const keys=Object.keys(row);return db.query(`INSERT INTO listening_v2.outbox(${keys.join(',')})
  VALUES(${keys.map((_,i)=>'$'+(i+1)).join(',')}) RETURNING *`,Object.values(row));}
@@ -76,13 +97,15 @@ async function catalog(db){const result={};for(const [key,sql] of Object.entries
  WHERE table_schema IN ('public','listening_v2') ORDER BY 1,2,ordinal_position`
 }))result[key]=(await db.query(sql)).rows;return result;}
 
-test('exact historical DDL pins and all old checks/indexes/ACLs/columns survive the additive slice',async t=>{
+test('exact historical DDL pins and old checks/indexes/effective permissions/columns survive the slice',async t=>{
  const pins={'030-listening-v2-schema.sql':'4cd413d4fe3d38ab62695ec8898e9532326e85e8d60c9a5f358dc9b911f5e0c6',
  '031-listening-v2-lifecycle-support.sql':'111032345679f02d00fb0df0d85ba8d11d48fc836159fffe316908007912e9ec',
  '032-auth-token-row-locks.sql':'c19650a29438ebeea186203d954fee8e144a65ca6d42ad91bc38c18f1f7e5df6',
  '033-listening-v2-lifecycle-composition.sql':'71b57b21ae4555d3d76da9b9936342238926fa8059117e68aa41a40a7e628678'};
  for(const [name,pin] of Object.entries(pins))assert.equal(createHash('sha256').update(await sqlFile(name)).digest('hex'),pin);
- const db=await fixture(t,{apply:false}),before=await catalog(db);await db.exec(await sqlFile(migrationName));const after=await catalog(db);
+ const db=await fixture(t,{apply:false,footprint:'observed'}),before=await catalog(db),rights=await keyRights(db);
+ const deletes=(await db.query("SELECT rolname,has_table_privilege(oid,'public.app_attest_keys','DELETE') AS allowed FROM pg_roles WHERE rolname IN ('lyra_runtime_v1','lyra_account_v1') ORDER BY 1")).rows;
+ await db.exec(await sqlFile(migrationName));const after=await catalog(db);
  for(const old of before.checks)if(!['outbox_lifecycle_kind','outbox_lifecycle_references'].includes(old.conname))
   assert.ok(after.checks.some(v=>JSON.stringify(v)===JSON.stringify(old)),old.conname);
  for(const old of before.indexes)assert.ok(after.indexes.some(v=>JSON.stringify(v)===JSON.stringify(old)),old.indexname);
@@ -90,7 +113,10 @@ test('exact historical DDL pins and all old checks/indexes/ACLs/columns survive 
  const fresh=r=>r.table_schema==='public'&&r.table_name==='app_attest_keys'&&
   ['sessions_install_binding_version','sessions_authority_generation'].includes(r.column_name);
  assert.deepEqual(after.columns.filter(r=>!fresh(r)),before.columns);assert.equal(after.columns.filter(fresh).length,2);
- assert.deepEqual(after.acl.filter(r=>!fresh(r)),before.acl);
+ const unrelated=r=>!(r.table_schema==='public'&&r.table_name==='app_attest_keys');
+ assert.deepEqual(after.acl.filter(unrelated),before.acl.filter(unrelated));
+ assert.deepEqual(await keyRights(db),rights,'table-to-column narrowing preserves effective rights on every old key column');
+ assert.deepEqual((await db.query("SELECT rolname,has_table_privilege(oid,'public.app_attest_keys','DELETE') AS allowed FROM pg_roles WHERE rolname IN ('lyra_runtime_v1','lyra_account_v1') ORDER BY 1")).rows,deletes);
  assert.deepEqual((await db.query("SELECT tablename FROM pg_tables WHERE schemaname='listening_v2' ORDER BY 1")).rows.map(r=>r.tablename),relations);
  const funcs=(await db.query(`SELECT proname,prosecdef,proconfig FROM pg_proc WHERE pronamespace='listening_v2'::regnamespace
  AND proname IN ('terminal_payload_valid','protect_terminal_job','protect_install_metadata') ORDER BY 1`)).rows;
@@ -154,15 +180,17 @@ test('legacy NULL/0 metadata and SQL-seeded known v1 preimages: immutable tuple/
  await denied(asRole(db,'lyra_runtime_v1',()=>db.query('UPDATE public.app_attest_keys SET sessions_authority_generation=0 WHERE key_id=$1',[key])));
 });
 
-test('real default-off guest/ACK/register/session/signIn/signOut/delete over complete DDL retain NULL/0',async t=>{
- const db=await fixture(t),adapter={query:(...a)=>db.query(...a),transaction:fn=>db.transaction(fn)};
+test('real restricted-role default-off guest/ACK/register/session/signIn/signOut/delete retain NULL/0',async t=>{
+ const db=await fixture(t,{footprint:'observed'});
+ const adapter=role=>({query:(...a)=>asRole(db,role,()=>db.query(...a)),
+  transaction:fn=>asRole(db,role,()=>db.transaction(fn))});
  await db.exec('UPDATE public.membership_settings SET public_access_enabled=true');
  const policy={audience:'test',environment:'development',prefix:'ABCDEFGHIJ',bundles:['test.lyrica']},bundleID=policy.bundles[0];
  const options={policy,attestFn:()=>({publicKey:'external-crypto-only',receipt:Buffer.from('crypto')}),
   assertionFn:({assertion})=>Number(assertion.toString()),
   apple:{authenticate:async()=>({subjectHash:d(777),refreshTokenEncrypted:'external-Apple-only'}),revoke:async()=>{}},
   spotifyCleanupFn:async()=>{}};
- const accounts=new AccountStore(adapter,options),auth=new AppAuthStore(adapter,options),keyID=Buffer.alloc(32,1).toString('base64');
+ const accounts=new AccountStore(adapter('lyra_account_v1'),options),auth=new AppAuthStore(adapter('lyra_runtime_v1'),options),keyID=Buffer.alloc(32,1).toString('base64');
  const credential='lyra_g_'+randomUUID().replaceAll('-','')+'abcdefghijk';
  const input={...await accounts.challenge({purpose:'guest',bundleID,keyID},null,'fixture'),credential,keyID,bundleID,attestation:'Y3J5cHRv'};
  assert.deepEqual(await accounts.guest(input),{registered:true});assert.deepEqual(await accounts.guest(input),{registered:true});
@@ -276,4 +304,72 @@ test('seeded expired claim retains one debit, fresh reclaim adds one, old full C
  const c=await claim(db,j);assert.equal(c.attempt_count,2);assert.equal(Number(c.claim_epoch),2);
  assert.equal((await db.query(`UPDATE listening_v2.outbox o SET attempt_count=0 WHERE job_id=$1 AND to_jsonb(o)=$2::jsonb RETURNING job_id`,[j.job_id,image])).rows.length,0);
  await progress(db,j,['test',U]);assert.equal((await row(db,j)).attempt_count,1);
+});
+
+// LT01 assertions frozen before the privilege implementation. No semantic red
+// has been executed. Old-source 42501 pin/import refusal is never semantic red.
+for(const footprint of ['minimal','observed'])test('LT01 '+footprint+': old key rights survive; both metadata columns are withheld',async t=>{
+ const db=await fixture(t,{apply:false,footprint}),before=await keyRights(db);
+ await db.exec(await sqlFile(migrationName));assert.deepEqual(await keyRights(db),before);
+ await db.exec("INSERT INTO library_users(id) VALUES('lt01-owner')");
+ const seed=(client,key,metadata=false)=>client.query(`INSERT INTO public.app_attest_keys
+ (key_id,user_id,audience,bundle_id,environment,public_key,receipt,sign_count,revoked,created_at${metadata?',sessions_install_binding_version':''})
+ VALUES($1,'lt01-owner','test','test.lyrica','development','synthetic-not-attestation',''::bytea,0,false,now()${metadata?',1':''})`,[key]);
+ const anchor=Buffer.alloc(32,41).toString('base64');await seed(db,anchor,true); // OWNER ONLY, syntax not provenance.
+ for(const role of ['lyra_runtime_v1','lyra_account_v1']){
+  for(const column of metadataColumns)for(const action of ['INSERT','UPDATE'])
+   assert.equal((await one(db,'SELECT has_column_privilege($1,$2,$3,$4) AS ok',[role,'public.app_attest_keys',column,action])).ok,false);
+  await denied(asRole(db,role,()=>seed(db,Buffer.alloc(32,role==='lyra_runtime_v1'?42:43).toString('base64'),true)));
+  await denied(asRole(db,role,()=>db.query('UPDATE public.app_attest_keys SET sessions_authority_generation=1 WHERE key_id=$1',[anchor])));
+  await denied(asRole(db,role,()=>db.query('UPDATE public.app_attest_keys SET sessions_install_binding_version=NULL WHERE key_id=$1',[anchor])));
+  const canWrite=role==='lyra_account_v1'||footprint==='observed',legacy='lt01-'+role;
+  if(canWrite){
+   await asRole(db,role,()=>seed(db,legacy));
+   const r=await one(db,'SELECT sessions_install_binding_version AS v,sessions_authority_generation::text AS g FROM public.app_attest_keys WHERE key_id=$1',[legacy]);
+   assert.deepEqual(r,{v:null,g:'0'});
+   // Each old column requires its preserved positive UPDATE right. Immutable
+   // tuple fields are assigned to themselves; actual edits still hit 23514.
+   for(const column of oldKeyColumns)await asRole(db,role,()=>db.query('UPDATE public.app_attest_keys SET '+column+'='+column+' WHERE key_id=$1',[legacy]));
+   await asRole(db,role,()=>db.query("UPDATE public.app_attest_keys SET revoked=true,public_key='',receipt=''::bytea,sign_count=1 WHERE key_id=$1",[legacy]));
+  }else await denied(asRole(db,role,()=>seed(db,legacy)));
+ }
+ await assert.rejects(asRole(db,'lyra_account_v1',()=>db.query('DELETE FROM public.app_attest_keys WHERE key_id=$1',[anchor])),{code:'23514'});
+ await rejected(db.query("UPDATE public.app_attest_keys SET sessions_install_binding_version=1 WHERE key_id='lt01-lyra_account_v1'"));
+ await db.query('UPDATE public.app_attest_keys SET sessions_authority_generation=1 WHERE key_id=$1',[anchor]);
+ await rejected(db.query('UPDATE public.app_attest_keys SET sessions_authority_generation=0 WHERE key_id=$1',[anchor]));
+});
+
+for(const lateRoles of [false,true])for(const footprint of ['minimal','observed'])test('LT01 actual replay '+footprint+' lateRoles='+lateRoles,async t=>{
+ const db=await fixture(t,{footprint,lateRoles});
+ if(lateRoles)await replayMembershipRoleGrants({query:text=>db.exec(text)});
+ const before=await keyRights(db);
+ await replayMembershipRoleGrants({query:text=>db.exec(text)});
+ await replayMembershipRoleGrants({query:text=>db.exec(text)});
+ assert.deepEqual(await keyRights(db),before);
+ for(const role of ['lyra_runtime_v1','lyra_account_v1'])for(const column of metadataColumns)for(const action of ['INSERT','UPDATE'])
+  assert.equal((await one(db,'SELECT has_column_privilege($1,$2,$3,$4) AS ok',[role,'public.app_attest_keys',column,action])).ok,false);
+});
+
+test('LT01 replay without metadata keeps the schema-absent V1 permissions',async t=>{
+ const db=await fixture(t,{apply:false,footprint:'observed'}),before=await keyRights(db);
+ await replayMembershipRoleGrants({query:text=>db.exec(text)});assert.deepEqual(await keyRights(db),before);
+ assert.equal((await one(db,"SELECT count(*)::int AS n FROM pg_attribute WHERE attrelid='public.app_attest_keys'::regclass AND attname=ANY($1::text[]) AND NOT attisdropped",[metadataColumns])).n,0);
+});
+
+for(const drift of [
+ 'ALTER TABLE public.app_attest_keys DROP COLUMN sessions_install_binding_version',
+ 'ALTER TABLE public.app_attest_keys ADD COLUMN unexpected text',
+ 'ALTER TABLE public.app_attest_keys ALTER COLUMN sessions_authority_generation DROP DEFAULT',
+ 'ALTER TABLE public.app_attest_keys ALTER COLUMN sessions_install_binding_version SET DEFAULT 1',
+ 'ALTER TABLE public.app_attest_keys DISABLE TRIGGER app_attest_keys_sessions_metadata_protect',
+ 'GRANT INSERT,UPDATE ON public.app_attest_keys TO PUBLIC',
+ 'ALTER TABLE public.app_attest_keys OWNER TO lyra_account_v1',
+ 'GRANT INSERT,UPDATE ON public.app_attest_keys TO terminal_untrusted; GRANT terminal_untrusted TO lyra_account_v1 WITH INHERIT TRUE'
+])test('LT01 replay refuses catalog/residual authority drift atomically: '+drift,async t=>{
+ const db=await fixture(t,{footprint:'observed'});
+ await db.exec(drift);
+ const before=await catalog(db);
+ await assert.rejects(replayMembershipRoleGrants({query:text=>db.exec(text)}),{code:'23514'});
+ // No partial replay effects. In particular 025 cannot leave broad key grants.
+ assert.deepEqual(await catalog(db),before);
 });
