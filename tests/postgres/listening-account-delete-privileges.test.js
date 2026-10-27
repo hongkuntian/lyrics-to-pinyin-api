@@ -343,6 +343,7 @@ async function runCases(caseTest,make){
   assert.ok(before.length>0);
  });
  const malformedChanges=[
+  'ALTER TABLE public.library_users RENAME TO delete_users_original',
   'DROP TABLE public.listening_rate_windows',
   'ALTER TABLE public.listening_rate_windows RENAME TO rate_original; CREATE VIEW public.listening_rate_windows AS SELECT * FROM public.rate_original',
   'ALTER TABLE public.listening_rate_windows ALTER COLUMN user_id TYPE varchar(128)',
@@ -361,6 +362,18 @@ async function runCases(caseTest,make){
   await assert.rejects(h.tx(null,async raw=>{await raw.query(change);await raw.query(body(await sqlFile(correction)));}),malformed);
   assert.deepEqual(await image(h),before);assert.deepEqual(await acl(h),old);
   assert.deepEqual(await one(h,"SELECT pg_get_indexdef('public.listening_members'::regclass) AS definition"),indexBefore);
+ });
+ await caseTest('035 upgrade refuses unresolved expected parent without receipt or ACL changes',async t=>{
+  const h=await make(t);await schema(h,{historical:true});await seed(h);
+  const before=await image(h),old=await acl(h);
+  await assert.rejects(h.tx(null,async raw=>{
+   await raw.query('ALTER TABLE public.library_users RENAME TO delete_users_original');
+   // Actual runner in the existing owner transaction: old receipts skip old
+   // bodies, so only035 can refuse this unresolved expected FK target.
+   await migrateLibrary({transaction:fn=>fn(raw)});
+  }),malformed);
+  assert.deepEqual(await image(h),before);assert.deepEqual(await acl(h),old);
+  assert.equal((await one(h,'SELECT count(*)::int AS n FROM public.library_schema_migrations WHERE name=$1',[correction])).n,0);
  });
  await caseTest('035 hostile search_path and shadows remain untouched, direct and replay repeat',async t=>{
   const h=await make(t);await schema(h,{historical:true,metadata:true});await seed(h,{metadata:true});const before=await image(h);
