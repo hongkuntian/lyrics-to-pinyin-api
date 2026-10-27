@@ -5,6 +5,7 @@ DO $listening_account_delete_privileges$
 DECLARE
   previous_search_path pg_catalog.text;
   target_name pg_catalog.text; relation_oid pg_catalog.oid; relation_count pg_catalog.int4;
+  expected_user_oid pg_catalog.oid;
   expected_columns pg_catalog.int4; expected_keys pg_catalog.int2[]; expected_foreign_keys pg_catalog.int4;
 BEGIN
   -- Resolve operators, casts and catalog expressions in pg_catalog even when
@@ -23,6 +24,10 @@ BEGIN
     NULL;
   ELSE
   IF relation_count<>4 THEN
+    RAISE EXCEPTION 'listening_account_delete_catalog_mismatch' USING ERRCODE='23514';
+  END IF;
+  expected_user_oid=pg_catalog.to_regclass('public.library_users');
+  IF expected_user_oid IS NULL THEN
     RAISE EXCEPTION 'listening_account_delete_catalog_mismatch' USING ERRCODE='23514';
   END IF;
   FOREACH target_name IN ARRAY ARRAY['listening_rooms','listening_commands','listening_outbox','listening_rate_windows'] LOOP
@@ -87,17 +92,17 @@ BEGIN
         SELECT 1 FROM pg_catalog.pg_constraint c WHERE c.conrelid=relation_oid AND c.contype='f' AND (
           NOT c.convalidated OR c.condeferrable OR c.condeferred OR NOT c.conislocal OR c.coninhcount<>0
           OR c.confdeltype<>'c' OR c.confupdtype<>'a' OR c.confmatchtype<>'s'
-          OR NOT (
+          OR (
             (c.conname=target_name||'_owner_id_fkey' AND target_name='listening_rooms'
-              AND c.conkey=ARRAY[3]::smallint[] AND c.confrelid=pg_catalog.to_regclass('public.library_users') AND c.confkey=ARRAY[1]::smallint[])
+              AND c.conkey=ARRAY[3]::smallint[] AND c.confrelid=expected_user_oid AND c.confkey=ARRAY[1]::smallint[])
             OR (c.conname=target_name||'_actor_id_fkey' AND target_name='listening_commands'
-              AND c.conkey=ARRAY[3]::smallint[] AND c.confrelid=pg_catalog.to_regclass('public.library_users') AND c.confkey=ARRAY[1]::smallint[])
+              AND c.conkey=ARRAY[3]::smallint[] AND c.confrelid=expected_user_oid AND c.confkey=ARRAY[1]::smallint[])
             OR (c.conname=target_name||'_room_id_fkey' AND target_name IN ('listening_commands','listening_outbox')
               AND c.conkey=CASE target_name WHEN 'listening_commands' THEN ARRAY[1]::smallint[] ELSE ARRAY[2]::smallint[] END
               AND c.confrelid=pg_catalog.to_regclass('public.listening_rooms') AND c.confkey=ARRAY[1]::smallint[])
             OR (c.conname=target_name||'_user_id_fkey' AND target_name='listening_rate_windows'
-              AND c.conkey=ARRAY[1]::smallint[] AND c.confrelid=pg_catalog.to_regclass('public.library_users') AND c.confkey=ARRAY[1]::smallint[])
-          )
+              AND c.conkey=ARRAY[1]::smallint[] AND c.confrelid=expected_user_oid AND c.confkey=ARRAY[1]::smallint[])
+          ) IS NOT TRUE
         )
       ) THEN RAISE EXCEPTION 'listening_account_delete_catalog_mismatch' USING ERRCODE='23514'; END IF;
   END LOOP;
