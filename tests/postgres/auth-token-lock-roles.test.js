@@ -19,19 +19,28 @@ const sourcePins={
  "api/processors/japanese.js": "ccfbe01a77564b0d3c4eb617d1a768c38a608f96786402233e0826130cf96677",
  "api/processors/korean.js": "b2bd8eb25881412f820ad1a042eb2210578f16bf82519b7281235fb207f1f5e0",
  "api/processors/russian.js": "676d886fe13f937416883510a774f6abb37224f05692d409a9eb77802265292b",
- "api/utils/app-auth/store.js": "5ee161b368f4527bd82a5ea43a2249bb7931ff7e832666951101fbb4f47bf262",
+ "api/utils/app-auth/admin.js": "c761e922197537e01da90b46021c4a8836275aadb33291e8722d96b2a0e30996",
+ "api/utils/app-auth/store.js": "2692755072094fb0907dd0721396c38f0190cf0a595f2c40dd16400f7dbbc6aa",
  "api/utils/app-auth/verification.js": "203e2e2a59706162e8987320b57be12a4dbf98d3784fce5b4298099f0a848995",
  "api/utils/artist-alias-recovery.js": "d57a500e7d7ad94e2873fe7a85fd0438f05b4fc998713b147797f6366819ad10",
  "api/utils/language-detection.js": "5f617664f96fdf7b3aa0ce2bad6e33dde5a8b0594b247cd89a21fcfaef986c32",
- "api/utils/listening-v2/auth-context.js": "f1aa7be04d49c236f4f3773a10faf52c9c43cbdb12f80ab9af2104b263536c1d",
- "api/utils/listening-v2/errors.js": "d36f7fb29f0aac07f1353044957147d0b97cd981f4bfd0af11b68afbf1c21022",
+ "api/utils/listening-v2/admission.js": "cb0aec7a4e53a07e3de2d8e9ea9cc7ce44878b9432b612d78ed9739a31dfd15f",
+ "api/utils/listening-v2/auth-context.js": "6d674aea80278c68aee2fa167da714c4987ff0530be44ff095544056b9671da6",
+ "api/utils/listening-v2/errors.js": "dac70423b7f56295f3b6d1fed410a87edda06432dbf8fd892ed84e98170d049c",
+ "api/utils/listening-v2/privacy-codec.js": "f4ab488efed5e80ea03ade63d715b80bb42886c20e1502ed0c52612bd7f19879",
+ "api/utils/listening-v2/privacy-lifecycle.js": "e796198976900acaf5502799cf9fda12be24f3f820b02d56de2a90a611ca5c90",
+ "api/utils/listening-v2/privacy-writers.js": "9c6db7c5bd3c3cc4bff34c1b46cc53ca68d6571a443d33bbcf26eb0b98954f34",
+ "api/utils/listening-v2/protocol.js": "4369c15340ea2e4a11a1afbab3407541103a816e015f7ad355243a2d18885fee",
+ "api/utils/listening-v2/tickets.js": "84c3b8ff87773fc61dbe07f7cfbc6c25a8c7f84a93275ae22bf321912759d046",
  "api/utils/listening/account.js": "6102a77618cbab5f5e34670631bda16e0671ca052c86ed769fc584db2d3c1268",
+ "api/utils/listening/model.js": "154e7cf816619735d0930aded1eab1cd0ee574934075cf35865fbc35b903ecd5",
+ "api/utils/listening/store.js": "2814ddcdcc95934b6b0fe6b945042ac422c4f3f9becafcb513a78a698da3d3f4",
  "api/utils/lyric-annotations.js": "bd2c25e30b9d15a2f4639126567ce61308d2cd307611d0f889ab384763e4e957",
  "api/utils/lyric-language.js": "68ea0189e51347ac6a1e83bbf46e555480e3481f84d2e7f2f003e4138f6f7a2d",
  "api/utils/lyric-notices.js": "81a09582bd460a94115518f243e8f964110baec31b13a67df351ec7730e55bde",
  "api/utils/lyric-quality.js": "c7ddea52aa758f02d8aa16ad15b645d2f28c0ccda9102bec77dc24f73c983f29",
  "api/utils/lyric-selection.js": "551647dc70180ab363c31a9c4c98519a2e2be5f1ac27c40d1bd5883891d55fd7",
- "api/utils/membership/accounts.js": "992ddfd48979f2d35d29eec7305cdf4b26f278ff20deddfdc71095a4e7c60809",
+ "api/utils/membership/accounts.js": "15a7fa51080bb68081a193c7e4c7c0bd72126ecf602b796518b21ecc473465ab",
  "api/utils/membership/apple-identity.js": "f7e31baaffb5ad0a684c5f7519fb38e186dd2d4e7a297f14b042681bef31141f",
  "api/utils/membership/policy.js": "a167d7c6bb90b486a5375b1f53c4ae962da50618aea3e78347c20891ad97af11",
  "api/utils/membership/store.js": "cc9d2af0b18e8434b8f0d1706081b98dd2f0e6fe152ec64076ffeb4953941088",
@@ -49,7 +58,7 @@ const sourcePins={
  "api/utils/song-library/selected-source.js": "5f4baf9805a45acd1c84ad927fb6316106582cefdca22eea35be4b00b71f9ae5",
  "api/utils/song-library/spending.js": "4f392c103c4d63c7fff2d98638c131da0419babd3ea269053765ffc635f3d236",
  "api/utils/song-library/spotify-recording.js": "eb93fd5fe471b5e09c3f4a15c37bc972c2d334f1cbd0900cc726d54763edd2a2",
- "api/utils/song-library/store.js": "c86abffc5d21a993249fb0b445b802928346cd70699f2aa8e2635b64c005b560",
+ "api/utils/song-library/store.js": "1a10a7dfc7a8c5e971047330b7b4211395b2950dbedbd71fd81a75068b6ba618",
  "api/utils/song-library/translation-identity.js": "7bba350b842eb301b970d4858ab8cbca98aadd2820397a3404d7e1448452895e",
  "api/utils/song-library/translation-reuse.js": "32067bf9dbb392f0645727d5380a2e5eadfba98aaee77fe4a448408177533d4a",
  "api/utils/song-library/translation-source.js": "050bdc5035a73aff19efbba73b29d767f798797c7851b6921e65eb121389a95a",
@@ -58,7 +67,7 @@ const sourcePins={
  "api/utils/spotify/observation.js": "db3a88d3766ebbd2b1d888b2be6e41450641595371c031fcd8d35010b4e39d2c",
  "api/utils/spotify/queue.js": "3e180347c2bd05765a4cd8fc9e1d095622feea84236199be5ae05929c22f0212",
  "api/utils/spotify/render.js": "b06bfc3412ea15f27a42aff86587479c79c70c8481b75168e0b951cd79574bd6",
- "api/utils/spotify/revocation.js": "55d698e91f68f57f8bb8fa412fa3f30c4d6f561eed6ad9aee998bd672743250e",
+ "api/utils/spotify/revocation.js": "a27ce0ea1774d6b40fabf68b16c58d75485361840893b01bb28abc8c4bb119e4",
  "api/utils/spotify/service.js": "ff21d2dbb9397f0c2dee28f7e8002ffdd6ccd03cbf85cb0bfdf28b2c47981d08",
  "api/utils/spotify/store.js": "e2e5d65e0bfd37b4fbe0baf0a45f63af6e1c3d375971a0790f5568cf1119a30d",
  "api/utils/spotify/vault.js": "c2cc7e473b985c7438d7a4f2927548303721a7ec0ac92b8539e7193db24bb68d",
@@ -468,14 +477,18 @@ async function authRace(h,order,observerFailure=false){
  const drain=()=>draining??=(async()=>{hold.release();try{await Promise.all(pending);}finally{h.scopes.delete(drain);}})();h.scopes.add(drain);
  try{
   if(order==='revocation-first'){
-   writing=h.outcome(accounts(h.db('writer',{role:account,afterSQL:text=>/^UPDATE library_tokens SET revoked/.test(text)?hold.point():undefined})).signOut(f.user));pending.push(writing);
+   const writer=accounts(h.db('writer',{role:account,afterSQL:text=>/^UPDATE library_tokens SET revoked/.test(text)?hold.point():undefined}));
+   const authentication=await writer.prepareWriterAuthentication(f.bearer);
+   writing=h.outcome(writer.signOut(f.user,authentication));pending.push(writing);
    await entered(hold,writing);
    reading=h.outcome(current(f,h.db('current',{role:runtime,trace}),()=>authorized++));pending.push(reading);
    await blocked(h,'current',h.pids.get('writer'));
   }else{
    reading=h.outcome(current(f,h.db('current',{role:runtime,trace,afterSQL:text=>/FROM public\.app_auth_sessions WHERE digest=\$1 FOR UPDATE/.test(text)?hold.point():undefined}),()=>authorized++));pending.push(reading);
    await entered(hold,reading);
-   writing=h.outcome(accounts(h.db('writer',{role:account})).signOut(f.user));pending.push(writing);
+   const writer=accounts(h.db('writer',{role:account}));
+   const authentication=await writer.prepareWriterAuthentication(f.bearer);
+   writing=h.outcome(writer.signOut(f.user,authentication));pending.push(writing);
    await blocked(h,'writer',h.pids.get('current'));
   }
   if(observerFailure)throw sentinel;
