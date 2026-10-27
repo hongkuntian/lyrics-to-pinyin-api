@@ -419,3 +419,53 @@ test('returned snapshots/effects are deeply frozen and time/revision overflow fa
   const overflow = ask(restoreAdmissionState(JSON.stringify(raw)), 1);
   assert.equal(overflow.result.status, 'unavailable'); assert.equal(overflow.state.stateVersion, Number.MAX_SAFE_INTEGER);
 });
+
+
+// NEGATIVE consumer regressions: authored before behavior; parser fixtures only.
+import * as retainedAdmissionAPI from '../../api/utils/listening-v2/admission.js';
+const restoreRetainedAdmissionState=raw=>retainedAdmissionAPI.restoreRetainedAdmissionState(raw);
+function negativeFixture(){
+ let s=approve(ask(state(),1).state,1).state;s=approve(ask(s,2,1002).state,2,1003).state;
+ s=structuredClone(s);const m=s.members[1];
+ Object.assign(m,{install:null,persona:null,profileReference:null,profileRevision:null,roomConsentRevision:null,
+  status:'removed',leaseVersion:2,endedAtMS:1004});
+ s.privacyRedaction=2;s.updatedAtMS=1004;s.stateVersion++;s.membershipRevision++;return s;
+}
+test('negative retained decoding never weakens positive hydration or invents authority',()=>{
+ const raw=negativeFixture();assert.throws(()=>restoreAdmissionState(JSON.stringify(raw)));
+ const s=restoreRetainedAdmissionState(JSON.stringify(raw));assert.deepEqual(s,raw);
+ assert.equal(s.members[1].install,null);assert.equal(s.members[1].persona,null);assert(Object.isFrozen(s.members[1]));
+ const m=s.members[2],result=reduceAdmission(s,command('leave',{}, {memberLeaseVersion:1}),{nowMS:1005,actor:actor(2,m)});
+ assert.equal(result.result.status,'accepted');assert.deepEqual(result.state.members[1],s.members[1]);
+ assert.equal(result.state.lifetimeMemberCount,s.lifetimeMemberCount);assert.equal(result.state.lifetimeRequestCount,s.lifetimeRequestCount);
+ assert.equal(result.state.members[2].leaseVersion,2);assert.equal(result.effects.grant,null);
+ assert(!JSON.stringify(result).includes('redacted-key:'));
+ assert.throws(()=>reduceAdmission(structuredClone(s),command('leave',{}, {memberLeaseVersion:1}),{nowMS:1005,actor:actor(2,m)}));
+});
+test('negative decoder rejects partial/unknown tombstones, invalid lease/time, live null and host fabrication',()=>{
+ for(const change of [s=>delete s.privacyRedaction,s=>s.privacyRedaction=1,s=>s.extra=true,
+  s=>s.members[1].install=install(1),s=>s.members[1].persona=persona(1),s=>s.members[1].profileReference='reattached',
+  s=>s.members[1].status='active',s=>s.members[1].leaseVersion=1,s=>s.members[1].leaseVersion=-1,
+  s=>s.members[1].endedAtMS=null,s=>s.members[1].endedAtMS=999,s=>s.members[1].endedAtMS=1006,
+  s=>s.members[1].firstJoinOrdinal=0,s=>s.members[1].id=s.members[0].id,
+  s=>s.originalHost.persona=null,s=>s.members[1].status='ended']){
+  const s=negativeFixture();change(s);assert.throws(()=>restoreRetainedAdmissionState(JSON.stringify(s)));
+ }
+});
+test('host negative shape closes pending/title and never creates an End or Release authority',()=>{
+ const s=negativeFixture();Object.assign(s.members[0],{install:null,persona:null,profileReference:null,profileRevision:null,
+  roomConsentRevision:null,status:'ended',leaseVersion:2,endedAtMS:1004});
+ s.originalHost.install=null;s.originalHost.persona=null;s.settings.title='';s.status='ended';
+ const retained=restoreRetainedAdmissionState(JSON.stringify(s));
+ const r=reduceAdmission(retained,command('leave',{}, {memberLeaseVersion:1}),{nowMS:1005,actor:actor(2,retained.members[2])});
+ assert.equal(r.result.code,'expired');assert.equal(r.effects.grant,null);assert.deepEqual(r.state,retained);
+ for(const change of [s=>s.settings.title='revived',s=>s.status='active',s=>s.members[0].status='removed',
+  s=>s.originalHost.install=install(0)]){
+  const bad=structuredClone(s);change(bad);assert.throws(()=>restoreRetainedAdmissionState(JSON.stringify(bad)));
+ }
+});
+test('null identity supplies neither positive member lease nor original host decision rights',()=>{
+ const s=restoreRetainedAdmissionState(JSON.stringify(negativeFixture()));
+ const r=reduceAdmission(s,command('leave',{}, {memberLeaseVersion:2}),{nowMS:1005,actor:actor(1,{id:s.members[1].id,leaseVersion:2})});
+ assert.equal(r.result.code,'forbidden');assert.equal(r.state,s);assert.equal(r.effects.grant,null);
+});

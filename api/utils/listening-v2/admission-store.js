@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {types} from 'node:util';
 import {createReceiptStore,decodeSafeUInt} from './receipt-store.js';
-import {createAdmissionState,restoreAdmissionState,validateAdmissionCommand,reduceAdmission,
+import {createAdmissionState,restoreRetainedAdmissionState,validateAdmissionCommand,reduceAdmission,
  expireAdmissions,removeAdmissionMember,ADMISSION_LIMITS} from './admission.js';
 import {parseBoundedSessionJSON} from './protocol.js';
 import {SessionV2Error} from './errors.js';
@@ -12,8 +12,8 @@ const uuid=s=>typeof s==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[8
 const digest=s=>typeof s==='string'&&/^[0-9a-f]{64}$/.test(s);
 const opaque=s=>typeof s==='string'&&s.length<=160&&/^[\x21-\x7e]+$/.test(s);
 const installKeys=['principalID','keyID','bundleID','audience','attestEnvironment'];
-const sameInstall=(a,b)=>installKeys.every(k=>a[k]===b[k]);
-const samePersona=(a,b)=>a.id===b.id&&a.generation===b.generation;
+const sameInstall=(a,b)=>Boolean(a&&b&&installKeys.every(k=>a[k]===b[k]));
+const samePersona=(a,b)=>Boolean(a&&b&&a.id===b.id&&a.generation===b.generation);
 const day=86400000,MAX=Number.MAX_SAFE_INTEGER;
 const lifecycle=new Set(['admission.expire','admission.remove']);
 const actions=['create','admission.request','admission.decide','admission.cancel','settings.update','leave',
@@ -139,7 +139,32 @@ function owned(s){
  const guests=s.members.filter(m=>m.status==='active'&&m.id!==s.originalHost.memberID).length;
  return {events:s.pending.length*3+guests,receipts:s.pending.length*2+guests+1}; // End has its own receipt.
 }
-const refs=s=>[...new Set([...s.members,...s.pending].map(p=>p.persona.id))].sort();
+const refs=s=>[...new Set([...s.members,...s.pending].filter(p=>p.persona!==null).map(p=>p.persona.id))].sort();
+function retainedState(room){
+ const s=restoreRetainedAdmissionState(JSON.stringify(room.state.admission));
+ if(s.privacyRedaction===2){
+  closed(room.state,['occurrences','visits','admission','admissionStore']);
+  if(!Array.isArray(room.state.occurrences)||room.state.occurrences.length||!Array.isArray(room.state.visits)||room.state.visits.length)fail();
+ }
+ return s;
+}
+const hostReferenceMatches=(s,r)=>s.originalHost.persona===null?
+ r.host_persona_id===null&&r.host_privacy_generation===null:
+ s.originalHost.persona.id===r.host_persona_id&&s.originalHost.persona.generation===decodeSafeUInt(r.host_privacy_generation);
+// Closed negative origin coverage only, never a private projection/authority.
+// There is no generic <= generation acceptance or current-owner substitution.
+async function negativeReference(tx,environment,p,reference){
+ const generation=decodeSafeUInt(p.privacy_generation),old=reference.generation;
+ if(generation===old)return true;
+ if(p.status==='withdrawn'&&old<MAX&&generation===old+1)return true;
+ const bridge=(await tx.query(`SELECT controller_kind,private_transfer_from_generation FROM listening_v2.privacy_personas
+  WHERE environment=$1 AND persona_id=$2 AND privacy_generation=$3 AND status=$4`,
+  [environment,p.persona_id,generation,p.status])).rows[0];
+ const from=bridge?.private_transfer_from_generation;
+ return from!==null&&from!==undefined&&decodeSafeUInt(from)===old&&
+  (bridge.controller_kind==='apple'&&p.status==='live'&&old<MAX&&generation===old+1||
+   p.status==='withdrawn'&&old<MAX-1&&generation===old+2);
+}
 const resultProjection=(r,s,room)=>({stateVersion:decodeSafeUInt(room.state_version),sessionRevision:decodeSafeUInt(room.session_revision),
  settingsRevision:s.settings.revision,eventSeq:decodeSafeUInt(room.event_seq),
  ...(r.admission?{admissionID:r.admission.id}:{}),...(r.code?{code:r.code}:{})});
@@ -160,6 +185,21 @@ function compactTerminal(p){
  return p;
 }
 
+// Match the pinned gateway's SQL int8 normalization, including nullable fields.
+// This private full-row snapshot never accepts a caller's room or authority.
+const accountingUInts=['invite_generation','share_generation','session_revision','queue_revision','settings_revision',
+ 'transition_revision','state_version','event_seq','authority_epoch','observation_sequence','desired_queue_revision',
+ 'applied_queue_revision','created_at_ms','expires_at_ms','updated_at_ms','receipt_count','reserved_receipts'];
+const accountingNullableUInts=['host_privacy_generation','ended_at_ms','event_delete_after_ms','receipt_delete_after_ms'];
+function accountingRoom(row){
+ if(!row)fail();const value=clone(row);
+ for(const key of accountingUInts)value[key]=decodeSafeUInt(value[key]);
+ for(const key of accountingNullableUInts)value[key]=value[key]===null?null:decodeSafeUInt(value[key]);
+ return freeze(value);
+}
+const accountingFingerprint=row=>{const value=accountingRoom(row);
+ return JSON.stringify(Object.keys(value).sort().map(key=>[key,value[key]]));};
+
 /** Inert SQL service. See the accompanying contract for the mandatory SAME-TX
  * auth/scope preparation, fact resolver, final reference validation and the
  * unapplied cooldown-only representation proposal. None is a request callback.
@@ -174,23 +214,22 @@ export function createAdmissionStore({db,environment,lockAuthorization,resolveFa
  })};
  async function bytes(tx,value){return decodeSafeUInt((await tx.query(
   'SELECT octet_length($1::jsonb::text)::text AS bytes',[JSON.stringify(value)])).rows[0].bytes);}
- async function checkedReferences(tx,s,a,allowWithdrawn=[]){
-  for(const item of [...s.members,...s.pending]){
+ async function checkedReferences(tx,s,a,allowWithdrawn=[],departure=false){
+  const items=[...s.members,...s.pending].filter(item=>item.persona!==null);
+  for(const item of items){
    if(!a.knownKeys.includes(item.install.keyID)||!a.knownPersonas.includes(item.persona.id))fail();
   }
-  // At most 35 rows, already locked in the earlier hook. Never lock here.
-  const ids=refs(s),rows=(await tx.query(`SELECT persona_id,privacy_generation,status FROM listening_v2.privacy_personas
+  // All scopes were captured/locked by the sole earlier current-auth pass.
+  // Null tombstones are never looked up or hydrated as people.
+  const ids=refs(s),rows=(await tx.query(`SELECT persona_id,original_principal_id,original_key_id,privacy_generation,status FROM listening_v2.privacy_personas
    WHERE environment=$1 AND persona_id=ANY($2::uuid[])`,[environment,ids])).rows;
   if(rows.length!==ids.length)fail();
-  for(const item of [...s.members,...s.pending]){
+  for(const item of items){
    const p=rows.find(p=>p.persona_id===item.persona.id);
-   // Closed membership is retained history, not live authority. Requiring its
-   // old persona to remain live would block other members' reserved departures
-   // after the first privacy withdrawal. Rejoining must pass the active check
-   // on the postimage; terminal hydration independently requires current live
-   // authority. Missing rows/scopes and generation regression still refuse.
+   if(!p||p.original_principal_id!==item.install.principalID||p.original_key_id!==item.install.keyID)fail();
    const historical=item.status==='left'||item.status==='removed';
-   if(historical||allowWithdrawn.includes(item.id)){if(decodeSafeUInt(p.privacy_generation)<item.persona.generation)fail();}
+   const own=samePersona(item.persona,a.persona);
+   if(historical||allowWithdrawn.includes(item.id)||departure&&!own){if(!await negativeReference(tx,environment,p,item.persona))fail();}
    else if(decodeSafeUInt(p.privacy_generation)!==item.persona.generation||p.status!=='live')fail('unauthorized');
   }
  }
@@ -236,7 +275,7 @@ export function createAdmissionStore({db,environment,lockAuthorization,resolveFa
    answer.install.keyID!==origin.original_key_id||!uint(answer.notAfterMS)||answer.notAfterMS<=nowMS||answer.notAfterMS<a.notAfterMS)fail();
   t.install=clone(answer.install);
   const m=s.members.find(m=>m.id===t.memberID);
-  if(m&&(!sameInstall(m.install,t.install)||!samePersona(m.persona,t.persona)||m.leaseVersion<t.memberLeaseVersion))fail();
+  if(m&&(m.persona===null||!sameInstall(m.install,t.install)||!samePersona(m.persona,t.persona)||m.leaseVersion<t.memberLeaseVersion))fail();
   const authority=freeze({terminal:t,notAfterMS:answer.notAfterMS});
   contexts.get(tx).terminalAuthority=authority;
   return authority.terminal;
@@ -251,7 +290,7 @@ export function createAdmissionStore({db,environment,lockAuthorization,resolveFa
   if(await bytes(tx,worst)>ADMISSION_LIMITS.stateBytes||
    await bytes(tx,{...whole,admission:worst})>262144-8192)fail('rate_limited');
   // Independent reducer dry-run validates the closed postimage as well.
-  try{restoreAdmissionState(JSON.stringify(worst));}catch{fail('rate_limited');}
+  try{restoreRetainedAdmissionState(JSON.stringify(worst));}catch{fail('rate_limited');}
  }
  async function grantRow(tx,s,f,a){
   checkPair(f.pair,s,a);
@@ -344,19 +383,19 @@ export function createAdmissionStore({db,environment,lockAuthorization,resolveFa
   // Missing representation is unavailable before any positive write. This is
   // deliberately not a migration runner or an alternate in-memory store.
   await tx.query('SELECT cooldown_until_ms FROM listening_v2.returning_grants WHERE false');
-  const before=room?restoreAdmissionState(JSON.stringify(room.state.admission)):null;
+  const before=room?retainedState(room):null;
+  const departure=a.mode==='member'&&['leave','admission.cancel'].includes(c.action);
   const newPositive=positive(c)&&!(c.action==='admission.decide'&&!before.pending.some(p=>p.id===c.payload.requestID));
   const rawFacts=await resolveFacts({tx,command:c,room,nowMS,authorization:a});
   const f=validateFacts(rawFacts,c,newPositive);slot.facts=f;
   if(before&&(before.environment!==environment||before.sessionID!==c.sessionID||before.status!==room.status||
    before.settings.revision!==room.settings_revision||before.inviteGeneration!==room.invite_generation||
-   before.originalHost.scope!==room.host_install_scope||before.originalHost.persona.id!==room.host_persona_id||
-   before.originalHost.persona.generation!==room.host_privacy_generation))fail();
+   before.originalHost.scope!==room.host_install_scope||!hostReferenceMatches(before,room)))fail();
   if(before&&(!a.hostScopes.includes(before.originalHost.scope)||nowMS<room.updated_at_ms||
    decodeSafeUInt(room.event_seq)!==decodeSafeUInt(room.semantic_event_count)+decodeSafeUInt(room.reaction_event_count)))fail();
   const withdrawalIDs=c.action==='admission.remove'?[c.payload.memberID]:c.action==='admission.expire'?
    before.pending.filter(p=>p.expiresAtMS<=nowMS).map(p=>p.id):[];
-  if(before)await checkedReferences(tx,before,a,withdrawalIDs);
+  if(before)await checkedReferences(tx,before,a,withdrawalIDs,departure);
   if(await revalidateFacts({tx,command:c,room,nowMS,authorization:a,facts:f,terminalAuthority:null,phase:'mutation'})!==true)fail();
   if(newPositive){
    if(f.antiAbuse.status==='denied')fail('rate_limited');
@@ -422,15 +461,25 @@ export function createAdmissionStore({db,environment,lockAuthorization,resolveFa
   }
   if(outcome.result.status==='unavailable')fail();
   if(outcome.result.code==='rate_limited')fail('rate_limited');
-  await checkedReferences(tx,next,a,withdrawalIDs);
+  await checkedReferences(tx,next,a,withdrawalIDs,departure);
   const priorMeta=room?metadata(room.state.admissionStore):{version:1,miscCount:0,reservedEvents:0,reservedReceipts:0,storefront:c.payload.storefront};
+  let heldEvents=0,heldReceipts=0;
   if(room){
-   const old=owned(before);
-   if(priorMeta.reservedEvents!==old.events||priorMeta.reservedReceipts!==old.receipts||
-    JSON.stringify([...room.privacy_persona_ids].sort())!==JSON.stringify(refs(before)))fail();
+   const old=owned(before),indexed=[...room.privacy_persona_ids].sort(),represented=refs(before);
+   if(before.privacyRedaction===2){
+    // The processor conservatively retains reserve/index responsibility after
+    // removing a pending reference or nulling an identity. Preserve that slack;
+    // it is neither a reusable lifetime slot nor funding for new positive work.
+    if(priorMeta.reservedEvents<old.events||priorMeta.reservedReceipts<old.receipts||
+     represented.some(id=>!indexed.includes(id))||indexed.some(id=>!a.knownPersonas.includes(id)))fail();
+    heldEvents=priorMeta.reservedEvents-old.events;heldReceipts=priorMeta.reservedReceipts-old.receipts;
+   }else if(priorMeta.reservedEvents!==old.events||priorMeta.reservedReceipts!==old.receipts||
+    JSON.stringify(indexed)!==JSON.stringify(represented))fail();
   }
-  const reservations=owned(next),misc=priorMeta.miscCount+(next.settings.revision!==(before?.settings.revision??0)||forget?1:0);
+  const ownedNext=owned(next),reservations={events:ownedNext.events+heldEvents,receipts:ownedNext.receipts+heldReceipts};
+  const misc=priorMeta.miscCount+(next.settings.revision!==(before?.settings.revision??0)||forget?1:0);
   if(misc>1000)fail('rate_limited');
+  const nextRefs=before?.privacyRedaction===2?[...new Set([...room.privacy_persona_ids,...refs(next)])].sort():refs(next);
   const meta={...priorMeta,miscCount:misc,reservedEvents:reservations.events,reservedReceipts:reservations.receipts};
   const whole={...(room?.state??{occurrences:[],visits:[]}),admission:next,admissionStore:meta};
   if(await bytes(tx,next)>16384||await bytes(tx,whole)>262144-8192||await bytes(tx,meta)>4096)fail('rate_limited');
@@ -468,10 +517,21 @@ export function createAdmissionStore({db,environment,lockAuthorization,resolveFa
     session_revision=session_revision+$6,settings_revision=$7,invite_generation=$8,semantic_event_count=$9,
     event_seq=event_seq+$10,reserved_semantic_events=$11,reserved_receipts=$12,updated_at_ms=$13
     WHERE environment=$1 AND session_id=$2 AND state_version=$14 RETURNING *`,[
-    environment,c.sessionID,whole,refs(next),delta,next.membershipRevision-before.membershipRevision,next.settings.revision,
+    environment,c.sessionID,whole,nextRefs,delta,next.membershipRevision-before.membershipRevision,next.settings.revision,
     next.inviteGeneration,events,entries.length,extE+reservations.events,extR+reservations.receipts+(consume?1:0),nowMS,room.state_version])).rows[0];
    if(!stored)fail('conflict');
   }
+  // Capture our exact reducer postimage BEFORE event/job SQL and the gateway's
+  // accounting. The same derived consume decision below drives the gateway.
+  // Only +1 receipt and precisely this reserved share may follow this row.
+  // Counters come from the locked input and our SQL reserve expression, not
+  // from an unexpectedly changed RETURNING value or a fresh post-write read.
+  const accountingBefore=freeze({...accountingRoom(stored),
+   receipt_count:room?decodeSafeUInt(room.receipt_count):0,
+   reserved_receipts:decodeSafeUInt(extR+reservations.receipts+(consume?1:0))});
+  slot.accounting=freeze({command:c,before:accountingBefore,after:{...accountingBefore,
+   receipt_count:decodeSafeUInt(accountingBefore.receipt_count+1),
+   reserved_receipts:decodeSafeUInt(accountingBefore.reserved_receipts-(consume?1:0))}});
   await eventsAndJobs(tx,c,next,entries,stored,nowMS);
   return {status:outcome.result.status==='refused'?'refused':'accepted',result:resultProjection(outcome.result,next,stored),
    ...(consume?{consumeReservedReceipt:true}:{})};
@@ -483,11 +543,25 @@ export function createAdmissionStore({db,environment,lockAuthorization,resolveFa
    const descriptor=Object.getOwnPropertyDescriptor(permit,'admissionContext');
    if(!descriptor||!Object.hasOwn(descriptor,'value')||typeof permit.revalidate!=='function')fail();
    const authorization=context(descriptor.value,permit,args.authentication,environment);
-   const slot={authorization,facts:null,terminalAuthority:null};contexts.set(args.tx,slot);
+   const slot={authorization,facts:null,terminalAuthority:null,accounting:null};contexts.set(args.tx,slot);
    return {...permit,notAfterMS:authorization.notAfterMS,revalidate:async request=>{
-    const answer=await permit.revalidate(request);if(answer!==true)return answer;
+    const accounting=request.phase==='commit'?slot.accounting:null;
+    if(accounting&&(request.tx!==args.tx||request.command!==accounting.command||
+     !request.receipt||request.receipt.environment!==environment||request.receipt.session_id!==accounting.command.sessionID||
+     request.receipt.room_id!==accounting.command.sessionID||request.receipt.command_id!==accounting.command.commandID))fail();
+    // The gateway passes its frozen PRE-accounting room. Final authorization
+    // needs our closed POST-accounting expectation, never an unverified SQL row.
+    // Keep exact current-auth before any accounting/source conflict disclosure.
+    const current=accounting?{...request,room:accounting.after}:request;
+    const answer=await permit.revalidate(current);if(answer!==true)return answer;
+    if(accounting){
+     if(accountingFingerprint(request.room)!==accountingFingerprint(accounting.before))fail('conflict');
+     const actual=(await request.tx.query('SELECT * FROM listening_v2.rooms WHERE environment=$1 AND session_id=$2',
+      [environment,accounting.command.sessionID])).rows[0];
+     if(accountingFingerprint(actual)!==accountingFingerprint(accounting.after))fail('conflict');
+    }
     if(slot.terminalAuthority)await canonicalTerminalPersona(request.tx,slot.terminalAuthority.terminal,authorization);
-    if(slot.facts&&await revalidateFacts({...request,authorization,facts:slot.facts,terminalAuthority:slot.terminalAuthority})!==true)fail();
+    if(slot.facts&&await revalidateFacts({...current,authorization,facts:slot.facts,terminalAuthority:slot.terminalAuthority})!==true)fail();
     return true;
    }};
   },mutations:Object.fromEntries(actions.map(action=>[action,mutate]))});

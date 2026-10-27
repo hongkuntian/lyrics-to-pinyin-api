@@ -397,3 +397,24 @@ test('only the exact retained transfer bridge maps stored private history; old w
  await sql.query('UPDATE library_users SET sessions_privacy_epoch=1 WHERE id=$1',[user(2)]);
  await refusesUnchanged(()=>s.readAdmission({...query(1),bearer:bearer(2)}),'unauthorized');
 });
+
+
+test('reserved Leave and safe own cancel exclude unrelated active credential/epoch failures from positive scope',async()=>{
+ const state=(await room()).state.admission;
+ await saveState({...state,members:[state.members[0],member(1),member(2)],pending:[pending(3)],lifetimeMemberCount:3,lifetimeRequestCount:3});
+ await sql.query('UPDATE library_tokens SET revoked=true WHERE user_id=$1',[user(1)]);queries=[];
+ const s=service({antiAbuse:null});assert.equal((await s.execute(cancel(3))).status,'accepted');
+ assert.equal((await s.execute(leave(2))).status,'accepted');
+ assert(!queries.some(q=>q.text.includes('library_tokens')&&q.text.includes('FOR UPDATE')&&q.params.includes(hash(credential(1)))));
+ assert.equal((await room()).state.admission.members[1].status,'active','no fake lifecycle postimage');
+});
+test('safe negative scope still rejects missing historical metadata and generation regression',async()=>{
+ const state=(await room()).state.admission;
+ await saveState({...state,members:[state.members[0],member(1),member(2)],pending:[],lifetimeMemberCount:3,lifetimeRequestCount:2});
+ await sql.query('UPDATE app_attest_keys SET bundle_id=$2 WHERE key_id=$1',[key(1),'forged.bundle']);
+ await refusesUnchanged(()=>service().execute(leave(2)),'unavailable');
+ await sql.query('UPDATE app_attest_keys SET bundle_id=$2 WHERE key_id=$1',[key(1),policy.bundles[0]]);
+ const r=await room();r.state.admission.members[1].persona.generation=9;
+ await sql.query('UPDATE listening_v2.rooms SET state=$2 WHERE session_id=$1',[roomID,r.state]);
+ await refusesUnchanged(()=>service().execute(leave(2)),'unavailable');
+});

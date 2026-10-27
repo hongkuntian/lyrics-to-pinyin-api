@@ -821,6 +821,23 @@ for(const phase of ['creation','update']){
  });
 }
 
+
+// New service-only regression; real positive authorization is covered in the
+// separate actual-method lifecycle suite, never by this legacy fixture permit.
+test('negative departure validates retained source without reviving unrelated active withdrawn refs',async()=>{
+ const s=store(),id=await create(s);await s.execute(mutation(id,0,'settings.update',{askBeforeJoin:false},{settingsRevision:0}));
+ await request(s,id,1);await request(s,id,2);
+ await sql.query(`UPDATE listening_v2.privacy_personas SET status='withdrawn',privacy_generation=2,
+  withdrawn_at_ms=$3::bigint,scrub_due_at_ms=$3::bigint+86400000 WHERE environment=$1 AND persona_id=$2`,[env,persona(1).id,start]);
+ const before=(await row(id)).state.admission.members[1];
+ await sql.query('UPDATE listening_v2.rooms SET semantic_event_count=19998,event_seq=19998,receipt_count=29997 WHERE session_id=$1',[id]);
+ assert.equal((await s.execute(mutation(id,2,'leave',{}, {memberLeaseVersion:1}))).status,'accepted');
+ const after=await row(id);assert.deepEqual(after.state.admission.members[1],before);
+ assert.equal(after.state.admission.members[2].status,'left');assert.equal(after.semantic_event_count,19999);
+ assert.equal(after.reserved_semantic_events,1);assert.equal(after.reserved_receipts,2);assert.equal(after.receipt_count,29998);
+ assert.equal(after.state.admission.lifetimeMemberCount,3);assert.equal(after.terminal_reservation_bytes,8192);
+});
+
 // Last: damage only this disposable fixture after every positive case used the
 // maintained migration directly. Missing representation cannot enable writes.
 test('missing cooldown representation fails closed before room or receipt mutation',async()=>{

@@ -5,7 +5,7 @@ import {SessionV2Error} from './errors.js';
 
 export const ADMISSION_LIMITS = Object.freeze({pendingMS:120000, cooldownMS:60000,
   pending:10, lifetimeMembers:25, lifetimeRequests:300, stateBytes:16384});
-const states = new WeakSet();
+const states = new WeakSet(), retainedStates = new WeakSet();
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const invalid = () => {throw new SessionV2Error('invalid_request');};
 const badFacts = () => {throw new TypeError('Invalid admission server facts');};
@@ -17,8 +17,8 @@ const environment = value => typeof value === 'string' &&
   (['production','development','test'].includes(value) || /^preview:[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(value));
 const same = (a, b, fields) => fields.every(key => a[key] === b[key]);
 const installFields = ['principalID','keyID','bundleID','audience','attestEnvironment'];
-const sameInstall = (a, b) => same(a, b, installFields);
-const samePersona = (a, b) => same(a, b, ['id','generation']);
+const sameInstall = (a, b) => Boolean(a && b && same(a, b, installFields));
+const samePersona = (a, b) => Boolean(a && b && same(a, b, ['id','generation']));
 const samePair = (a, b) => same(a, b, ['environment','hostScope','guestKeyID','digest']);
 const copy = value => structuredClone(value);
 function freeze(value) {
@@ -110,39 +110,55 @@ function array(value, max) {
   if (types.isProxy(value) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || value.length > max ||
       Reflect.ownKeys(value).length !== value.length + 1) badFacts();
 }
-function validateState(s) {
+function validateState(s, retained = false) {
   record(s, ['version','environment','sessionID','status','createdAtMS','updatedAtMS','expiresAtMS','inviteGeneration',
-    'originalHost','settings','stateVersion','membershipRevision','lifetimeRequestCount','lifetimeMemberCount','members','pending']);
+    'originalHost','settings','stateVersion','membershipRevision','lifetimeRequestCount','lifetimeMemberCount','members','pending',
+    ...(retained ? ['privacyRedaction'] : [])]);
+  if (retained && s.privacyRedaction !== 2) badFacts();
   if (s.version !== 2 || !environment(s.environment) || !uuid(s.sessionID) || !['active','ended'].includes(s.status) ||
       !['createdAtMS','updatedAtMS','expiresAtMS','inviteGeneration','stateVersion','membershipRevision','lifetimeRequestCount','lifetimeMemberCount'].every(k => uint(s[k])) ||
       s.updatedAtMS < s.createdAtMS || s.expiresAtMS <= s.createdAtMS || s.expiresAtMS - s.createdAtMS > 28800000 ||
       s.lifetimeRequestCount > ADMISSION_LIMITS.lifetimeRequests || s.lifetimeMemberCount < 1 || s.lifetimeMemberCount > ADMISSION_LIMITS.lifetimeMembers) badFacts();
   record(s.originalHost, ['install','persona','memberID','scope']);
-  install(s.originalHost.install); persona(s.originalHost.persona);
+  const closedHost = retained && s.originalHost.persona === null;
+  if (closedHost) {if (s.originalHost.install !== null || s.status !== 'ended') badFacts();}
+  else {install(s.originalHost.install); persona(s.originalHost.persona);}
   if (!uuid(s.originalHost.memberID) || !digest(s.originalHost.scope)) badFacts();
   record(s.settings, ['revision','title','askBeforeJoin','takeTurns']);
   if (!uint(s.settings.revision) || typeof s.settings.title !== 'string' || Buffer.byteLength(s.settings.title) > 320 ||
       typeof s.settings.askBeforeJoin !== 'boolean' || typeof s.settings.takeTurns !== 'boolean') badFacts();
   // Reuse established title/grapheme/control validation without widening core wire.
-  validateCommand(JSON.stringify({version:2, action:'settings.update', sessionID:s.sessionID, commandID:s.originalHost.memberID,
+  if (closedHost) {if (s.settings.title !== '' || s.pending.length !== 0) badFacts();}
+  else validateCommand(JSON.stringify({version:2, action:'settings.update', sessionID:s.sessionID, commandID:s.originalHost.memberID,
     expected:{settingsRevision:s.settings.revision}, payload:{title:s.settings.title, askBeforeJoin:s.settings.askBeforeJoin, takeTurns:s.settings.takeTurns}}));
   array(s.members, ADMISSION_LIMITS.lifetimeMembers); array(s.pending, ADMISSION_LIMITS.pending);
   if (!s.members.length || s.members.length > s.lifetimeMemberCount || s.lifetimeRequestCount < s.lifetimeMemberCount - 1 + s.pending.length) badFacts();
   const ids = new Set(), installs = new Set(), ordinals = new Set();
   for (const m of s.members) {
     record(m, ['id','install','persona','profileReference','profileRevision','roomConsentRevision','status','leaseVersion','firstJoinOrdinal','joinedAtMS','endedAtMS']);
-    install(m.install); persona(m.persona);
-    const binding = JSON.stringify(installFields.map(k => m.install[k]));
-    if (!uuid(m.id) || ids.has(m.id) || installs.has(binding) || !opaque(m.profileReference) || !uint(m.profileRevision) ||
-        !uint(m.roomConsentRevision) || m.roomConsentRevision === 0 || !['active','left','removed'].includes(m.status) ||
-        !uint(m.leaseVersion) || m.leaseVersion === 0 || !uint(m.firstJoinOrdinal) || m.firstJoinOrdinal >= s.lifetimeMemberCount ||
-        ordinals.has(m.firstJoinOrdinal) || !uint(m.joinedAtMS) || m.joinedAtMS < s.createdAtMS || m.joinedAtMS > s.updatedAtMS ||
+    const tombstone = retained && m.persona === null;
+    if (tombstone) {
+      if (m.install !== null || m.profileReference !== null || m.profileRevision !== null || m.roomConsentRevision !== null ||
+          !['left','removed','ended'].includes(m.status) || m.leaseVersion < 2 ||
+          (m.status === 'ended') !== (closedHost && m.id === s.originalHost.memberID)) badFacts();
+    } else {
+      install(m.install); persona(m.persona);
+      if (!opaque(m.profileReference) || !uint(m.profileRevision) || !uint(m.roomConsentRevision) || m.roomConsentRevision === 0 ||
+          !['active','left','removed'].includes(m.status)) badFacts();
+      const binding = JSON.stringify(installFields.map(k => m.install[k]));
+      if (installs.has(binding)) badFacts();
+      installs.add(binding);
+    }
+    if (!uuid(m.id) || ids.has(m.id) || !uint(m.leaseVersion) || m.leaseVersion === 0 ||
+        !uint(m.firstJoinOrdinal) || m.firstJoinOrdinal >= s.lifetimeMemberCount || ordinals.has(m.firstJoinOrdinal) ||
+        !uint(m.joinedAtMS) || m.joinedAtMS < s.createdAtMS || m.joinedAtMS > s.updatedAtMS ||
         (m.status === 'active' ? m.endedAtMS !== null : !uint(m.endedAtMS) || m.endedAtMS < m.joinedAtMS || m.endedAtMS > s.updatedAtMS)) badFacts();
-    ids.add(m.id); installs.add(binding); ordinals.add(m.firstJoinOrdinal);
+    ids.add(m.id); ordinals.add(m.firstJoinOrdinal);
   }
   const host = s.members[0];
-  if (host.id !== s.originalHost.memberID || host.status !== 'active' || host.firstJoinOrdinal !== 0 ||
-      !sameInstall(host.install, s.originalHost.install) || !samePersona(host.persona, s.originalHost.persona)) badFacts();
+  if (host.id !== s.originalHost.memberID || host.firstJoinOrdinal !== 0) badFacts();
+  if (closedHost) {if (host.persona !== null || host.status !== 'ended') badFacts();}
+  else if (host.status !== 'active' || !sameInstall(host.install, s.originalHost.install) || !samePersona(host.persona, s.originalHost.persona)) badFacts();
   const pendingIDs = new Set(), pendingInstalls = new Set();
   for (const r of s.pending) {
     record(r, ['id','version','status','install','persona','pairDigest','profileReference','profileRevision','roomConsentRevision',
@@ -157,8 +173,8 @@ function validateState(s) {
     pendingIDs.add(r.id); pendingInstalls.add(binding);
   }
 }
-function seal(state) {
-  validateState(state);
+function seal(state, retained = false) {
+  validateState(state, retained);
   // Reserve JSON's ordinary normalized separator spaces as well as compact
   // UTF-8 bytes. Real DB encoding/framing still needs its independent budget.
   const encoded = JSON.stringify(state); let bytes = Buffer.byteLength(encoded), quoted = false;
@@ -168,10 +184,10 @@ function seal(state) {
     else if (!quoted && (encoded[i] === ',' || encoded[i] === ':')) bytes++;
   }
   if (bytes > ADMISSION_LIMITS.stateBytes) throw new SessionV2Error('unavailable');
-  freeze(state); states.add(state); return state;
+  freeze(state); (retained ? retainedStates : states).add(state); return state;
 }
 function known(state, nowMS) {
-  if (!states.has(state) || !uint(nowMS) || nowMS < state.updatedAtMS) badFacts();
+  if ((!states.has(state) && !retainedStates.has(state)) || !uint(nowMS) || nowMS < state.updatedAtMS) badFacts();
 }
 function increment(value) {if (value === Number.MAX_SAFE_INTEGER) throw new SessionV2Error('unavailable'); return value + 1;}
 function touch(s, nowMS, membership = false) {
@@ -200,7 +216,7 @@ function expire(s, nowMS, effects) {
 const emptyEffects = () => ({terminals:[], grant:null, cooldown:null});
 function finish(original, s, result, effects) {
   try {
-    const state = s.stateVersion === original.stateVersion ? original : seal(s);
+    const state = s.stateVersion === original.stateVersion ? original : seal(s, retainedStates.has(original));
     return freeze({state, result, effects});
   } catch (error) {
     if (!(error instanceof SessionV2Error) || error.code !== 'unavailable') throw error;
@@ -224,6 +240,15 @@ export function createAdmissionState(facts) {
 }
 /** Hydrate only this slice from bounded JSON, never a preparsed caller object. */
 export function restoreAdmissionState(rawJSON) {return seal(parseBoundedSessionJSON(rawJSON));}
+/** Retained DB admission slice only. A distinct NEGATIVE brand accepts the
+ * processor's closed null tombstones without constructing validation witnesses.
+ * No client action accepts this state; no null identity becomes authority.
+ */
+export function restoreRetainedAdmissionState(rawJSON) {
+  const s = parseBoundedSessionJSON(rawJSON);
+  return seal(s, Object.hasOwn(s, 'privacyRedaction'));
+}
+
 
 /** Local reducer intent contract; no route or shared wire schema is enabled. */
 export function validateAdmissionCommand(rawJSON) {
