@@ -1,0 +1,122 @@
+{
+  "format": 1,
+  "revision": "R2",
+  "mode": "SOURCE-ONLY design correction",
+  "namedIntegrator": "redesign Root",
+  "report": {
+    "path": "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/artifacts/review-static/sessions-auth-output-terminal-plan-r2.md",
+    "sha256": "d169891ee418cce32ce810d349a38640f1c67d8bd098102a58e585b8a5fedc5a",
+    "bytes": 81317,
+    "lines": 310
+  },
+  "frozenR1": {
+    "reportSHA256Before": "00ce492ce2189dd529580ffc7135606548ae434717411b94b47e2842299200be",
+    "reportSHA256After": "00ce492ce2189dd529580ffc7135606548ae434717411b94b47e2842299200be",
+    "pinsSHA256Before": "9a77c5fa3d28b58751ac4d0002d85f5a45504aba9ee98aaef3edc4fea27e8124",
+    "pinsSHA256After": "9a77c5fa3d28b58751ac4d0002d85f5a45504aba9ee98aaef3edc4fea27e8124",
+    "preservedByteForByte": true
+  },
+  "reviews": [
+    {
+      "lane": "security",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-security-review-r1/report.md",
+      "sha256Before": "292b5e1f299300ee55fab4fbc067308378a29378c8c926e15150e6b33e4f3821",
+      "sha256After": "292b5e1f299300ee55fab4fbc067308378a29378c8c926e15150e6b33e4f3821",
+      "fullReadRanges": [
+        [
+          1,
+          87
+        ]
+      ],
+      "historicalR1Score": 95,
+      "historicalR1Verdict": "Approve",
+      "historicalR1Findings": [],
+      "isR2Approval": false,
+      "r2Disposition": "fresh independent R2 review required"
+    },
+    {
+      "lane": "parity",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/report.md",
+      "sha256Before": "cf03f3886aa377685fc0191483cda71c46ea88517653069f4adea792be3e99ee",
+      "sha256After": "cf03f3886aa377685fc0191483cda71c46ea88517653069f4adea792be3e99ee",
+      "fullReadRanges": [
+        [
+          1,
+          54
+        ]
+      ],
+      "historicalR1Score": 95,
+      "historicalR1Verdict": "Approve",
+      "historicalR1Findings": [],
+      "isR2Approval": false,
+      "r2Disposition": "fresh independent R2 review required"
+    },
+    {
+      "lane": "operations",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-operations-review-r1/report.md",
+      "sha256Before": "172d5e2115b317e40eb6bf1895cddaf8a5fc87a2f15c6498fa8f1056f2ec0091",
+      "sha256After": "172d5e2115b317e40eb6bf1895cddaf8a5fc87a2f15c6498fa8f1056f2ec0091",
+      "fullReadRanges": [
+        [
+          1,
+          66
+        ]
+      ],
+      "historicalR1Score": 89.75,
+      "historicalR1Verdict": "Request changes",
+      "historicalR1Findings": [
+        "OPS-01 major"
+      ],
+      "isR2Approval": false,
+      "r2Disposition": "fresh independent R2 review required"
+    }
+  ],
+  "responses": [
+    {
+      "finding": "OPS-01",
+      "severity": "major",
+      "sourceReportSHA256": "172d5e2115b317e40eb6bf1895cddaf8a5fc87a2f15c6498fa8f1056f2ec0091",
+      "beforeLocation": "R1 lines111-113,123-133; exact compaction R2 privacy-lifecycle.js200-239,350-360",
+      "beforeScenario": "One live G/K persona has11 supported retained historical rooms. Ten successful one-room claims exhaust cumulative attempts before the11th room; ten rooms may need another final range probe.",
+      "disposition": "accepted; proposed design correction, pending all3 fresh independent R2 reviews",
+      "selectedAfterContract": "R2 section4.2: attempt_count=prior genuine failures plus one current reserved claim debit. Only atomic strict cursor/phase progress or final range-verified publication/typed handoff refunds exactly that current debit under full same epoch/nonce/expected-count CAS. Failure/crash-before-page-COMMIT/expiry retains its debit once. Reclaim preserves old failures and reserves a fresh debit if budget remains. Live claimed10 may succeed to pending9; ten genuine failures are dead.",
+      "sourceFit": "Full exact030 read: count0..10; claimed positive count/epoch with nonce/until; nonclaimed NULL claim fields; no outbox monotone count trigger. Existing columns/roles represent the selection. New authority_terminal kind/reference/closed-shape/transition/uniqueness support is required in additive next DDL; no claim of existing claimScrub refund behavior.",
+      "preserved": [
+        "original invalidation/creation/retry/deletion chronology",
+        "one <=256KiB room per transaction and <=100 independent scrub rows",
+        "all semantic/cursor/refund effects atomic and stale-CAS rollback",
+        "full keyset/final full-range/source-anchor/new-retention era fences",
+        "4096 normalized payload with maximum future cursor/repair/numeric widths",
+        "eight V2 relations and all existing aggregate caps",
+        "exact dead debt; separately authorized finite repair lineage; no in-place reset",
+        "all other R1 normative decisions; current PW-01/02/03; public V2/live capacity off/0",
+        "old privacy engine R2/refusals unchanged; no Release from completion"
+      ],
+      "authorOnlyTraces": "R2 section4.2.4, no execution",
+      "futureRequiredTests": [
+        "actual new family store0/1/10/11/>100 rooms across environments, all success pages plus final empty/full-range proof",
+        "nine genuine failures then many successes and publication at9",
+        "ten genuine failures dead with exact debt",
+        "one failure; before/after page COMMIT crashes; expired claim; stale full CAS; explicit-failure/reclaim race; replay",
+        "held writers/new earlier incarnation/publication both orders and durable successor",
+        "original retry/deletion/invalidation deadlines and maximum SQL-normalized future cursor/payload bounds",
+        "restricted roles, unchanged old-family behavior and zero duplicate End/events/receipts/credits/refunds"
+      ],
+      "testsExecuted": false,
+      "independentlyClosed": false
+    }
+  ],
+  "r1Gate": "CLOSED",
+  "r2Gate": "CLOSED; all3 fresh independent reviews on same report/pins/responses bytes required",
+  "requiredReviewGate": {
+    "reviewers": 3,
+    "eachWeightedScoreAtLeast": 90,
+    "everyCategoryAtLeast": 4,
+    "unresolvedMajorOrBlocker": 0,
+    "reuseR1Approvals": false
+  },
+  "runtimeApproval": false,
+  "implementation": false,
+  "executionQualification": false,
+  "ownership": "Root owns read/reviews/implementation/execution/integration/publication/delivery. Worker hands off once."
+}

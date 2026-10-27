@@ -1,0 +1,2005 @@
+{
+  "format": 2,
+  "revision": "R2",
+  "status": "SOURCE-ONLY frozen successor proposal; gate CLOSED; no approval or runtime proof",
+  "report": {
+    "path": "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/artifacts/review-static/sessions-auth-output-terminal-plan-r2.md",
+    "sha256": "d169891ee418cce32ce810d349a38640f1c67d8bd098102a58e585b8a5fedc5a",
+    "bytes": 81317,
+    "lines": 310
+  },
+  "responses": {
+    "path": "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/artifacts/review-static/sessions-auth-output-terminal-plan-r2-responses.json",
+    "sha256": "bf575accfa32ca132ddee86d2e7a2fecee44bccaedd6cd7af96ed78134dc4f80",
+    "bytes": 6440,
+    "lines": 122
+  },
+  "selfHashRule": "Pins does not hash itself; final handoff independently supplies its SHA256. Responses binds report; pins binds report and responses, avoiding circular hashes.",
+  "backend": {
+    "root": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026",
+    "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+    "authority": "git show exact commit and R1-pinned completed postimages only",
+    "resolvedCommit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+    "workingTreeOrNewerQualificationRead": false
+  },
+  "inputs": [
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/docs/design/sessions-v2-architecture.md",
+      "sha256Before": "7d4bd6a6d6b8b6c7be2044a2be61c0fd7841c1ba77d9e982bd592e7d1a24f049",
+      "sha256After": "7d4bd6a6d6b8b6c7be2044a2be61c0fd7841c1ba77d9e982bd592e7d1a24f049",
+      "bytes": 194869,
+      "lines": 842,
+      "unchanged": true,
+      "inspection": "full text",
+      "matchesFrozenR1Pin": true,
+      "readChunks": [
+        [
+          1,
+          100
+        ],
+        [
+          101,
+          165
+        ],
+        [
+          166,
+          245
+        ],
+        [
+          201,
+          208
+        ],
+        [
+          246,
+          295
+        ],
+        [
+          296,
+          360
+        ],
+        [
+          361,
+          445
+        ],
+        [
+          446,
+          520
+        ],
+        [
+          483,
+          493
+        ],
+        [
+          521,
+          580
+        ],
+        [
+          581,
+          690
+        ],
+        [
+          691,
+          752
+        ],
+        [
+          753,
+          810
+        ],
+        [
+          811,
+          842
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/artifacts/review-static/sessions-lifecycle-composition-plan-r2.md",
+      "sha256Before": "f745e92b644ba09ccf121406fc459d99cdb4ca0d2345907a4816dee9e349841d",
+      "sha256After": "f745e92b644ba09ccf121406fc459d99cdb4ca0d2345907a4816dee9e349841d",
+      "bytes": 56490,
+      "lines": 200,
+      "unchanged": true,
+      "inspection": "full text",
+      "matchesFrozenR1Pin": true,
+      "readChunks": [
+        [
+          1,
+          55
+        ],
+        [
+          56,
+          100
+        ],
+        [
+          101,
+          145
+        ],
+        [
+          146,
+          200
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/artifacts/review-static/lifecycle-foundation-interface-r1.md",
+      "sha256Before": "19b58796ebadc21d71dadb87b342430bcaa90be72a9da45f9432ffabe32a3252",
+      "sha256After": "19b58796ebadc21d71dadb87b342430bcaa90be72a9da45f9432ffabe32a3252",
+      "bytes": 7038,
+      "lines": 48,
+      "unchanged": true,
+      "inspection": "full text",
+      "matchesFrozenR1Pin": true,
+      "readChunks": [
+        [
+          1,
+          48
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "git",
+      "path": "AGENTS.md",
+      "sha256Before": "b2127d085dfe3e07967a3d74903f2848c8262b30c0348aaee86480344e9b38e6",
+      "sha256After": "b2127d085dfe3e07967a3d74903f2848c8262b30c0348aaee86480344e9b38e6",
+      "bytes": 1553,
+      "lines": 38,
+      "unchanged": true,
+      "inspection": "full text",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "09f30118fdebba0d42640fccf30caaab7770e9f5",
+      "matchesR1Blob": true,
+      "readChunks": [
+        [
+          1,
+          38
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/membership/accounts.js",
+      "sha256Before": "992ddfd48979f2d35d29eec7305cdf4b26f278ff20deddfdc71095a4e7c60809",
+      "sha256After": "992ddfd48979f2d35d29eec7305cdf4b26f278ff20deddfdc71095a4e7c60809",
+      "bytes": 12906,
+      "lines": 179,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "35873bdefb17f816a63ba1643f2e1b4003afeab6",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/app-auth/store.js",
+      "sha256Before": "5ee161b368f4527bd82a5ea43a2249bb7931ff7e832666951101fbb4f47bf262",
+      "sha256After": "5ee161b368f4527bd82a5ea43a2249bb7931ff7e832666951101fbb4f47bf262",
+      "bytes": 8193,
+      "lines": 115,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "50cc3cad87cbf02f36308ebf96114771cdd3c18f",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/app-auth/admin.js",
+      "sha256Before": "23ff24e35690925bd6104bd766e8bd267fa95c6906bf6403c439e802d0ea495b",
+      "sha256After": "23ff24e35690925bd6104bd766e8bd267fa95c6906bf6403c439e802d0ea495b",
+      "bytes": 3172,
+      "lines": 47,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "d3b400b4eafd9422cc400e0c36e6c53fab5e8c24",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/app-auth/verification.js",
+      "sha256Before": "203e2e2a59706162e8987320b57be12a4dbf98d3784fce5b4298099f0a848995",
+      "sha256After": "203e2e2a59706162e8987320b57be12a4dbf98d3784fce5b4298099f0a848995",
+      "bytes": 2136,
+      "lines": 31,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "69e9b07d5e494c8cb236e6259ff3f38a5864d7bf",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/membership/database.js",
+      "sha256Before": "904be0c318e0f1c54a15109f9e71d44e149d0c009d65556f75e766edbbafc5cd",
+      "sha256After": "904be0c318e0f1c54a15109f9e71d44e149d0c009d65556f75e766edbbafc5cd",
+      "bytes": 824,
+      "lines": 17,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "d793b4e14b5dcf9b1d0fdc89472d18730d5d1d45",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/song-library/database.js",
+      "sha256Before": "7528363c2bc1c20cbba389fb5bdc7686c13f6b15e3ca3ce540e19140c83e7e3d",
+      "sha256After": "7528363c2bc1c20cbba389fb5bdc7686c13f6b15e3ca3ce540e19140c83e7e3d",
+      "bytes": 899,
+      "lines": 17,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "23e0bb40de818ae1d5b4938039311880ca7a7747",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/listening-v2/admission-store.js",
+      "sha256Before": "e243b6872afe674d4ecd55c2f564f14598061d63825e00b97ba896cb222bf800",
+      "sha256After": "e243b6872afe674d4ecd55c2f564f14598061d63825e00b97ba896cb222bf800",
+      "bytes": 36596,
+      "lines": 502,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "15899dfa06934d0f579fd30a2ae407f33663b740",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/listening-v2/admission.js",
+      "sha256Before": "cb0aec7a4e53a07e3de2d8e9ea9cc7ce44878b9432b612d78ed9739a31dfd15f",
+      "sha256After": "cb0aec7a4e53a07e3de2d8e9ea9cc7ce44878b9432b612d78ed9739a31dfd15f",
+      "bytes": 27951,
+      "lines": 418,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "0823c1dd6b806149bd98e58699957828827ae751",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/listening-v2/protocol.js",
+      "sha256Before": "4369c15340ea2e4a11a1afbab3407541103a816e015f7ad355243a2d18885fee",
+      "sha256After": "4369c15340ea2e4a11a1afbab3407541103a816e015f7ad355243a2d18885fee",
+      "bytes": 8445,
+      "lines": 155,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "68c99edc208c3965bc762cfcea775a43585f07ae",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/listening-v2/visit-escrow.js",
+      "sha256Before": "70fd4b1c91de1b5f70aefb8367e6da8e9507c4be32cba17b175fd243539ad61e",
+      "sha256After": "70fd4b1c91de1b5f70aefb8367e6da8e9507c4be32cba17b175fd243539ad61e",
+      "bytes": 22315,
+      "lines": 413,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "ad4eca425189da1dc6a65b9dd5b59eaea2662f10",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/spotify/revocation.js",
+      "sha256Before": "55d698e91f68f57f8bb8fa412fa3f30c4d6f561eed6ad9aee998bd672743250e",
+      "sha256After": "55d698e91f68f57f8bb8fa412fa3f30c4d6f561eed6ad9aee998bd672743250e",
+      "bytes": 2260,
+      "lines": 28,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "21901cc5a9ede388ca48d1ba93659cb3ba643ef5",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/spotify/store.js",
+      "sha256Before": "e2e5d65e0bfd37b4fbe0baf0a45f63af6e1c3d375971a0790f5568cf1119a30d",
+      "sha256After": "e2e5d65e0bfd37b4fbe0baf0a45f63af6e1c3d375971a0790f5568cf1119a30d",
+      "bytes": 9239,
+      "lines": 65,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "bf48b26be80c2a3cc6e60bfe79159e70cac00d64",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/spotify/service.js",
+      "sha256Before": "ff21d2dbb9397f0c2dee28f7e8002ffdd6ccd03cbf85cb0bfdf28b2c47981d08",
+      "sha256After": "ff21d2dbb9397f0c2dee28f7e8002ffdd6ccd03cbf85cb0bfdf28b2c47981d08",
+      "bytes": 35099,
+      "lines": 326,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "2d67192e8354f1b2dcb6adde92b7cbf4f9e78ee0",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/spotify/runtime.js",
+      "sha256Before": "21c767ca2bafaff6d75fd080eb37375294700dd1f88945319c04d573bb4a64a7",
+      "sha256After": "21c767ca2bafaff6d75fd080eb37375294700dd1f88945319c04d573bb4a64a7",
+      "bytes": 4171,
+      "lines": 45,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "2e3d4b89945db2f3f8ef909d14e10a4eaff31da0",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/spotify/provider.js",
+      "sha256Before": "02a562ac39b820dac257bb33895b35eb6965a3dfa701fad45041e953d32d9bd6",
+      "sha256After": "02a562ac39b820dac257bb33895b35eb6965a3dfa701fad45041e953d32d9bd6",
+      "bytes": 2688,
+      "lines": 23,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "f886bfa8fe8be2d87482dcae992174461d2ff0a8",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/listening/service.js",
+      "sha256Before": "2fdd36484619cff0ae9a6cf8dc98a26d0d03966a87846276254e37d16cfd34a0",
+      "sha256After": "2fdd36484619cff0ae9a6cf8dc98a26d0d03966a87846276254e37d16cfd34a0",
+      "bytes": 15840,
+      "lines": 215,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "8893c01040a758a6bc08c533f42038d349af3a85",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/listening/spotify.js",
+      "sha256Before": "7e9cd3cff775301cf3d29600b2669b193ddaefa4461ada56482f14880a40252a",
+      "sha256After": "7e9cd3cff775301cf3d29600b2669b193ddaefa4461ada56482f14880a40252a",
+      "bytes": 6170,
+      "lines": 73,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "da802fefe8fbbb595e7a54a6e6d9ec62519b0c3b",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/listening/runtime.js",
+      "sha256Before": "22643c2ee60b753d9c4d55a773935595ecb20b9adc5f9c0f42c6b8113b116c7a",
+      "sha256After": "22643c2ee60b753d9c4d55a773935595ecb20b9adc5f9c0f42c6b8113b116c7a",
+      "bytes": 595,
+      "lines": 9,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "55f5a5d54cb0650e67f971bf14ff6d6c3db5210d",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/listening/account.js",
+      "sha256Before": "6102a77618cbab5f5e34670631bda16e0671ca052c86ed769fc584db2d3c1268",
+      "sha256After": "6102a77618cbab5f5e34670631bda16e0671ca052c86ed769fc584db2d3c1268",
+      "bytes": 837,
+      "lines": 12,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "0dfaaa9481e877a1a7ac9d36eff47fea4800ec80",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/listening/store.js",
+      "sha256Before": "2814ddcdcc95934b6b0fe6b945042ac422c4f3f9becafcb513a78a698da3d3f4",
+      "sha256After": "2814ddcdcc95934b6b0fe6b945042ac422c4f3f9becafcb513a78a698da3d3f4",
+      "bytes": 7128,
+      "lines": 63,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "c5e38fe0ae3a73ee71ab00aa7d2bb8949315d434",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "db/021-app-auth.sql",
+      "sha256Before": "8f553ef1224c91537d37ebf73d9de759aa11967a3f5cff2a27e22ea318751071",
+      "sha256After": "8f553ef1224c91537d37ebf73d9de759aa11967a3f5cff2a27e22ea318751071",
+      "bytes": 3506,
+      "lines": 53,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "3c0f9dc9456140865039649d403ff7a4e98b3f14",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "db/030-listening-v2-schema.sql",
+      "sha256Before": "4cd413d4fe3d38ab62695ec8898e9532326e85e8d60c9a5f358dc9b911f5e0c6",
+      "sha256After": "4cd413d4fe3d38ab62695ec8898e9532326e85e8d60c9a5f358dc9b911f5e0c6",
+      "bytes": 37309,
+      "lines": 535,
+      "unchanged": true,
+      "inspection": "full text",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "068bf78e632ec735b146f1298839241e297d67d7",
+      "matchesR1Blob": true,
+      "readChunks": [
+        [
+          1,
+          125
+        ],
+        [
+          126,
+          265
+        ],
+        [
+          266,
+          410
+        ],
+        [
+          411,
+          535
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "git",
+      "path": "db/031-listening-v2-lifecycle-support.sql",
+      "sha256Before": "111032345679f02d00fb0df0d85ba8d11d48fc836159fffe316908007912e9ec",
+      "sha256After": "111032345679f02d00fb0df0d85ba8d11d48fc836159fffe316908007912e9ec",
+      "bytes": 8829,
+      "lines": 131,
+      "unchanged": true,
+      "inspection": "full text",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "8de8899a83fdc29f7da7d97308032afbe45ce0a1",
+      "matchesR1Blob": true,
+      "readChunks": [
+        [
+          1,
+          131
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "git",
+      "path": "db/032-auth-token-row-locks.sql",
+      "sha256Before": "c19650a29438ebeea186203d954fee8e144a65ca6d42ad91bc38c18f1f7e5df6",
+      "sha256After": "c19650a29438ebeea186203d954fee8e144a65ca6d42ad91bc38c18f1f7e5df6",
+      "bytes": 3049,
+      "lines": 58,
+      "unchanged": true,
+      "inspection": "full text",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "188e4055937fc0842c164f8610348108edfe0f7c",
+      "matchesR1Blob": true,
+      "readChunks": [
+        [
+          1,
+          58
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "git",
+      "path": "docs/design/sessions-v2-storage-schema.md",
+      "sha256Before": "25be3cfcfc6793ff12f81c079a09e43752c758ab4464dbb87fa35e9964796d56",
+      "sha256After": "25be3cfcfc6793ff12f81c079a09e43752c758ab4464dbb87fa35e9964796d56",
+      "bytes": 27977,
+      "lines": 117,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "035f2be8c334c227254ec757db45b67febdecd6f",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "docs/design/sessions-v2-lifecycle-schema.md",
+      "sha256Before": "3a30cbcb841726c0ab155d57628f83fd314743b583a84111a5441a1513aae7ee",
+      "sha256After": "3a30cbcb841726c0ab155d57628f83fd314743b583a84111a5441a1513aae7ee",
+      "bytes": 24529,
+      "lines": 124,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "be7de6d22d92fcf6df5dafd246287edffcc26779",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "docs/design/sessions-v2-admission.md",
+      "sha256Before": "ecbeb19d73b42c64bf366b7780f8fc515b19e4c6d8b9fd24879eb17dfe069bd5",
+      "sha256After": "ecbeb19d73b42c64bf366b7780f8fc515b19e4c6d8b9fd24879eb17dfe069bd5",
+      "bytes": 16051,
+      "lines": 102,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "3d0f1a6d8deba403fa62c2dc3dd1273f387608d2",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "docs/design/sessions-v2-admission-store.md",
+      "sha256Before": "4f2d0fc83ed74f0778a81a388a80db891790cbcabd186e20a2b97a3df5fd989b",
+      "sha256After": "4f2d0fc83ed74f0778a81a388a80db891790cbcabd186e20a2b97a3df5fd989b",
+      "bytes": 28561,
+      "lines": 137,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "e23c4314b79a5f02b5614743a61281deeabdc2c2",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "docs/design/sessions-v2-receipt-store.md",
+      "sha256Before": "be2dbea4e56b6a08a6fb043b6a262f69a1f1f19558463d788cf0f5ef7db57f0f",
+      "sha256After": "be2dbea4e56b6a08a6fb043b6a262f69a1f1f19558463d788cf0f5ef7db57f0f",
+      "bytes": 20037,
+      "lines": 102,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "f70788f99eb8df520d7c485f9f52c2305a404f44",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "docs/design/sessions-v2-wire-contract.md",
+      "sha256Before": "88b40361f390c56c7bc8ba4c23fc314520001fc5aa41ffaa3471ca45b3983b8b",
+      "sha256After": "88b40361f390c56c7bc8ba4c23fc314520001fc5aa41ffaa3471ca45b3983b8b",
+      "bytes": 12743,
+      "lines": 105,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "34867c1c75031fdf60287f3faea0c262d9e49a01",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "docs/design/sessions-v2-auth-writer-order.md",
+      "sha256Before": "44a9bf9b476f1385f2bc458e9fa1858851958a86ab47bf3d5a1ecd578d7981cb",
+      "sha256After": "44a9bf9b476f1385f2bc458e9fa1858851958a86ab47bf3d5a1ecd578d7981cb",
+      "bytes": 22256,
+      "lines": 108,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "8839bb3332b7e8622c45df6b13fc8e6d0c96b1c9",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "docs/design/sessions-v2-visit-escrow.md",
+      "sha256Before": "84d4cdfaf9a7b2f6bce7a606fc553e99703ffce90edd47f8bd3276048fff339d",
+      "sha256After": "84d4cdfaf9a7b2f6bce7a606fc553e99703ffce90edd47f8bd3276048fff339d",
+      "bytes": 27774,
+      "lines": 416,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "3877b00a53371b7071737f6e070d1d7dbf1fae90",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "api/utils/song-library/store.js",
+      "sha256Before": "c86abffc5d21a993249fb0b445b802928346cd70699f2aa8e2635b64c005b560",
+      "sha256After": "c86abffc5d21a993249fb0b445b802928346cd70699f2aa8e2635b64c005b560",
+      "bytes": 33357,
+      "lines": 409,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "a6f8fb2dfd8e1ceb984834b0f753d3b4192291bc",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "git",
+      "path": "db/025-memberships.sql",
+      "sha256Before": "4dd6728c74dbb855e063dd8aa80590c02b0da653cfa0df36900933013c31e780",
+      "sha256After": "4dd6728c74dbb855e063dd8aa80590c02b0da653cfa0df36900933013c31e780",
+      "bytes": 5225,
+      "lines": 81,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true,
+      "commit": "b88a1486fe0b5bc013ea7012695360aecbf61758",
+      "gitBlob": "15e34a75a048174f6e15aca63c115400451ec2d9",
+      "matchesR1Blob": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-auth-lifecycle-consumers-r1/HANDOFF.md",
+      "sha256Before": "00a2c4647ccdf22521ebf7af49253e92428f678b1e35722928657fcac4b0ae8b",
+      "sha256After": "00a2c4647ccdf22521ebf7af49253e92428f678b1e35722928657fcac4b0ae8b",
+      "bytes": 4189,
+      "lines": 65,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-auth-lifecycle-consumers-r1/manifest.json",
+      "sha256Before": "460c68b9930b7069a7340244ab37cebb86aa15454adc2d72180f0493375787d4",
+      "sha256After": "460c68b9930b7069a7340244ab37cebb86aa15454adc2d72180f0493375787d4",
+      "bytes": 11043,
+      "lines": 213,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-auth-lifecycle-consumers-r1/postimages/api/utils/app-auth/store.js",
+      "sha256Before": "2692755072094fb0907dd0721396c38f0190cf0a595f2c40dd16400f7dbbc6aa",
+      "sha256After": "2692755072094fb0907dd0721396c38f0190cf0a595f2c40dd16400f7dbbc6aa",
+      "bytes": 8626,
+      "lines": 123,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-auth-lifecycle-consumers-r1/postimages/api/utils/app-auth/admin.js",
+      "sha256Before": "c761e922197537e01da90b46021c4a8836275aadb33291e8722d96b2a0e30996",
+      "sha256After": "c761e922197537e01da90b46021c4a8836275aadb33291e8722d96b2a0e30996",
+      "bytes": 4638,
+      "lines": 61,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-auth-lifecycle-consumers-r1/postimages/api/utils/song-library/store.js",
+      "sha256Before": "22711a17d6921b13b963e7b9124e66b1c80005516ead15af51f38fb9033b21c9",
+      "sha256After": "22711a17d6921b13b963e7b9124e66b1c80005516ead15af51f38fb9033b21c9",
+      "bytes": 35082,
+      "lines": 433,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-auth-lifecycle-consumers-r1/postimages/docs/design/sessions-v2-auth-lifecycle-consumers.md",
+      "sha256Before": "75c9ad985a8d7909ba37b60ec7d7a4617666b78e54282e3236915aa00b9e4b77",
+      "sha256After": "75c9ad985a8d7909ba37b60ec7d7a4617666b78e54282e3236915aa00b9e4b77",
+      "bytes": 19589,
+      "lines": 296,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-lifecycle-transfer-cutoff-r2/manifest.json",
+      "sha256Before": "3955eec2dd52367e9c9dddcea172a0bc7de8f1595acd267fe5d09e156be0c9f2",
+      "sha256After": "3955eec2dd52367e9c9dddcea172a0bc7de8f1595acd267fe5d09e156be0c9f2",
+      "bytes": 2545,
+      "lines": 54,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-lifecycle-transfer-cutoff-r2/green-execution.json",
+      "sha256Before": "93f38ccddf8c21cfaaf5d48eacc12da2d4df65060bd47f4d99f06906e991ca69",
+      "sha256After": "93f38ccddf8c21cfaaf5d48eacc12da2d4df65060bd47f4d99f06906e991ca69",
+      "bytes": 476,
+      "lines": 16,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-lifecycle-transfer-cutoff-r2/postimages/api/utils/listening-v2/auth-context.js",
+      "sha256Before": "6d674aea80278c68aee2fa167da714c4987ff0530be44ff095544056b9671da6",
+      "sha256After": "6d674aea80278c68aee2fa167da714c4987ff0530be44ff095544056b9671da6",
+      "bytes": 33674,
+      "lines": 539,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-lifecycle-transfer-cutoff-r2/postimages/api/utils/listening-v2/privacy-writers.js",
+      "sha256Before": "9c6db7c5bd3c3cc4bff34c1b46cc53ca68d6571a443d33bbcf26eb0b98954f34",
+      "sha256After": "9c6db7c5bd3c3cc4bff34c1b46cc53ca68d6571a443d33bbcf26eb0b98954f34",
+      "bytes": 16032,
+      "lines": 210,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-lifecycle-transfer-cutoff-r2/postimages/api/utils/membership/accounts.js",
+      "sha256Before": "15a7fa51080bb68081a193c7e4c7c0bd72126ecf602b796518b21ecc473465ab",
+      "sha256After": "15a7fa51080bb68081a193c7e4c7c0bd72126ecf602b796518b21ecc473465ab",
+      "bytes": 19471,
+      "lines": 262,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-lifecycle-transfer-cutoff-r2/postimages/docs/design/sessions-v2-auth-lifecycle-consumers.md",
+      "sha256Before": "705f8bc1873ae21cbbdd42e608613092c8d2ec2989d94b3eb1a2d2c3427e79b0",
+      "sha256After": "705f8bc1873ae21cbbdd42e608613092c8d2ec2989d94b3eb1a2d2c3427e79b0",
+      "bytes": 20410,
+      "lines": 300,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-lifecycle-transfer-cutoff-r2/postimages/docs/design/sessions-v2-writer-auth-context.md",
+      "sha256Before": "8c11120e1e3e0add182098869d37e963695e6702ee5b981d9619e285ce1a2f97",
+      "sha256After": "8c11120e1e3e0add182098869d37e963695e6702ee5b981d9619e285ce1a2f97",
+      "bytes": 16777,
+      "lines": 124,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-lifecycle-consumers-source-review-r1/report.md",
+      "sha256Before": "f38ecefbfc163bf2b57592e76e8f934bb9394ba2a0fb35aaf311bcfe9385d2cd",
+      "sha256After": "f38ecefbfc163bf2b57592e76e8f934bb9394ba2a0fb35aaf311bcfe9385d2cd",
+      "bytes": 17518,
+      "lines": 86,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/private-projection-epoch-r1/manifest.json",
+      "sha256Before": "8f74a55c14e1647d6668a5cdbd9b965f637a85ea25ca05a1d79fa9b1bc97aaca",
+      "sha256After": "8f74a55c14e1647d6668a5cdbd9b965f637a85ea25ca05a1d79fa9b1bc97aaca",
+      "bytes": 748,
+      "lines": 17,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/private-projection-epoch-r1/postimages/api/utils/listening-v2/privacy-context.js",
+      "sha256Before": "2dab0b9c2eaecd1c42e6f9c408811da95e9a8cf6ab0a0d0fa824a0f9b8e3d2bb",
+      "sha256After": "2dab0b9c2eaecd1c42e6f9c408811da95e9a8cf6ab0a0d0fa824a0f9b8e3d2bb",
+      "bytes": 31816,
+      "lines": 418,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/private-projection-epoch-r1/postimages/docs/design/sessions-v2-privacy-context.md",
+      "sha256Before": "cba3078fcd06cfa859d8b8beaa03fa80ebd9a9738721bd130d952d55db77e7de",
+      "sha256After": "cba3078fcd06cfa859d8b8beaa03fa80ebd9a9738721bd130d952d55db77e7de",
+      "bytes": 19172,
+      "lines": 110,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-erase-receipt-compaction-r2/HANDOFF.md",
+      "sha256Before": "5642a2d5fcad6d40aba9a54d1904975d6792c5a79d480e4b8bbe0ff6dc3cb000",
+      "sha256After": "5642a2d5fcad6d40aba9a54d1904975d6792c5a79d480e4b8bbe0ff6dc3cb000",
+      "bytes": 13027,
+      "lines": 88,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-erase-receipt-compaction-r2/manifest.json",
+      "sha256Before": "92703d1406721a7d919a074d348b6aae64b6ac5091948f848758a1e6ce4cbdfd",
+      "sha256After": "92703d1406721a7d919a074d348b6aae64b6ac5091948f848758a1e6ce4cbdfd",
+      "bytes": 12165,
+      "lines": 155,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-erase-receipt-compaction-r2/postimages/api/utils/listening-v2/privacy-lifecycle.js",
+      "sha256Before": "e796198976900acaf5502799cf9fda12be24f3f820b02d56de2a90a611ca5c90",
+      "sha256After": "e796198976900acaf5502799cf9fda12be24f3f820b02d56de2a90a611ca5c90",
+      "bytes": 54967,
+      "lines": 711,
+      "unchanged": true,
+      "inspection": "full text",
+      "matchesFrozenR1Pin": true,
+      "readChunks": [
+        [
+          1,
+          160
+        ],
+        [
+          161,
+          280
+        ],
+        [
+          281,
+          410
+        ],
+        [
+          411,
+          540
+        ],
+        [
+          541,
+          650
+        ],
+        [
+          651,
+          711
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-erase-receipt-compaction-r2/postimages/api/utils/listening-v2/private-persona-service.js",
+      "sha256Before": "3bfcf84d4bc7e72049bc0f94df0182c8f87fc7ef5aa4a73d10984923a3c2790e",
+      "sha256After": "3bfcf84d4bc7e72049bc0f94df0182c8f87fc7ef5aa4a73d10984923a3c2790e",
+      "bytes": 24834,
+      "lines": 348,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-erase-receipt-compaction-r2/postimages/docs/design/sessions-v2-private-persona-service.md",
+      "sha256Before": "f13be82011fb77c352a5b9d08af81b37934412a7cd629e565b60621ea5adef93",
+      "sha256After": "f13be82011fb77c352a5b9d08af81b37934412a7cd629e565b60621ea5adef93",
+      "bytes": 30193,
+      "lines": 118,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-private-persona-service-r1/manifest.json",
+      "sha256Before": "91dcc375be576c6f84fb1dc5bb7440bebddf0520120eb436ced60427e0983233",
+      "sha256After": "91dcc375be576c6f84fb1dc5bb7440bebddf0520120eb436ced60427e0983233",
+      "bytes": 2166,
+      "lines": 55,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-private-persona-service-r1/postimages/api/utils/listening-v2/receipt-store.js",
+      "sha256Before": "01a5b7e524f83b2b7d71ecfe844b973b819797822153a631bb36d665f8f21edb",
+      "sha256After": "01a5b7e524f83b2b7d71ecfe844b973b819797822153a631bb36d665f8f21edb",
+      "bytes": 18595,
+      "lines": 294,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-lifecycle-composition-schema-r1/postimages/db/033-listening-v2-lifecycle-composition.sql",
+      "sha256Before": "71b57b21ae4555d3d76da9b9936342238926fa8059117e68aa41a40a7e628678",
+      "sha256After": "71b57b21ae4555d3d76da9b9936342238926fa8059117e68aa41a40a7e628678",
+      "bytes": 4678,
+      "lines": 91,
+      "unchanged": true,
+      "inspection": "full text",
+      "matchesFrozenR1Pin": true,
+      "readChunks": [
+        [
+          1,
+          91
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-lifecycle-composition-schema-r1/postimages/docs/design/sessions-v2-lifecycle-composition-schema.md",
+      "sha256Before": "86cb0376cc8d022a193adf15b7a8b4552ce84a072331bc94ffa0412ff0597fc6",
+      "sha256After": "86cb0376cc8d022a193adf15b7a8b4552ce84a072331bc94ffa0412ff0597fc6",
+      "bytes": 8899,
+      "lines": 148,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-privacy-codecs-r1/postimages/api/utils/listening-v2/privacy-codec.js",
+      "sha256Before": "f4ab488efed5e80ea03ade63d715b80bb42886c20e1502ed0c52612bd7f19879",
+      "sha256After": "f4ab488efed5e80ea03ade63d715b80bb42886c20e1502ed0c52612bd7f19879",
+      "bytes": 12760,
+      "lines": 256,
+      "unchanged": true,
+      "inspection": "full text",
+      "matchesFrozenR1Pin": true,
+      "readChunks": [
+        [
+          1,
+          140
+        ],
+        [
+          141,
+          256
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-spotify-revocation-split-r1/manifest.json",
+      "sha256Before": "fe7e381cdb6615b7d3238555e3a8d37c5a126bfa7a1ad587a23beaabec93925a",
+      "sha256After": "fe7e381cdb6615b7d3238555e3a8d37c5a126bfa7a1ad587a23beaabec93925a",
+      "bytes": 3108,
+      "lines": 70,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-spotify-revocation-split-r1/postimages/api/utils/spotify/revocation.js",
+      "sha256Before": "a27ce0ea1774d6b40fabf68b16c58d75485361840893b01bb28abc8c4bb119e4",
+      "sha256After": "a27ce0ea1774d6b40fabf68b16c58d75485361840893b01bb28abc8c4bb119e4",
+      "bytes": 6484,
+      "lines": 101,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-spotify-revocation-split-r1/postimages/docs/design/sessions-v2-spotify-revocation-phases.md",
+      "sha256Before": "583d48b654d8b994c3c27dffaa6ad3e291d061143506a394c4b02ed6f4d8bc36",
+      "sha256After": "583d48b654d8b994c3c27dffaa6ad3e291d061143506a394c4b02ed6f4d8bc36",
+      "bytes": 11552,
+      "lines": 55,
+      "unchanged": true,
+      "inspection": "hash only; no inherited R1 read claim",
+      "matchesFrozenR1Pin": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/AGENTS.md",
+      "sha256Before": "ada68a3e5badfa996a5d4086fd03def2250e1545ec2683e20262c7054bbbb3e6",
+      "sha256After": "ada68a3e5badfa996a5d4086fd03def2250e1545ec2683e20262c7054bbbb3e6",
+      "bytes": 10065,
+      "lines": 70,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          70
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/artifacts/review-static/sessions-auth-output-terminal-plan-r1.md",
+      "sha256Before": "00ce492ce2189dd529580ffc7135606548ae434717411b94b47e2842299200be",
+      "sha256After": "00ce492ce2189dd529580ffc7135606548ae434717411b94b47e2842299200be",
+      "bytes": 60700,
+      "lines": 235,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          70
+        ],
+        [
+          71,
+          150
+        ],
+        [
+          143,
+          195
+        ],
+        [
+          196,
+          235
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/artifacts/review-static/sessions-auth-output-terminal-plan-r1.pins.json",
+      "sha256Before": "9a77c5fa3d28b58751ac4d0002d85f5a45504aba9ee98aaef3edc4fea27e8124",
+      "sha256After": "9a77c5fa3d28b58751ac4d0002d85f5a45504aba9ee98aaef3edc4fea27e8124",
+      "bytes": 20489,
+      "lines": 1,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          1
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-security-review-r1/report.md",
+      "sha256Before": "292b5e1f299300ee55fab4fbc067308378a29378c8c926e15150e6b33e4f3821",
+      "sha256After": "292b5e1f299300ee55fab4fbc067308378a29378c8c926e15150e6b33e4f3821",
+      "bytes": 19075,
+      "lines": 87,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          87
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-security-review-r1/seal.json",
+      "sha256Before": "bd60276833fa2982f27a85ae8edb4b429f0d719f50df5b0390e4954f0d700c84",
+      "sha256After": "bd60276833fa2982f27a85ae8edb4b429f0d719f50df5b0390e4954f0d700c84",
+      "bytes": 845,
+      "lines": 29,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          29
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/report.md",
+      "sha256Before": "cf03f3886aa377685fc0191483cda71c46ea88517653069f4adea792be3e99ee",
+      "sha256After": "cf03f3886aa377685fc0191483cda71c46ea88517653069f4adea792be3e99ee",
+      "bytes": 15361,
+      "lines": 54,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          54
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/read-certificate.md",
+      "sha256Before": "d8183bed53a3b8611d30416501d8a69695da497cc107e5d1faaf2876f06a76be",
+      "sha256After": "d8183bed53a3b8611d30416501d8a69695da497cc107e5d1faaf2876f06a76be",
+      "bytes": 7684,
+      "lines": 69,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          69
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/review-pins.sha256",
+      "sha256Before": "fa85b4671e4bfb0e1ed383e3eca546b9b579e79cf19c6bf59d993598d6d45b54",
+      "sha256After": "fa85b4671e4bfb0e1ed383e3eca546b9b579e79cf19c6bf59d993598d6d45b54",
+      "bytes": 508,
+      "lines": 6,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          6
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/authorities-before.sha256",
+      "sha256Before": "07f423b41d3c90f863df8a8a8e5b0d54a6e6175a9baa48398ae7ff2289e1ff48",
+      "sha256After": "07f423b41d3c90f863df8a8a8e5b0d54a6e6175a9baa48398ae7ff2289e1ff48",
+      "bytes": 1087,
+      "lines": 8,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          8
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/authorities-after.sha256",
+      "sha256Before": "07f423b41d3c90f863df8a8a8e5b0d54a6e6175a9baa48398ae7ff2289e1ff48",
+      "sha256After": "07f423b41d3c90f863df8a8a8e5b0d54a6e6175a9baa48398ae7ff2289e1ff48",
+      "bytes": 1087,
+      "lines": 8,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          8
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-operations-review-r1/report.md",
+      "sha256Before": "172d5e2115b317e40eb6bf1895cddaf8a5fc87a2f15c6498fa8f1056f2ec0091",
+      "sha256After": "172d5e2115b317e40eb6bf1895cddaf8a5fc87a2f15c6498fa8f1056f2ec0091",
+      "bytes": 14188,
+      "lines": 66,
+      "unchanged": true,
+      "inspection": "full text",
+      "readChunks": [
+        [
+          1,
+          66
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/before-pins.tsv",
+      "sha256Before": "11f49b9b26a7032fd788ede9dda0347ebe26cb4cb1c2e9696de14afef841c8f6",
+      "sha256After": "11f49b9b26a7032fd788ede9dda0347ebe26cb4cb1c2e9696de14afef841c8f6",
+      "bytes": 16086,
+      "lines": 64,
+      "unchanged": true,
+      "inspection": "hash only; first snapshot after certificate read and before authoring"
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/after-pins.tsv",
+      "sha256Before": "11f49b9b26a7032fd788ede9dda0347ebe26cb4cb1c2e9696de14afef841c8f6",
+      "sha256After": "11f49b9b26a7032fd788ede9dda0347ebe26cb4cb1c2e9696de14afef841c8f6",
+      "bytes": 16086,
+      "lines": 64,
+      "unchanged": true,
+      "inspection": "hash only; first snapshot after certificate read and before authoring"
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/skills/lyrica-work/SKILL.md",
+      "sha256": "ee9fbe3602c96c222671ad9a806e660ae5c6173bd44931e9709d1be7dabe13ef",
+      "bytes": 3005,
+      "lines": 24,
+      "inspection": "full workflow text; hash sampled after read",
+      "readChunks": [
+        [
+          1,
+          24
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/skills/lyrica-work/references/design.md",
+      "sha256": "41599b8123ba37e643e5202667129162b1f1571d8a5309dd3cfc01a0d59c4c9a",
+      "bytes": 1326,
+      "lines": 9,
+      "inspection": "full workflow text; hash sampled after read",
+      "readChunks": [
+        [
+          1,
+          9
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.codex/skills/lyrica-work/references/topics.md",
+      "sha256": "8f2bb7c9b4c9ecd8579023c5520000db1bcf02c4a81d5ed23ba9c481bb883d63",
+      "bytes": 6200,
+      "lines": 33,
+      "inspection": "full workflow text; hash sampled after read",
+      "readChunks": [
+        [
+          1,
+          33
+        ]
+      ],
+      "completeRead": true
+    },
+    {
+      "source": "artifact",
+      "path": "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/docs/CLEANUP.md",
+      "sha256": "ae26308730bc92ca6f1786f88550db07c36f943e5489ec6b07de126745d890fe",
+      "bytes": 6816,
+      "lines": 32,
+      "inspection": "full workflow text; hash sampled after read",
+      "readChunks": [
+        [
+          1,
+          32
+        ]
+      ],
+      "completeRead": true
+    }
+  ],
+  "readCertificate": {
+    "rule": "Only this authors bounded source-text reads are completeRead. Hash-only records are not source or execution proof. R1/reviewer read claims are never inherited.",
+    "fullSpecifiedInputsRead": true,
+    "ownFullReads": [
+      {
+        "path": "AGENTS.md",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            70
+          ]
+        ]
+      },
+      {
+        "path": "artifacts/review-static/sessions-auth-output-terminal-plan-r1.md",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            70
+          ],
+          [
+            71,
+            150
+          ],
+          [
+            143,
+            195
+          ],
+          [
+            196,
+            235
+          ]
+        ],
+        "recoveredTruncation": true
+      },
+      {
+        "path": "artifacts/review-static/sessions-auth-output-terminal-plan-r1.pins.json",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            1
+          ]
+        ],
+        "logicalGroups": [
+          "all root fields and notReadOrExecuted entries",
+          "inputs[0:25]",
+          "inputs[25:68]"
+        ],
+        "recoveredTruncation": true
+      },
+      {
+        "path": "docs/design/sessions-v2-architecture.md",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            100
+          ],
+          [
+            101,
+            165
+          ],
+          [
+            166,
+            245
+          ],
+          [
+            201,
+            208
+          ],
+          [
+            246,
+            295
+          ],
+          [
+            296,
+            360
+          ],
+          [
+            361,
+            445
+          ],
+          [
+            446,
+            520
+          ],
+          [
+            483,
+            493
+          ],
+          [
+            521,
+            580
+          ],
+          [
+            581,
+            690
+          ],
+          [
+            691,
+            752
+          ],
+          [
+            753,
+            810
+          ],
+          [
+            811,
+            842
+          ]
+        ],
+        "recoveryReads": [
+          [
+            201,
+            208
+          ],
+          [
+            483,
+            493
+          ]
+        ],
+        "recoveredTruncation": true
+      },
+      {
+        "path": "artifacts/review-static/sessions-lifecycle-composition-plan-r2.md",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            55
+          ],
+          [
+            56,
+            100
+          ],
+          [
+            101,
+            145
+          ],
+          [
+            146,
+            200
+          ]
+        ]
+      },
+      {
+        "path": "artifacts/review-static/lifecycle-foundation-interface-r1.md",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            48
+          ]
+        ]
+      },
+      {
+        "path": "AGENTS.md",
+        "source": "git",
+        "chunks": [
+          [
+            1,
+            38
+          ]
+        ]
+      },
+      {
+        "path": "db/030-listening-v2-schema.sql",
+        "source": "git",
+        "chunks": [
+          [
+            1,
+            125
+          ],
+          [
+            126,
+            265
+          ],
+          [
+            266,
+            410
+          ],
+          [
+            411,
+            535
+          ]
+        ]
+      },
+      {
+        "path": "db/031-listening-v2-lifecycle-support.sql",
+        "source": "git",
+        "chunks": [
+          [
+            1,
+            131
+          ]
+        ]
+      },
+      {
+        "path": "db/032-auth-token-row-locks.sql",
+        "source": "git",
+        "chunks": [
+          [
+            1,
+            58
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-erase-receipt-compaction-r2/postimages/api/utils/listening-v2/privacy-lifecycle.js",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            160
+          ],
+          [
+            161,
+            280
+          ],
+          [
+            281,
+            410
+          ],
+          [
+            411,
+            540
+          ],
+          [
+            541,
+            650
+          ],
+          [
+            651,
+            711
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-privacy-codecs-r1/postimages/api/utils/listening-v2/privacy-codec.js",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            140
+          ],
+          [
+            141,
+            256
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.t3/worktrees/lyrics-to-pinyin-api/codex-sessions-v2-20261026/artifacts/sessions-v2-lifecycle-composition-schema-r1/postimages/db/033-listening-v2-lifecycle-composition.sql",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            91
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-security-review-r1/report.md",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            87
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/report.md",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            54
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-operations-review-r1/report.md",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            66
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-security-review-r1/seal.json",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            29
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/read-certificate.md",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            69
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/review-pins.sha256",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            6
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/authorities-before.sha256",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            8
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/authorities-after.sha256",
+        "source": "artifact",
+        "chunks": [
+          [
+            1,
+            8
+          ]
+        ]
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/skills/lyrica-work/SKILL.md",
+        "source": "artifact",
+        "chunks": "complete"
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/skills/lyrica-work/references/design.md",
+        "source": "artifact",
+        "chunks": "complete"
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/skills/lyrica-work/references/topics.md",
+        "source": "artifact",
+        "chunks": "complete"
+      },
+      {
+        "path": "docs/CLEANUP.md",
+        "source": "artifact",
+        "chunks": "complete"
+      }
+    ],
+    "truncationRecovery": "Initial combined R1/pins outputs reread1-70,71-150,143-195,196-235 and all logical pins groups; R5 recovered201-208 and483-493. No required unread range remains.",
+    "standardLibraryUse": "Text/JSON formatting, filesystem SHA256 and Git-object inspection only; no application import/evaluation or embedded/reference-model execution."
+  },
+  "sourceProof": {
+    "newFamilyRepresentable": true,
+    "classification": "source inference, no DB execution",
+    "030Ranges": {
+      "countStateEnvelope": [
+        369,
+        393
+      ],
+      "kindReferencesPayload": [
+        361,
+        405
+      ],
+      "noOutboxMonotoneTrigger": [
+        415,
+        495
+      ],
+      "runtimeAndAccountRoles": [
+        501,
+        532
+      ]
+    },
+    "referenceEngineBefore": {
+      "sha256": "e796198976900acaf5502799cf9fda12be24f3f820b02d56de2a90a611ca5c90",
+      "claim": [
+        200,
+        220
+      ],
+      "successfulAdvanceNoRefund": [
+        231,
+        239
+      ],
+      "pendingThenFinalProbe": [
+        350,
+        360
+      ],
+      "expiredDebtReplacementRefusal": [
+        364,
+        386
+      ]
+    },
+    "oldFamilyUnchanged": true,
+    "additiveNewFamilyDDLCodecProcessorRequired": true
+  },
+  "parityProvenance": {
+    "paritySeal": [
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/report.md",
+        "sha256": "cf03f3886aa377685fc0191483cda71c46ea88517653069f4adea792be3e99ee",
+        "expected": "cf03f3886aa377685fc0191483cda71c46ea88517653069f4adea792be3e99ee",
+        "matches": true,
+        "bytes": 15361,
+        "lines": 54
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/read-certificate.md",
+        "sha256": "d8183bed53a3b8611d30416501d8a69695da497cc107e5d1faaf2876f06a76be",
+        "expected": "d8183bed53a3b8611d30416501d8a69695da497cc107e5d1faaf2876f06a76be",
+        "matches": true,
+        "bytes": 7684,
+        "lines": 69
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/before-pins.tsv",
+        "sha256": "11f49b9b26a7032fd788ede9dda0347ebe26cb4cb1c2e9696de14afef841c8f6",
+        "expected": "11f49b9b26a7032fd788ede9dda0347ebe26cb4cb1c2e9696de14afef841c8f6",
+        "matches": true,
+        "bytes": 16086,
+        "lines": 64
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/after-pins.tsv",
+        "sha256": "11f49b9b26a7032fd788ede9dda0347ebe26cb4cb1c2e9696de14afef841c8f6",
+        "expected": "11f49b9b26a7032fd788ede9dda0347ebe26cb4cb1c2e9696de14afef841c8f6",
+        "matches": true,
+        "bytes": 16086,
+        "lines": 64
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/authorities-before.sha256",
+        "sha256": "07f423b41d3c90f863df8a8a8e5b0d54a6e6175a9baa48398ae7ff2289e1ff48",
+        "expected": "07f423b41d3c90f863df8a8a8e5b0d54a6e6175a9baa48398ae7ff2289e1ff48",
+        "matches": true,
+        "bytes": 1087,
+        "lines": 8
+      },
+      {
+        "path": "/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/auth-output-terminal-plan-parity-review-r1/authorities-after.sha256",
+        "sha256": "07f423b41d3c90f863df8a8a8e5b0d54a6e6175a9baa48398ae7ff2289e1ff48",
+        "expected": "07f423b41d3c90f863df8a8a8e5b0d54a6e6175a9baa48398ae7ff2289e1ff48",
+        "matches": true,
+        "bytes": 1087,
+        "lines": 8
+      }
+    ],
+    "parityInventoriesIdentical": true,
+    "gitBlobs": [
+      {
+        "path": "AGENTS.md",
+        "blob": "09f30118fdebba0d42640fccf30caaab7770e9f5",
+        "matches": true
+      },
+      {
+        "path": "api/utils/membership/accounts.js",
+        "blob": "35873bdefb17f816a63ba1643f2e1b4003afeab6",
+        "matches": true
+      },
+      {
+        "path": "api/utils/app-auth/store.js",
+        "blob": "50cc3cad87cbf02f36308ebf96114771cdd3c18f",
+        "matches": true
+      },
+      {
+        "path": "api/utils/app-auth/admin.js",
+        "blob": "d3b400b4eafd9422cc400e0c36e6c53fab5e8c24",
+        "matches": true
+      },
+      {
+        "path": "api/utils/app-auth/verification.js",
+        "blob": "69e9b07d5e494c8cb236e6259ff3f38a5864d7bf",
+        "matches": true
+      },
+      {
+        "path": "api/utils/membership/database.js",
+        "blob": "d793b4e14b5dcf9b1d0fdc89472d18730d5d1d45",
+        "matches": true
+      },
+      {
+        "path": "api/utils/song-library/database.js",
+        "blob": "23e0bb40de818ae1d5b4938039311880ca7a7747",
+        "matches": true
+      },
+      {
+        "path": "api/utils/listening-v2/admission-store.js",
+        "blob": "15899dfa06934d0f579fd30a2ae407f33663b740",
+        "matches": true
+      },
+      {
+        "path": "api/utils/listening-v2/admission.js",
+        "blob": "0823c1dd6b806149bd98e58699957828827ae751",
+        "matches": true
+      },
+      {
+        "path": "api/utils/listening-v2/protocol.js",
+        "blob": "68c99edc208c3965bc762cfcea775a43585f07ae",
+        "matches": true
+      },
+      {
+        "path": "api/utils/listening-v2/visit-escrow.js",
+        "blob": "ad4eca425189da1dc6a65b9dd5b59eaea2662f10",
+        "matches": true
+      },
+      {
+        "path": "api/utils/spotify/revocation.js",
+        "blob": "21901cc5a9ede388ca48d1ba93659cb3ba643ef5",
+        "matches": true
+      },
+      {
+        "path": "api/utils/spotify/store.js",
+        "blob": "bf48b26be80c2a3cc6e60bfe79159e70cac00d64",
+        "matches": true
+      },
+      {
+        "path": "api/utils/spotify/service.js",
+        "blob": "2d67192e8354f1b2dcb6adde92b7cbf4f9e78ee0",
+        "matches": true
+      },
+      {
+        "path": "api/utils/spotify/runtime.js",
+        "blob": "2e3d4b89945db2f3f8ef909d14e10a4eaff31da0",
+        "matches": true
+      },
+      {
+        "path": "api/utils/spotify/provider.js",
+        "blob": "f886bfa8fe8be2d87482dcae992174461d2ff0a8",
+        "matches": true
+      },
+      {
+        "path": "api/utils/listening/service.js",
+        "blob": "8893c01040a758a6bc08c533f42038d349af3a85",
+        "matches": true
+      },
+      {
+        "path": "api/utils/listening/spotify.js",
+        "blob": "da802fefe8fbbb595e7a54a6e6d9ec62519b0c3b",
+        "matches": true
+      },
+      {
+        "path": "api/utils/listening/runtime.js",
+        "blob": "55f5a5d54cb0650e67f971bf14ff6d6c3db5210d",
+        "matches": true
+      },
+      {
+        "path": "api/utils/listening/account.js",
+        "blob": "0dfaaa9481e877a1a7ac9d36eff47fea4800ec80",
+        "matches": true
+      },
+      {
+        "path": "api/utils/listening/store.js",
+        "blob": "c5e38fe0ae3a73ee71ab00aa7d2bb8949315d434",
+        "matches": true
+      },
+      {
+        "path": "db/021-app-auth.sql",
+        "blob": "3c0f9dc9456140865039649d403ff7a4e98b3f14",
+        "matches": true
+      },
+      {
+        "path": "db/030-listening-v2-schema.sql",
+        "blob": "068bf78e632ec735b146f1298839241e297d67d7",
+        "matches": true
+      },
+      {
+        "path": "db/031-listening-v2-lifecycle-support.sql",
+        "blob": "8de8899a83fdc29f7da7d97308032afbe45ce0a1",
+        "matches": true
+      },
+      {
+        "path": "db/032-auth-token-row-locks.sql",
+        "blob": "188e4055937fc0842c164f8610348108edfe0f7c",
+        "matches": true
+      },
+      {
+        "path": "docs/design/sessions-v2-storage-schema.md",
+        "blob": "035f2be8c334c227254ec757db45b67febdecd6f",
+        "matches": true
+      },
+      {
+        "path": "docs/design/sessions-v2-lifecycle-schema.md",
+        "blob": "be7de6d22d92fcf6df5dafd246287edffcc26779",
+        "matches": true
+      },
+      {
+        "path": "docs/design/sessions-v2-admission.md",
+        "blob": "3d0f1a6d8deba403fa62c2dc3dd1273f387608d2",
+        "matches": true
+      },
+      {
+        "path": "docs/design/sessions-v2-admission-store.md",
+        "blob": "e23c4314b79a5f02b5614743a61281deeabdc2c2",
+        "matches": true
+      },
+      {
+        "path": "docs/design/sessions-v2-receipt-store.md",
+        "blob": "f70788f99eb8df520d7c485f9f52c2305a404f44",
+        "matches": true
+      },
+      {
+        "path": "docs/design/sessions-v2-wire-contract.md",
+        "blob": "34867c1c75031fdf60287f3faea0c262d9e49a01",
+        "matches": true
+      },
+      {
+        "path": "docs/design/sessions-v2-auth-writer-order.md",
+        "blob": "8839bb3332b7e8622c45df6b13fc8e6d0c96b1c9",
+        "matches": true
+      },
+      {
+        "path": "docs/design/sessions-v2-visit-escrow.md",
+        "blob": "3877b00a53371b7071737f6e070d1d7dbf1fae90",
+        "matches": true
+      },
+      {
+        "path": "api/utils/song-library/store.js",
+        "blob": "a6f8fb2dfd8e1ceb984834b0f753d3b4192291bc",
+        "matches": true
+      },
+      {
+        "path": "db/025-memberships.sql",
+        "blob": "15e34a75a048174f6e15aca63c115400451ec2d9",
+        "matches": true
+      }
+    ],
+    "resolvedCommit": "b88a1486fe0b5bc013ea7012695360aecbf61758"
+  },
+  "preservation": {
+    "all68R1InventorySHA256MatchBeforeAfter": true,
+    "all35GitBlobIDsMatch": true,
+    "allSnapshotInputsUnchanged": true,
+    "frozenR1Unchanged": true,
+    "otherFilesWritten": [],
+    "maintainedOrIndexChange": false,
+    "commitCreated": false
+  },
+  "scope": {
+    "allowedWrites": [
+      "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/artifacts/review-static/sessions-auth-output-terminal-plan-r2.md",
+      "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/artifacts/review-static/sessions-auth-output-terminal-plan-r2.pins.json",
+      "/Users/hongkuntian/.t3/worktrees/Lyra/codex-redesign-parity-20261025/artifacts/review-static/sessions-auth-output-terminal-plan-r2-responses.json"
+    ],
+    "testsOrRuntimeExecuted": false,
+    "networkOrDatabaseOrNativeUsed": false,
+    "subagentsOrQualificationOrPartialWorkerAccess": false,
+    "publicV2": "off",
+    "liveRetainedProfileCapacity": 0,
+    "PW01PW02PW03": "retained until complete replacements implemented and qualified"
+  },
+  "cleanup": {
+    "reclaimedBytes": 0,
+    "largeOrDisposableOutputsCreated": false,
+    "retentionReason": "three requested small source-design files for Root pending independent R2 reviews"
+  },
+  "reviewGate": {
+    "reviewers": 3,
+    "eachWeightedScoreAtLeast": 90,
+    "everyCategoryAtLeast": 4,
+    "unresolvedMajorOrBlocker": 0,
+    "reuseR1Approvals": false
+  }
+}
