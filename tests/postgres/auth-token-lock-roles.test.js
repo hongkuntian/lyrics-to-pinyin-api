@@ -6,6 +6,8 @@ import {readFile,lstat,realpath} from 'node:fs/promises';
 import {isAbsolute} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 
 const migration='032-auth-token-row-locks.sql',runtime='lyra_runtime_v1',account='lyra_account_v1';
 const runID=randomUUID().replaceAll('-',''),provenance=`lyrica-auth-token-lock:${runID}`;
@@ -105,6 +107,12 @@ const sourcePins={
  "scripts/library-migrations.js": "b2bcfb3ea471555c048f9258b45f745f8ef56cbdfcda08cbbdd2ed0d1e40b422",
  "scripts/membership-role-grants.js": "6c92eaf3fb68a69c66d2d182afacebfce87cdf8ed5d9d98c659c2c9c95dd8117"
 };
+// Explicit changed-input pin refresh comes ONLY from Root's supplied clean
+// immutable commit, never hashes accepted from the current working files.
+const refreshPinPaths=['scripts/library-migrations.js','scripts/membership-role-grants.js','db/035-listening-account-delete-privileges.sql'];
+const gitRoot=fileURLToPath(new URL('../../',import.meta.url));
+const git=(...args)=>execFileSync('git',args,{cwd:gitRoot,encoding:'utf8',stdio:['ignore','pipe','pipe'],env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}}).trim();
+const correction='035-listening-account-delete-privileges.sql';
 const aclMetadataSHA256='7ee564f93b162fc2b75d6ed791622414c2e44449ff776cc61705644b433e1972';
 const existingTokenFields=['digest','user_id','revoked','created_at','expires_at'];
 const observed={
@@ -129,6 +137,10 @@ const drift=error=>error.code==='23514'&&/auth_token_lock_.*catalog_mismatch/.te
 async function manifest(){
  // Complete local-file validation precedes imports of application modules and
  // every connection attempt. No DATABASE_URL, password file or .env is read.
+ const approved=process.env.LYRA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT;
+ assert.match(approved??'',/^[a-f0-9]{40}$/);assert.equal(git('rev-parse','HEAD'),approved);
+ assert.equal(git('status','--porcelain=v1','--untracked-files=normal','--','.',':(exclude)node_modules'),'');
+ git('merge-base','--is-ancestor','5b12df46048a212a56b8b0cc146a80492f49481f',approved);
  const path=process.env.LYRA_TEST_POSTGRES_MANIFEST,uid=process.getuid();
  assert.ok(path&&isAbsolute(path),'explicit current-user-owned local manifest required');
  const file=await lstat(path);assert.ok(file.isFile()&&!file.isSymbolicLink());assert.equal(file.uid,uid);
@@ -144,8 +156,12 @@ async function manifest(){
  assert.ok(data.isDirectory()&&!data.isSymbolicLink());assert.equal(data.uid,uid);assert.equal(data.mode&0o077,0);
  assert.ok(Number.isInteger(marker.port)&&marker.port>1024&&marker.port<65536);
  assert.ok(typeof marker.user==='string'&&marker.user.length>0);
- for(const [path,expected] of Object.entries(sourcePins))
+ for(const [path,expected] of Object.entries(sourcePins))if(!refreshPinPaths.includes(path))
   assert.equal(sha(await readFile(new URL('../../'+path,import.meta.url))),expected,'immutable source: '+path);
+ for(const path of refreshPinPaths){
+  const expected=sha(execFileSync('git',['show',approved+':'+path],{cwd:gitRoot,env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}}));
+  assert.equal(sha(await readFile(new URL('../../'+path,import.meta.url))),expected,'Root-approved refreshed source: '+path);
+ }
  return marker;
 }
 async function connect(){
@@ -155,7 +171,14 @@ async function connect(){
  ({AccountStore}=await import('../../api/utils/membership/accounts.js'));
  ({SpotifyStore}=await import('../../api/utils/spotify/store.js'));
  ({createCurrentAuthContext}=await import('../../api/utils/listening-v2/auth-context.js'));
- ({migrateLibrary,migrationNames}=await import('../../scripts/library-migrations.js'));
+ const registered=await import('../../scripts/library-migrations.js');migrationNames=registered.migrationNames;
+ // This original 032 harness retains every receipt/ACL/race assertion on its
+ // exact historical prefix. New 035 proof lives in its dedicated harness.
+ migrateLibrary=async database=>{
+  const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>n!==correction));
+  try{return await registered.migrateLibrary(database);}
+  finally{migrationNames.splice(0,migrationNames.length,...saved);}
+ };
  ({replayMembershipRoleGrants}=await import('../../scripts/membership-role-grants.js'));
  config={host:marker.socketDirectory,port:marker.port,user:marker.user,password:'',ssl:false,
   connectionTimeoutMillis:3000,statement_timeout:8000,lock_timeout:3000,idle_in_transaction_session_timeout:15000,
@@ -323,7 +346,7 @@ async function usingDatabase(fn){
 async function baseline(h){
  const saved=[...migrationNames],publicNames=saved.filter(name=>Number(name.slice(0,3))<=29);
  assert.deepEqual(publicNames.map(name=>Number(name.slice(0,3))),Array.from({length:29},(_,i)=>i+1));
- assert.deepEqual(saved,[...publicNames,migration],'only 032 may follow 029');
+ assert.deepEqual(saved,[...publicNames,migration,correction],'exact current registry; original harness selects only through 032');
  migrationNames.splice(0,migrationNames.length,...publicNames);
  try{assert.deepEqual(await migrateLibrary(h.db('baseline')),publicNames);}
  finally{migrationNames.splice(0,migrationNames.length,...saved);}
