@@ -37,7 +37,14 @@ const policy={audience:'delete-privilege-test',environment:'development',prefix:
 const bundleID=policy.bundles[0];
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const sqlFile=name=>readFile(new URL('../../db/'+name,import.meta.url),'utf8');
-const body=text=>text.replace(/^BEGIN;\s*/,'').replace(/COMMIT;\s*$/,'');
+// Retained 030/031 begin with comments. Strip their actual outer transaction
+// so setup commits before each rollback probe instead of leaving PGlite in it.
+const body=text=>{
+ const outer=/^((?:[ \t]*(?:--[^\n]*)?\r?\n)*)BEGIN;[ \t]*\r?\n/.exec(text);
+ assert.ok(outer,'fixture migration must have one leading outer BEGIN');
+ assert.match(text,/COMMIT;\s*$/);
+ return outer[1]+text.slice(outer[0].length).replace(/COMMIT;\s*$/,'');
+};
 const one=async(db,text,args=[])=>(await db.query(text,args)).rows[0];
 const permission=error=>error.code==='42501'&&error.message.includes('listening_rate_windows');
 const malformed=error=>error.code==='23514'&&error.message.includes('listening_account_delete_catalog_mismatch');
@@ -343,15 +350,17 @@ async function runCases(caseTest,make){
   'ALTER TABLE public.listening_rate_windows ADD COLUMN extra text',
   'ALTER TABLE public.listening_rate_windows DROP CONSTRAINT listening_rate_windows_pkey',
   'ALTER TABLE public.listening_rate_windows DROP CONSTRAINT listening_rate_windows_user_id_fkey',
-  'ALTER TABLE public.listening_rooms ALTER COLUMN data TYPE text USING data::text',
+  'DROP INDEX public.listening_members; ALTER TABLE public.listening_rooms ALTER COLUMN data TYPE text USING data::text',
   'DROP TABLE public.listening_commands',
   'ALTER TABLE public.listening_rate_windows ENABLE ROW LEVEL SECURITY',
   'CREATE TABLE public.rate_child() INHERITS(public.listening_rate_windows)'
  ];
  for(const change of malformedChanges)await caseTest('035 refuses malformed optional schema atomically: '+change,async t=>{
   const h=await make(t);await schema(h,{historical:true});await seed(h);const before=await image(h),old=await acl(h);
+  const indexBefore=await one(h,"SELECT pg_get_indexdef('public.listening_members'::regclass) AS definition");
   await assert.rejects(h.tx(null,async raw=>{await raw.query(change);await raw.query(body(await sqlFile(correction)));}),malformed);
   assert.deepEqual(await image(h),before);assert.deepEqual(await acl(h),old);
+  assert.deepEqual(await one(h,"SELECT pg_get_indexdef('public.listening_members'::regclass) AS definition"),indexBefore);
  });
  await caseTest('035 hostile search_path and shadows remain untouched, direct and replay repeat',async t=>{
   const h=await make(t);await schema(h,{historical:true,metadata:true});await seed(h,{metadata:true});const before=await image(h);
