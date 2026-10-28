@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto';
 import {decryptQRC} from './vendor/qq-qrc-codec.js';
 import {validVocalTiming,validTimingTimestamp,timingDurationLimit,MAX_LYRIC_SECONDS} from './vocal-timing.js';
 
-export const QQ_ACQUISITION_CAPABILITY='qq-qrc-3';
+export const QQ_ACQUISITION_CAPABILITY='qq-qrc-4';
 const MAX_SECONDS=MAX_LYRIC_SECONDS, MAX_BYTES=524288, MAX_ROWS=250, MAX_MARKERS=8192;
 const integer=n=>Number.isSafeInteger(n)&&n>=0;
 const number=s=>/^-?\d{1,16}$/.test(s)?Number(s):NaN;
@@ -108,10 +108,16 @@ export function parseQRC(raw,{songId,duration=MAX_SECONDS,durationResolution=0}=
   }
   text+=h[3].slice(cursor);
   if(/\([^()]*,/u.test(text)||text.length>2000||!text.trim()||invalidUnicode(text))return null;
+  // QQ can overlap adjacent words by exactly one integer millisecond. Join
+  // only that boundary at the next supplied start; larger conflicts still
+  // fail the shared validator. Keep the raw intervals in the revision input.
+  if(!bad)for(let i=0;i<segments.length-1;i++) {
+   const a=integerSegments[i],b=integerSegments[i+1];
+   if(a[4]===b[3]+1&&a[3]<b[3])segments[i].end=b[3]/1000;
+  }
   // Some QQ rows end one source millisecond before their final measured word.
-  // Use that supplied word endpoint for the enclosing envelope only. Every
-  // word time stays byte-for-byte equivalent in milliseconds; larger conflicts
-  // remain invalid. The original row endpoint is retained in the revision.
+  // Use that supplied endpoint for the enclosing envelope only; the original
+  // row endpoint remains in the revision and larger conflicts stay invalid.
   const finalEnd=integerSegments.at(-1)?.[4],envelopeEnd=!bad&&finalEnd===end+1?finalEnd:end;
   const line={text,timestamp:start/1000,vocalTiming:{end:envelopeEnd/1000,segments}};
   if(bad||!validVocalTiming(line,{duration,durationResolution}))delete line.vocalTiming;

@@ -84,10 +84,18 @@ sources and unqualified documents retain the exact bound; nothing is rescaled.
 
 Some QRC rows end exactly one millisecond before the last supplied positive word
 cue. The parser derives the containing row envelope from that supplied cue only
-for this one-millisecond discrepancy. Word starts and ends remain unchanged, and
-the original container endpoint remains in the source revision. Larger overruns,
-overlaps, invalid ranges and source-duration violations still lose optional cues.
+for this one-millisecond discrepancy. That envelope adjustment leaves word times
+unchanged, and the original container endpoint remains in the source revision.
 This recovers the measured initial Idol row without distributing guessed times.
+
+Adjacent QQ words can also overlap by exactly one integer millisecond. The QRC
+parser joins only that boundary at the next supplied word start when starts
+strictly increase, changing the preceding end by one millisecond. Raw intervals
+remain in the source revision, and the parser/selection capability invalidates
+older parsed caches. Shared and native interval validation remain unchanged;
+larger overlaps, reversed times, broken text ranges and duration violations still
+lose optional cues. An anonymized multirow fixture reproduces Mojito's 89-to-404
+cue recovery with complete meaningful-grapheme coverage and unchanged words.
 
 Meaningful coverage counts graphemes containing letters or numbers, not silent
 punctuation or spaces. Complete coverage means all such text in the returned

@@ -18,7 +18,7 @@ export function chooseLyricCandidate(current,candidate) {
  return current;
 }
 import {validVocalTiming,validSourceTiming,validTimingProvenance,vocalCoverage,sourceDurationResolution,validTimingTimestamp,MAX_LYRIC_SECONDS} from './vocal-timing.js';
-export const VOCAL_SELECTION_CAPABILITY='measured-vocal-selection-6:outer-whitespace-1:qrc-literal-ampersands-1:kugou-krc-1:qq-qrc-3:plain-word-window-1';
+export const VOCAL_SELECTION_CAPABILITY='measured-vocal-selection-6:outer-whitespace-1:qrc-literal-ampersands-1:kugou-krc-1:qq-qrc-4:plain-word-window-1';
 
 // A provider capability grants a lookup opportunity, never timing authority.
 // Only validated cues from the selected source's own recording may outrank LRC.

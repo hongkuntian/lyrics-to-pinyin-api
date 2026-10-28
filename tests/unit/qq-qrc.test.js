@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {decryptQRC,MAX_QRC_ENCRYPTED_BYTES} from '../../api/utils/vendor/qq-qrc-codec.js';
 import {parseQRC,parseEncryptedQRC,qrcBody} from '../../api/utils/qq-qrc.js';
+import {validVocalTiming,vocalCoverage} from '../../api/utils/vocal-timing.js';
 const fixtures=JSON.parse(readFileSync(new URL('../fixtures/qrc-codec-fixtures.json',import.meta.url)));
 const escaped=s=>s.replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 const xml=body=>`<?xml version="1.0" encoding="utf-8"?><QrcInfos><QrcHeadInfo SaveTime="1" Version="100"/><LyricInfo LyricCount="1"><Lyric_1 LyricType="1" LyricContent="${escaped(body)}"/></LyricInfo></QrcInfos>`;
@@ -120,4 +121,45 @@ test('strict codec rejects malformed hex, extra payloads, bad UTF8 and inflate b
  for(const hex of ['', '0', 'ff'.repeat(7), 'gg'.repeat(8), '00'.repeat(8)+' ', '00'.repeat(MAX_QRC_ENCRYPTED_BYTES+8), fixtures.invalidUTF8Hex, fixtures.expansionHex, fixtures.trailingNonzeroHex]) {
   assert.throws(()=>decryptQRC(hex));assert.equal(parseEncryptedQRC(hex,{songId:123}),null);
  }
+});
+
+test('one-millisecond QQ word overlaps retain complete cues at the next supplied boundary',()=>{
+ const result=parse('[1000,1000]A(1000,501)B(1500,500)');
+ assert.deepEqual(result.lines,[{text:'AB',timestamp:1,vocalTiming:{end:2,segments:[
+  {utf16Start:0,utf16Length:1,text:'A',start:1,end:1.5},
+  {utf16Start:1,utf16Length:1,text:'B',start:1.5,end:2},
+ ]}}]);
+ const exact=parse('[1000,1000]A(1000,500)B(1500,500)');
+ assert.deepEqual(result.lines,exact.lines);
+ assert.notEqual(result.timingSource.revision,exact.timingSource.revision);
+});
+test('consecutive one-millisecond word overlaps coexist with the existing row-end precision rule',()=>{
+ const line=parse('[1000,1000]甲(1000,334)乙(1333,334)丙(1666,335)').lines[0];
+ assert.equal(line.text,'甲乙丙');assert.equal(line.vocalTiming.end,2.001);
+ assert.deepEqual(line.vocalTiming.segments.map(s=>[s.start,s.end]),[[1,1.333],[1.333,1.666],[1.666,2.001]]);
+});
+test('QQ boundary normalization cannot rescue larger overlaps, reversed starts, collapsed intervals or broken graphemes',()=>{
+ for(const row of [
+  '[1000,1000]A(1000,502)B(1500,500)',
+  '[1000,1000]A(1500,100)B(1400,100)',
+  '[1000,1000]A(1000,1)B(1000,50)',
+  '[1000,1000]e(1000,501)\u0301(1500,500)',
+  '[1000,1000]A(1000,-1)B(1500,500)',
+  '[1000,1000]A(1000,501)B(1500,502)',
+ ])assert.equal(parse(row).lines[0].vocalTiming,undefined,row);
+});
+test('multirow QQ boundary fixture retains every supplied cue and meaningful grapheme',()=>{
+ const fixture=JSON.parse(readFileSync(new URL('../fixtures/qrc-millisecond-boundaries.json',import.meta.url)));
+ const result=parseQRC(fixture.qrc,{songId:'42',duration:fixture.duration,durationResolution:1});
+ assert.equal(result.lines.length,fixture.expected.rows);
+ assert.equal(result.lines.reduce((n,l)=>n+(l.vocalTiming?.segments.length??0),0),fixture.expected.cues);
+ assert.ok(result.lines.every(l=>l.vocalTiming));
+ assert.deepEqual(vocalCoverage(result.lines,{duration:fixture.duration,durationResolution:1}),{
+  covered:fixture.expected.meaningfulGraphemes,total:fixture.expected.meaningfulGraphemes,complete:true});
+});
+test('the shared timing validator still rejects unnormalized overlapping intervals',()=>{
+ assert.equal(validVocalTiming({text:'AB',timestamp:1,vocalTiming:{end:2,segments:[
+  {utf16Start:0,utf16Length:1,text:'A',start:1,end:1.501},
+  {utf16Start:1,utf16Length:1,text:'B',start:1.5,end:2},
+ ]}},{duration:10}),false);
 });
