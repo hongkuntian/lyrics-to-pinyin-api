@@ -61,7 +61,8 @@
           "enum": [
             "netease",
             "lrclib",
-            "kugou"
+            "kugou",
+            "qq"
           ]
         },
         "itemID": {

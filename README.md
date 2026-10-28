@@ -13,7 +13,7 @@ A Node.js serverless backend (Vercel) for romanizing multilingual lyrics and tex
 - Music sources currently enabled in runtime registry:
   - `netease`
   - `kugou`
-  - `qq` (raw acquisition opt-in)
+  - `qq` (measured acquisition)
   - `lrclib`
 
 Lyric discovery through LRCLIB accepts other language tags, including Latin,
@@ -22,10 +22,13 @@ coverage or a pronunciation processor. Original words stay readable when a
 language or pronunciation dialect cannot be established.
 
 Raw music acquisition accepts `options.lyric_sources_version: 2` to include QQ
-QRC alongside NetEase YRC and Kugou KRC measured word cues. Omitted or version 1
-keeps the legacy provider set, including for durable library acquisition. The
-native client can use a newer raw result as a temporary word-timing upgrade
-without replacing a saved lyric document. See [measured source findings and
+QRC alongside NetEase YRC and Kugou KRC measured word cues. Normal library
+acquisition uses this same expanded provider policy and saves the winning
+edition's text and timings together. Existing saved copies can use Reload Lyrics;
+refresh keeps valid measured coverage when only a worse fallback is available.
+Raw calls that omit the option or request version 1 retain their former provider
+set. Compatible timing-only upgrades preserve the accepted document's text and
+learning references. See [measured source findings and
 benchmark](docs/research/word-timing-findings.md) for format, identity and
 performance evidence and its limits.
 

@@ -22,13 +22,14 @@ import {createLyricSourceLoader} from './utils/lyric-search.js';
 import {withDeadline} from './utils/fetch-json.js';
 import {selectedSourceRequest,makeSelectedDocument} from './utils/song-library/selected-source.js';
 import {annotationFor,pronunciationKey,enabledProfiles} from './utils/pronunciation-aids.js';
+import {isMeasuredTimingDowngrade} from './utils/song-library/lyric-retention.js';
 
 export const config={maxDuration:300,supportsResponseStreaming:true};
 const actions={selected_source:['provider','itemID','query','expectedTextHash'],capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeService()) {
   return async (recording,{refresh=false,delivery}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
-    await handler({method:'POST',...(delivery?{lyricDelivery:delivery}:{}),body:{...(isSpotifyRecording(recording)?{recording}:recording),options:{tone_style:'marks',separator:' ',case:'lower',...(refresh?{refresh:true}:{})}}},result);
+    await handler({method:'POST',...(delivery?{lyricDelivery:delivery}:{}),body:{...(isSpotifyRecording(recording)?{recording}:recording),options:{tone_style:'marks',separator:' ',case:'lower',lyric_sources_version:2,...(refresh?{refresh:true}:{})}}},result);
     if(result.code!==200) throw new LibraryError(result.body?.code??'lyrics_unavailable',result.code);
     return result.body;
   };
@@ -116,8 +117,11 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
               // explicit reloads still demand a new source check.
               const candidate=makeDocument(recording,await measure('lyrics_lookup',()=>loadLyrics(recording,{refresh:explicit||Boolean(doc),delivery:req.lyricDelivery})),selectionRevision);
               req.lyricDelivery?.signal.throwIfAborted();
-              // Provider outages or regressions cannot erase a complete timed source.
-              const keep=doc?.response.quality.synced && !candidate.response.quality.synced && !lyricSourceNeedsRefreshFn(doc.response,recording);
+              // Preserve valid line/word timing on a worse fallback. Equal
+              // quality may replace the edition; rejected old sources cannot win.
+              const keep=doc&&!lyricSourceNeedsRefreshFn(doc.response,recording)
+                &&(doc.response.quality.synced&&!candidate.response.quality.synced
+                  ||isMeasuredTimingDowngrade(doc.response,candidate.response,recording));
               doc=await measure('document_save',()=>db.saveDocument(keep?{...doc,requestKey:key}:candidate,{replaceID:doc?.id,lookupOwner:owner}));
             }
           } catch(error) {

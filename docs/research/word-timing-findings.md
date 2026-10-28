@@ -50,10 +50,18 @@ must not be presented as a reproduction of their exact recording or stock app.
   cache entries. Native policy allows one bounded retry after that migration and
   adopts only strictly greater coverage on the current recording/source epoch.
   Sparse successes have a shorter lifetime than complete coverage.
-- `options.lyric_sources_version: 2` negotiates QQ only for updated raw clients.
-  Version 1/omitted calls and existing library acquisition keep their provider set.
-  Cache keys separate these capabilities. Saved documents remain pinned while the
-  player can adopt an ephemeral raw timing overlay.
+- Normal library acquisition requests `options.lyric_sources_version: 2`, matching
+  the expanded provider set used by native raw timing requests. The winning source
+  supplies the saved text, line times and measured cues together. Raw version 1 or
+  omitted-option calls retain their former provider set and separate cache keys.
+  Existing saved copies can use Reload Lyrics without a bulk migration.
+- Refresh retains valid measured coverage on a strict quality downgrade, using
+  the same meaningful-grapheme coverage, provenance and duration-precision rules
+  as acquisition. Equal-quality editions can replace the current source; rejected
+  old sources still yield. Whole immutable documents are saved through the existing
+  lookup lease and exact-request mapping. Old translations, corrections and admitted
+  jobs remain bound to their original document, never copied onto changed wording.
+  Optional timing attachments still require exact accepted text and better coverage.
 
 Backend ownership centralizes source consensus, provenance, cache reuse and
 identity rules. The existing progressive response path and native overlay avoid

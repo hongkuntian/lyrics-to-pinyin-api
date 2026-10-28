@@ -65,9 +65,8 @@ export function createSpotifyLyricsService(dependencies={}) {
         ||('case' in options&&options.case!=='lower')||('refresh' in options&&typeof options.refresh!=='boolean')
         ||('lyric_sources_version' in options&&![1,2].includes(options.lyric_sources_version)))throw new LibraryError('invalid_recording',400);
       const r=spotifyRecording(body.recording),target=spotifySearchRequest(r),requestHash=spotifyRequestHash(r);
-      // Older native bindings have a closed provider set. QQ is opt-in on the
-      // ephemeral acquisition path; saved library sources keep their existing
-      // contract until that route negotiates the expanded source set too.
+      // Native raw timing requests and the library loader both request v2.
+      // Explicit v1/omitted raw calls retain their separate provider/cache policy.
       const sourceVersion=options.lyric_sources_version??1;
       const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}:${NETEASE_TITLE_CAPABILITY}:${PROVIDER_LANGUAGE_EVIDENCE_VERSION}:sources-${sourceVersion}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const send=result=>{if(result.candidate)attachSpotifyMatchEvidence(result.body,result.candidate);res.setHeader('X-Lyrics-Cache',result.cache??'MISS');return reply(result.status,result.body);};
