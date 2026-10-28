@@ -16,7 +16,7 @@ export function freshHintMatches(hint,fresh,target){
   &&['artist','title'].every(k=>typeof song[k]==='string'&&normalizeRecordingText(song[k])===normalizeRecordingText(previous[k]??''))
   &&(previous.album==null?song.album==null:typeof song.album==='string'&&normalizedAlbum(song.album)===normalizedAlbum(previous.album))
   &&Number.isFinite(song.duration)&&Number.isFinite(previous.duration)&&Math.abs(song.duration-previous.duration)<=0.5
-  &&['isrc','explicit','creditedArtistNames'].every(k=>previous[k]===undefined||JSON.stringify(previous[k])===JSON.stringify(song[k]))
+  &&['isrc','explicit','creditedArtistNames','creditedArtistIDs'].every(k=>previous[k]===undefined||JSON.stringify(previous[k])===JSON.stringify(song[k]))
   &&sameNetEaseTitleEvidence(previous.neteaseTitleEvidence,song.neteaseTitleEvidence)
   &&recordingScore(song,target)>=0);
 }

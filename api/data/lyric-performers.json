@@ -42,50 +42,6 @@
       "note": "Apple artist 380642076 is one performer under both localized names. Preserve the ampersand inside the complete stage name; additional guest syntax remains separate. Name localization still requires catalog evidence."
     }
   ],
-  "neteaseArtistAliases": [
-    {
-      "id": "2747",
-      "name": "费玉清",
-      "profileAlias": "Yu-Ching Fei",
-      "aliases": ["Fei Yu-ching"],
-      "provenance": [
-        "https://music.163.com/artist?id=2747",
-        "https://open.spotify.com/artist/6aSJ9LaNaHOKiPchLDYGYl",
-        "https://open.spotify.com/track/3Pjp7lBM20zYzTlRurI6B7"
-      ],
-      "note": "Reviewed 2026-10-26. NetEase artist 2747 uses Yu-Ching Fei while Spotify credits Fei Yu-ching. Require this fresh provider ID, canonical name and profile alias before adding the reviewed spelling; do not infer reordered names generally."
-    },
-    {
-      "id": "6459",
-      "name": "张雨生",
-      "profileAlias": "Tom Chang",
-      "aliases": [
-        "Zhang Yu Sheng"
-      ],
-      "provenance": [
-        "https://music.163.com/artist?id=6459",
-        "https://open.spotify.com/artist/3LefT7hR0PJgShJNQoPns5",
-        "https://open.spotify.com/track/7mubQiRZ1Q94ZN3zCrNbzn",
-        "https://www.wikidata.org/wiki/Q707349"
-      ],
-      "note": "Reviewed 2026-10-27. Spotify artist 3LefT7hR0PJgShJNQoPns5 credits Zhang Yu Sheng; NetEase artist 6459 is 张雨生 with the profile alias Tom Chang. Require this fresh provider ID, canonical name and profile alias. Applies to this artist identity, never a title-only or phonetic match."
-    },
-    {
-      "id": "10559",
-      "name": "张惠妹",
-      "profileAlias": "aMEI",
-      "aliases": [
-        "A-Mei Chang"
-      ],
-      "provenance": [
-        "https://music.163.com/artist?id=10559",
-        "https://open.spotify.com/artist/6noxsCszBEEK04kCehugOp",
-        "https://open.spotify.com/track/5WD10VSuBAm2YxnaiqQ3eA",
-        "https://www.wikidata.org/wiki/Q713461"
-      ],
-      "note": "Reviewed 2026-10-27 during the frozen Chinese catalog audit. Spotify credits A-Mei Chang; NetEase artist 10559 is 张惠妹 with profile alias aMEI. Require the fresh provider ID, canonical name and profile alias before using this reviewed label; recording metadata is still validated independently."
-    }
-  ],
   "reviewedRecordings": {
     "342794615": {"卢": "Lo", "王": "Wang"}
   }

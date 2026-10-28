@@ -1,0 +1,74 @@
+{
+  "recording": {
+    "version": 2,
+    "provider": "spotify",
+    "item_id": "0123456789ABCDEFGHIJKL",
+    "metadata": {
+      "origin": "spotify",
+      "title": "測試 \"海\" / A\\B",
+      "artists": [
+        "甲 & 乙",
+        "Guest"
+      ],
+      "duration_ms": 240000,
+      "artist_ids": [
+        "1123456789ABCDEFGHIJKL",
+        "2123456789ABCDEFGHIJKL"
+      ]
+    }
+  },
+  "source": {
+    "provider": "lrclib",
+    "itemID": "fixture-42",
+    "title": "Independent title",
+    "artist": "Independent artist",
+    "language": "zh",
+    "romanizationSystem": "pinyin",
+    "lines": [
+      {
+        "original": "風來了",
+        "romanized": "fēng lái le",
+        "timestamp": 12.5
+      },
+      {
+        "original": "海在這裡",
+        "romanized": "hǎi zài zhè lǐ",
+        "timestamp": 60.125
+      }
+    ],
+    "structure": {
+      "version": "source-speakers-1",
+      "speakers": [],
+      "occurrences": [
+        {
+          "sourceID": "L0001",
+          "sourceText": "風來了",
+          "lyricText": "風來了",
+          "speakerID": null,
+          "startsTurn": false,
+          "sourcePrefix": ""
+        },
+        {
+          "sourceID": "L0002",
+          "sourceText": "海在這裡",
+          "lyricText": "海在這裡",
+          "speakerID": null,
+          "startsTurn": false,
+          "sourcePrefix": ""
+        }
+      ]
+    }
+  },
+  "selectionRevision": "fixture-selection-1",
+  "requestCanonical": "[\"spotify-request-2\",\"0123456789ABCDEFGHIJKL\",null,null,\"測試 \\\"海\\\" / A\\\\B\",[\"甲 & 乙\",\"Guest\"],null,240000,null,null,[\"1123456789ABCDEFGHIJKL\",\"2123456789ABCDEFGHIJKL\"]]",
+  "hashes": {
+    "recordingKey": "4368a9bea9a2ae5bad1ce87a0c50aa20ef7445570dbb6c7c471b2d735c010466",
+    "requestHash": "78d3ade2a817c1d467826b8b0552639f15559cead74f82f3e23f36260981ea45",
+    "contextHash": "10914d01e1518b16cf19073d5e57f533a4e34c1b45c656bf6de0400bb2a8eb0c",
+    "textRevision": "f6525dd2c7bcec758459e55afa7b714a8e8881bfc99e3798f8ead5fd1bda746e",
+    "timingRevision": "1392ed0fe6f9295efd9af079e6558a2e1a4f6096fd565628f673a0172aa9802e",
+    "readingRevision": "afbda87a0a767bd849a6b2af3200844c8eeb73a22d615fc36b4a3cfa40165eca",
+    "sourceHash": "3ed1ed12c515975335c67a8684c5e81e5ec4572c147a7a76072f1ca9b7b74a33",
+    "documentID": "bd8ab4983ad1f3482bfe9169e4be1608e4b249895c8522a5ad5b86884a10056b"
+  }
+}

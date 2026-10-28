@@ -9,6 +9,17 @@ const schema=name=>JSON.parse(readFileSync(new URL('../../contracts/'+name+'.sch
 const fixture=JSON.parse(readFileSync(new URL('../fixtures/spotify-recording-vectors.json',import.meta.url))).fixtures[0];
 const response={song:{id:fixture.source.itemID,title:{original:fixture.source.title},artist:{original:fixture.source.artist},language:'zh',romanization_system:'pinyin',duration:240},
   lines:fixture.source.lines,quality:{synced:true,partial:false,instrumental:false},metadata:{source:'LRCAPI',selection_revision:fixture.selectionRevision}};
+test('artist-ID requests and emitted durable documents satisfy the shared wire contract',()=>{
+  const vector=JSON.parse(readFileSync(new URL('../fixtures/spotify-artist-id-vector.json',import.meta.url)));
+  const recording=recordingRequest(vector.recording),source=sourceCapsule(response);
+  const fallback={...response,recordingBinding:spotifyBinding(recording,source,fixture.selectionRevision,response)};
+  const doc=publicDocument(makeDocument(recording,fallback,fixture.selectionRevision),recording);
+  assert.deepEqual(validateSchema(schema('spotify-recording'),recording),[]);
+  assert.deepEqual(validateSchema(schema('spotify-recording-binding'),doc.recordingBinding),[]);
+  assert.deepEqual(validateSchema(schema('song-library'),{version:1,state:'ready',document:doc}),[]);
+  assert.equal(doc.recordingBinding.requestHash,vector.hashes.requestHash);
+  assert.equal(doc.id,vector.hashes.documentID);
+});
 test('additive Spotify binding contract retains v1 and binds both fallback and durable responses',()=>{
   const recording=recordingRequest(fixture.recording),source=sourceCapsule(response);
   const fallback={...response,recordingBinding:spotifyBinding(recording,source,fixture.selectionRevision,response)};

@@ -1,5 +1,9 @@
 # Verified lyric acquisition reuse
 
+Spotify catalog artist IDs and bounded multilingual alias enrichment follow
+[ARTIST_IDENTITY.md](ARTIST_IDENTITY.md). Provider aliases remain the fast path;
+the fallback replaces the former manual artist alias registry.
+
 Provider language evidence is captured from existing QQ detail/QRC and Kugou
 search responses without a serial metadata request. It never changes timing
 eligibility or provider ordering. Incomplete source-ID hints schedule

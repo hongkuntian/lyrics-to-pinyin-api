@@ -9,10 +9,7 @@ import {BoundedCache} from '../utils/bounded-cache.js';
 import {neteaseTitleEvidence,neteaseDescriptiveTitleMatches} from '../utils/netease-title-evidence.js';
 import {simplifyRecordingScript} from '../utils/recording-script.js';
 import {isNeteaseMetadataRow} from '../utils/netease-metadata.js';
-import {createRequire} from 'node:module';
-import {buildArtistAliasEvidence,recoveredArtistNames,recoverySearchTitle} from '../utils/artist-alias-recovery.js';
-const require=createRequire(import.meta.url);
-const {neteaseArtistAliases}=require('../data/lyric-performers.json');
+import {buildArtistAliasEvidence,buildArtistIdentityEvidence,recoveredArtistNames,recoverySearchTitle} from '../utils/artist-alias-recovery.js';
 const performerIDs=raw=>Array.isArray(raw?.artists)&&raw.artists.length>0&&raw.artists.length<=3
  &&raw.artists.every(p=>/^[1-9]\d{0,19}$/.test(String(p.id)))
  ?JSON.stringify(raw.artists.map(p=>String(p.id)).sort()):null;
@@ -107,7 +104,7 @@ export class NeteaseAPI extends BaseMusicAPI {
       const data=await fetchJSON(`${this.baseURL}/search?limit=${limit}&keywords=${encodeURIComponent(simplifyRecordingScript(query))}`,context);
       if(data.code!==200) throw new Error('NetEase search unavailable');
       for(const raw of data.result?.songs || []) if(!records.has(raw.id)) {
-        const song={id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease',...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),...(context.recordingProvider==='spotify'?{creditedArtistNames:raw.artists?.map(x=>x.name),...(raw.isrc?{isrc:raw.isrc}:{})}:{})};
+        const song={id:raw.id,title:raw.name,artist:raw.artists?.map(x=>x.name).join(' & ') || '',album:raw.album?.name,duration:raw.duration ? raw.duration/1000:null,source:'netease',...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),...(context.recordingProvider==='spotify'?{creditedArtistNames:raw.artists?.map(x=>x.name),creditedArtistIDs:raw.artists?.map(x=>String(x.id)),...(raw.isrc?{isrc:raw.isrc}:{})}:{})};
         records.set(raw.id,{raw,song:withTitleEvidence({...song,...(recoveryTitle?{searchRecovery:'title_only_fallback'}:{})},raw,'alias',request)});
       }
       const song=await select();if(song) return this.measuredRelease(song,records,request,context);
@@ -189,7 +186,12 @@ export class NeteaseAPI extends BaseMusicAPI {
     } else if(spotify) {
       const verifiedProfiles=new Map(await Promise.all(performers.map(async p=>[String(p.id),
         profiles.has(String(p.id))?await profiles.get(String(p.id)):[p.name]])));
-      const evidence=buildArtistAliasEvidence(song,performers,request,verifiedProfiles);
+      let evidence=buildArtistAliasEvidence(song,performers,request,verifiedProfiles);
+      if(!evidence&&request.creditedArtistIDs&&typeof context.resolveArtistIdentities==='function') {
+        const identities=await context.resolveArtistIdentities({signal:context.signal});
+        context.signal?.throwIfAborted();
+        evidence=buildArtistIdentityEvidence(song,performers,request,verifiedProfiles,identities);
+      }
       if(evidence) {
         song.artistAliasEvidence=evidence;
         if(recordingScore(song,request)>=0)
@@ -210,7 +212,7 @@ export class NeteaseAPI extends BaseMusicAPI {
       ||typeof raw.name!=='string'||!raw.name.trim()||!Number.isFinite(raw.dt)||raw.dt<=0)
       throw Object.assign(new Error('Invalid NetEase source metadata'),{code:'recording_mismatch'});
     const song=withTitleEvidence({id:raw.id,title:raw.name,artist:performers.map(p=>p.name).join(' & '),album:raw.al?.name,duration:raw.dt/1000,source:'netease',...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),
-      ...(context.recordingProvider==='spotify'?{creditedArtistNames:performers.map(p=>p.name),...(raw.isrc?{isrc:raw.isrc}:{})}:{})},raw,'alia',context);
+      ...(context.recordingProvider==='spotify'?{creditedArtistNames:performers.map(p=>p.name),creditedArtistIDs:performers.map(p=>String(p.id)),...(raw.isrc?{isrc:raw.isrc}:{})}:{})},raw,'alia',context);
     if(recordingScore(song,context)<0)await this.resolveArtistAliases(song,performers,context,context);
     findRecording([song],context);
     context.signal?.throwIfAborted();
@@ -223,12 +225,6 @@ export class NeteaseAPI extends BaseMusicAPI {
       const data=await fetchJSON(`${this.baseURL}/artist/detail?id=${id}`,context),artist=data.data?.artist;
       if(data.code!==200 || String(artist?.id)!==id) return [];
       const names=[artist.name,...(artist.alias || []),...(artist.transNames || [])].filter(name=>typeof name==='string' && name.trim());
-      // A reviewed alternate spelling belongs to one fresh provider artist,
-      // not arbitrary reordered names. Drift in either anchor fails closed.
-      const reviewed=neteaseArtistAliases.find(entry=>entry.id===id
-        &&normalizeRecordingText(entry.name)===normalizeRecordingText(artist.name)
-        &&names.some(name=>normalizeRecordingText(name)===normalizeRecordingText(entry.profileAlias)));
-      if(reviewed)names.push(...reviewed.aliases);
       // Catalogs sometimes omit Latin accents (Rene / René). Derive only this
       // spelling from this freshly verified artist ID, never from song titles
       // or arbitrary search labels. Other scripts keep their combining marks.

@@ -3,12 +3,28 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {digest} from '../../api/utils/song-library/store.js';
 import {recordingRequest,requestKey,makeDocument} from '../../api/utils/song-library/document.js';
-import {canonicalJSON,spotifyHashes,sourceCapsule,spotifyBinding} from '../../api/utils/song-library/spotify-recording.js';
+import {canonicalJSON,spotifyHashes,sourceCapsule,spotifyBinding,spotifySearchRequest} from '../../api/utils/song-library/spotify-recording.js';
 import {recordingScore,findRecording} from '../../api/utils/recording-match.js';
 const vectors=JSON.parse(readFileSync(new URL('../fixtures/spotify-recording-vectors.json',import.meta.url)));
 const minimal=vectors.fixtures[0].recording;
 const request=(artists=['A & B'],extra={})=>({recordingProvider:'spotify',artist:artists.join(' & '),creditedArtistNames:artists,title:'Song',duration:240,...extra});
 const candidate=(extra={})=>({id:'source',artist:'A & B',title:'Song',duration:240,...extra});
+test('complete catalog artist IDs bind request and durable document identity without changing independent source hashes',()=>{
+ const f=vectors.fixtures[0],ids=['1123456789ABCDEFGHIJKL','2123456789ABCDEFGHIJKL'];
+ const r={...f.recording,metadata:{...f.recording.metadata,artist_ids:ids}};
+ assert.deepEqual(recordingRequest(r),r);assert.deepEqual(spotifySearchRequest(r).creditedArtistIDs,ids);
+ const old=spotifyHashes(f.recording,f.source,f.selectionRevision),a=spotifyHashes(r,f.source,f.selectionRevision);
+ assert.notEqual(a.requestHash,old.requestHash);assert.notEqual(a.documentID,old.documentID);
+ for(const key of ['recordingKey','sourceHash','textRevision','timingRevision','readingRevision'])assert.equal(a[key],old[key]);
+ const changed={...r,metadata:{...r.metadata,artist_ids:[...ids].reverse()}},b=spotifyHashes(changed,f.source,f.selectionRevision);
+ assert.notEqual(a.requestHash,b.requestHash);assert.notEqual(a.documentID,b.documentID);
+ for(const artist_ids of [null,[],[ids[0]],[ids[0],ids[0]],['invalid',ids[1]],[ids[0]+'\n',ids[1]]])
+  assert.throws(()=>recordingRequest({...r,metadata:{...r.metadata,artist_ids}}),{code:'invalid_recording'});
+});
+test('artist ID request preimage and durable hashes match the shared native golden vector',()=>{
+ const f=JSON.parse(readFileSync(new URL('../fixtures/spotify-artist-id-vector.json',import.meta.url)));
+ assert.deepEqual(spotifyHashes(f.recording,f.source,f.selectionRevision),f.hashes);
+});
 test('Spotify explicit catalog flag qualifies an explicit release marker without qualifying other editions',()=>{
  const source=candidate({album:'Album (Explicit)'}),target=request(['A & B'],{album:'Album',explicit:true});
  assert.ok(recordingScore(source,target)>=0);

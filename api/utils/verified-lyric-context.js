@@ -16,9 +16,9 @@ export function verifiedCatalogProof(proof,request){
   &&Array.isArray(proof.searches)&&proof.searches.length>0&&proof.searches.length<=8
   &&proof.searches.every(s=>s&&typeof s.artist==='string'&&s.artist&&typeof s.title==='string'&&s.title&&Number.isFinite(s.duration));
 }
-const songFields=['id','artist','title','album','duration','source','isrc','explicit','creditedArtistNames','neteaseTitleEvidence'];
+const songFields=['id','artist','title','album','duration','source','isrc','explicit','creditedArtistNames','creditedArtistIDs','neteaseTitleEvidence'];
 export const sourceSignature=song=>Object.fromEntries(songFields.filter(k=>song[k]!==undefined).map(k=>[k,structuredClone(song[k])]));
-const targetFields=['artist','title','album','duration','catalog_id','artist_entities','recordingProvider','recordingItemID','recordingKey','creditedArtistNames','isrc','explicit'];
+const targetFields=['artist','title','album','duration','catalog_id','artist_entities','recordingProvider','recordingItemID','recordingKey','creditedArtistNames','creditedArtistIDs','isrc','explicit'];
 export const sourceTarget=(target={})=>Object.fromEntries(targetFields.filter(k=>target[k]!==undefined).map(k=>[k,structuredClone(target[k])]));
 export function createVerifiedContextCache({redis,getFn=getCached,setFn=setLyricsCached,waitUntilFn=()=>{},now=Date.now,ttlMs=21600000,cacheTimeoutMs=300,policy}={}){
  const memory=new BoundedCache({now,ttlMs,maxEntryBytes:131072}),writes=new Map(),keyFor=(request,kind)=>'lyrics:verified-context:v1:'+hash(JSON.stringify({kind,request:contextSignature(request),policy}));

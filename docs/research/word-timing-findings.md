@@ -140,6 +140,11 @@ strict. The remaining absence of matching measured timing is an honest gap.
 
 ## Chinese catalog admission regressions (2026-10-27)
 
+The initial reviewed-artist repair described here was superseded on 2026-10-28
+by automatic catalog-ID-based enrichment; see [ARTIST_IDENTITY.md](../ARTIST_IDENTITY.md).
+The manual NetEase artist alias entries are removed. The source diagnosis and
+observed source editions below remain historical evidence.
+
 The exact Spotify 天天想你 recording (`7mubQiRZ1Q94ZN3zCrNbzn`,
 252866 ms, same-name album) has complete NetEase YRC timing at source `188177`.
 Discovery rejected its artist credit: Spotify uses Zhang Yu Sheng while the

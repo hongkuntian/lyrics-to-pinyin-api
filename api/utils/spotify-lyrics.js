@@ -23,6 +23,7 @@ import {BoundedCache} from './bounded-cache.js';
 import {waitUntil} from '@vercel/functions';
 import {LibraryError} from './song-library/store.js';
 import {NETEASE_TITLE_CAPABILITY} from './netease-title-evidence.js';
+import {createArtistIdentityResolver} from './artist-identities.js';
 import {spotifyRecording,spotifyRequestHash,spotifySearchRequest,independentProvider,sourceCapsule,spotifyBinding,verifySpotifyBinding,attachSpotifyMatchEvidence} from './song-library/spotify-recording.js';
 
 // The same independent provider path serves durable acquisition and readable
@@ -32,6 +33,7 @@ export function createSpotifyLyricsService(dependencies={}) {
     getDefaultRomanizationSystemFn=getDefaultRomanizationSystem,getProcessorFn=getProcessor,formatMusicResponseFn=formatMusicResponse,
     getCachedFn=getCached,setCachedFn=setLyricsCached,providerTimeoutMs=6000,cacheTimeoutMs=300,hedgeDelayMs=350,untimedGraceMs=2500,wordTimingGraceMs=providerTimeoutMs,
     rejectRecordingLyricsFn=isRejectedRecordingLyrics,analyzeLyricLanguageFn=analyzeLyricLanguage,waitUntilFn=waitUntil,logger=console,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800,neteaseSourceHintBudgetMs=2500}=dependencies;
+  const resolveArtistIdentities=dependencies.resolveArtistIdentitiesFn??createArtistIdentityResolver({redis,getFn:getCachedFn,setFn:setCachedFn,now:contextNow,cacheTimeoutMs});
   const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,sourceNames:NETEASE_TITLE_CAPABILITY,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY,vocalSelection:VOCAL_SELECTION_CAPABILITY,languageEvidence:PROVIDER_LANGUAGE_EVIDENCE_VERSION}});
   const cache=new BoundedCache(),inflight=new Map();let latestStart=0;
   const validCached=(entry,r)=>{
@@ -98,10 +100,12 @@ export function createSpotifyLyricsService(dependencies={}) {
         };
         const lookup=async(api,parentSignal,localization=null)=>{
           const label=api.name.replace(/[^a-zA-Z0-9_]/g,'');
-          let hintCandidate=null;
+          let hintCandidate=null,identityLookup;
           try {
             return await withDeadline(async signal=>{
-              const searchTarget=localization?{...target,artist:localization.names.join(' & '),creditedArtistNames:localization.names}:target;
+              const localized=localization?{...target,artist:localization.names.join(' & '),creditedArtistNames:localization.names}:target;
+              const searchTarget={...localized,...(target.creditedArtistIDs?{resolveArtistIdentities:({signal})=>
+                identityLookup??=measure('artist_identity_lookup',()=>resolveArtistIdentities(target.creditedArtistIDs,{signal,refresh:options.refresh===true}))}:{})};
               const {artist,title,...context}=searchTarget;
               const validateSource=async(song,raw)=>{
                 if(!song)return null;
@@ -207,7 +211,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         const candidate={id:String(song.id),title:song.title,artist:song.artist,duration:song.duration,
           ...(song.neteaseTitleEvidence||song.artistAliasEvidence?{source:'netease'}:{}),
           ...Object.fromEntries(['neteaseTitleEvidence','artistAliasEvidence'].filter(k=>song[k]!==undefined).map(k=>[k,structuredClone(song[k])])),
-          ...Object.fromEntries(['album','creditedArtistNames','isrc','explicit'].filter(k=>song[k]!==undefined).map(k=>[k,song[k]]))};
+          ...Object.fromEntries(['album','creditedArtistNames','creditedArtistIDs','isrc','explicit'].filter(k=>song[k]!==undefined).map(k=>[k,song[k]]))};
         const entry={response,candidate,metadata:{acquisition_started_at:acquisitionStartedAt}};
         if(canHint)verifiedContext=verifiedContext??contexts.spotify(r,response,acquisitionStartedAt);
         if(verifiedContext)contexts.save(contexts.hint(verifiedContext,selected,acquisitionStartedAt));

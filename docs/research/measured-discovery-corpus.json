@@ -8,7 +8,8 @@
     "Public catalog metadata, no acoustic or stock Dynamic Lyrics verification.",
     "Refresh bypasses client/response caches; upstream network caches remain uncontrolled.",
     "Every case uses ordinary production discovery and unchanged deadlines.",
-    "The Chinese expansion is a convenience sample across ten additional artists, not a random estimate or stock-app parity test."
+    "The Chinese expansion is a convenience sample across ten additional artists, not a random estimate or stock-app parity test.",
+    "Artist IDs, where present, were hydrated from the exact Spotify track on 2026-10-28 only when the complete ordered contributor labels agreed. No artist IDs were inferred or matched by song title."
   ],
   "cases": [
     {
@@ -224,7 +225,10 @@
             ],
             "album": "如果雨之後",
             "duration_ms": 258954,
-            "explicit": false
+            "explicit": false,
+            "artist_ids": [
+              "5fEQLwq1BWWQNR8GzhOIvi"
+            ]
           }
         }
       }
@@ -247,7 +251,10 @@
             ],
             "album": "她說",
             "duration_ms": 249248,
-            "explicit": false
+            "explicit": false,
+            "artist_ids": [
+              "7Dx7RhX0mFuXhCOUgB01uM"
+            ]
           }
         }
       }
@@ -270,7 +277,10 @@
             ],
             "album": "我等你",
             "duration_ms": 341400,
-            "explicit": false
+            "explicit": false,
+            "artist_ids": [
+              "6qzfo7jiO4OrhxrvPFPlWX"
+            ]
           }
         }
       }
@@ -293,7 +303,10 @@
             ],
             "album": "ELEMENTS -國語歌曲",
             "duration_ms": 230813,
-            "explicit": false
+            "explicit": false,
+            "artist_ids": [
+              "4VhiuMC32Qj7pVW3e6Nlms"
+            ]
           }
         }
       }
@@ -316,7 +329,10 @@
             ],
             "album": "Parachutes",
             "duration_ms": 266773,
-            "explicit": false
+            "explicit": false,
+            "artist_ids": [
+              "4gzpq5DPGxSnKTe4SA8HAU"
+            ]
           }
         }
       }
@@ -339,7 +355,10 @@
             ],
             "album": "Viva La Vida or Death and All His Friends",
             "duration_ms": 242373,
-            "explicit": false
+            "explicit": false,
+            "artist_ids": [
+              "4gzpq5DPGxSnKTe4SA8HAU"
+            ]
           }
         }
       }
@@ -362,7 +381,10 @@
             ],
             "album": "÷ (Deluxe)",
             "duration_ms": 233712,
-            "explicit": false
+            "explicit": false,
+            "artist_ids": [
+              "6eUKZXaKkcviH0Ku9w2n3V"
+            ]
           }
         }
       }
@@ -385,7 +407,10 @@
             ],
             "album": "25",
             "duration_ms": 295493,
-            "explicit": false
+            "explicit": false,
+            "artist_ids": [
+              "4dpARuHxo51G3z768sgnrY"
+            ]
           }
         }
       }
@@ -408,7 +433,10 @@
             ],
             "album": "SOUR",
             "duration_ms": 242013,
-            "explicit": true
+            "explicit": true,
+            "artist_ids": [
+              "1McMsnEElThX1knmY4oliG"
+            ]
           }
         }
       }
@@ -431,7 +459,10 @@
             ],
             "album": "アイドル",
             "duration_ms": 213233,
-            "explicit": false
+            "explicit": false,
+            "artist_ids": [
+              "64tJ2EAv1R6UaZqc4iOCyj"
+            ]
           }
         }
       }
@@ -454,7 +485,10 @@
             ],
             "album": "Love poem",
             "duration_ms": 217053,
-            "explicit": false
+            "explicit": false,
+            "artist_ids": [
+              "3HqSLMAZ3g3d5poNaI7GOU"
+            ]
           }
         }
       }
@@ -489,7 +523,10 @@
               "黃小琥"
             ],
             "album": "簡單不簡單",
-            "duration_ms": 310133
+            "duration_ms": 310133,
+            "artist_ids": [
+              "6KCusBln9NTESgcuI0DlUz"
+            ]
           }
         }
       }
@@ -512,7 +549,11 @@
               "Fei Yu-ching"
             ],
             "album": "依然范特西",
-            "duration_ms": 256372
+            "duration_ms": 256372,
+            "artist_ids": [
+              "2elBjNSdBE2Y3f0j1mjrql",
+              "6aSJ9LaNaHOKiPchLDYGYl"
+            ]
           }
         }
       }
@@ -535,7 +576,11 @@
               "Faye Wong"
             ],
             "album": "Stranger Under My Skin",
-            "duration_ms": 216893
+            "duration_ms": 216893,
+            "artist_ids": [
+              "2QcZxAgcs2I1q7CtCkl6MI",
+              "3df3XLKuqTQ6iOSmi0K3Wp"
+            ]
           }
         }
       }
@@ -555,7 +600,10 @@
               "Jacky Cheung"
             ],
             "album": "吻別",
-            "duration_ms": 302093
+            "duration_ms": 302093,
+            "artist_ids": [
+              "1Hu58yHg2CXNfDhlPd7Tdd"
+            ]
           }
         }
       },
@@ -580,7 +628,10 @@
               "Andy Lau"
             ],
             "album": "忘情水",
-            "duration_ms": 266000
+            "duration_ms": 266000,
+            "artist_ids": [
+              "2n3uDrupL8UtFSeZhY38MS"
+            ]
           }
         }
       },
@@ -605,7 +656,10 @@
               "Teresa Teng"
             ],
             "album": "鄧麗君15週年",
-            "duration_ms": 206293
+            "duration_ms": 206293,
+            "artist_ids": [
+              "3ienC90A5I1X3irDyQoqWZ"
+            ]
           }
         }
       },
@@ -630,7 +684,10 @@
               "Faye Wong"
             ],
             "album": "唱遊",
-            "duration_ms": 256026
+            "duration_ms": 256026,
+            "artist_ids": [
+              "3df3XLKuqTQ6iOSmi0K3Wp"
+            ]
           }
         }
       },
@@ -655,7 +712,10 @@
               "Mayday"
             ],
             "album": "神的孩子都在跳舞",
-            "duration_ms": 261618
+            "duration_ms": 261618,
+            "artist_ids": [
+              "16s0YTFcyjP4kgFwt7ktrY"
+            ]
           }
         }
       },
@@ -680,7 +740,10 @@
               "Wu Bai"
             ],
             "album": "愛情的盡頭",
-            "duration_ms": 391026
+            "duration_ms": 391026,
+            "artist_ids": [
+              "5H8TJITZE1sPjVR2ACzXNS"
+            ]
           }
         }
       },
@@ -705,7 +768,10 @@
               "A-Mei Chang"
             ],
             "album": "BAD BOY",
-            "duration_ms": 318333
+            "duration_ms": 318333,
+            "artist_ids": [
+              "6noxsCszBEEK04kCehugOp"
+            ]
           }
         }
       },
@@ -730,7 +796,10 @@
               "JJ Lin"
             ],
             "album": "第二天堂",
-            "duration_ms": 265000
+            "duration_ms": 265000,
+            "artist_ids": [
+              "7Dx7RhX0mFuXhCOUgB01uM"
+            ]
           }
         }
       },
@@ -755,7 +824,10 @@
               "David Tao"
             ],
             "album": "陶喆同名專輯",
-            "duration_ms": 269533
+            "duration_ms": 269533,
+            "artist_ids": [
+              "40tNK2YedBV2jRFAHxpifB"
+            ]
           }
         }
       },
@@ -780,7 +852,10 @@
               "Stefanie Sun"
             ],
             "album": "The Moment",
-            "duration_ms": 209760
+            "duration_ms": 209760,
+            "artist_ids": [
+              "0SIXZXJCAhNU8sxK0qm7hn"
+            ]
           }
         }
       },
@@ -805,7 +880,10 @@
               "Jay Chou"
             ],
             "album": "Mojito",
-            "duration_ms": 185008
+            "duration_ms": 185008,
+            "artist_ids": [
+              "2elBjNSdBE2Y3f0j1mjrql"
+            ]
           }
         }
       },
@@ -826,7 +904,10 @@
               "Zhang Yu Sheng"
             ],
             "album": "天天想你",
-            "duration_ms": 252866
+            "duration_ms": 252866,
+            "artist_ids": [
+              "3LefT7hR0PJgShJNQoPns5"
+            ]
           }
         }
       },

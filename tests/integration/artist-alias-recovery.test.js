@@ -9,10 +9,13 @@ import {publicDocument} from '../../api/utils/song-library/public-content.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 import {recoveryCorpus,fixtureAPI} from '../helpers/artist-alias-recovery.js';
 import {libraryDB} from '../helpers/library-db.js';
+import {createArtistIdentityResolver} from '../../api/utils/artist-identities.js';
+import {identityCatalog} from '../helpers/artist-identities.js';
 
 test('all recovery positives, existing controls and adversarial negatives retain expected source identity',async()=>{
   for(const row of recoveryCorpus().cases) {
     const {api,calls}=fixtureAPI(NeteaseAPI,row),target=spotifySearchRequest(row.recording);
+    if(row.recording.metadata.artist_ids){const resolve=createArtistIdentityResolver({fetchFn:identityCatalog(row.recording,row.songs[0],row.profiles).fetchFn});target.resolveArtistIdentities=()=>resolve(row.recording.metadata.artist_ids);}
     let id=null;
     try{id=String((await api.searchSong(target.artist,target.title,target))?.id??'')||null;}
     catch(error){assert.equal(error.code,'recording_mismatch',row.caseID);}

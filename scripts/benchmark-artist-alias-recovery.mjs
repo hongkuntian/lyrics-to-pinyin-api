@@ -7,6 +7,8 @@ import {pathToFileURL,fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 import {runCatalogBenchmark} from './benchmark-catalog-word-timing.mjs';
 import {recoveryCorpus,fixtureAPI} from '../tests/helpers/artist-alias-recovery.js';
+import {identityCatalog} from '../tests/helpers/artist-identities.js';
+import {createArtistIdentityResolver} from '../api/utils/artist-identities.js';
 
 const percentile=(values,p)=>{const sorted=[...values].sort((a,b)=>a-b);return sorted.length?sorted[Math.ceil(sorted.length*p)-1]:null;};
 const counts=calls=>({total:calls.length,search:calls.filter(c=>c.path==='/search').length,
@@ -22,7 +24,9 @@ export async function evaluateRecovery({roots,runs=3,delayMS=20,cases=recoveryCo
   for(const row of cases) {
     const latest=new Map(),modes=modules.map(m=>({id:m.id,createService:()=>{
       const f=fixtureAPI(m.NeteaseAPI,row,{delayMS});
-      const service=m.createService({redis:null,getAvailableAPIsFn:()=>[f.api],logger:{info(){},error(){}}});
+      const resolveArtistIdentitiesFn=row.recording.metadata.artist_ids
+        ?createArtistIdentityResolver({fetchFn:identityCatalog(row.recording,row.songs[0],row.profiles).fetchFn}):undefined;
+      const service=m.createService({redis:null,getAvailableAPIsFn:()=>[f.api],resolveArtistIdentitiesFn,logger:{info(){},error(){}}});
       return async(req,res)=>{await service(req,res);latest.set(m.id,{calls:counts(f.calls),queries:f.calls.filter(c=>c.path==='/search').map(c=>c.query)});};
     }}));
     await runCatalogBenchmark({corpus:{version:1,cases:[{caseID:row.caseID,platform:'spotify',request:{recording:row.recording}}],limitations:[]},

@@ -9,6 +9,11 @@ import {makeDocument} from '../../api/utils/song-library/document.js';
 import {publicDocument} from '../../api/utils/song-library/public-content.js';
 import {spotifySearchRequest,verifySpotifyBinding,sourceCapsule} from '../../api/utils/song-library/spotify-recording.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
+import {createArtistIdentityResolver} from '../../api/utils/artist-identities.js';
+import {identityCatalog} from '../helpers/artist-identities.js';
+import {recoveredArtistNames} from '../../api/utils/artist-alias-recovery.js';
+const resolverFor=(recording,song,profiles)=>createArtistIdentityResolver({fetchFn:identityCatalog(recording,song,profiles).fetchFn});
+const identityTarget=(recording,resolve)=>({...spotifySearchRequest(recording),resolveArtistIdentities:({signal}={})=>resolve(recording.metadata.artist_ids,{signal})});
 
 // Request ID is synthetic. Provider IDs/names/aliases were observed live;
 // performed words are original test fixtures.
@@ -47,7 +52,7 @@ test('Spotify English contributor names resolve only through each independent pr
 // Metadata observed from Spotify and NetEase on 2026-10-26. Only the lyrics
 // below are invented; the two-second catalog duration discrepancy is real.
 const qianLiRecording={version:2,provider:'spotify',item_id:'3Pjp7lBM20zYzTlRurI6B7',metadata:{origin:'spotify',
-  title:'千里之外',artists:['Jay Chou','Fei Yu-ching'],album:'依然范特西',duration_ms:256372}};
+  title:'千里之外',artists:['Jay Chou','Fei Yu-ching'],artist_ids:['2elBjNSdBE2Y3f0j1mjrql','6aSJ9LaNaHOKiPchLDYGYl'],album:'依然范特西',duration_ms:256372}};
 const qianLiSong={id:185880,name:'千里之外',artists:[{id:6452,name:'周杰伦'},{id:2747,name:'费玉清'}],
   album:{name:'依然范特西'},duration:254373};
 const qianLiProfiles={6452:{id:6452,name:'周杰伦',alias:['Jay Chou','周董']},
@@ -56,26 +61,26 @@ const qianLiLyrics={code:200,lrc:{lyric:'[00:12]一起听\n[00:18]慢慢唱'},
   yrc:{lyric:'[12000,2000](12000,1000,0)一起(13000,1000,0)听\n[18000,2000](18000,1000,0)慢慢(19000,1000,0)唱'}};
 const qianLiFixture=options=>fixture({song:qianLiSong,performerProfiles:qianLiProfiles,lyricPayload:qianLiLyrics,...options});
 
-test('reviewed Fei Yu-ching alias admits the exact duet through search and fresh source-ID lookup',async()=>{
-  const {api,calls}=qianLiFixture(),target=spotifySearchRequest(qianLiRecording);
+test('automatic artist identity admits the exact duet through search and fresh source-ID lookup without a registry',async()=>{
+  const {api,calls}=qianLiFixture(),target=identityTarget(qianLiRecording,resolverFor(qianLiRecording,qianLiSong,qianLiProfiles));
   const song=await api.searchSong(target.artist,target.title,target);
   assert.equal(song.id,185880);
-  assert.deepEqual(song.creditedArtistNames,['Jay Chou','Fei Yu-ching']);
+  assert.deepEqual(recoveredArtistNames(song,target),['Jay Chou','Fei Yu-ching']);
   assert.equal(song.artist,'周杰伦 & 费玉清');
   const {api:fresh,fetchFn}=qianLiFixture(),source=await fresh.getRecording(185880,{...target,fetchFn});
-  assert.deepEqual(source.song.creditedArtistNames,['Jay Chou','Fei Yu-ching']);
+  assert.deepEqual(recoveredArtistNames(source.song,target),['Jay Chou','Fei Yu-ching']);
   assert.ok(source.lyrics.lines.every(line=>line.vocalTiming));
   assert.equal(calls.filter(u=>u.pathname==='/artist/detail').length,2);
 });
 
-test('reviewed artist aliases require the fresh provider ID, name and anchor alias without weakening recording checks',async()=>{
-  const target=spotifySearchRequest(qianLiRecording);
+test('automatic artist aliases require fresh profile corroboration without weakening recording checks',async()=>{
+  const target=identityTarget(qianLiRecording,resolverFor(qianLiRecording,qianLiSong,qianLiProfiles));
   for(const options of [
     {changeProfile:p=>p.id===2747?{...p,id:999}:p},
     {changeProfile:p=>p.id===2747?{...p,name:'Other Singer'}:p},
     {changeProfile:p=>p.id===2747?{...p,alias:['Other Singer']}:p},
     {song:{...qianLiSong,artists:[qianLiSong.artists[0],{id:999,name:'费玉清'}]},
-      performerProfiles:{...qianLiProfiles,999:{...qianLiProfiles[2747],id:999}}},
+      performerProfiles:{...qianLiProfiles,999:qianLiProfiles[2747]}},
     {song:{...qianLiSong,name:'千里之外 (Live)'}},
     {song:{...qianLiSong,duration:260000}},
     {song:{...qianLiSong,artists:[qianLiSong.artists[0]]}}
@@ -92,6 +97,7 @@ test('the reported Spotify duet keeps NetEase measured timing through acquisitio
   const {db,store}=await libraryDB();t.after(()=>db.close());
   const {api}=qianLiFixture();
   const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}},
+    resolveArtistIdentitiesFn:resolverFor(qianLiRecording,qianLiSong,qianLiProfiles),
     resolveCatalogAliasesFn:()=>assert.fail('Spotify must not use Apple aliases')});
   const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(service),
     authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
@@ -220,12 +226,12 @@ test('authenticated library route stores and reopens localized Spotify lyrics un
 // Fresh catalog metadata matches the original Spotify album and millisecond
 // duration. NetEase lists Tom Chang but omits Spotify's Zhang Yu Sheng label.
 const zhangRecording={version:2,provider:'spotify',item_id:'1123456789ABCDEFGHIJKL',metadata:{origin:'spotify',
- title:'天天想你',artists:['Zhang Yu Sheng'],album:'天天想你',duration_ms:252866}};
+ title:'天天想你',artists:['Zhang Yu Sheng'],artist_ids:['3LefT7hR0PJgShJNQoPns5'],album:'天天想你',duration_ms:252866}};
 const zhangSong={id:188177,name:'天天想你',artists:[{id:6459,name:'张雨生'}],album:{name:'天天想你'},duration:252866};
 const zhangProfile={6459:{id:6459,name:'张雨生',alias:['Tom Chang','小宝']}};
 
 const ameiRecording={version:2,provider:'spotify',item_id:'2123456789ABCDEFGHIJKL',metadata:{origin:'spotify',
- title:'聽海',artists:['A-Mei Chang'],album:'BAD BOY',duration_ms:318333}};
+ title:'聽海',artists:['A-Mei Chang'],artist_ids:['6noxsCszBEEK04kCehugOp'],album:'BAD BOY',duration_ms:318333}};
 const ameiSong={id:327584,name:'听海',artists:[{id:10559,name:'张惠妹'}],album:{name:'BAD BOY'},duration:318626};
 const ameiProfile={10559:{id:10559,name:'张惠妹',alias:['aMEI','阿妹','阿密特']}};
 for(const [label,recording,song,profiles] of [
@@ -233,27 +239,27 @@ for(const [label,recording,song,profiles] of [
  ['A-Mei Chang',ameiRecording,ameiSong,ameiProfile],
 ]) {
  const identityFixture=options=>fixture({song,performerProfiles:profiles,lyricPayload:qianLiLyrics,...options});
- test(`${label}: reviewed identity admits the exact album through search and fresh source-ID lookup`,async()=>{
-  const target=spotifySearchRequest(recording),f=identityFixture();
+ test(`${label}: automatic identity admits the exact album through search and fresh source-ID lookup`,async()=>{
+  const target=identityTarget(recording,resolverFor(recording,song,profiles)),f=identityFixture();
   const found=await f.api.searchSong(target.artist,target.title,target);
-  assert.equal(found.id,song.id);assert.equal(found.artist,song.artists[0].name);assert.deepEqual(found.creditedArtistNames,recording.metadata.artists);
+  assert.equal(found.id,song.id);assert.equal(found.artist,song.artists[0].name);assert.deepEqual(recoveredArtistNames(found,target),recording.metadata.artists);
   const fresh=identityFixture(),result=await fresh.api.getRecording(song.id,{...target,fetchFn:fresh.fetchFn});
-  assert.deepEqual(result.song.creditedArtistNames,recording.metadata.artists);assert.ok(result.lyrics.lines.every(l=>l.vocalTiming));
+  assert.deepEqual(recoveredArtistNames(result.song,target),recording.metadata.artists);assert.ok(result.lyrics.lines.every(l=>l.vocalTiming));
  });
  test(`${label}: changed profile anchors, provider IDs and recording versions remain refused`,async()=>{
-  const target=spotifySearchRequest(recording),profile=profiles[song.artists[0].id];
+  const target=identityTarget(recording,resolverFor(recording,song,profiles)),profile=profiles[song.artists[0].id];
   for(const options of [
    {changeProfile:p=>({...p,id:999})},{changeProfile:p=>({...p,name:'Another Singer'})},
    {changeProfile:p=>({...p,alias:['Another Alias']})},
    {song:{...song,name:song.name+' (Live)'}},{song:{...song,duration:song.duration+10000}},
-   {song:{...song,artists:[{id:999,name:song.artists[0].name}]},performerProfiles:{999:{...profile,id:999}}},
+   {song:{...song,artists:[{id:999,name:song.artists[0].name}]},performerProfiles:{999:profile}},
   ]) {
    const f=identityFixture(options);await assert.rejects(()=>f.api.searchSong(target.artist,target.title,target),{code:'recording_mismatch'});
   }
  });
  test(`${label}: measured cues survive actual library acquisition and reopen`,async t=>{
   const {db,store}=await libraryDB();t.after(()=>db.close());const {api}=identityFixture();
-  const acquisition=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}}});
+  const acquisition=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],resolveArtistIdentitiesFn:resolverFor(recording,song,profiles),logger:{info(){},error(){}}});
   const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(acquisition),
    authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
   const call=async body=>{const req=createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res=createMockRes();await handler(req,res);return res;};
@@ -266,3 +272,30 @@ for(const [label,recording,song,profiles] of [
   assert.equal(Number((await store.usage()).jobs),0);
  });
 }
+
+test('cached external aliases cannot authorize another catalog artist ID or a names-only request',async()=>{
+ const {api}=fixture({song:zhangSong,performerProfiles:zhangProfile,lyricPayload:qianLiLyrics});
+ let lookups=0;const resolve=resolverFor(zhangRecording,zhangSong,zhangProfile);
+ const fallback=new LRCAPI();fallback.searchSong=async(artist,title,c)=>({id:900,artist,title,album:c.album,duration:c.duration,source:'lrclib',creditedArtistNames:c.creditedArtistNames});
+ fallback.getLyrics=async()=>({source:'lrclib',songId:900,lines:[{text:'一起听',timestamp:12},{text:'慢慢唱',timestamp:18}]});
+ const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api,fallback],resolveArtistIdentitiesFn:async(...args)=>{lookups++;return resolve(...args);},logger:{info(){},error(){}}});
+ const call=async recording=>{const res=createMockRes();await service(createMockReq({body:{recording,options:{lyric_sources_version:2}}}),res);assert.equal(res.statusCode,200);return res.body;};
+ const first=await call(zhangRecording);assert.ok(first.lines.every(l=>l.vocalTiming));assert.ok(lookups>0);
+ const different={...zhangRecording,metadata:{...zhangRecording.metadata,artist_ids:['6noxsCszBEEK04kCehugOp']}};
+ const wrong=await call(different);assert.equal(wrong.metadata.source,'LRCAPI');assert.ok(wrong.lines.every(l=>!l.vocalTiming));
+ assert.notEqual(wrong.recordingBinding.requestHash,first.recordingBinding.requestHash);
+ const calls=lookups,{artist_ids,...metadata}=zhangRecording.metadata;
+ const missing=await call({...zhangRecording,metadata});assert.equal(missing.metadata.source,'LRCAPI');assert.equal(lookups,calls);
+ assert.ok((await call(zhangRecording)).lines.every(l=>l.vocalTiming),'correct identity remains cached independently');
+});
+test('an unavailable identity resolver preserves readable fallback and cannot downgrade an existing measured library document',async t=>{
+ const {db,store}=await libraryDB();t.after(()=>db.close());let available=true;
+ const {api}=fixture({song:zhangSong,performerProfiles:zhangProfile,lyricPayload:qianLiLyrics}),resolve=resolverFor(zhangRecording,zhangSong,zhangProfile);
+ const fallback=new LRCAPI();fallback.searchSong=async(artist,title,c)=>({id:900,artist,title,album:c.album,duration:c.duration,source:'lrclib',creditedArtistNames:c.creditedArtistNames});
+ fallback.getLyrics=async()=>({source:'lrclib',songId:900,lines:[{text:'一起听',timestamp:12},{text:'慢慢唱',timestamp:18}]});
+ const acquisition=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api,fallback],resolveArtistIdentitiesFn:async(...args)=>available?resolve(...args):[],logger:{info(){},error(){}}});
+ const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(acquisition),authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
+ const call=async()=>{const res=createMockRes();await handler(createMockReq({body:{action:'lyrics',recording:zhangRecording,refresh:true},headers:{authorization:'Bearer lyra_s_fixture'}}),res);assert.equal(res.statusCode,200);return res.body.document;};
+ const first=await call();assert.ok(first.response.lines.every(l=>l.vocalTiming));available=false;
+ const retained=await call();assert.equal(retained.id,first.id);assert.deepEqual(retained.response.lines,first.response.lines);
+});

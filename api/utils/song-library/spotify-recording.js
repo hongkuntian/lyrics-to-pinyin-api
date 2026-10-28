@@ -20,8 +20,9 @@ export function spotifyRecording(value) {
   const m=value?.metadata;
   if(!keys(value,['version','provider','item_id','requested_item_id','market','metadata'])||value.version!==2||value.provider!=='spotify'||!id(value.item_id)
     ||('requested_item_id' in value&&!id(value.requested_item_id))||('market' in value&&(typeof value.market!=='string'||!/^[A-Z]{2}$/.test(value.market)))
-    ||!keys(m,['origin','title','artists','album','duration_ms','isrc','explicit'])||m.origin!=='spotify'||!name(m.title)
+    ||!keys(m,['origin','title','artists','artist_ids','album','duration_ms','isrc','explicit'])||m.origin!=='spotify'||!name(m.title)
     ||!Array.isArray(m.artists)||m.artists.length<1||m.artists.length>32||!m.artists.every(value=>name(value))
+    ||('artist_ids' in m&&(!Array.isArray(m.artist_ids)||m.artist_ids.length!==m.artists.length||!m.artist_ids.every(id)||new Set(m.artist_ids).size!==m.artist_ids.length))
     ||!Number.isInteger(m.duration_ms)||m.duration_ms<1||m.duration_ms>7200000
     ||('album' in m&&!name(m.album))||('isrc' in m&&(typeof m.isrc!=='string'||!/^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$/.test(m.isrc)))
     ||('explicit' in m&&typeof m.explicit!=='boolean'))throw new LibraryError('invalid_recording',400);
@@ -54,12 +55,12 @@ export function canonicalJSON(value) {
 export const spotifyHash=value=>createHash('sha256').update(canonicalJSON(value),'utf8').digest('hex');
 export function spotifyRequestHash(value) {
   const r=spotifyRecording(value),m=r.metadata;
-  return spotifyHash(['spotify-request-2',r.item_id,r.requested_item_id??null,r.market??null,m.title,m.artists,m.album??null,m.duration_ms,m.isrc??null,m.explicit??null]);
+  return spotifyHash(['spotify-request-2',r.item_id,r.requested_item_id??null,r.market??null,m.title,m.artists,m.album??null,m.duration_ms,m.isrc??null,m.explicit??null,...(m.artist_ids?[m.artist_ids]:[])]);
 }
 export const spotifyRecordingKey=r=>spotifyHash(['spotify-recording-2',spotifyRecording(r).item_id]);
 export function spotifySearchRequest(value) {
   const r=spotifyRecording(value),m=r.metadata;
-  return {recordingProvider:'spotify',recordingItemID:r.item_id,creditedArtistNames:[...m.artists],artist:m.artists.join(' & '),title:m.title,
+  return {recordingProvider:'spotify',recordingItemID:r.item_id,creditedArtistNames:[...m.artists],...(m.artist_ids?{creditedArtistIDs:[...m.artist_ids]}:{}),artist:m.artists.join(' & '),title:m.title,
     ...(m.album!==undefined?{album:m.album}:{}),duration:m.duration_ms/1000,...(m.isrc?{isrc:m.isrc}:{}),...(m.explicit!==undefined?{explicit:m.explicit}:{})};
 }
 // Legacy source-only documents may predate structured candidate evidence.
@@ -99,7 +100,7 @@ export function spotifyHashes(r,s,selectionRevision) {
   const timingRevision=spotifyHash(['spotify-timing-2',recordingKey,s.provider,s.itemID,textRevision,s.lines.map(l=>[l.original,l.timestamp??null,l.vocalTiming??null]),s.lyricTiming??null]);
   const readingRevision=spotifyHash(['spotify-reading-2',textRevision,s.romanizationSystem,s.lines.map(l=>l.romanized)]);
   const sourceHash=spotifyHash(['spotify-source-2',s.provider,s.itemID,contextHash,s.language,s.romanizationSystem,s.lines,s.structure,s.lyricTiming??null]);
-  const documentID=spotifyHash(['spotify-document-2',recordingKey,sourceHash,selectionRevision]);
+  const documentID=spotifyHash(r.metadata.artist_ids?['spotify-document-artist-ids-1',recordingKey,sourceHash,selectionRevision,requestHash]:['spotify-document-2',recordingKey,sourceHash,selectionRevision]);
   return {recordingKey,requestHash,contextHash,textRevision,timingRevision,readingRevision,sourceHash,documentID};
 }
 export function synchronizationEligible(response) {

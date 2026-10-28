@@ -6,6 +6,8 @@ const name=x=>typeof x==='string'&&x.trim()&&[...x].length<=500&&!/[\u0000-\u001
 export function observedRecording(item){
  if(!item||item.type!=='track'||item.is_local||!/^[A-Za-z0-9]{22}$/.test(item.id??'')||!name(item.name)||!Array.isArray(item.artists)||!item.artists.length||item.artists.length>32||item.artists.some(a=>!name(a.name))||!Number.isSafeInteger(item.duration_ms)||item.duration_ms<1||item.duration_ms>7200000)return null;
  const metadata={origin:'spotify',title:item.name,artists:item.artists.map(a=>a.name),duration_ms:item.duration_ms};
+ const artistIDs=item.artists.map(a=>a.id);
+ if(artistIDs.every(v=>typeof v==='string'&&/^[A-Za-z0-9]{22}$/.test(v))&&new Set(artistIDs).size===artistIDs.length)metadata.artist_ids=artistIDs;
  if(name(item.album?.name))metadata.album=item.album.name;
  if(/^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$/.test(item.external_ids?.isrc??''))metadata.isrc=item.external_ids.isrc;
  if(typeof item.explicit==='boolean')metadata.explicit=item.explicit;

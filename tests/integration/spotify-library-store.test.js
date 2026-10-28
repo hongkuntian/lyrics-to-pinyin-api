@@ -33,6 +33,35 @@ test('Spotify source, exact request, context and revisions survive reopen and pr
   assert.equal((await db.query('SELECT count(*) AS n FROM catalog_recording_bindings')).rows[0].n,0);
   assert.equal((await db.query('SELECT count(*) AS n FROM recording_lyric_heads')).rows[0].n,0);
 });
+test('artist-ID fingerprints keep separate immutable documents and preserve old learning/job authority',async t=>{
+ const {db,store}=await libraryDB();t.after(()=>db.close());
+ const first=await save(store,A),job=await store.reserve({userID:'reader-a',documentID:first.id,target:'en',recipe:'test',reservedMicros:10000});
+ const before=await store.document(first.id);
+ const withIDs={...A,metadata:{...A.metadata,artist_ids:['1123456789ABCDEFGHIJKL']}},otherIDs={...A,metadata:{...A.metadata,artist_ids:['2123456789ABCDEFGHIJKL']}};
+ const second=await save(store,withIDs),third=await save(store,otherIDs);
+ assert.equal(new Set([first.id,second.id,third.id]).size,3);
+ assert.equal(first.sourceHash,second.sourceHash);assert.equal(second.sourceHash,third.sourceHash);
+ assert.deepEqual(await store.document(first.id),before);assert.equal((await store.existingTranslationJob(first,'en')).id,job.job.id);
+ for(const current of [second,third]) {
+  const shared=await store.existingTranslationJob(current,'en');
+  assert.notEqual(shared.id,job.job.id);assert.equal(shared.documentID,current.id);
+  const alias=(await db.query('SELECT job_id,document_id FROM translation_job_aliases WHERE id=$1',[shared.id])).rows[0];
+  assert.equal(alias.job_id,job.job.id);assert.equal(alias.document_id,current.id);
+ }
+ assert.equal((await store.job(job.job.id)).documentID,first.id,'the original generation remains attached to its admitted document');
+ assert.equal((await db.query('SELECT count(*) AS n FROM translation_jobs')).rows[0].n,1);
+ assert.equal(Number((await store.usage()).accounted_micros),10000,'document aliases do not reserve another generation');
+ for(const [recording,saved] of [[A,first],[withIDs,second],[otherIDs,third]]) {
+  const reopened=await store.documentForRequest(requestKey(recording),policy);assert.equal(reopened.id,saved.id);
+  assert.equal(publicDocument(reopened,recording).recordingBinding.requestHash,requestKey(recording));
+ }
+ assert.throws(()=>publicDocument(first,withIDs),{code:'recording_mismatch'});
+ assert.throws(()=>publicDocument(second,otherIDs),{code:'recording_mismatch'});
+ const owner=await store.claimLookup(requestKey(withIDs),policy);
+ await assert.rejects(store.saveDocument(doc(otherIDs,'new-source'),{lookupOwner:owner,replaceID:third.id}),{code:'lookup_superseded'});
+ await store.releaseLookup(requestKey(withIDs),policy,owner);
+ assert.deepEqual((await store.document(first.id)).response,before.response);
+});
 test('Spotify refresh advances only the leased fingerprint and leaves shared saved source current',async t=>{
   const {db,store}=await libraryDB();t.after(()=>db.close());const original=await save(store,A);await save(store,B);
   const oldB=await store.documentForRequest(requestKey(B),policy),newA=doc(A,'source-2');

@@ -1,9 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createVault} from '../../api/utils/spotify/vault.js';
-import {observePlayback,requestFingerprint} from '../../api/utils/spotify/observation.js';
+import {observePlayback,requestFingerprint,observedRecording} from '../../api/utils/spotify/observation.js';
 import {renderState,immutablePush} from '../../api/utils/spotify/render.js';
 const time=1800000000000;
+test('background catalog observations retain complete artist IDs and never invent a partial contributor mapping',()=>{
+ const ids=['1123456789ABCDEFGHIJKL','2123456789ABCDEFGHIJKL'];
+ const item={type:'track',id:'0123456789ABCDEFGHIJKL',name:'Synthetic',artists:[{id:ids[0],name:'A'},{id:ids[1],name:'Guest'}],duration_ms:240000};
+ const complete=observedRecording(item);assert.deepEqual(complete.metadata.artist_ids,ids);
+ const without=structuredClone(item);delete without.artists[1].id;
+ const partial=observedRecording(without);assert.equal(partial.metadata.artist_ids,undefined);assert.deepEqual(partial.metadata.artists,['A','Guest']);
+ assert.notEqual(requestFingerprint(complete),requestFingerprint(partial));
+ without.artists[1].id=ids[0];assert.equal(observedRecording(without).metadata.artist_ids,undefined);
+});
 test('Spotify vault binds ciphertext to owner/key/epoch/environment and supports bounded key rotation',()=>{
  const context={ownerID:'a',keyID:'k',connectionID:'c',epoch:'e',clientID:'public',environment:'preview'};
  const old=createVault({active:'old',keys:{old:Buffer.alloc(32,1).toString('base64')}});
