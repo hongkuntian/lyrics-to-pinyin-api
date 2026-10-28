@@ -111,6 +111,34 @@ Cached responses containing recognized embedded credits revalidate through the e
 
 New translation or Study reservations against a legacy source that still embeds credits return `source_revision_superseded` before reserving allowance or invoking a model. Existing saved results and already reserved jobs keep their normal reuse/recovery paths.
 
+## Qualified vocal production and recording codes
+
+Assistant-production roles have equivalent Chinese/English labels. Vocal
+production uses complete composed labels: a vocal role (harmony, backing vocals,
+choir, 和声/和音/合声/伴唱/背景人声/合唱) plus an arranging task, or an explicit
+guest modifier plus a vocal role. This recognizes forms such as 制作助理,
+和声编谱 and 友情大合唱 across contributors and recordings. Traditional script,
+spacing and equivalent bilingual assistant labels are compared without rewriting
+retained words. Bare chorus/backing-vocal cues retain their existing corroboration
+requirements; unknown suffixes and arbitrary colon prose remain lyrics.
+
+A complete standalone ISRC also qualifies without an `ISRC` prefix. Recognition
+uses the [IFPI code structure](https://isrc.ifpi.org/images/downloads/ISRC_Handbook.pdf):
+two letters, three alphanumeric characters, two year digits and five designation
+digits, with supported display hyphens. Width normalization is comparison-only.
+Partial codes, numeric barcodes, codes embedded in prose and multiline rows do
+not qualify. The code remains in Song details under the `ISRC` role; it never
+becomes recording-match authority merely because it appeared in a lyric source.
+
+These rules apply at any row position and share normalization, cache refresh
+and generation-preflight classification. Retained vocals keep their order,
+timestamps, word timing and canonical performer mapping. Valid performed-prefix
+evidence protects a sung body even when it spells one of these metadata forms.
+The existing revisions remain unchanged: contaminated cached sources are
+reacquired into new immutable documents, without mutating saved sources or
+regenerating translations. Existing offline app copies need a lyric reload to
+receive this backend cleanup.
+
 ## Provider notices and bracket preservation
 
 `api/data/lyric-notice-policy.json` is the authoritative version-1 declarative

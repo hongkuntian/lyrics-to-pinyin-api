@@ -270,7 +270,10 @@ for(const [creditFamily,creditRows] of [
  ['performer',['男声：单色凌','戏腔：单色凌','和声：曾婕']],
  ['design-engineering',['和声：冯旖旎','混音/母带处理：潘君明','封面设计：米一嗷','联合出品：Practice company']],
  ['ownership',['词版权管理方：Practice publisher','曲版权管理方：Practice publisher',
-   '录音作品及MV版权：Practice company','联合出品：Practice company']]
+   '录音作品及MV版权：Practice company','联合出品：Practice company']],
+ ['vocal-production',['制作助理：Practice assistant','和声编谱：Practice arranger',
+   '友情大合唱：张三/李四/Tiger']],
+ ['recording-code',['TWB819754502']]
 ]) {
 test(`fresh saved ${creditFamily} credits acquire a clean immutable document without mutating the old source`,async t=>{
  let calls=0;

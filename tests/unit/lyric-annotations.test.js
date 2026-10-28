@@ -6,6 +6,72 @@ import {LYRIC_NORMALIZATION_VERSION,hasEmbeddedLyricCredits,normalizeLyricAnnota
 const top={artist:'TOP Debut Boy Group',duration:271.291};
 const rows=texts=>texts.map((text,i)=>({text,timestamp:i*4+1}));
 
+test('assistant production and qualified vocal roles compose without song or contributor exceptions',()=>{
+  const credits=[
+    '制作助理：Practice contributor','助理制作人：Practice contributor',
+    '製作助理 Production Assistant：Practice contributor','Assistant Producer（助理製作人）：Practice contributor',
+    ...['和声','和音','合声','伴唱','背景人声'].flatMap(role=>
+      ['编谱','编写','编曲','编排','编配','设计'].map(action=>`${role}${action}：Practice contributor`)),
+    '和聲編譜：Practice contributor','合唱編排：Practice contributor',
+    '和音编写及演唱：Practice contributor','和声编曲/录音：Practice contributor',
+    'Harmony Arrangement：Practice contributor','Vocal Arrangement：Practice contributor',
+    'Choral Arrangement：Practice contributor','Background Vocals Arranger：Practice contributor',
+    '友情大合唱：张三/李四/Tiger','特邀合唱：Practice contributor',
+    '特别伴唱：Practice contributor','嘉賓和音：Practice contributor',
+    'Guest Backing Vocals：Practice contributor','Guest Choir：Practice contributor'
+  ];
+  const vocal={text:'一起唱',timestamp:20,vocalTiming:{end:22,segments:[
+    {text:'一起唱',start:20,end:22,utf16Start:0,utf16Length:3}]}};
+  for(const credit of credits) {
+    const data={source:'netease',lines:[{text:credit,timestamp:0},vocal,{text:credit,timestamp:23}]};
+    const result=cleanLyrics(data);
+    assert.deepEqual(result.lines,[vocal],credit);
+    assert.deepEqual(result.lyricStructure.sourceRows,[{text:vocal.text,timestamp:20}],credit);
+    assert.deepEqual(result.credits.map(c=>c.original),[credit],credit);
+    assert.equal(result.credits[0].source,'netease');
+    assert.equal(hasEmbeddedLyricCredits({lines:[{original:credit}]}),true,credit);
+    assert.deepEqual(cleanLyrics(result),result,credit);
+  }
+});
+
+test('standalone recording codes use full ISRC syntax and remain available in Song details',()=>{
+  for(const code of ['TWB819754502','USABC2612345','GB-Z99-04-00706','ISRC: US-ABC-26-12345',
+    'ISRC：TW-C23-04-007-06','ＩＳＲＣ：ＵＳＡＢＣ２６１２３４５']) {
+    const data={source:'netease',lines:rows(['一起唱',code,'慢慢听'])};
+    const result=cleanLyrics(data);
+    assert.deepEqual(result.lines,[data.lines[0],data.lines[2]],code);
+    assert.equal(result.credits[0]?.role,'ISRC',code);
+    assert.deepEqual(result.credits[0]?.contributors,[code.normalize('NFKC').replace(/^ISRC[:：]\s*/u,'')]);
+    assert.equal(result.credits[0]?.original,code);
+    assert.equal(hasEmbeddedLyricCredits({lines:[{original:code}]}),true,code);
+    assert.deepEqual(cleanLyrics(result),result,code);
+  }
+});
+
+test('new metadata families preserve ordinary prose, unknown labels, brackets and malformed codes',()=>{
+  const vocals=['制作助理说：一起唱','制作Anything：一起唱','和声编谱着梦：一起唱',
+    '和声编谱Anything：一起唱','友情大合唱的梦：一起唱','Production Assistant to my heart: you',
+    'Harmony Arrangement of love: us','Chorus: sing with me','合唱：一起唱','和声：一起唱',
+    '[友情大合唱]','(和声编谱)','TWB81975450','TWB8197545020','TW-B81-97-54502 是我的暗号',
+    '我的暗号 TWB819754502','123456789012','USABC2X12345','ABCD1234567',
+    'ISRC: USABC2612345\n一起唱','USABC2612345\u2028一起唱','制作助理：Example\n一起唱'];
+  for(const text of vocals) {
+    const data={lines:rows(['制作助理：Example',text,'和声编谱：Example'])};
+    assert.deepEqual(cleanLyrics(data).lines,[data.lines[1]],text);
+    assert.equal(hasEmbeddedLyricCredits({lines:[{original:text}]}),false,text);
+  }
+});
+
+test('verified performed bodies retain credit-like roles and recording codes across cleanup passes',()=>{
+  const texts=['制作助理：一起唱','和声编谱：一起唱','友情大合唱：一起唱','TWB819754502'];
+  const data={lines:rows(texts.map(text=>`Eason Chan：${text}`))};
+  const result=cleanLyrics(data,{artist:'Eason Chan'});
+  assert.deepEqual(result.lines.map(line=>line.text),texts);
+  assert.deepEqual(cleanLyrics(result,{artist:'Eason Chan'}),result);
+  assert.equal(hasEmbeddedLyricCredits({lines:result.lines.map(line=>({original:line.text})),
+    metadata:{lyric_structure:result.lyricStructure}}),false);
+});
+
 const composedCredits=['弦乐 助理：杨波(北京)','1st Violin：陈允、曾诚、王洋','2nd Violin：李博彦、严柯、史丹',
   'C.Bass：邵士玫、张小迪','ISRC：TW-C23-04-007-06','3rd Violins: Ensemble','Principal cello: Musician',
   'Assistant recording engineer: Engineer','弦樂錄音助理：楊波','Guitar technician: Musician',

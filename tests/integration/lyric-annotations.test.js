@@ -13,10 +13,10 @@ const data={source:'netease',lines:[{text:'编曲Arrangement：Example',timestam
   {text:'合：',timestamp:5},{text:'一起唱这首歌',timestamp:6},
   {text:'张极Jeremy：',timestamp:10},{text:'我说：别走',timestamp:11},
   {text:'张泽禹Zack/左航LEFT：再唱一遍',timestamp:20},{text:'一起唱这首歌',timestamp:23}]};
-async function response({reviewed=false,cache}={}) {
+async function response({reviewed=false,cache,input=data}={}) {
   const song={...recording,id:2734065329};
-  const api={name:'NeteaseAPI',searchSong:async()=>song,getLyrics:async()=>data};
-  const candidate={song,lyrics:cleanLyrics(data),api,target:recording};
+  const api={name:'NeteaseAPI',searchSong:async()=>song,getLyrics:async()=>input};
+  const candidate={song,lyrics:cleanLyrics(input),api,target:recording};
   const handler=createMusicRomanizeHandler({redis:cache?{}:null,getCachedFn:async()=>cache,
     setCachedFn:async()=>{},waitUntilFn:()=>{},getAvailableAPIsFn:()=>[api],
     lookupReviewedRecordingFn:async()=>reviewed?candidate:null,lookupOfficialTranscriptionFn:async()=>null,
@@ -115,4 +115,40 @@ test('current-revision ownership credits invalidate cached acquisition without c
  assert.deepEqual(current.lines,fresh.lines);
  assert.equal(current.metadata.selection_revision,fresh.metadata.selection_revision);
  assert.deepEqual(old.lines[0],{original:'词曲版权管理方：Practice publisher',romanized:'credit',timestamp:0});
+});
+
+test('qualified vocal credits and bare recording codes leave romanization and canonical model input',async()=>{
+  const credits=['制作助理：Practice assistant','和声编谱：Practice arranger',
+    '友情大合唱：张三/李四/Tiger','TWB819754502'];
+  const input={...data,lines:[...credits.map(text=>({text,timestamp:0})),...data.lines]};
+  const fresh=await response();
+  for(const reviewed of [false,true]) {
+    const result=await response({input,reviewed});
+    assert.deepEqual(result.lines,fresh.lines);
+    assert.deepEqual(result.metadata.lyric_structure,fresh.metadata.lyric_structure);
+    assert.deepEqual(result.song_details.credits.slice(0,credits.length).map(c=>c.original),credits);
+    const doc=makeDocument(recording,result,result.metadata.selection_revision);
+    const context=JSON.parse(requestBody(doc).input[0].content);
+    assert.deepEqual(context.sourceDocument.occurrences.map(o=>o.lyricText),fresh.lines.map(l=>l.original));
+    assert.ok(!JSON.stringify(context).includes('TWB819754502'));
+  }
+});
+
+test('new credit families refresh current-revision caches into new immutable source identities',async()=>{
+  const fresh=await response();
+  for(const text of ['制作助理：Practice assistant','和声编谱：Practice arranger',
+    '友情大合唱：张三/李四/Tiger','TWB819754502']) {
+    const old=structuredClone(fresh);
+    old.metadata.timestamp=new Date().toISOString();
+    old.lines.splice(1,0,{original:text,romanized:'metadata',timestamp:8});
+    delete old.metadata.lyric_structure;delete old.lyric_structure;
+    const snapshot=structuredClone(old);
+    const oldDoc=makeDocument(recording,old,old.metadata.selection_revision);
+    const current=await response({cache:old});
+    const currentDoc=makeDocument(recording,current,current.metadata.selection_revision);
+    assert.deepEqual(current.lines,fresh.lines,text);
+    assert.notEqual(currentDoc.id,oldDoc.id,text);
+    assert.notEqual(currentDoc.sourceHash,oldDoc.sourceHash,text);
+    assert.deepEqual(old,snapshot,text);
+  }
 });

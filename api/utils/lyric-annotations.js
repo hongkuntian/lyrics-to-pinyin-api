@@ -35,6 +35,7 @@ const roles=[
   [["词曲"],["music and lyrics","lyrics and music"]],
   [["编曲"],["arrangement","arranger","arranged by","music arrangement"]],
   [["制作人","制作"],["producer","produced by","production"]],
+  [["制作助理","助理制作","助理制作人"],["production assistant","assistant producer"]],
   [["配唱制作人","配唱制作"],["vocal producer","vocal production"]],
   [["监制","出品监制"],["executive producer","supervisor"]],
   [["统筹","制作统筹"],["coordinator","coordination"]],
@@ -115,15 +116,24 @@ const ownershipRole=new RegExp([
 ].join(''),'u');
 const artworkRole=/^(?:(?:封面|视觉|平面|美术|海报|包装|字体|视频)(?:设计|制作|统筹|总监|指导|绘制|插画|剪辑|后期|拍摄)|(?:cover|artwork|visual|graphic|poster|packaging|video|typography)(?:design|illustration|direction|production|editing|photography|coordination))$/u;
 const engineeringRole=/^(?:录音|混音|母带)(?:后期)?(?:处理|制作)(?:工程师|师|室|工作室)?$/u;
+// Vocal production combines a bounded vocal role with an explicit arranging
+// task or guest-credit modifier. Bare chorus/backing-vocal cues stay ambiguous.
+const vocalProductionRole=/^(?:(?:和声|和音|合声|伴唱|背景人声|合唱)(?:编谱|编写|编曲|编排|编配|设计)(?:及演唱)?|(?:友情|特邀|特别|嘉宾|客串)(?:大?合唱|和声|和音|合声|伴唱|背景人声)|(?:(?:backing|background)vocals?|vocals?|harmony|choral|choir)(?:arrangement|arranger)|guest(?:(?:backing|background)?vocals?|choir|chorus))$/u;
 function compositeProductionRole(key) {
   const atom=part=>!ambiguousRoles.has(part)
-    && (roleLabels.has(part)||[composedRole,ownershipRole,artworkRole,engineeringRole].some(pattern=>pattern.test(part)));
+    && (roleLabels.has(part)||[composedRole,ownershipRole,artworkRole,engineeringRole,vocalProductionRole].some(pattern=>pattern.test(part)));
   if(atom(key))return true;
   // Admit role lists only when every component is a complete production role.
   const parts=key.split(/[\/&+、及]|and/u);
   return parts.length>1&&parts.every(part=>part&&atom(part));
 }
-const isrcPattern=/^\s*ISRC\s*[:：]?\s*([A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9](?:-?[0-9]){4})\s*$/iu;
+// A whole-row recording code may omit the ISRC label. Never match a code
+// embedded in prose, a partial code, or a different numeric identifier.
+const isrcPattern=/^\s*(?:ISRC\s*[:：]?\s*)?([A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9](?:-?[0-9]){4})\s*$/iu;
+function recordingCode(text) {
+  if(text.length>80 || /[\r\n\v\f\u0085\u2028\u2029]/u.test(text))return null;
+  return text.normalize('NFKC').match(isrcPattern)?.[1]??null;
+}
 const ambiguousRoles=new Set(['chorus','和声','和音','合声','backingvocal','backingvocals']);
 const sourceCredit=/^取材自歌曲[《〈].+[》〉]\s*[（(]\s*[词詞]\s*[:：].+曲\s*[:：].+[）)]$/u;
 const wrappedInstrumentals=new Set(['music','instrumental','interlude','intro','outro','间奏','前奏','尾奏','伴奏','纯音乐']);
@@ -187,8 +197,9 @@ function namedPerformers(label,aliases) {
   return names.length && names.every(Boolean)?[...new Set(names)]:null;
 }
 function creditRole(text,aliases) {
+  if(/[\r\n\v\f\u0085\u2028\u2029]/u.test(text))return null;
   if(sourceCredit.test(text)) return 'source_credit';
-  if(isrcPattern.test(text)) return 'production_credit';
+  if(recordingCode(text)) return 'production_credit';
   const parts=text.match(/^([^:：]+)[:：](.*)$/u);
   if(!parts || parts[1].length>120 || !parts[2].trim()) return null;
   const key=labelKey(parts[1]);
@@ -325,8 +336,8 @@ export function normalizeLyricAnnotations(data,options={}) {
     if(!text || role || (!strippedPrefix && (isInstrumentalMarker(text) || isMusicNotePlaceholder(text)))) {
       if(role && !notice) {
         const match=text.match(/^([^:：]+)[:：]\s*(.+)$/u);
-        const isrc=text.match(isrcPattern);
-        const credit={role:role==='recording_heading'?'Recording':isrc?'ISRC':match?.[1].trim()??'Source',contributors:isrc?[isrc[1]]:match?match[2].split(/\s*[、/／&，,]\s*/u).filter(Boolean):[],
+        const isrc=recordingCode(text);
+        const credit={role:role==='recording_heading'?'Recording':isrc?'ISRC':match?.[1].trim()??'Source',contributors:isrc?[isrc]:match?match[2].split(/\s*[、/／&，,]\s*/u).filter(Boolean):[],
           source:data.source??'unknown',original:text};
         if(!credits.some(c=>c.original===text && c.source===credit.source)) credits.push(credit);
       }
