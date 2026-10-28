@@ -4,7 +4,7 @@ import {isNeteaseMetadataRow} from './netease-metadata.js';
 export const NETEASE_ACQUISITION_CAPABILITY='netease-yrc-1';
 // Acquisition caches must revisit sheets previously downgraded to sibling LRC.
 // Keep the source hash recipe stable for already accepted sung rows and cues.
-export const NETEASE_ACQUISITION_CACHE_CAPABILITY=NETEASE_ACQUISITION_CAPABILITY+':signed-credits-1:structured-lrc-2:structured-yrc-2:measured-releases-1:artist-diacritics-1';
+export const NETEASE_ACQUISITION_CACHE_CAPABILITY=NETEASE_ACQUISITION_CAPABILITY+':signed-credits-1:structured-lrc-2:structured-yrc-2:measured-releases-1:artist-diacritics-1:reviewed-artist-aliases-2';
 const integer=value=>Number.isSafeInteger(value)&&value>=0;
 const number=value=>/^-?\d+$/.test(value)?Number(value):NaN;
 

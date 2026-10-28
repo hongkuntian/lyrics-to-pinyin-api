@@ -38,7 +38,7 @@ test('catalog sample retains both catalogs and every exact reported Spotify reco
  const corpus=JSON.parse(await readFile(new URL('../../docs/research/measured-discovery-corpus.json',import.meta.url),'utf8'));
  assert.ok(corpus.cases.filter(c=>c.platform==='apple').length>=12);
  assert.ok(corpus.cases.filter(c=>c.platform==='spotify').length>=10);
- for(const id of ['46fURCnWErjFdNM2yBJ2c8','56UzFYxgkvxU188BsCKBOc','2wzXhxWPX0aODraKNXoJYY'])assert.ok(corpus.cases.some(c=>c.request.recording?.item_id===id));
+ for(const id of ['46fURCnWErjFdNM2yBJ2c8','56UzFYxgkvxU188BsCKBOc','2wzXhxWPX0aODraKNXoJYY','7BYMjh3vWnHU4IFyfZdIDO','7mubQiRZ1Q94ZN3zCrNbzn','5WD10VSuBAm2YxnaiqQ3eA'])assert.ok(corpus.cases.some(c=>c.request.recording?.item_id===id));
 });
 
 test('larger live sweeps bound case concurrency without dropping or duplicating requests',async()=>{

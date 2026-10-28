@@ -2,12 +2,13 @@
   "version": 1,
   "kind": "live-provider-handler-catalog-sample",
   "capturedAt": "2026-10-21T06:29:49.202Z",
-  "selection": "Preselected 12 existing multilingual coverage examples plus reported songs, and 7 popular Spotify recordings plus the reported items; no outcome-based exclusions.",
+  "selection": "Preselected 12 existing multilingual coverage examples plus reported songs, and 7 popular Spotify recordings plus the reported items; no outcome-based exclusions. Expanded 2026-10-27 with ten Chinese-language catalog recordings frozen before timing measurement plus the two exact reported Spotify items; every result is retained.",
   "limitations": [
     "Convenience sample, not a random catalog-wide estimate.",
     "Public catalog metadata, no acoustic or stock Dynamic Lyrics verification.",
     "Refresh bypasses client/response caches; upstream network caches remain uncontrolled.",
-    "Every case uses ordinary production discovery and unchanged deadlines."
+    "Every case uses ordinary production discovery and unchanged deadlines.",
+    "The Chinese expansion is a convenience sample across ten additional artists, not a random estimate or stock-app parity test."
   ],
   "cases": [
     {
@@ -538,6 +539,298 @@
           }
         }
       }
+    },
+    {
+      "caseID": "spotify-1k0YFNylstvLBC3C5vPWP9",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1k0YFNylstvLBC3C5vPWP9",
+          "metadata": {
+            "origin": "spotify",
+            "title": "吻別",
+            "artists": [
+              "Jacky Cheung"
+            ],
+            "album": "吻別",
+            "duration_ms": 302093
+          }
+        }
+      },
+      "catalogURI": "spotify:track:1k0YFNylstvLBC3C5vPWP9",
+      "catalogURL": "https://open.spotify.com/track/1k0YFNylstvLBC3C5vPWP9?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=fe7e7e5c-622b-4501-beed-e21e553da34c",
+      "artistURIs": [
+        "spotify:artist:1Hu58yHg2CXNfDhlPd7Tdd"
+      ]
+    },
+    {
+      "caseID": "spotify-5ufg2o33urFZ1AQfTxwNZO",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5ufg2o33urFZ1AQfTxwNZO",
+          "metadata": {
+            "origin": "spotify",
+            "title": "忘情水",
+            "artists": [
+              "Andy Lau"
+            ],
+            "album": "忘情水",
+            "duration_ms": 266000
+          }
+        }
+      },
+      "catalogURI": "spotify:track:5ufg2o33urFZ1AQfTxwNZO",
+      "catalogURL": "https://open.spotify.com/track/5ufg2o33urFZ1AQfTxwNZO?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=40c5c544-535d-4cae-bfd9-a751fdc662de",
+      "artistURIs": [
+        "spotify:artist:2n3uDrupL8UtFSeZhY38MS"
+      ]
+    },
+    {
+      "caseID": "spotify-3Srw8isgDzmYsgwDi4MtbD",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3Srw8isgDzmYsgwDi4MtbD",
+          "metadata": {
+            "origin": "spotify",
+            "title": "月亮代表我的心",
+            "artists": [
+              "Teresa Teng"
+            ],
+            "album": "鄧麗君15週年",
+            "duration_ms": 206293
+          }
+        }
+      },
+      "catalogURI": "spotify:track:3Srw8isgDzmYsgwDi4MtbD",
+      "catalogURL": "https://open.spotify.com/track/3Srw8isgDzmYsgwDi4MtbD?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=fe939301-8e70-40d6-9269-2587865c11e7",
+      "artistURIs": [
+        "spotify:artist:3ienC90A5I1X3irDyQoqWZ"
+      ]
+    },
+    {
+      "caseID": "spotify-5l94Up12BJSjhH7Mhr2ji4",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5l94Up12BJSjhH7Mhr2ji4",
+          "metadata": {
+            "origin": "spotify",
+            "title": "紅豆",
+            "artists": [
+              "Faye Wong"
+            ],
+            "album": "唱遊",
+            "duration_ms": 256026
+          }
+        }
+      },
+      "catalogURI": "spotify:track:5l94Up12BJSjhH7Mhr2ji4",
+      "catalogURL": "https://open.spotify.com/track/5l94Up12BJSjhH7Mhr2ji4?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=0d4181bc-2a07-4cd0-9d96-52b76c7e5402",
+      "artistURIs": [
+        "spotify:artist:3df3XLKuqTQ6iOSmi0K3Wp"
+      ]
+    },
+    {
+      "caseID": "spotify-1HvAJPhhs2LnNViKxQ7APT",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "1HvAJPhhs2LnNViKxQ7APT",
+          "metadata": {
+            "origin": "spotify",
+            "title": "倔強",
+            "artists": [
+              "Mayday"
+            ],
+            "album": "神的孩子都在跳舞",
+            "duration_ms": 261618
+          }
+        }
+      },
+      "catalogURI": "spotify:track:1HvAJPhhs2LnNViKxQ7APT",
+      "catalogURL": "https://open.spotify.com/track/1HvAJPhhs2LnNViKxQ7APT?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=c5018b82-99c8-4fe2-bdbf-f92aec110be8",
+      "artistURIs": [
+        "spotify:artist:16s0YTFcyjP4kgFwt7ktrY"
+      ]
+    },
+    {
+      "caseID": "spotify-5KdZLYyoBP0qsjDTDP28do",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5KdZLYyoBP0qsjDTDP28do",
+          "metadata": {
+            "origin": "spotify",
+            "title": "挪威的森林",
+            "artists": [
+              "Wu Bai"
+            ],
+            "album": "愛情的盡頭",
+            "duration_ms": 391026
+          }
+        }
+      },
+      "catalogURI": "spotify:track:5KdZLYyoBP0qsjDTDP28do",
+      "catalogURL": "https://open.spotify.com/track/5KdZLYyoBP0qsjDTDP28do?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=3d2bffda-9810-4de7-9061-b2c0671494ba",
+      "artistURIs": [
+        "spotify:artist:5H8TJITZE1sPjVR2ACzXNS"
+      ]
+    },
+    {
+      "caseID": "spotify-5WD10VSuBAm2YxnaiqQ3eA",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5WD10VSuBAm2YxnaiqQ3eA",
+          "metadata": {
+            "origin": "spotify",
+            "title": "聽海",
+            "artists": [
+              "A-Mei Chang"
+            ],
+            "album": "BAD BOY",
+            "duration_ms": 318333
+          }
+        }
+      },
+      "catalogURI": "spotify:track:5WD10VSuBAm2YxnaiqQ3eA",
+      "catalogURL": "https://open.spotify.com/track/5WD10VSuBAm2YxnaiqQ3eA?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=a539a213-594d-4a6f-a012-c9d8bd39e611",
+      "artistURIs": [
+        "spotify:artist:6noxsCszBEEK04kCehugOp"
+      ]
+    },
+    {
+      "caseID": "spotify-0YgvF6fNWydNGzCY3pzK4Y",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "0YgvF6fNWydNGzCY3pzK4Y",
+          "metadata": {
+            "origin": "spotify",
+            "title": "江南",
+            "artists": [
+              "JJ Lin"
+            ],
+            "album": "第二天堂",
+            "duration_ms": 265000
+          }
+        }
+      },
+      "catalogURI": "spotify:track:0YgvF6fNWydNGzCY3pzK4Y",
+      "catalogURL": "https://open.spotify.com/track/0YgvF6fNWydNGzCY3pzK4Y?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=9cd3c653-df46-47c5-8ebc-98249c204af1",
+      "artistURIs": [
+        "spotify:artist:7Dx7RhX0mFuXhCOUgB01uM"
+      ]
+    },
+    {
+      "caseID": "spotify-3OXHwY8gI2QUh0QliXBwrI",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3OXHwY8gI2QUh0QliXBwrI",
+          "metadata": {
+            "origin": "spotify",
+            "title": "愛, 很簡單",
+            "artists": [
+              "David Tao"
+            ],
+            "album": "陶喆同名專輯",
+            "duration_ms": 269533
+          }
+        }
+      },
+      "catalogURI": "spotify:track:3OXHwY8gI2QUh0QliXBwrI",
+      "catalogURL": "https://open.spotify.com/track/3OXHwY8gI2QUh0QliXBwrI?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=f875e4ac-2eb8-4ff5-9197-856531b59e41",
+      "artistURIs": [
+        "spotify:artist:40tNK2YedBV2jRFAHxpifB"
+      ]
+    },
+    {
+      "caseID": "spotify-3xJK8ywApYVEYIDhymYMC6",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "3xJK8ywApYVEYIDhymYMC6",
+          "metadata": {
+            "origin": "spotify",
+            "title": "遇見",
+            "artists": [
+              "Stefanie Sun"
+            ],
+            "album": "The Moment",
+            "duration_ms": 209760
+          }
+        }
+      },
+      "catalogURI": "spotify:track:3xJK8ywApYVEYIDhymYMC6",
+      "catalogURL": "https://open.spotify.com/track/3xJK8ywApYVEYIDhymYMC6?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=26058363-2d48-499e-b89b-08efeeb48cf1",
+      "artistURIs": [
+        "spotify:artist:0SIXZXJCAhNU8sxK0qm7hn"
+      ]
+    },
+    {
+      "caseID": "spotify-7BYMjh3vWnHU4IFyfZdIDO",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7BYMjh3vWnHU4IFyfZdIDO",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Mojito",
+            "artists": [
+              "Jay Chou"
+            ],
+            "album": "Mojito",
+            "duration_ms": 185008
+          }
+        }
+      },
+      "catalogURI": "spotify:track:7BYMjh3vWnHU4IFyfZdIDO"
+    },
+    {
+      "caseID": "spotify-7mubQiRZ1Q94ZN3zCrNbzn",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7mubQiRZ1Q94ZN3zCrNbzn",
+          "metadata": {
+            "origin": "spotify",
+            "title": "天天想你",
+            "artists": [
+              "Zhang Yu Sheng"
+            ],
+            "album": "天天想你",
+            "duration_ms": 252866
+          }
+        }
+      },
+      "catalogURI": "spotify:track:7mubQiRZ1Q94ZN3zCrNbzn"
     }
   ]
 }

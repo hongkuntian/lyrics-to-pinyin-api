@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "frozen-source-positive-catalog-cohort",
-  "selection": "Select every country-chart pair with measured source timing found during screening, including the failed counterpart; add all source-positive original regression cases. Freeze before this acceptance run.",
+  "selection": "Select every country-chart pair with measured source timing found during screening, including the failed counterpart; add all source-positive original regression cases. Freeze before this acceptance run. Retain the exact Mojito and 天天想你 reports plus the independently discovered 聽海 artist-alias regression after observed complete source timing.",
   "limitations": [
     "Availability from a metadata-matched counterpart is a coverage target, not acoustic equivalence or permission to bypass source admission.",
     "Every request uses ordinary discovery; availability source IDs are evidence only and never supplied to the service.",
@@ -3245,6 +3245,112 @@
         },
         "rows": 43,
         "cues": 411,
+        "metadataOnly": true
+      }
+    },
+    {
+      "caseID": "spotify-7BYMjh3vWnHU4IFyfZdIDO",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7BYMjh3vWnHU4IFyfZdIDO",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Mojito",
+            "artists": [
+              "Jay Chou"
+            ],
+            "album": "Mojito",
+            "duration_ms": 185008
+          }
+        }
+      },
+      "catalogURI": "spotify:track:7BYMjh3vWnHU4IFyfZdIDO",
+      "availabilityEvidence": {
+        "fromCaseID": "spotify-7BYMjh3vWnHU4IFyfZdIDO",
+        "observedAt": "2026-10-27",
+        "artifact": "tiantian-diagnosis-20261027/chinese-audit-final.json",
+        "source": {
+          "provider": "QQMusicAPI",
+          "itemID": "268352018",
+          "timing": "qq:268352018:qrc"
+        },
+        "rows": 36,
+        "cues": 404,
+        "metadataOnly": true
+      }
+    },
+    {
+      "caseID": "spotify-7mubQiRZ1Q94ZN3zCrNbzn",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7mubQiRZ1Q94ZN3zCrNbzn",
+          "metadata": {
+            "origin": "spotify",
+            "title": "天天想你",
+            "artists": [
+              "Zhang Yu Sheng"
+            ],
+            "album": "天天想你",
+            "duration_ms": 252866
+          }
+        }
+      },
+      "catalogURI": "spotify:track:7mubQiRZ1Q94ZN3zCrNbzn",
+      "availabilityEvidence": {
+        "fromCaseID": "spotify-7mubQiRZ1Q94ZN3zCrNbzn",
+        "observedAt": "2026-10-27",
+        "artifact": "tiantian-diagnosis-20261027/chinese-audit-final.json",
+        "source": {
+          "provider": "NeteaseAPI",
+          "itemID": "188177",
+          "timing": "netease:188177:yrc"
+        },
+        "rows": 42,
+        "cues": 315,
+        "metadataOnly": true
+      }
+    },
+    {
+      "caseID": "spotify-5WD10VSuBAm2YxnaiqQ3eA",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5WD10VSuBAm2YxnaiqQ3eA",
+          "metadata": {
+            "origin": "spotify",
+            "title": "聽海",
+            "artists": [
+              "A-Mei Chang"
+            ],
+            "album": "BAD BOY",
+            "duration_ms": 318333
+          }
+        }
+      },
+      "catalogURI": "spotify:track:5WD10VSuBAm2YxnaiqQ3eA",
+      "catalogURL": "https://open.spotify.com/track/5WD10VSuBAm2YxnaiqQ3eA?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=a539a213-594d-4a6f-a012-c9d8bd39e611",
+      "artistURIs": [
+        "spotify:artist:6noxsCszBEEK04kCehugOp"
+      ],
+      "availabilityEvidence": {
+        "fromCaseID": "spotify-5WD10VSuBAm2YxnaiqQ3eA",
+        "observedAt": "2026-10-27",
+        "artifact": "tiantian-diagnosis-20261027/chinese-audit-final.json",
+        "source": {
+          "provider": "NeteaseAPI",
+          "itemID": "327584",
+          "timing": "netease:327584:yrc"
+        },
+        "rows": 53,
+        "cues": 337,
         "metadataOnly": true
       }
     }

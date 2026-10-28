@@ -138,6 +138,37 @@ can qualify Explicit labels while Clean, Live and other distinctions remain
 strict. The remaining absence of matching measured timing is an honest gap.
 
 
+## Chinese catalog admission regressions (2026-10-27)
+
+The exact Spotify 天天想你 recording (`7mubQiRZ1Q94ZN3zCrNbzn`,
+252866 ms, same-name album) has complete NetEase YRC timing at source `188177`.
+Discovery rejected its artist credit: Spotify uses Zhang Yu Sheng while the
+fresh NetEase artist `6459` profile uses 张雨生 with Tom Chang. The existing
+reviewed artist-alias registry now covers this identity, conditional on that
+fresh provider ID, canonical name and profile alias. Recording title, album,
+duration, complete contributors and version checks still apply. This is an
+artist identity entry, not a song-title exception or phonetic matching rule.
+
+A frozen expansion across ten additional Chinese catalog artists found the
+same gap for A-Mei Chang: NetEase artist `10559` uses 张惠妹 with aMEI. The
+reviewed entry admits the exact BAD BOY 聽海 source `327584` (318626 ms) for
+Spotify `5WD10VSuBAm2YxnaiqQ3eA` (318333 ms) under the existing duration policy.
+Changed profiles, IDs, Live editions and incompatible durations remain refused.
+The NetEase acquisition cache capability advances; accepted source hash recipes
+and immutable stored documents do not change.
+
+The maintained discovery corpus grows from 30 to 42 cases. The ten additional
+artist recordings were selected before timing measurement, and every result is
+retained. With the two exact user reports included, the 12-case local production
+service replay changes from 9 to 12 complete measured results; all nine prior
+complete results remain complete. Mojito retains 404 cues covering 432 meaningful
+graphemes, 天天想你 has 315/315, and 聽海 has 337/337. These three source-positive
+cases also join the existing availability cohort (110 to 113), so later manual
+coverage runs retain these regressions. The expanded cohort is a convenience
+sample, not a catalog-wide coverage estimate or a stock Dynamic Lyrics test.
+Live public-provider metadata and measured coverage do not establish acoustic
+alignment, authenticated deployed acquisition or physical-device playback.
+
 ## Observed source-path results (2026-10-18)
 
 After the version-admission correction, the fixed 17-case corpus returned

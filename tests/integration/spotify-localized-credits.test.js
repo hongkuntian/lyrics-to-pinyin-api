@@ -216,3 +216,53 @@ test('authenticated library route stores and reopens localized Spotify lyrics un
   assert.equal(wrong.statusCode,409);assert.equal(wrong.body.code,'recording_mismatch');
   assert.equal(Number((await store.usage()).jobs),0);
 });
+
+// Fresh catalog metadata matches the original Spotify album and millisecond
+// duration. NetEase lists Tom Chang but omits Spotify's Zhang Yu Sheng label.
+const zhangRecording={version:2,provider:'spotify',item_id:'1123456789ABCDEFGHIJKL',metadata:{origin:'spotify',
+ title:'天天想你',artists:['Zhang Yu Sheng'],album:'天天想你',duration_ms:252866}};
+const zhangSong={id:188177,name:'天天想你',artists:[{id:6459,name:'张雨生'}],album:{name:'天天想你'},duration:252866};
+const zhangProfile={6459:{id:6459,name:'张雨生',alias:['Tom Chang','小宝']}};
+
+const ameiRecording={version:2,provider:'spotify',item_id:'2123456789ABCDEFGHIJKL',metadata:{origin:'spotify',
+ title:'聽海',artists:['A-Mei Chang'],album:'BAD BOY',duration_ms:318333}};
+const ameiSong={id:327584,name:'听海',artists:[{id:10559,name:'张惠妹'}],album:{name:'BAD BOY'},duration:318626};
+const ameiProfile={10559:{id:10559,name:'张惠妹',alias:['aMEI','阿妹','阿密特']}};
+for(const [label,recording,song,profiles] of [
+ ['Zhang Yu Sheng',zhangRecording,zhangSong,zhangProfile],
+ ['A-Mei Chang',ameiRecording,ameiSong,ameiProfile],
+]) {
+ const identityFixture=options=>fixture({song,performerProfiles:profiles,lyricPayload:qianLiLyrics,...options});
+ test(`${label}: reviewed identity admits the exact album through search and fresh source-ID lookup`,async()=>{
+  const target=spotifySearchRequest(recording),f=identityFixture();
+  const found=await f.api.searchSong(target.artist,target.title,target);
+  assert.equal(found.id,song.id);assert.equal(found.artist,song.artists[0].name);assert.deepEqual(found.creditedArtistNames,recording.metadata.artists);
+  const fresh=identityFixture(),result=await fresh.api.getRecording(song.id,{...target,fetchFn:fresh.fetchFn});
+  assert.deepEqual(result.song.creditedArtistNames,recording.metadata.artists);assert.ok(result.lyrics.lines.every(l=>l.vocalTiming));
+ });
+ test(`${label}: changed profile anchors, provider IDs and recording versions remain refused`,async()=>{
+  const target=spotifySearchRequest(recording),profile=profiles[song.artists[0].id];
+  for(const options of [
+   {changeProfile:p=>({...p,id:999})},{changeProfile:p=>({...p,name:'Another Singer'})},
+   {changeProfile:p=>({...p,alias:['Another Alias']})},
+   {song:{...song,name:song.name+' (Live)'}},{song:{...song,duration:song.duration+10000}},
+   {song:{...song,artists:[{id:999,name:song.artists[0].name}]},performerProfiles:{999:{...profile,id:999}}},
+  ]) {
+   const f=identityFixture(options);await assert.rejects(()=>f.api.searchSong(target.artist,target.title,target),{code:'recording_mismatch'});
+  }
+ });
+ test(`${label}: measured cues survive actual library acquisition and reopen`,async t=>{
+  const {db,store}=await libraryDB();t.after(()=>db.close());const {api}=identityFixture();
+  const acquisition=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}}});
+  const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(acquisition),
+   authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
+  const call=async body=>{const req=createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res=createMockRes();await handler(req,res);return res;};
+  const first=await call({action:'lyrics',recording,refresh:true});assert.equal(first.statusCode,200);const doc=first.body.document;
+  assert.equal(doc.recordingBinding.source.provider,'netease');assert.equal(doc.recordingBinding.source.itemID,String(song.id));
+  assert.ok(doc.response.lines.every(l=>l.vocalTiming?.segments.length===2));
+  const reopened=await call({action:'lyrics',recording});assert.equal(reopened.statusCode,200);assert.equal(reopened.body.document.id,doc.id);
+  assert.deepEqual(reopened.body.document.response.lines,doc.response.lines);
+  verifySpotifyBinding(reopened.body.document.recordingBinding,recording,sourceCapsule(doc.response),SELECTION_REVISION,doc.response,{durable:true});
+  assert.equal(Number((await store.usage()).jobs),0);
+ });
+}
