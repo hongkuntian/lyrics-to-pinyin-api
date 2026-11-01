@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runCatalogBenchmark,coverageGate,selectCatalogCases,diagnosticProviders} from '../../scripts/benchmark-catalog-word-timing.mjs';
+import {runCatalogBenchmark,coverageGate,selectCatalogCases,diagnosticProviders,summarizeResponse} from '../../scripts/benchmark-catalog-word-timing.mjs';
 const sentinel='Invented lyric sentinel';
 const request={catalog_id:'123',artist:'Synthetic',title:'Synthetic',duration:30};
 const response={song:{id:42,duration:30},quality:{synced:true},metadata:{source:'NeteaseAPI',lyric_timing:{version:1,provider:'appleMusic',recordingID:'123',source:'netease:42:yrc',revision:'a'.repeat(64)}},
  lines:[{original:sentinel,timestamp:1,vocalTiming:{end:2,segments:[{text:sentinel,utf16Start:0,utf16Length:sentinel.length,start:1,end:2}]}}]};
 const mode=(id,body,status=200)=>({id,createService:()=>async(_,res)=>res.status(status).json(body)});
+test('benchmark distinguishes script fallback without retaining lyric bodies',()=>{
+ const target={...request,title:'紅日'};
+ assert.equal(summarizeResponse(response,target).scriptFit,-1);
+ assert.equal(summarizeResponse({...response,lines:[{original:'這是測試文字'}]},target).scriptFit,1);
+});
 test('isolated discovery diagnostics retain provider eligibility and cannot select another provider',()=>{
  const net={name:'NeteaseAPI'},qq={name:'QQMusicAPI'},lrc={name:'LRCAPI'};
  const available=script=>script==='zh'?[net,qq,lrc]:[qq,lrc];

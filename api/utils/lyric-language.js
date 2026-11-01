@@ -2,7 +2,7 @@ import {francAll} from 'franc-min';
 import {resolveProviderLanguageEvidence} from './provider-language-evidence.js';
 
 const toTag={eng:'en',spa:'es',fra:'fr',por:'pt',deu:'de',ita:'it',rus:'ru',ukr:'uk',bul:'bg',srp:'sr',hrv:'hr',pol:'pl',ces:'cs',slk:'sk',nld:'nl',swe:'sv',dan:'da',fin:'fi',nor:'no',nob:'nb',ron:'ro',hun:'hu',tur:'tr',ell:'el',ara:'ar',pes:'fa',urd:'ur',hin:'hi',ben:'bn',tam:'ta',tel:'te',mar:'mr',tha:'th',vie:'vi',ind:'id',tgl:'tl',heb:'he',jpn:'ja',kor:'ko',cmn:'zh',yue:'yue',cat:'ca',lit:'lt',lav:'lv',est:'et',sqi:'sq',kaz:'kk',uzn:'uz',aze:'az',bel:'be',mal:'ml',kan:'kn',guj:'gu',pan:'pa',nep:'ne',sin:'si',khm:'km',mya:'my',amh:'am',swh:'sw'};
-const scriptsOf=text=>[
+export const scriptsOf=text=>[
  ['Jpan',/[\p{Script=Hiragana}\p{Script=Katakana}]/u],['Kore',/\p{Script=Hangul}/u],['Hani',/\p{Script=Han}/u],
  ['Latn',/\p{Script=Latin}/u],['Cyrl',/\p{Script=Cyrillic}/u],['Arab',/\p{Script=Arabic}/u],['Deva',/\p{Script=Devanagari}/u],
  ['Thai',/\p{Script=Thai}/u],['Hebr',/\p{Script=Hebrew}/u],['Grek',/\p{Script=Greek}/u],['Taml',/\p{Script=Tamil}/u]

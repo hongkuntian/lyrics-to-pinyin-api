@@ -1,6 +1,6 @@
 import {createRequire} from 'node:module';
 import {fetchJSON,withDeadline} from './fetch-json.js';
-import {recordingScore,recordingNames,sameRecordingNames,normalizeRecordingText,normalizedAlbum} from './recording-match.js';
+import {recordingScore,recordingNames,sameRecordingNames,normalizeRecordingText,normalizedAlbum,stripThemeDescriptionSuffix} from './recording-match.js';
 import {configuredAppleCatalog,sameCatalogRecording,CATALOG_RESOLUTION_VERSION} from './apple-catalog.js';
 const require=createRequire(import.meta.url);
 const {recordings:reviewedAliases}=require('../data/reviewed-catalog-aliases.json');
@@ -62,14 +62,15 @@ export async function resolveCatalogAliases(request,context={}) {
  let catalogID=request.catalog_id,discovered=[];
  if(catalogID!=null&&!/^\d{1,20}$/.test(catalogID))return [];
  const countries=[...new Set([request.storefront??'us','us','hk',...CATALOG_TERRITORIES,request.account_storefront??'us'])].slice(0,8);
+ const lookupRequest=request.album?{...request,title:stripThemeDescriptionSuffix(request.title)}:request;
  if(!catalogID){
   if(!request.album)return [];
   const pages=await mapBounded([...new Set([request.storefront??'us','tw'])],async(country,signal)=>{
-   try{const params=new URLSearchParams({term:`${request.artist} ${request.title}`,country,entity:'song',limit:'15'});
+   try{const params=new URLSearchParams({term:`${lookupRequest.artist} ${lookupRequest.title}`,country,entity:'song',limit:'15'});
     return ((await fetchJSON(`https://itunes.apple.com/search?${params}`,{...context,signal})).results??[]).filter(s=>s.kind==='song').map(s=>item(s,country)).filter(valid);
    }catch{return [];}
   },budget);
-  const candidates=pages.flat().filter(s=>/^\d{1,20}$/.test(s.catalog_id)&&recordingScore(s,request)>=0&&s.album&&normalizedAlbum(s.album)===normalizedAlbum(request.album));
+  const candidates=pages.flat().filter(s=>/^\d{1,20}$/.test(s.catalog_id)&&recordingScore(s,lookupRequest)>=0&&Math.abs(s.duration-request.duration)<=0.5&&s.album&&normalizedAlbum(s.album)===normalizedAlbum(request.album));
   const ids=[...new Set(candidates.map(s=>s.catalog_id))];if(ids.length!==1)return [];
   catalogID=ids[0];discovered=pages.flat().filter(s=>s.catalog_id===catalogID);
  }
@@ -85,7 +86,7 @@ export async function resolveCatalogAliases(request,context={}) {
  },budget);
  let songs=[...discovered,...results.flat()].filter(s=>s.catalog_id===catalogID&&Math.abs(s.duration-request.duration)<=0.5);
  const entities=songs.flatMap(s=>s.artist_entities??[]);
- const expected=recordingNames(request,entities);
+ const expected=recordingNames(lookupRequest,entities);
  const titleMatches=songs.filter(s=>recordingNames(s).title===expected.title);
  const artists=songs.filter(s=>JSON.stringify(recordingNames(s,entities).credits)===JSON.stringify(expected.credits));
  if(!titleMatches.length||!artists.length){

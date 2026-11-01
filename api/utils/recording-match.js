@@ -5,6 +5,7 @@ import {neteaseDescriptiveTitleMatches} from './netease-title-evidence.js';
 import {validTimingTimestamp,sourceDurationResolution} from './vocal-timing.js';
 import {simplifyRecordingScript} from './recording-script.js';
 import {recoveredArtistNames} from './artist-alias-recovery.js';
+import {lyricScriptFit} from './lyric-script.js';
 const require=createRequire(import.meta.url);
 const {artists:reviewedArtists}=require('../data/lyric-performers.json');
 const escapePattern=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -36,6 +37,8 @@ export class RecordingMismatchError extends Error {
 }
 const unwrappedAlbum=value=>value.replace(/^Optional\("(.*)"\)$/, '$1');
 export const stripTitleDescription=value=>value.normalize('NFKC').replace(/\s*\((?:from\s+[^()]+|(?:love\s+)?theme\s+(?:song\s+)?from\s+[^()]+|[^()]*(?:主题曲|主題曲|插曲|片尾曲|片頭曲|片头曲|主题歌|主題歌)[^()]*|抖音[热熱]歌)\)/gi,description=>/\b(live|remaster(?:ed)?|instrumental|karaoke|acapella|cover|remix|demo)\b|现场|現場|演唱会|演唱會|重制|重製|伴奏|翻唱/i.test(description) ? description : '').trim();
+export const stripThemeDescriptionSuffix=value=>value.normalize('NFKC').replace(/\s+[-–—]\s+(?:電視劇|电视剧|電影|电影|動畫|动画)[「《][^「」《》\n]+[」》](?:主題曲|主题曲|片尾曲|片頭曲|片头曲|插曲|主題歌|主题歌)\s*$/u,
+ description=>sensitiveCredit.test(description)?description:'').trim();
 export function normalizedAlbum(value) {
   return normalizeRecordingText(unwrappedAlbum(value).replace(/\s+-\s+(single|ep)$/i,''));
 }
@@ -128,7 +131,8 @@ export function metadataEquivalence(song,request) {
     else if(oneLongLatinEdit(a,b)) {
       if(a!==stripTitleDescription(song.title) || b!==stripTitleDescription(request.title)) rules.push('artist_prefixed_title');
       rules.push('long_title_typo');
-    } else return null;
+    } else if(normalizeRecordingText(stripTitleDescription(stripThemeDescriptionSuffix(song.title)))===normalizeRecordingText(stripTitleDescription(stripThemeDescriptionSuffix(request.title)))) rules.push('theme_description_suffix');
+    else return null;
   }
   return rules.length ? {rules}:null;
 }
@@ -197,6 +201,9 @@ export function findRecording(songs, request) {
 // Prefer usable timing only after establishing the recording. A release suffix
 // alone must not strand plain lyrics when a near-identical timed copy exists.
 export function findLyricsRecording(songs, request) {
+  const compatible=songs.filter(song=>recordingScore(song,request)>=0);
+  const scriptFit=song=>lyricScriptFit({target:request,song,lyrics:song.lyricsData});
+  if(compatible.some(song=>scriptFit(song)===1)&&compatible.some(song=>scriptFit(song)===-1))songs=compatible.filter(song=>scriptFit(song)!==-1);
   const best=findRecording(songs,request);
   if(!best || best.lyricsData?.lines?.some(line=>Number.isFinite(line.timestamp) && line.timestamp>=0)) return best;
   if(!Number.isFinite(request.duration) || !Number.isFinite(best.duration) || !best.album) return best;
@@ -252,7 +259,7 @@ function creditSegmentations(value,knownNames) {
 }
 function spotifyTitle(value='') {
   const guests=[];
-  const base=stripTitleDescription(value).replace(/\(\s*live\s*版?\s*\)/gi,'(Live)').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
+  const base=stripTitleDescription(stripThemeDescriptionSuffix(value)).replace(/\(\s*live\s*版?\s*\)/gi,'(Live)').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
   return {title:normalizeRecordingText(base),guests};
 }
 const structuredNames=song=>Array.isArray(song.creditedArtistNames)&&song.creditedArtistNames.length>0

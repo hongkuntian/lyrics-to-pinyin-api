@@ -14,6 +14,7 @@ import {withDeadline} from './fetch-json.js';
 import {recordingScore,findRecording,RecordingMismatchError} from './recording-match.js';
 import {cleanLyrics,hasUsableLyrics} from './lyric-quality.js';
 import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,needsTimingDiscovery,lyricResponseLifetimeMs,VOCAL_SELECTION_CAPABILITY} from './lyric-selection.js';
+import {isLatinScriptFallback} from './lyric-script.js';
 import {hedgedLookup} from './hedged-lookup.js';
 import {isRejectedRecordingLyrics} from './rejected-lyrics.js';
 import {analyzeLyricLanguage} from './lyric-language.js';
@@ -130,7 +131,7 @@ export function createSpotifyLyricsService(dependencies={}) {
               if(fresh){try{
                 hintCandidate=await validateSource(fresh.song,fresh.lyrics);
                 if(hintCandidate){
-                  if(!api.supportsVocalTiming||!needsTimingDiscovery(hintCandidate))return hintCandidate;
+                  if(!isLatinScriptFallback(hintCandidate)&&(!api.supportsVocalTiming||!needsTimingDiscovery(hintCandidate)))return hintCandidate;
                   // Request ownership settles this work; readable formatting
                   // cannot consume the source's remaining discovery budget.
                   req.lyricDelivery?.own(publishCandidate(hintCandidate).catch(()=>{}));
@@ -188,13 +189,13 @@ export function createSpotifyLyricsService(dependencies={}) {
         };
         let publishedCandidate=null;
         const publishCandidate=async candidate=>{
-          if(!req.lyricDelivery||chooseLyricCandidate(publishedCandidate,candidate)!==candidate)return;
+          if(!req.lyricDelivery||isLatinScriptFallback(candidate)||chooseLyricCandidate(publishedCandidate,candidate)!==candidate)return;
           const response=await responseFor(candidate);
           if(chooseLyricCandidate(publishedCandidate,candidate)!==candidate)return;
           attachSpotifyMatchEvidence(response,{...candidate.song,id:String(candidate.song.id)});
           publishedCandidate=candidate;req.lyricDelivery.publish(response,{requestID,serverTiming:timings.join(', ')});
         };
-        const hedgeOptions=()=>({delayMs:hedgeDelayMs,untimedGraceMs,wordTimingGraceMs:Math.min(wordTimingGraceMs,Math.max(0,deadline-Date.now())),chooseCandidate:chooseLyricCandidate,signal:req.lyricDelivery?.signal,onCandidate:publishCandidate});
+        const hedgeOptions=()=>({delayMs:hedgeDelayMs,untimedGraceMs,wordTimingGraceMs:Math.min(wordTimingGraceMs,Math.max(0,deadline-Date.now())),scriptGraceMs:Math.min(providerTimeoutMs,Math.max(0,deadline-Date.now())),chooseCandidate:chooseLyricCandidate,signal:req.lyricDelivery?.signal,onCandidate:publishCandidate});
         let selected=await hedgedLookup(apis,lookup,hedgeOptions());
         if(needsTimingDiscovery(selected,{measured:apis.some(api=>api.supportsVocalTiming===true)})&&localizations.length&&Date.now()<deadline) {
           // One bounded native-name continuation. A readable baseline stays

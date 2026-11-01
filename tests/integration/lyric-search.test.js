@@ -20,6 +20,15 @@ test('ranking prefers matching performer and close duration while retaining alte
   assert.deepEqual(res.body.candidates.map(c=>c.itemID),['2','34750760','1']);
   assert.equal(res.body.candidates[2].namesMatch,false);
 });
+test('native words rank above romanization, not above an unrelated performer identity',async()=>{
+ const romanized={...record,id:1,duration:hints.duration,syncedLyrics:'[00:20]Synthetic romanized words\n[00:24]More phonetic words'};
+ const native={...record,id:2,duration:hints.duration,syncedLyrics:null};
+ const service=fixture({searchLRCLIB:async()=>[romanized,native,{...native,id:3,artistName:'Another performer'}],previewLRCLIB:async()=>romanized});
+ const response=await call(service,{action:'search_lyrics',query:'父亲',hints});
+ assert.deepEqual(response.body.candidates.map(candidate=>candidate.itemID),['2','1','3']);
+ const preview=await call(service,{action:'preview_lyrics',provider:'lrclib',itemID:'1'});
+ assert.equal(preview.statusCode,200);assert.equal(preview.body.candidate.lines[0].text,'Synthetic romanized words');
+});
 test('one provider failure preserves results and reports the failed source',async()=>{
   const res=await call(fixture({searchNetEase:async()=>{throw new Error('down');}}),{action:'search_lyrics',query:'父亲',hints});
   assert.equal(res.statusCode,200);assert.equal(res.body.candidates.length,1);assert.deepEqual(res.body.unavailable,['netease']);

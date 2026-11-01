@@ -11,6 +11,14 @@ const measured={song:{id:42,duration:30},lyrics:parseYRC('[1000,1000](1000,500,0
 const capable={name:'measured',supportsVocalTiming:true},plain={name:'line'};
 const untimed={...line,lyrics:{...line.lyrics,lines:line.lyrics.lines.map(l=>({...l,timestamp:null}))}};
 
+test('complete measured transliteration cannot displace native plain words',()=>{
+ const target={title:'測試歌曲'},romanized={...measured,target};
+ const native={...untimed,target,lyrics:{lines:[{text:'第一句測試',timestamp:null},{text:'第二句測試',timestamp:null}]}};
+ assert.equal(measuredVocalCoverage(romanized).complete,true);
+ assert.equal(chooseLyricCandidate(native,romanized),native);
+ assert.equal(chooseLyricCandidate(romanized,native),native);
+});
+
 test('plain readable text cannot cancel an active measured source inside the existing word window',async t=>{
  t.mock.timers.enable({apis:['setTimeout','Date']});
  const gate=deferred(),published=[];let settled=false,sourceSignal;

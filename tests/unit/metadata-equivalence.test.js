@@ -4,6 +4,19 @@ import {metadataEquivalence,recordingScore,findRecording} from '../../api/utils/
 const request={catalog_id:'966805806',title:'匆匆那年',artist:'Faye Wong',album:'匆匆那年 - Single',duration:241};
 const candidate={...request,id:1,album:'匆匆那年',duration:240.99};
 
+test('a quoted TV-theme dash description needs catalog, album and close duration evidence',()=>{
+ const target={catalog_id:'1443394970',artist:'Hacken Lee',title:'紅日 - 電視劇「他來自天堂」主題曲',album:'紅日',duration:287};
+ const song={...target,id:8812366,title:'紅日'};
+ assert.deepEqual(metadataEquivalence(song,target),{rules:['theme_description_suffix']});
+ assert.ok(recordingScore(song,target)>=0);
+ for(const change of [{catalog_id:undefined},{artist:'Other Singer'},{album:'Other album'},{duration:289},{title:target.title+' (Live)'},{title:'紅日 - Another song'},{title:'紅日 - 電視劇「他來自天堂」主題曲 feat. Guest'}])
+  assert.equal(recordingScore(song,{...target,...change}),-1);
+ const spotify={...target,recordingProvider:'spotify',creditedArtistNames:['Hacken Lee']};
+ assert.ok(recordingScore(song,spotify)>=0);
+ for(const change of [{creditedArtistNames:['Other Singer']},{duration:299},{title:target.title+' (Live)'}])
+  assert.equal(recordingScore(song,{...spotify,...change}),-1);
+});
+
 test('reversed two-word solo names require corroborating catalog, album and duration',()=>{
  const song={...candidate,artist:'Wong, Faye'};
  assert.deepEqual(metadataEquivalence(song,request),{rules:['reversed_solo_artist']});

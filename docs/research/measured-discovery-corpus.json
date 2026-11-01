@@ -13,6 +13,17 @@
   ],
   "cases": [
     {
+      "caseID": "reported-hacken-red-sun-script",
+      "platform": "metadata-only",
+      "metadataEvidence": "User screenshot title, artist and album; LRCLIB exact record 9217531 supplies 287 seconds. Playback platform and catalog ID were not established.",
+      "request": {
+        "artist": "Hacken Lee",
+        "title": "紅日 - 電視劇「他來自天堂」主題曲",
+        "album": "紅日",
+        "duration": 287
+      }
+    },
+    {
       "caseID": "en-viva-album",
       "platform": "apple",
       "metadataURL": "https://itunes.apple.com/lookup?id=1122773680&country=us",

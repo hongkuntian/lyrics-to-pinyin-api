@@ -26,7 +26,7 @@ for(const rejectWordSource of [false,true])test(`reported exact Spotify recordin
  net.getLyrics=(id,c)=>lyrics(id,{...c,fetchFn});
  const plain={name:'LRCAPI',searchSong:async()=>({id:8998666,title:'第一次',artist:'Michael Wong',
   creditedArtistNames:['Michael Wong'],album:'十光年精選輯',duration:263,source:'lrclib'}),
-  getLyrics:async()=>({source:'lrclib',songId:8998666,lines:[{text:'Invented readable words',timestamp:null},{text:'Invented second row',timestamp:null}]})};
+  getLyrics:async()=>({source:'lrclib',songId:8998666,lines:[{text:'這是測試文字',timestamp:null},{text:'這是另一句測試',timestamp:null}]})};
  const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[net,plain],hedgeDelayMs:1,
   untimedGraceMs:20,wordTimingGraceMs:200,logger:{info(){},error(){}}});
  const res=streamResponse(),work=service({method:'POST',body:{recording:fixture.recording,options:{delivery:'progressive-v1',refresh:true}}},res);

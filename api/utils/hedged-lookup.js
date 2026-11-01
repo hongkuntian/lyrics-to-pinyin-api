@@ -1,14 +1,15 @@
 import {chooseLyricCandidate,timingQuality,hasCompleteMeasuredVocalTiming,measuredSelectionProtected} from './lyric-selection.js';
+import {isLatinScriptFallback} from './lyric-script.js';
 // At most two lookups run at once. Only the caller's validated results compete.
 // Timed lyrics win immediately; untimed lyrics leave a short window for timing.
-export function hedgedLookup(apis, lookup, {delayMs=350, untimedGraceMs=350,wordTimingGraceMs=0,chooseCandidate=chooseLyricCandidate,signal,onCandidate}={}) {
+export function hedgedLookup(apis, lookup, {delayMs=350, untimedGraceMs=350,wordTimingGraceMs=0,scriptGraceMs=Math.max(untimedGraceMs,wordTimingGraceMs),chooseCandidate=chooseLyricCandidate,signal,onCandidate}={}) {
   return new Promise(resolve=> {
-    let next=0, active=0, finished=false, untimed=null, hedgeTimer, graceTimer,wordTimer,wordDeadline=null,lineWordStarted=false;
+    let next=0, active=0, finished=false, untimed=null, hedgeTimer, graceTimer,wordTimer,scriptTimer,wordDeadline=null,scriptDeadline=null,lineWordStarted=false;
     const controllers=new Map();
     const capableRemaining=()=>[...controllers.values(),...apis.slice(next)].some(api=>api.supportsVocalTiming===true);
     const finish=value=> {
       if(finished) return;
-      finished=true; clearTimeout(hedgeTimer); clearTimeout(graceTimer);clearTimeout(wordTimer);signal?.removeEventListener('abort',abort);
+      finished=true; clearTimeout(hedgeTimer); clearTimeout(graceTimer);clearTimeout(wordTimer);clearTimeout(scriptTimer);signal?.removeEventListener('abort',abort);
       for(const controller of controllers.keys()) controller.abort();
       resolve(value);
     };
@@ -31,7 +32,18 @@ export function hedgedLookup(apis, lookup, {delayMs=350, untimedGraceMs=350,word
         controllers.delete(controller); active--;
         if(finished) return;
         // A delayed event-loop turn cannot extend the fixed upgrade window.
-        if(wordDeadline!==null&&Date.now()>=wordDeadline){finish(untimed);return;}
+        if(wordDeadline!==null&&Date.now()>=wordDeadline||scriptDeadline!==null&&Date.now()>=scriptDeadline){finish(untimed);return;}
+        if(result&&(isLatinScriptFallback(result)||isLatinScriptFallback(chooseCandidate(untimed,result)))) {
+          untimed=chooseCandidate(untimed,result);
+          if(isLatinScriptFallback(untimed)) {
+            clearTimeout(graceTimer);clearTimeout(wordTimer);wordDeadline=null;lineWordStarted=false;
+            if(scriptDeadline===null){scriptDeadline=Date.now()+scriptGraceMs;scriptTimer=setTimeout(()=>finish(untimed),scriptGraceMs);}
+          }
+          while(active<2&&next<apis.length)launch();
+          if(active===0&&next>=apis.length)finish(untimed);
+          return;
+        }
+        if(result&&scriptDeadline!==null){clearTimeout(scriptTimer);scriptDeadline=null;}
         const complete=result&&!result.lyrics.partial&&timingQuality(result).usable;
         if(complete) {
           untimed=chooseCandidate(untimed,result);

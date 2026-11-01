@@ -77,7 +77,7 @@ test('every provider rejects a known wrong language version and preserves legiti
 test('the Mandarin Strangers report resolves its Chinese-title reviewed source instead of exact-metadata wrong copies',async()=>{
   const require=createRequire(import.meta.url);
   const entry=require('../../api/data/reviewed-recordings.json').recordings.find(r=>r.id==='apple-6785801848-lrclib-37647540');
-  const correct=[{text:'Correct Mandarin fixture',timestamp:17.51},{text:'Final Mandarin fixture',timestamp:187.72}];
+  const correct=[{text:'这是普通话测试文字',timestamp:17.51},{text:'这是最后一句测试文字',timestamp:187.72}];
   const review={...entry,source:{...entry.source,lyricsFingerprint:timingFingerprint({lines:correct})}};
   const recording={...entry.acceptedRequests[0],duration:210};
   const wrong=[{text:'Separate Cantonese fixture',timestamp:8}];
@@ -95,7 +95,7 @@ test('the Mandarin Strangers report resolves its Chinese-title reviewed source i
         if(!available)throw new Error('Provider unavailable');
         body={id:Number(entry.source.id),trackName:entry.source.title,artistName:entry.source.artist,
           albumName:entry.source.album,duration:entry.source.duration,
-          syncedLyrics:'[00:17.51]Correct Mandarin fixture\n[03:07.72]Final Mandarin fixture'};
+          syncedLyrics:'[00:17.51]这是普通话测试文字\n[03:07.72]这是最后一句测试文字'};
       }
       return {ok:true,json:async()=>body};
     };

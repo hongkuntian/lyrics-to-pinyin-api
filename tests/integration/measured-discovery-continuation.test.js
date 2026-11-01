@@ -12,9 +12,9 @@ import {streamResponse,frames} from '../helpers/stream-http.js';
 const apple={artist:'Eric Chou',title:'Unbreakable Love',album:'The Chaos After You',duration:258.264,catalog_id:'1321295664',storefront:'ca'};
 const native={...apple,artist:'周興哲',title:'永不失聯的愛',album:'如果雨之後'};
 const spotify={version:2,provider:'spotify',item_id:'46fURCnWErjFdNM2yBJ2c8',market:'US',metadata:{origin:'spotify',title:native.title,artists:[apple.artist],album:native.album,duration_ms:258954}};
-const line=()=>({source:'netease',lines:[{text:'Invented first row',timestamp:10},{text:'Invented second row',timestamp:30}]});
-const words=id=>parseYRC('[10000,2000](10000,2000,0)Invented first row\n[30000,2000](30000,2000,0)Invented second row',{songId:id});
-const qrc=id=>parseQRC('<QrcInfos><LyricInfo LyricCount="1"><Lyric_1 LyricType="1" LyricContent="[10000,2000]Invented first row(10000,2000)&#10;[30000,2000]Invented second row(30000,2000)"/></LyricInfo></QrcInfos>',{songId:id});
+const line=()=>({source:'netease',lines:[{text:'第一句測試文字',timestamp:10},{text:'第二句測試文字',timestamp:30}]});
+const words=id=>parseYRC('[10000,2000](10000,2000,0)第一句測試文字\n[30000,2000](30000,2000,0)第二句測試文字',{songId:id});
+const qrc=id=>parseQRC('<QrcInfos><LyricInfo LyricCount="1"><Lyric_1 LyricType="1" LyricContent="[10000,2000]第一句測試文字(10000,2000)&#10;[30000,2000]第二句測試文字(30000,2000)"/></LyricInfo></QrcInfos>',{songId:id});
 const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)};};
 function setup(provider,{localized=true,behavior='words',gate=null,protectedTiming=false}={}) {
  const values=new Map(),pending=[],queries=[],ttls=[];let upgrade=false,hints=0;
@@ -133,7 +133,7 @@ test('Apple Sunny Day localization completes a whitespace-padded QRC without exh
  const localized={...request,artist:'周杰倫',title:'晴天',album:'葉惠美'},queries=[];
  // The reported source has Latin sung tokens ending in a provider space.
  // All content here is invented; ranges/times reproduce that source shape.
- const lyrics=parseQRC('<QrcInfos><LyricInfo LyricCount="1"><Lyric_1 LyricType="1" LyricContent="[10000,2000]Alpha (10000,500)beta (10600,500)&#10;[30000,2000]Gamma (30000,500)delta (30600,500)"/></LyricInfo></QrcInfos>',{songId:97773,duration:269,durationResolution:1});
+ const lyrics=parseQRC('<QrcInfos><LyricInfo LyricCount="1"><Lyric_1 LyricType="1" LyricContent="[10000,2000]測試Alpha (10000,500)beta (10600,500)&#10;[30000,2000]測試Gamma (30000,500)delta (30600,500)"/></LyricInfo></QrcInfos>',{songId:97773,duration:269,durationResolution:1});
  const api={name:'QQMusicAPI',supportsVocalTiming:true,searchSong:async(a,t)=>{
   queries.push([a,t]);
   if(a===localized.artist&&t===localized.title)return {...localized,id:97773,duration:269,source:'qq'};
@@ -157,9 +157,9 @@ test('Apple Sunny Day localization completes a whitespace-padded QRC without exh
  assert.equal(response.metadata.lyric_timing.durationResolution,1);
  assert.equal(response.metadata.recording_match.duration,269.747);
  assert.equal(response.metadata.recording_match.artist,request.artist);
- assert.deepEqual(response.lines.map(l=>l.original),['Alpha beta','Gamma delta']);
+ assert.deepEqual(response.lines.map(l=>l.original),['測試Alpha beta','測試Gamma delta']);
  assert.deepEqual(response.lines.map(l=>l.vocalTiming.segments.map(s=>[s.text,s.start,s.end])),[
-  [['Alpha ',10,10.5],['beta',10.6,11.1]],[['Gamma ',30,30.5],['delta',30.6,31.1]]
+  [['測試Alpha ',10,10.5],['beta',10.6,11.1]],[['測試Gamma ',30,30.5],['delta',30.6,31.1]]
  ]);
 });
 

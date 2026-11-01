@@ -5,6 +5,7 @@ import {parseArgs} from 'node:util';
 import {resolve} from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {vocalCoverage,validTimingProvenance} from '../api/utils/vocal-timing.js';
+import {lyricScriptFit} from '../api/utils/lyric-script.js';
 import {verifySpotifyBinding,sourceCapsule,independentProvider} from '../api/utils/song-library/spotify-recording.js';
 
 export function diagnosticProviders(getAvailable,provider){
@@ -23,6 +24,7 @@ export function summarizeResponse(response,request) {
  const lines=Array.isArray(response?.lines)?response.lines:[];
  const coverage=vocalCoverage(lines.map(l=>({...l,text:l.original})),{duration:song?.duration??7200,durationResolution:timing?.durationResolution??0,provenance:bound});
  return {readable:lines.length>0||response?.quality?.instrumental===true,lineTimed:response?.quality?.synced===true,
+  scriptFit:lyricScriptFit({...response,target:request.recording?.metadata??request}),
   completeMeasured:coverage.complete,coverage,rows:lines.length,cues:bound?lines.reduce((n,l)=>n+(l.vocalTiming?.segments?.length??0),0):0,
   source:{provider:response?.metadata?.source??null,itemID:song?.id==null?null:String(song.id),timing:bound?timing.source:null},
   acousticVerified:false};

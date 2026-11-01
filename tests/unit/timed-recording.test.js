@@ -31,3 +31,11 @@ test('conflicting timed duplicates keep the safe plain fallback; identical timin
  assert.equal(findLyricsRecording([plain,timed,other],request).id,1);
  assert.equal(findLyricsRecording([plain,timed,{...timed,id:3}],request).id,2);
 });
+test('native script resolves romanized duplicates only after recording admission',()=>{
+ const target={artist:'Hacken Lee',title:'紅日',album:'紅日',duration:287};
+ const romanized={...target,id:9217531,lyricsData:{lines:[{text:'Meng wan jau shuin',timestamp:20},{text:'Thin bou lau lei',timestamp:24}]}};
+ const native={...target,id:8812366,lyricsData:{lines:[{text:'这是测试歌词',timestamp:null},{text:'这是另一句',timestamp:null}]}};
+ for(const rows of [[romanized,native],[native,romanized]])assert.equal(findLyricsRecording(rows,target),native);
+ for(const wrong of [{artist:'Another singer'},{title:'紅日 (Live)'},{duration:310}])assert.equal(findLyricsRecording([romanized,{...native,...wrong}],target),romanized);
+ assert.equal(findLyricsRecording([romanized],target),romanized);
+});

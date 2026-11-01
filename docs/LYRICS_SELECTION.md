@@ -29,8 +29,32 @@ Live Lyrics rendering. It supplies no replacement words, Apple aliases or timing
 
 ## Usable lyrics and instrumentals
 
+For a title containing non-Latin script, a usable recording-compatible source
+containing that script outranks an exclusively Latin-script transcript, even if
+the latter has line or measured word timing. Han and Japanese script are
+compatible for this comparison. This is a conservative script heuristic, not
+proof of language or transliteration: Latin titles, bilingual lyrics and
+unrelated scripts retain the ordinary selection rules. Existing performer,
+version, duration and ambiguity checks run before this preference; titles are
+not freely shortened to admit a different recording. A narrowly quoted Chinese
+TV/film theme description after a dash can resolve through Apple catalog proof,
+matching album and duration within 0.5 seconds. Spotify treats only that same
+anchored description as presentation metadata while preserving its structured
+credits, version and duration checks. Arbitrary dash subtitles are not removed.
+
+Latin-only candidates remain last-resort fallbacks. They leave a fixed bounded
+discovery window, do not flash as progressive readable results, and are returned
+at completion if no better usable source is found. LRCLIB continues its existing
+bounded searches after an exact timed fallback; outages or rate limits preserve
+an already admitted positive. Explicit source previews remain available.
+
+The acquisition capability includes `native-script-1`, invalidating old server
+selection caches without changing the response contract or selection revision.
+Latin-only fallbacks expire after five minutes, including timed ones. Existing
+saved/native documents are not rewritten; Reload lyrics requests fresh selection.
+
 Provider-declared language is optional evidence, not a recording or timing
-criterion. Complete measured timing keeps its existing priority even when a
+criterion. Within the script preference above, complete measured timing keeps its existing priority even when a
 language declaration is absent, broad or contradictory. At the response-size
 limit, optional language diagnostics give way before measured cues. See
 [PROVIDER_LANGUAGE_EVIDENCE.md](PROVIDER_LANGUAGE_EVIDENCE.md).

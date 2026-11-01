@@ -11,6 +11,16 @@ request-owned readable formatting concurrently with continued discovery inside
 the original deadline. See [PROVIDER_LANGUAGE_EVIDENCE.md](PROVIDER_LANGUAGE_EVIDENCE.md)
 for the optional contract, conflict rules, bounds and cache policy.
 
+Native-script preference uses observed lyric text and the admitted target title,
+not provider language declarations. Exclusively Latin text for a non-Latin title
+keeps searching inside a fixed script grace bounded by the existing provider and
+request deadlines, with at most two active providers. Repeated fallback results
+cannot renew that grace. Fallback snapshots are withheld from progressive
+publication, but the final legacy/progressive response still returns them if no
+usable compatible-script source appears. A native result clears the script timer
+and retains the ordinary measured-timing opportunity. Source-ID hints follow the
+same rule, including hints from providers without word-timing support.
+
 Milestone 2 keeps the `progressive-v1` delivery contract and all legacy JSON
 responses unchanged. The backend now reuses verified discovery context, overlaps
 one bounded discovery with catalog work, and shares eligible source work within

@@ -5,6 +5,19 @@ const request={artist:'Emil Wakin Chau',title:'Friends',album:'Friends',duration
 const en={kind:'song',trackId:161282089,artistName:request.artist,trackName:request.title,collectionName:'Friends',trackTimeMillis:312333};
 const zh={...en,artistName:'周華健',trackName:'朋友',collectionName:'朋友'};
 const fetchFn=async url=>({ok:true,json:async()=>({results:new URL(url).searchParams.get('country')==='tw' ? [zh]:[en]})});
+test('quoted TV-theme suffix discovery retains original request proof and strict catalog evidence',async()=>{
+ const target={artist:'Hacken Lee',title:'紅日 - 電視劇「他來自天堂」主題曲',album:'紅日',duration:287};
+ const song={kind:'song',trackId:1443394970,artistName:target.artist,trackName:'紅日',collectionName:target.album,trackTimeMillis:287173};
+ const context={appleCatalog:null,fetchFn:async()=>({ok:true,json:async()=>({results:[song]})})};
+ for(const catalog_id of [undefined,'1443394970']){
+  const aliases=await resolveCatalogAliases({...target,...(catalog_id?{catalog_id}:{})},context);
+  assert.equal(aliases[0].title,'紅日');
+  assert.equal(aliases.resolution.accepted_request.title,target.title);
+  assert.equal(aliases.resolution.canonical_recording_id,'apple:1443394970');
+ }
+ for(const change of [{artist:'Cover Singer'},{album:'Other album'},{duration:289},{album:undefined},{title:target.title+' (Live)'},{title:'紅日 - Another song'}])
+  assert.deepEqual(await resolveCatalogAliases({...target,...change},context),[]);
+});
 test('catalog discovery without a supplied ID still verifies complete metadata and exact album',async()=>{
  const aliases=await resolveCatalogAliases(request,{fetchFn});
  assert.ok(aliases.some(a=>a.title==='朋友' && a.artist==='周華健' && a.catalog_id==='161282089'));

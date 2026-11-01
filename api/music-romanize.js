@@ -31,6 +31,7 @@ import {lookupListeningReviewedRecording,hasListeningCatalogSource} from './util
 import {analyzeLyricLanguage} from './utils/lyric-language.js';
 import {providerLanguageSource,PROVIDER_LANGUAGE_EVIDENCE_VERSION} from './utils/provider-language-evidence.js';
 import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,needsTimingDiscovery,lyricResponseLifetimeMs as responseLifetimeMs,VOCAL_SELECTION_CAPABILITY} from './utils/lyric-selection.js';
+import {isLatinScriptFallback} from './utils/lyric-script.js';
 import {isRejectedRecordingLyrics} from './utils/rejected-lyrics.js';
 export const RESPONSE_VERSION='2.5.0';
 export const config={supportsResponseStreaming:true};
@@ -173,7 +174,7 @@ export function createMusicRomanizeService(dependencies={}) {
                   hintCandidate=await validateSource(fresh.song,fresh.lyrics);
                   if(hintCandidate){
                     matched=true;
-                    if(preferred||!api.supportsVocalTiming||!needsTimingDiscovery(hintCandidate))return hintCandidate;
+                    if(preferred||!isLatinScriptFallback(hintCandidate)&&(!api.supportsVocalTiming||!needsTimingDiscovery(hintCandidate)))return hintCandidate;
                     // Formatting belongs to the acquisition, not this provider
                     // slot. Continue discovery inside the original deadline;
                     // publication still rechecks the best candidate and signal.
@@ -197,7 +198,7 @@ export function createMusicRomanizeService(dependencies={}) {
           // inside the fixed provider and request deadlines.
           const targetScript=await detectLanguageFn(`${target.artist} ${target.title}`);
           const targetAPIs=target===request || preferred ? apis : [...new Set([...getAvailableAPIsFn(targetScript).filter(acceptsSource),...apis])];
-          return hedgedLookup(targetAPIs,lookup,{delayMs:hedgeDelayMs,untimedGraceMs:Math.min(untimedGraceMs,Math.max(0,deadline-Date.now())),wordTimingGraceMs:Math.min(wordTimingGraceMs,Math.max(0,deadline-Date.now())),chooseCandidate:chooseLyricCandidate,signal:scope?.signal,onCandidate:publishCandidate});
+          return hedgedLookup(targetAPIs,lookup,{delayMs:hedgeDelayMs,untimedGraceMs:Math.min(untimedGraceMs,Math.max(0,deadline-Date.now())),wordTimingGraceMs:Math.min(wordTimingGraceMs,Math.max(0,deadline-Date.now())),scriptGraceMs:Math.min(providerTimeoutMs,Math.max(0,deadline-Date.now())),chooseCandidate:chooseLyricCandidate,signal:scope?.signal,onCandidate:publishCandidate});
         };
         // Reuse previously verified localizations first on repeated catalog requests.
         const mayImprove=candidate=>!candidate || (!preferred&&needsTimingDiscovery(candidate,{measured:apis.some(api=>api.supportsVocalTiming===true)}));
@@ -286,7 +287,7 @@ export function createMusicRomanizeService(dependencies={}) {
         };
         let publishedCandidate=null;
         publishCandidate=async candidate=> {
-          if(!scope || chooseLyricCandidate(publishedCandidate,candidate)!==candidate)return;
+          if(!scope || isLatinScriptFallback(candidate) || chooseLyricCandidate(publishedCandidate,candidate)!==candidate)return;
           const response=await responseFor(candidate);
           if(response?.song&&chooseLyricCandidate(publishedCandidate,candidate)===candidate){publishedCandidate=candidate;scope.publish(response,{requestID,serverTiming:timings.join(', ')});}
         };

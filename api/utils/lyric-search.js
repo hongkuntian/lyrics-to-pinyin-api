@@ -8,6 +8,7 @@ import {validLyricStructure} from './lyric-annotations.js';
 import {sameSpotifyRecordingNames,normalizeRecordingText} from './recording-match.js';
 import {isRejectedLyrics,isRejectedRecordingLyrics} from './rejected-lyrics.js';
 import {validVocalTiming} from './vocal-timing.js';
+import {isLatinScriptFallback} from './lyric-script.js';
 
 // Discovery is deliberately separate from recording verification. These source
 // capsules never become Song Library documents or playback identities.
@@ -38,7 +39,8 @@ function score(candidate,hints) {
   const duration=delta===null?0.5:1/(1+delta/10);
   return {namesMatch,durationMatches:delta!==null&&delta<=3,
     score:4*similarity(candidate.title,hints.title)+4*similarity(candidate.artist,hints.artist)+duration
-      +(hints.album&&candidate.album?0.5*similarity(candidate.album,hints.album):0)+(candidate.lines?.length?0.5:0)};
+      +(hints.album&&candidate.album?0.5*similarity(candidate.album,hints.album):0)+(candidate.lines?.length?0.5:0)
+      -(isLatinScriptFallback({target:hints,lines:candidate.lines})?3:0)};
 }
 const rank=(candidate,hints)=>({...candidate,...(hints?score(candidate,hints):{namesMatch:false,durationMatches:false,score:0})});
 const lrclib=new LRCAPI(),netease=new NeteaseAPI(),kugou=new KugouAPI();
@@ -139,7 +141,7 @@ export function createLyricSearchService(dependencies={}) {
       if(unavailable.length===pages.length)return res.status(502).json({version:1,code:'provider_unavailable'});
       const unique=new Map();
       for(const candidate of pages.flatMap(p=>p.candidates))unique.set(candidate.provider+':'+candidate.itemID,rank(candidate,body.hints));
-      const candidates=[...unique.values()].sort((a,b)=>b.score-a.score||a.provider.localeCompare(b.provider)||a.itemID.localeCompare(b.itemID,'en',{numeric:true})).slice(0,20);
+      const candidates=[...unique.values()].sort((a,b)=>Number(b.namesMatch)-Number(a.namesMatch)||b.score-a.score||a.provider.localeCompare(b.provider)||a.itemID.localeCompare(b.itemID,'en',{numeric:true})).slice(0,20);
       // Keep metadata choices even when several complete transcriptions exceed
       // the transport budget; those words can be requested explicitly later.
       let bytes=0;for(const c of candidates){bytes+=Buffer.byteLength(JSON.stringify(c));if(bytes>500000){delete c.lines;delete c.lyricStructure;}}
