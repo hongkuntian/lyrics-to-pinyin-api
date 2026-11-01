@@ -88,7 +88,7 @@ function lyricsBody(data,song) {
   try { raw=new TextDecoder('utf-8',{fatal:true}).decode(bytes); } catch { throw providerError(); }
   if(raw.includes('\u0000')) throw providerError();
   validateHeaders(raw,song);
-  const parsed=parseLRC(raw);
+  const parsed=parseLRC(raw.replace(/\\"/g,'"'));
   if(parsed.some(line=>line.timestamp!=null && (!Number.isFinite(line.timestamp) || line.timestamp<0 || line.timestamp>song.duration))) throw new RecordingMismatchError();
   const result=bindProviderLanguageObservations(cleanLyrics({lines:parsed.filter(line=>!header(line.text,song)),source:'kugou',songId:song.id},{duration:song.duration}),
     song,languageEvidence.get(song),{field:'/content',format:'lrc'});

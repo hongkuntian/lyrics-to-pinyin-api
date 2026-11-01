@@ -1,11 +1,12 @@
 import {digest,LibraryError} from './song-library/store.js';
+import {reviewedJapaneseSpans,documentReadingRecording} from './japanese-reading-overrides.js';
 
 // A profile describes a notation, not a translation target or the UI language.
 // Future phonetic approximations must declare a readerLanguage and limitations;
 // no direction is inferred from the existence of two other profiles.
 export const profiles=Object.freeze([
-  {id:'ja-hepburn',version:'1',sourceLanguage:'ja',kind:'romanization',notation:'hepburn',outputScript:'Latn',readerLanguage:null,label:'Japanese · Romaji',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-1'},
-  {id:'ja-kana',version:'1',sourceLanguage:'ja',kind:'native-reading',notation:'kana',outputScript:'Hira',readerLanguage:null,label:'Japanese · Kana',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-1'},
+  {id:'ja-hepburn',version:'1',sourceLanguage:'ja',kind:'romanization',notation:'hepburn',outputScript:'Latn',readerLanguage:null,label:'Japanese · Romaji',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-2'},
+  {id:'ja-kana',version:'1',sourceLanguage:'ja',kind:'native-reading',notation:'kana',outputScript:'Hira',readerLanguage:null,label:'Japanese · Kana',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-2'},
   {id:'ko-revised',version:'1',sourceLanguage:'ko',kind:'romanization',notation:'revised',outputScript:'Latn',readerLanguage:null,label:'Korean · Romanization',engineVersion:'koroman-1.0.16-lyra-1'}
 ].map(p=>Object.freeze({...p,status:'beta',basis:'text',limitations:['Text-derived reading; the recorded performance may differ.']})));
 export function profileFor(id){const p=profiles.find(p=>p.id===id);if(!p)throw new LibraryError('unsupported_pronunciation_profile',422);return p;}
@@ -35,9 +36,22 @@ function runs(text,language){
 const plain=run=>({lower:run.lower,upper:run.upper,source:run.source,reading:null,romanized:null,status:'verbatim'});
 const unresolved=run=>({...plain(run),status:'unresolved'});
 
-export async function analyzeReading(text,language){
+export async function analyzeReading(text,language,{recording}={}){
   if(typeof text!=='string'||!['ja','ko'].includes(language))throw new LibraryError('invalid_pronunciation_source',422);
   const segments=[];
+  const overrides=language==='ja'?reviewedJapaneseSpans(text,recording):[];
+  if(overrides.length){
+    const characters=graphemes(text),{util}=await japaneseEngine();let cursor=0;
+    for(const span of [...overrides,{lower:characters.length,upper:characters.length}]){
+      if(span.lower>cursor){
+        const ordinary=await analyzeReading(characters.slice(cursor,span.lower).join(''),language);
+        segments.push(...ordinary.segments.map(segment=>({...segment,lower:segment.lower+cursor,upper:segment.upper+cursor})));
+      }
+      if(span.source)segments.push({...span,romanized:util.kanaToRomaji(span.reading,'hepburn'),status:'resolved'});
+      cursor=span.upper;
+    }
+    return {language,segments};
+  }
   for(const run of runs(text,language)){
     if(!run.active){segments.push(plain(run));continue;}
     if(language==='ko'){
@@ -98,7 +112,7 @@ export const pronunciationKey=(doc,profileID)=>{
 export async function annotationFor(doc,profileID){
   const id=pronunciationKey(doc,profileID),profile=profileFor(profileID),readings=[];
   // Bound work per request and initialize the dictionary once per warm instance.
-  for(const line of doc.structure.occurrences)readings.push({sourceID:line.sourceID,...await analyzeReading(line.lyricText,profile.sourceLanguage)});
+  for(const line of doc.structure.occurrences)readings.push({sourceID:line.sourceID,...await analyzeReading(line.lyricText,profile.sourceLanguage,{recording:documentReadingRecording(doc)})});
   return {version:1,id,documentID:doc.id,sourceHash:doc.sourceHash,profile,offsetUnit:'grapheme',textScope:'lyric-body',
     readingRevision:digest({engine:profile.engineVersion,readings}),
     lines:readings.map(r=>({sourceID:r.sourceID,...renderReading(r,profileID)}))};

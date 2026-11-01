@@ -54,3 +54,34 @@ test('legacy casing and vowel options compose without restoring placeholder cach
     assert.notEqual(getCacheKey(text,language,system),old);
   }
 });
+test('reviewed Blue Bird readings stay recording- and source-span-bound in both profiles and legacy output',async()=>{
+ const recording={title:'ブルーバード',artist:'Ikimonogakari',album:'Chou Ikimonobakari Tennen Kinen Members Best Selection',duration:215.707};
+ const {JapaneseProcessor}=await import('../../api/processors/japanese.js');
+ for(const [text,kana,romaji] of [['飛翔いたら','はばたいたら','habataitara'],['遊迷','ゆめ','yume'],['共鳴けて','あずけて','azukete']]){
+  const reading=await analyzeReading(text,'ja',{recording});
+  assert.equal(renderReading(reading,'ja-kana').text,kana);assert.equal(renderReading(reading,'ja-hepburn').text,romaji);
+  assert.equal(reading.segments.map(span=>span.source).join(''),text);
+  assert.equal((await new JapaneseProcessor().romanize(text,'hepburn',{recording})).romanized,romaji);
+  for(const other of [{...recording,artist:'Cover Singer'},{...recording,album:'Live Album'},{...recording,duration:300},{...recording,title:'Other Song'}])
+   assert.notEqual(renderReading(await analyzeReading(text,'ja',{recording:other}),'ja-hepburn').text,romaji);
+ }
+ const doc={id:'a'.repeat(64),sourceHash:'b'.repeat(64),response:{song:{language:'ja',title:{original:recording.title},artist:{original:recording.artist},album:recording.album,duration:recording.duration}},structure:{occurrences:[{sourceID:'L0001',lyricText:'👩🏽‍🎤飛翔いたら'}]}};
+ const before=structuredClone(doc),annotation=await annotationFor(doc,'ja-hepburn');
+ assert.equal(annotation.lines[0].text,'👩🏽‍🎤habataitara');assert.deepEqual(doc,before);
+ assert.equal(renderReading(await analyzeReading('飛翔','ja',{recording}),'ja-hepburn').text,'hishō');
+});
+test('albumless reviewed Kugou source carries readings without borrowing request labels',async()=>{
+ const recording={id:'468823329',source:'KugouAPI',title:'ブルーバード',artist:'Ikimonogakari',duration:215};
+ const reading=async value=>renderReading(await analyzeReading('共鳴けて','ja',{recording:value}),'ja-kana').text;
+ assert.equal(await reading(recording),'あずけて');
+ for(const other of [{...recording,id:'468823330'},{...recording,source:'NeteaseAPI'},{...recording,album:'Live Album'},{...recording,duration:300}])
+  assert.notEqual(await reading(other),'あずけて');
+});
+test('selected-source documents use the reviewed source reading without changing frozen legacy documents',async()=>{
+ const {makeSelectedDocument,selectedTextHash,validateSelectedDocument}=await import('../../api/utils/song-library/selected-source.js');
+ const candidate={provider:'kugou',itemID:'468823329',title:'ブルーバード',artist:'Ikimonogakari',duration:215,lines:[{text:'共鳴けて'}]};
+ const doc=await makeSelectedDocument(candidate,{provider:candidate.provider,itemID:candidate.itemID,query:'ブルーバード',expectedTextHash:selectedTextHash(candidate.lines)});
+ validateSelectedDocument(doc);assert.equal(doc.response.lines[0].romanized,'azukete');
+ const before=structuredClone(doc),annotation=await annotationFor(doc,'ja-kana');
+ assert.equal(annotation.lines[0].text,'あずけて');assert.deepEqual(doc,before);
+});

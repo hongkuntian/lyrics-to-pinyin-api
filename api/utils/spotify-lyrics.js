@@ -17,6 +17,7 @@ import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,needs
 import {isLatinScriptFallback} from './lyric-script.js';
 import {hedgedLookup} from './hedged-lookup.js';
 import {isRejectedRecordingLyrics} from './rejected-lyrics.js';
+import {qualifyLyricTiming,responseTimingNeedsRefresh} from './timing-plausibility.js';
 import {analyzeLyricLanguage} from './lyric-language.js';
 import {providerLanguageSource,PROVIDER_LANGUAGE_EVIDENCE_VERSION} from './provider-language-evidence.js';
 import {LYRIC_SELECTION_REVISION,LYRIC_NORMALIZATION_VERSION,hasEmbeddedLyricCredits,publicRawLyrics} from './lyric-annotations.js';
@@ -45,6 +46,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         ||candidate.title!==response.song?.title?.original||candidate.artist!==response.song?.artist?.original))return false;
       if(rejectRecordingLyricsFn(response.lines.map(l=>({text:l.original})),spotifySearchRequest(r)))return false;
       if(hasEmbeddedLyricCredits(response,spotifySearchRequest(r)))return false;
+      if(responseTimingNeedsRefresh(response))return false;
       if(response.metadata.selection_revision!==LYRIC_SELECTION_REVISION||response.metadata.spotify_response_version!==1)return false;
       if(!Number.isFinite(Date.parse(response.metadata.timestamp))||Date.now()-Date.parse(response.metadata.timestamp)>=lyricResponseLifetimeMs(response))return false;
       verifySpotifyBinding(response.recordingBinding,r,sourceCapsule(response),LYRIC_SELECTION_REVISION,response);return true;
@@ -123,7 +125,7 @@ export function createSpotifyLyricsService(dependencies={}) {
                 return validate(`${label}_validation`,()=>{
                   const lyrics=cleanLyrics(raw,{duration:song.duration,title:song.title,artist:song.artist});
                   if(rejectRecordingLyricsFn(lyrics?.lines??[],target))throw new RecordingMismatchError('version_conflict');
-                  return hasUsableLyrics(lyrics,{duration:song.duration})?{song,lyrics,api,target}:null;
+                  return hasUsableLyrics(lyrics,{duration:song.duration})?qualifyLyricTiming({song,lyrics,api,target}):null;
                 });
               };
               const fresh=await hintedRecording(api,searchTarget,hintContext,{signal,deadline:Math.min(deadline,Date.now()+providerTimeoutMs),budgetMs:sourceHintBudgetMs,neteaseBudgetMs:neteaseSourceHintBudgetMs,measure});
@@ -159,12 +161,12 @@ export function createSpotifyLyricsService(dependencies={}) {
         const language=dependencies.detectLanguageFn?await detectLanguageFn(lyrics.lines.map(l=>l.text).join('\n')):languageDetails.primary;
         const system=getDefaultRomanizationSystemFn(dependencies.detectLanguageFn?language:languageDetails.pronunciation_language);
         const processor=system==='none'?null:getProcessorFn(language);
-        const romanize=async text=>processor&&/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Cyrillic}]/u.test(text)
-          ?(await processor.romanize(text,system,{tone_style:'marks',separator:' ',case:'lower'})).romanized:text;
+        const romanize=async(text,readingRecording)=>processor&&/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Cyrillic}]/u.test(text)
+          ?(await processor.romanize(text,system,{tone_style:'marks',separator:' ',case:'lower',recording:readingRecording})).romanized:text;
         // No query/request backfill. All labels come from the selected provider
         // record; absent labels stay empty for the legacy display DTO only.
         const independentSong={...song,title:typeof song.title==='string'?song.title:'',artist:typeof song.artist==='string'?song.artist:'',source:api.name};
-        const [title,artist,lines]=await Promise.all([romanize(independentSong.title),romanize(independentSong.artist),Promise.all(lyrics.lines.map(async line=>({original:line.text,romanized:await romanize(line.text),timestamp:line.timestamp??null,
+        const [title,artist,lines]=await Promise.all([romanize(independentSong.title),romanize(independentSong.artist),Promise.all(lyrics.lines.map(async line=>({original:line.text,romanized:await romanize(line.text,song),timestamp:line.timestamp??null,
           ...(line.vocalTiming?{vocalTiming:line.vocalTiming}:{})})))]);
         const response=formatMusicResponseFn(independentSong,{title,artist,language,system,lines});
         if(!response)throw new LibraryError('invalid_source',502);
@@ -175,6 +177,7 @@ export function createSpotifyLyricsService(dependencies={}) {
         response.song_details={catalog_id:null,source_id:String(song.id),source:independentProvider(api.name),credits:lyrics.credits??[]};
         response.metadata.word_timing_upgrade_supported=!lyrics.instrumental&&!lyrics.partial&&apis.some(a=>a.supportsVocalTiming===true);
         response.metadata.word_timing_upgrade_version=2;
+        if(selected.timingCorrection)response.metadata.timing_correction=selected.timingCorrection;
         if(lyrics.providerTranslation)response.provider_translation=lyrics.providerTranslation;
         if(lyrics.timingSource)publicRawLyrics(response);
         attachVocalTiming(response,lyrics,{provider:'spotify',recordingID:r.item_id,sourceID:song.id});

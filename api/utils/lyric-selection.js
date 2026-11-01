@@ -1,4 +1,5 @@
 import {lyricScriptFit,isLatinScriptFallback} from './lyric-script.js';
+import {timingRejectionReason,responseTimingNeedsRefresh} from './timing-plausibility.js';
 export function timingQuality(candidate) {
  const lines=candidate?.lyrics?.lines??[],duration=candidate?.song?.duration;
  const bounds={duration:duration??MAX_LYRIC_SECONDS,durationResolution:sourceDurationResolution(candidate?.lyrics,candidate?.song?.id)};
@@ -6,7 +7,7 @@ export function timingQuality(candidate) {
  const ordered=valid.every((t,i)=>!i||t>=valid[i-1]);
  const malformed=times.some(t=>t!=null&&!validTimingTimestamp(t,bounds));
  const coverage=lines.length?valid.length/lines.length:0;
- const usable=!malformed&&ordered&&coverage>=0.8&&new Set(valid).size>=Math.min(2,lines.length);
+ const usable=!timingRejectionReason(candidate)&&!malformed&&ordered&&coverage>=0.8&&new Set(valid).size>=Math.min(2,lines.length);
  return {usable,coverage,alignment:candidate?.timingCorrection?.basis==='recording_listening_review'?'listening_reviewed':'provider'};
 }
 export function chooseLyricCandidate(current,candidate) {
@@ -22,19 +23,19 @@ export function chooseLyricCandidate(current,candidate) {
  return current;
 }
 import {validVocalTiming,validSourceTiming,validTimingProvenance,vocalCoverage,sourceDurationResolution,validTimingTimestamp,MAX_LYRIC_SECONDS} from './vocal-timing.js';
-export const VOCAL_SELECTION_CAPABILITY='measured-vocal-selection-6:outer-whitespace-1:qrc-literal-ampersands-1:kugou-krc-1:qq-qrc-4:plain-word-window-1:native-script-1';
+export const VOCAL_SELECTION_CAPABILITY='measured-vocal-selection-7:outer-whitespace-1:qrc-literal-ampersands-1:kugou-krc-2:qq-qrc-4:plain-word-window-1:native-script-1:temporal-plausibility-1:ja-reading-2';
 
 // A provider capability grants a lookup opportunity, never timing authority.
 // Only validated cues from the selected source's own recording may outrank LRC.
 export function hasMeasuredVocalTiming(candidate) {
  const {song,lyrics}=candidate??{};
- return validSourceTiming(lyrics,song?.id)
+ return !timingRejectionReason(candidate)&&validSourceTiming(lyrics,song?.id)
   && lyrics.lines.some(line=>validVocalTiming(line,{duration:song.duration??MAX_LYRIC_SECONDS,durationResolution:sourceDurationResolution(lyrics,song.id)}));
 }
 export function measuredVocalCoverage(candidate) {
  return vocalCoverage(candidate?.lyrics?.lines,{duration:candidate?.song?.duration??MAX_LYRIC_SECONDS,
   durationResolution:sourceDurationResolution(candidate?.lyrics,candidate?.song?.id),
-  provenance:validSourceTiming(candidate?.lyrics,candidate?.song?.id)});
+   provenance:!timingRejectionReason(candidate)&&validSourceTiming(candidate?.lyrics,candidate?.song?.id)});
 }
 export const hasCompleteMeasuredVocalTiming=candidate=>measuredVocalCoverage(candidate).complete;
 export const measuredSelectionProtected=candidate=>timingQuality(candidate).alignment==='listening_reviewed'
@@ -54,6 +55,7 @@ export function needsTimingDiscovery(candidate,{measured=true}={}) {
 // A readable positive must not hide a recoverable word-timing miss for a day.
 // Apply the same lifetime to memory, canonical and persistent response caches.
 export function lyricResponseLifetimeMs(response) {
+ if(responseTimingNeedsRefresh(response))return 300000;
  if(isLatinScriptFallback(response))return 300000;
  if(response.quality?.partial===true||(response.quality?.synced===false&&response.quality?.instrumental!==true))return 300000;
  if(response.metadata?.word_timing_upgrade_supported===true) {

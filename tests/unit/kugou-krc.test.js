@@ -45,3 +45,10 @@ test('source credits do not change sung-row timing revision and source IDs do',(
  assert.equal(parse().timingSource.revision,parse(good.replace('Invented Singer','Another credit')).timingSource.revision);
  assert.notEqual(parse().timingSource.revision,parse(good,{songId:'43'}).timingSource.revision);
 });
+test('Kugou literal quote escapes are normalized before cue offsets and revisions are built',()=>{
+ const escaped=parse('[1000,2000]<0,1000,0>\\"Invented\\"<1000,1000,0> sky\\path');
+ const literal=parse('[1000,2000]<0,1000,0>"Invented"<1000,1000,0> sky\\path');
+ assert.equal(escaped.lines[0].text,'"Invented" sky\\path');
+ assert.deepEqual(escaped,literal);assert.equal(validVocalTiming(escaped.lines[0],{duration:240}),true);
+ assert.equal(escaped.lines[0].vocalTiming.segments[1].utf16Start,10);
+});

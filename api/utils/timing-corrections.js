@@ -5,6 +5,7 @@ import {cleanLyrics} from './lyric-quality.js';
 import {normalizeRecordingText,normalizedAlbum,recordingScore} from './recording-match.js';
 import {isMusicNotePlaceholder,hasEmbeddedLyricCredits} from './lyric-annotations.js';
 import {isRejectedRecordingLyrics} from './rejected-lyrics.js';
+import {qualifyLyricTiming,responseTimingNeedsRefresh} from './timing-plausibility.js';
 
 export function timingFingerprint(lyrics) {
   return createHash('sha256').update(JSON.stringify((lyrics?.lines || []).map(line=>[line.timestamp ?? null,line.text.normalize('NFC')]))).digest('hex');
@@ -43,6 +44,7 @@ function correctionRule(lyrics,request,rules) {
 // Invalidate only cached sources that need this repair. Keep the existing
 // selection contract so current apps can still cache unaffected recordings.
 export function lyricSourceNeedsRefresh(response,request,{rules=timingCorrections,recordingRejections}={}) {
+  if(responseTimingNeedsRefresh(response))return true;
   const lines=response?.lines || [];
   if(lines.some(line=>isMusicNotePlaceholder(line.original))) return true;
   if(hasEmbeddedLyricCredits(response,request)) return true;
@@ -50,6 +52,7 @@ export function lyricSourceNeedsRefresh(response,request,{rules=timingCorrection
   return Boolean(correctionRule({lines:lines.map(line=>({text:line.original,timestamp:line.timestamp}))},request,rules));
 }
 export async function applyTimingCorrection(candidate, request, context={}, {rules=timingCorrections,fetchJSONFn=fetchJSON}={}) {
+  candidate=qualifyLyricTiming(candidate);
   const rule=correctionRule(candidate.lyrics,request,rules);
   if(!rule) return candidate;
   try {

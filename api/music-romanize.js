@@ -246,10 +246,10 @@ export function createMusicRomanizeService(dependencies={}) {
             const script=lyrics.instrumental ? searchScript : language || (dependencies.detectLanguageFn ? await detectLanguageFn(lyrics.lines.map(line=>line.text || '').join('\n')) : languageDetails.primary);
             const system=romanization_system || (language || dependencies.detectLanguageFn ? getDefaultRomanizationSystemFn(script) : getDefaultRomanizationSystemFn(languageDetails.pronunciation_language));
             const processor=system==='none'?null:getProcessorFn(script);
-            const romanize=async text=>processor && /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Cyrillic}]/u.test(text)
-              ? processor.romanize(text,system,options):{romanized:text};
+            const romanize=async(text,readingRecording)=>processor && /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Cyrillic}]/u.test(text)
+              ? processor.romanize(text,system,{...options,recording:readingRecording}):{romanized:text};
             const [romanizedTitle,romanizedArtist,lines]=await Promise.all([
-              romanize(song.title),romanize(song.artist),Promise.all(lyrics.lines.filter(line=>line.text?.trim()).map(async line=>({original:line.text,romanized:(await romanize(line.text)).romanized,timestamp:Number.isFinite(line.timestamp) && line.timestamp>=0 ? line.timestamp:null,...(line.vocalTiming?{vocalTiming:line.vocalTiming}:{})})))
+              romanize(song.title),romanize(song.artist),Promise.all(lyrics.lines.filter(line=>line.text?.trim()).map(async line=>({original:line.text,romanized:(await romanize(line.text,song)).romanized,timestamp:Number.isFinite(line.timestamp) && line.timestamp>=0 ? line.timestamp:null,...(line.vocalTiming?{vocalTiming:line.vocalTiming}:{})})))
             ]);
             return formatMusicResponseFn({...song,source:api.name},{title:romanizedTitle.romanized,artist:romanizedArtist.romanized,language:script,system,lines});
           });

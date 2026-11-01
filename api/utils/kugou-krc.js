@@ -2,7 +2,7 @@ import {inflateSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
 import {validVocalTiming,MAX_LYRIC_SECONDS} from './vocal-timing.js';
 
-export const KUGOU_ACQUISITION_CAPABILITY='kugou-krc-1';
+export const KUGOU_ACQUISITION_CAPABILITY='kugou-krc-2:escaped-quotes-1';
 const maxBytes=524288;
 // Public KRC container format, independently documented by LyricsKit. This is
 // a format codec, not a provider credential or a key extracted from an app.
@@ -38,7 +38,7 @@ export function parseKRC(raw,{songId,duration=MAX_LYRIC_SECONDS}={}) {
   const start=number(header[1]),length=number(header[2]),end=start+length;
   if(!integer(start)||!integer(length)||!integer(end)||length<=0||end>duration*1000
    ||lines.length&&start/1000<lines.at(-1).timestamp)return null;
-  const body=header[3],markers=[...body.matchAll(/<(-?\d+),([^<> ,]*),([^<> ,]*)>/gu)];
+  const body=header[3].replace(/\\"/g,'"'),markers=[...body.matchAll(/<(-?\d+),([^<> ,]*),([^<> ,]*)>/gu)];
   if(markers.length>1024||(tokens+=markers.length)>8192)return null;
   let text=markers.length?body.slice(0,markers[0].index):body,bad=false;
   const segments=[],integerSegments=[];

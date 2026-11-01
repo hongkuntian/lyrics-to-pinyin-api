@@ -18,6 +18,12 @@ function context(candidates,lyrics={},extra={}) {
 }
 const search=(ctx,values={})=>new KugouAPI().searchSong(values.artist ?? request.artist,values.title ?? request.title,ctx);
 
+test('Kugou LRC removes literal quote escapes without swallowing other backslashes',async()=>{
+ const content=Buffer.from('[00:12.00]今日は \\"空\\" C:\\music').toString('base64');
+ const song=await search(context([candidate()],{'10':{status:200,content}}));
+ assert.equal(song.lyricsData.lines[0].text,'今日は "空" C:\\music');
+});
+
 test('Kugou language declarations use the existing search and own selected lyric body without another call',async()=>{
  const before=context([candidate()]),after=context([candidate('10',{language:'俄语'})]);
  const a=await search(before),b=await search(after);

@@ -68,7 +68,8 @@ export async function makeSelectedDocument(candidate,request,{analyzeLanguageFn=
   // model-context -> selected-source -> processor initialization cycle.
   const system=getDefaultRomanizationSystem(details.pronunciation_language);
   const processor=system==='none'?null:(getProcessorFn??(await import('../../processors/index.js')).getProcessor)(details.pronunciation_language);
-  const lines=await Promise.all(candidate.lines.map(async l=>({original:l.text,romanized:processor?(await processor.romanize(l.text,system,{tone_style:'marks',separator:' ',case:'lower'})).romanized:l.text,timestamp:null})));
+  const recording={...candidate,source:candidate.provider,id:candidate.itemID};
+  const lines=await Promise.all(candidate.lines.map(async l=>({original:l.text,romanized:processor?(await processor.romanize(l.text,system,{tone_style:'marks',separator:' ',case:'lower',recording})).romanized:l.text,timestamp:null})));
   if(lines.some(l=>typeof l.romanized!=='string'||l.romanized.length>16000))throw new LibraryError('invalid_source',502);
   const structure={version:'source-speakers-1',speakers:[],occurrences:lines.map((l,i)=>({sourceID:`L${String(i+1).padStart(4,'0')}`,
     sourceText:l.original,lyricText:l.original,speakerID:null,startsTurn:false,sourcePrefix:''}))};
