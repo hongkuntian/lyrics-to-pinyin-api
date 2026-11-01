@@ -7,6 +7,8 @@ import {createSongLibraryService as createSongLibraryHandler} from '../../api/so
 import {lyricsFingerprint} from '../../api/utils/rejected-lyrics.js';
 import {lyricSourceNeedsRefresh} from '../../api/utils/timing-corrections.js';
 import {requestKey} from '../../api/utils/song-library/document.js';
+import {sourceCapsule,spotifyBinding} from '../../api/utils/song-library/spotify-recording.js';
+import {completenessTarget,completenessCandidate,fullerCandidate} from '../helpers/lyric-completeness-fixture.js';
 const recording={catalog_id:'123',artist:'Test artist',title:'Original song',duration:15};
 const response={song:{id:'source-1',title:{original:'Original song'},artist:{original:'Test artist'},language:'zh',romanization_system:'pinyin'},
   lines:[{original:'一起唱',romanized:'yī qǐ chàng',timestamp:0}],metadata:{source:'test',selection_revision:'test'},quality:{synced:true,partial:false,instrumental:false}};
@@ -214,6 +216,52 @@ test('stale plain documents upgrade with an immutable revision and fence old gen
   assert.equal((await store.document(old.id)).response.quality.synced,false);
   assert.equal((await call({action:'translate',documentID:old.id,sourceHash:old.sourceHash})).body.code,'source_revision_superseded');
   assert.equal(calls,2);
+});
+for(const platform of ['apple','spotify'])for(const measured of [false,true])test(`${platform}: corroborated fuller library text replaces a ${measured?'word':'line'}-timed excerpt without rewriting its source`,async t=>{
+ const request=platform==='apple'?{catalog_id:'123',...completenessTarget}:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',
+  metadata:{origin:'spotify',title:completenessTarget.title,artists:[completenessTarget.artist],album:completenessTarget.album,duration_ms:240000}};
+ const edition=(candidate,words=false)=>{
+  const value={song:{...candidate.song,title:{original:candidate.song.title},artist:{original:candidate.song.artist},language:'en',romanization_system:'identity'},
+   lines:candidate.lyrics.lines.map(line=>({original:line.text,romanized:line.text,timestamp:line.timestamp,...(words?{vocalTiming:{end:line.timestamp+1,
+    segments:[{utf16Start:0,utf16Length:line.text.length,text:line.text,start:line.timestamp,end:line.timestamp+1}]}}:{})})),
+   quality:{synced:candidate.lyrics.lines.some(line=>line.timestamp!==null),partial:false,instrumental:false},metadata:{source:'QQMusicAPI',selection_revision:'test',
+    ...(words?{lyric_timing:{version:1,provider:platform==='apple'?'appleMusic':'spotify',recordingID:request.catalog_id??request.item_id,
+     source:`qq:${candidate.song.id}:qrc`,revision:'a'.repeat(64)}}:{})}};
+  if(platform==='spotify')value.recordingBinding=spotifyBinding(request,sourceCapsule(value),'test',value);
+  return value;
+ };
+ const excerpt=edition(completenessCandidate({id:'42'}),measured),full=edition({...fullerCandidate(),song:{...fullerCandidate().song,id:'43'}});
+ let fresh=excerpt;const refreshes=[];
+ const {call,db,store}=await setup(t,{loadLyrics:async(_,options)=>{refreshes.push(options.refresh);return fresh;}});
+ const first=await call({action:'lyrics',recording:request});assert.equal(first.code,200,JSON.stringify(first.body));const old=first.body.document;
+ const job=await store.reserve({userID:'reader-a',documentID:old.id,target:'en',recipe:'test',reservedMicros:1000});
+ fresh=full;
+ const refreshed=await call({action:'lyrics',recording:request,refresh:true});assert.equal(refreshed.code,200,JSON.stringify(refreshed.body));
+ const current=refreshed.body.document;
+ assert.deepEqual(current.response.lines.map(line=>line.original),full.lines.map(line=>line.original));
+ assert.equal(current.response.quality.synced,false);assert.notEqual(current.id,old.id);assert.notEqual(current.sourceHash,old.sourceHash);
+ const preserved=await store.document(old.id);assert.equal(preserved.sourceHash,old.sourceHash);assert.deepEqual(preserved.response.lines,old.response.lines);
+ assert.equal((await store.existingTranslationJob(preserved,'en')).id,job.job.id);
+ fresh=excerpt;await db.query("UPDATE lyric_requests SET checked_at=now()-interval '6 minutes'");
+ assert.equal((await call({action:'lyrics',recording:request})).body.document.id,current.id);
+ assert.deepEqual(refreshes,[false,true,true]);
+});
+for(const platform of ['apple','spotify'])for(const omitDuration of [false,true])test(`${platform}: early-cutoff library positives ${omitDuration?'without source duration ':''}recheck in five minutes and remain readable during outages`,async t=>{
+ const request=platform==='apple'?{catalog_id:'123',...completenessTarget}:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',
+  metadata:{origin:'spotify',title:completenessTarget.title,artists:[completenessTarget.artist],duration_ms:240000}};
+ const candidate=completenessCandidate(),value={song:{...candidate.song,title:{original:candidate.song.title},artist:{original:candidate.song.artist},language:'en',romanization_system:'identity'},
+  lines:candidate.lyrics.lines.map(line=>({original:line.text,romanized:line.text,timestamp:line.timestamp})),quality:{synced:true,partial:false,instrumental:false},metadata:{source:'LRCAPI',selection_revision:'test'}};
+ if(omitDuration)delete value.song.duration;
+ if(platform==='spotify')value.recordingBinding=spotifyBinding(request,sourceCapsule(value),'test',value);
+ const refreshes=[];
+ const {call,db}=await setup(t,{loadLyrics:async(_,options)=>{refreshes.push(options.refresh);if(refreshes.length===3)throw new LibraryError('provider_timeout',504);return value;}});
+ const old=(await call({action:'lyrics',recording:request})).body.document;
+ assert.equal((await call({action:'lyrics',recording:request})).body.document.id,old.id);assert.deepEqual(refreshes,[false]);
+ await db.query("UPDATE lyric_requests SET checked_at=now()-interval '6 minutes'");
+ assert.equal((await call({action:'lyrics',recording:request})).body.document.id,old.id);assert.deepEqual(refreshes,[false,true]);
+ await db.query("UPDATE lyric_requests SET checked_at=now()-interval '6 minutes'");
+ const fallback=await call({action:'lyrics',recording:request});assert.equal(fallback.code,200);assert.equal(fallback.body.document.id,old.id);
+ assert.equal(fallback.body.refreshError,'provider_timeout');assert.deepEqual(refreshes,[false,true,true]);
 });
 test('first library acquisition reuses verified provider caches; stale and explicit loads refresh',async t=>{
   const refreshes=[];

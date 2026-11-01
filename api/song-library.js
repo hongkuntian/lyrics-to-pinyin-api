@@ -22,7 +22,8 @@ import {createLyricSourceLoader} from './utils/lyric-search.js';
 import {withDeadline} from './utils/fetch-json.js';
 import {selectedSourceRequest,makeSelectedDocument} from './utils/song-library/selected-source.js';
 import {annotationFor,pronunciationKey,enabledProfiles} from './utils/pronunciation-aids.js';
-import {isMeasuredTimingDowngrade} from './utils/song-library/lyric-retention.js';
+import {shouldRetainLyricDocument} from './utils/song-library/lyric-retention.js';
+import {lyricResponseLifetimeMs} from './utils/lyric-selection.js';
 
 export const config={maxDuration:300,supportsResponseStreaming:true};
 const actions={selected_source:['provider','itemID','query','expectedTextHash'],capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
@@ -104,7 +105,8 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
           req.lyricDelivery.publish(readable,{cache:'LIBRARY',serverTiming:timings.join(', ')});
         }
         const stale=value=>!value || lyricSourceNeedsRefreshFn(value.response,recording)
-          || Date.now()-new Date(value.checkedAt??0).getTime()>((value.response.quality.synced && !value.response.quality.partial)?86400000:300000);
+          || Date.now()-new Date(value.checkedAt??0).getTime()>lyricResponseLifetimeMs({...value.response,song:{...value.response.song,
+            duration:isSpotifyRecording(recording)?recording.metadata.duration_ms/1000:recording.duration}});
         if(explicit || stale(doc)) {
           lyricCache='MISS';
           const owner=await db.claimLookup(key,selectionRevision);
@@ -120,8 +122,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
               // Preserve valid line/word timing on a worse fallback. Equal
               // quality may replace the edition; rejected old sources cannot win.
               const keep=doc&&!lyricSourceNeedsRefreshFn(doc.response,recording)
-                &&(doc.response.quality.synced&&!candidate.response.quality.synced
-                  ||isMeasuredTimingDowngrade(doc.response,candidate.response,recording));
+                &&shouldRetainLyricDocument(doc,candidate,recording);
               doc=await measure('document_save',()=>db.saveDocument(keep?{...doc,requestKey:key}:candidate,{replaceID:doc?.id,lookupOwner:owner}));
             }
           } catch(error) {
