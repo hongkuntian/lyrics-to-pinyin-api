@@ -17,6 +17,31 @@ import {resolveCatalogAliases} from '../../api/utils/catalog-aliases.js';
 
 async function acquired(request=appleRequest,options={}){const f=yrcService(options),r=await f.call(request.provider?{recording:request}:request);assert.equal(r.statusCode,200,JSON.stringify(r.body));return {f,response:r.body,doc:makeDocument(request,r.body,SELECTION_REVISION)};}
 async function save(store,doc,replaceID=null){const owner=await store.claimLookup(doc.requestKey,SELECTION_REVISION);assert.ok(owner);try{return await store.saveDocument(doc,{lookupOwner:owner,replaceID});}finally{await store.releaseLookup(doc.requestKey,SELECTION_REVISION,owner);}}
+test('orchestral credit extraction preserves measured word cues through HTTP cache and durable projection',async t=>{
+ const path=await mkdtemp(join(tmpdir(),'credit-word-timing-'));t.after(()=>rm(path,{recursive:true,force:true}));
+ const credits=JSON.parse(await readFile(new URL('../fixtures/production-credit-grammar.json',import.meta.url),'utf8')).orchestralScreenshotCredits;
+ const creditRows=credits.map((text,index)=>`[${index*1000},500](${index*1000},500,0)${text}`).join('\n');
+ for(const request of [appleRequest,spotifyRequest]){
+  const baseline=await acquired(request),current=await acquired(request,{yrc:`${creditRows}\n${syntheticYRC}`});
+  assert.deepEqual(current.response.lines,baseline.response.lines);
+  assert.equal(current.response.lines.filter(line=>line.vocalTiming).length,2);
+  assert.equal(current.response.metadata.lyric_timing.provider,request.provider??'appleMusic');
+  assert.equal(current.response.metadata.lyric_timing.recordingID,request.item_id??request.catalog_id);
+  assert.equal(current.response.metadata.lyric_timing.source,'netease:42:yrc');
+  assert.deepEqual(current.response.song_details.credits.filter(credit=>credits.includes(credit.original)).map(credit=>credit.original),credits);
+  const cached=await current.f.call(request.provider?{recording:request}:request);
+  assert.equal(cached.statusCode,200);
+  assert.deepEqual(cached.body.lines,current.response.lines);
+  assert.deepEqual(cached.body.metadata.lyric_timing,current.response.metadata.lyric_timing);
+  const databasePath=join(path,request.provider??'appleMusic');
+  let {db,store}=await libraryDB(databasePath);t.after(()=>db.close());
+  await save(store,current.doc);await db.close();({db,store}=await libraryDB(databasePath));
+  const loaded=await store.documentForRequest(requestKey(request),SELECTION_REVISION);
+  const reopened=publicDocument(loaded,request).response;
+  assert.deepEqual(reopened.lines,current.response.lines);
+  assert.deepEqual(reopened.metadata.lyric_timing,current.response.metadata.lyric_timing);
+ }
+});
 test('synthetic resolver proof retains the required canonical context from the real resolver',async()=>{
  const aliases=await resolveCatalogAliases(appleRequest,{appleCatalog:null,fetchFn:async()=>({ok:true,json:async()=>({results:[{kind:'song',trackId:123,trackName:appleRequest.title,artistName:appleRequest.artist,collectionName:appleRequest.album,trackTimeMillis:appleRequest.duration*1000}]})})});
  assert.ok(aliases.resolution);const expected=aliases.resolution.canonical_context;
