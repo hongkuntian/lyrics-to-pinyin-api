@@ -10,11 +10,10 @@ migrationNames.push('026-spotify-recordings.sql');
 migrationNames.push('027-spotify-background.sql');
 // Explicit provider-source learning, independent from playback/catalog binding.
 migrationNames.push('028-selected-lyrics-learning.sql');
-migrationNames.push('029-listening-sessions.sql');
 // Public auth token row-lock admission; 030/031 deliberately remain unregistered.
 migrationNames.push('032-auth-token-row-locks.sql');
-// Narrow V1 account DELETE predicate right; 030/031/033/034 stay unregistered.
-migrationNames.push('035-listening-account-delete-privileges.sql');
+// Retained account-data deletion rights without creating optional feature schema.
+migrationNames.push('036-account-data-privacy.sql');
 export async function migrateLibrary(database) {
   return database.transaction(async db=> {
     await db.query("SET LOCAL lock_timeout='5s'");

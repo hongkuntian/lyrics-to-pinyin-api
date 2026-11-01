@@ -56,5 +56,6 @@ lyrics-to-pinyin-api/
 
 ## Notes
 
+- The [initial release boundary](docs/INITIAL_RELEASE_SCOPE.md) excludes shared listening Sessions and its API, worker, contracts and feature tests. Ordinary app authentication, account deletion, Spotify connections and listening-reviewed lyric timing remain in scope.
 - Runtime support matrix should be derived from registries (`api/processors/index.js`, `api/music-apis/index.js`) rather than hardcoded docs.
 - Keep this file synced whenever test layout or runtime provider registration changes.

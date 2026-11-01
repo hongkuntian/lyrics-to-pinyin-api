@@ -1,11 +1,10 @@
-import {scrubListeningAccount} from '../listening/account.js';
+import {assertRetainedAccountDeletionAvailable,scrubRetainedAccountData} from './account-data-privacy.js';
 import {prepareSpotifyRevocationInTransaction,persistSpotifyRevocationInTransaction,flushSpotifyCleanup} from '../spotify/revocation.js';
-import {createAuthPrivacyWriters} from '../listening-v2/privacy-writers.js';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {digest,LibraryError,lockAuthWriter} from '../song-library/store.js';
 import {AppAuthStore,authPolicy} from '../app-auth/store.js';
-import {createWriterAuthContext} from '../listening-v2/auth-context.js';
-import {SessionV2Error} from '../listening-v2/errors.js';
+import {createWriterAuthContext} from '../app-auth/auth-context.js';
+import {AuthContextError} from '../app-auth/errors.js';
 import {attest} from '../app-auth/verification.js';
 import {AppleIdentityService} from './apple-identity.js';
 import {first} from './policy.js';
@@ -27,7 +26,7 @@ async function sourceCredential(db,user,policy) {
 async function writerAuthorization(operation) {
   try{return await operation();}
   catch(error){
-    if(!(error instanceof SessionV2Error))throw error;
+    if(!(error instanceof AuthContextError))throw error;
     if(['unauthorized','forbidden','expired','conflict'].includes(error.code))
       throw new LibraryError('app_access_revoked',403);
     throw new LibraryError('app_auth_unavailable',503);
@@ -36,11 +35,9 @@ async function writerAuthorization(operation) {
 
 export class AccountStore {
   #writerAuth;
-  #privacyWriters;
   #writerAuthentications=new WeakMap();
-  constructor(db,{policy,attestFn=attest,apple=new AppleIdentityService(),spotifyCleanupFn=flushSpotifyCleanup,sessionsPrivacy}={}) {
+  constructor(db,{policy,attestFn=attest,apple=new AppleIdentityService(),spotifyCleanupFn=flushSpotifyCleanup}={}) {
     this.spotifyCleanup=spotifyCleanupFn;this.db=db;this.policy=policy??authPolicy();this.attest=attestFn;this.apple=apple;
-    this.#privacyWriters=createAuthPrivacyWriters(db,sessionsPrivacy);
     // Pure construction: no SQL or namespace activation.
     this.#writerAuth=createWriterAuthContext({authStore:new AppAuthStore(this.db,{policy:this.policy}),
       environment:this.policy.environment==='production'?'production':'development'});
@@ -175,8 +172,6 @@ export class AccountStore {
       const scope=await this.#lockWriter(db,user,prepared.authentication,operationRawJSON,{userIDs:[user.id,userID]});
       await writerAuthorization(()=>scope.revalidate({tx:db}));
       const spotifyPlan=await prepareSpotifyRevocationInTransaction(db,{ownerID:user.id,keyID:user.keyID},'ownerChanged');
-      const privacyPlan=this.#privacyWriters?await this.#privacyWriters.prepareSignIn(db,scope,userID):null;
-      if(privacyPlan)await this.#privacyWriters.applyBeforeAuth(db,privacyPlan);
       await db.query('UPDATE account_identities SET deleted_at=NULL,apple_client_id=$2,refresh_token_encrypted=$3 WHERE user_id=$1',
         [userID,input.bundleID,verified.refreshTokenEncrypted]);
       // Configured target reenable passed permanent-withdrawal refusal above.
@@ -191,10 +186,7 @@ export class AccountStore {
       // the locked preimage check; unique collision still rolls everything back.
       await db.query("INSERT INTO library_tokens(digest,user_id,expires_at) VALUES($1,$2,clock_timestamp()+interval '365 days')",[targetCredentialDigest,userID]);
       spotifyCleanup=await persistSpotifyRevocationInTransaction(db,spotifyPlan);
-      let privacyNotAfterMS;
-      if(privacyPlan){await this.#privacyWriters.persistAfterAuth(db,privacyPlan);privacyNotAfterMS=await this.#privacyWriters.verifyPostimage(db,privacyPlan);}
-      // The retained privacy cutoff and exact S/C/C2 share this LAST SQL clock.
-      await writerAuthorization(()=>scope.verifyPostimage({tx:db,notAfterMS:privacyNotAfterMS}));
+      await writerAuthorization(()=>scope.verifyPostimage({tx:db}));
       // Return directly to the transaction wrapper's COMMIT; no further IO.
     });
     await this.spotifyCleanup(this.db,spotifyCleanup);
@@ -209,11 +201,8 @@ export class AccountStore {
       const scope=await this.#lockWriter(db,user,prepared.authentication,operationRawJSON,{allKeys:true});
       await writerAuthorization(()=>scope.revalidate({tx:db}));
       const spotifyPlan=await prepareSpotifyRevocationInTransaction(db,{ownerID:user.id,credentialDigest:user.credentialDigest},'signedOut');
-      const privacyPlan=this.#privacyWriters?await this.#privacyWriters.prepareSignOut(db,scope):null;
-      if(privacyPlan)await this.#privacyWriters.applyBeforeAuth(db,privacyPlan);
       await db.query('UPDATE library_tokens SET revoked=true WHERE digest=$1',[user.credentialDigest]);
       spotifyCleanup=await persistSpotifyRevocationInTransaction(db,spotifyPlan);
-      if(privacyPlan){await this.#privacyWriters.persistAfterAuth(db,privacyPlan);await this.#privacyWriters.verifyPostimage(db,privacyPlan);}
       // Exact source deadline SQL, then direct COMMIT.
       await writerAuthorization(()=>scope.verifyPostimage({tx:db}));
     });
@@ -229,6 +218,7 @@ export class AccountStore {
     if(!identity)throw new LibraryError('sign_in_required',403);
     const verified=await this.apple.authenticate(input);
     if(verified.subjectHash!==identity.subject_hash)throw new LibraryError('apple_identity_invalid',403);
+    await assertRetainedAccountDeletionAvailable(this.db);
     await this.apple.revoke({...identity,apple_client_id:input.bundleID,refresh_token_encrypted:verified.refreshTokenEncrypted});
     let spotifyCleanup=[];
     await this.db.transaction(async db=>{
@@ -239,9 +229,7 @@ export class AccountStore {
       const scope=await this.#lockWriter(db,user,prepared.authentication,operationRawJSON,{allTokens:true,allKeys:true});
       await writerAuthorization(()=>scope.revalidate({tx:db}));
       const spotifyPlan=await prepareSpotifyRevocationInTransaction(db,{ownerID:user.id},'accountDeleted');
-      const privacyPlan=this.#privacyWriters?await this.#privacyWriters.prepareDelete(db,scope):null;
-      if(privacyPlan)await this.#privacyWriters.applyBeforeAuth(db,privacyPlan);
-      await scrubListeningAccount(db,user.id);
+      await scrubRetainedAccountData(db,user.id);
       await db.query('UPDATE library_users SET disabled=true WHERE id=$1',[user.id]);
       await db.query('DELETE FROM selected_source_access WHERE user_id=$1',[user.id]);
       await db.query('UPDATE library_tokens SET revoked=true WHERE user_id=$1',[user.id]);
@@ -251,7 +239,6 @@ export class AccountStore {
       await db.query('DELETE FROM live_lyrics_push_receipts WHERE user_id=$1',[user.id]);
       await db.query("UPDATE correction_reports SET detail='[Account deleted]',assessment=NULL WHERE user_id=$1",[user.id]);
       spotifyCleanup=await persistSpotifyRevocationInTransaction(db,spotifyPlan);
-      if(privacyPlan){await this.#privacyWriters.persistAfterAuth(db,privacyPlan);await this.#privacyWriters.verifyPostimage(db,privacyPlan);}
       // Exact source session and credential deadlines survive deliberate deletion
       // as captured auth evidence. Privacy verification must come before this.
       await writerAuthorization(()=>scope.verifyPostimage({tx:db}));

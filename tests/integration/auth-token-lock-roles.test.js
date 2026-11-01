@@ -11,7 +11,7 @@ import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.j
 // actual public migrations plus a synthetic NOLOGIN role with SELECT(tokens)
 // and no token UPDATE. No account/auth service, V2 schema or live pool is used.
 const name='032-auth-token-row-locks.sql',anchor='auth_lock_anchor';
-const correction='035-listening-account-delete-privileges.sql';
+const correction='036-account-data-privacy.sql';
 // Preserve every historical 032 assertion on its exact registered prefix.
 async function migrateLibrary(database){
  const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>n!==correction));
@@ -28,7 +28,7 @@ const publicNames=[
  '019-translation-reuse-dashboard.sql','020-catalog-recording-bindings.sql','021-app-auth.sql',
  '022-live-lyrics-push.sql','023-live-lyrics-runtime.sql','024-live-lyrics-cleanup.sql',
  '025-memberships.sql','026-spotify-recordings.sql','027-spotify-background.sql',
- '028-selected-lyrics-learning.sql','029-listening-sessions.sql'
+ '028-selected-lyrics-learning.sql'
 ];
 const sql=filename=>readFile(new URL(`../../db/${filename}`,import.meta.url),'utf8');
 const sha=text=>createHash('sha256').update(text).digest('hex');
@@ -107,7 +107,7 @@ async function privilegeSnapshot(db){
   WHERE n.nspname='public' AND c.relkind='r' ORDER BY relation,a.attnum`)).rows;
 }
 
-test('manifest preserves historical prefix, adds 035 after 032 and leaves 030/031/033/034 unregistered',()=>{
+test('manifest retains public auth and account privacy without registering retired feature migrations',()=>{
  assert.deepEqual(migrationNames,[...publicNames,name,correction]);
 });
 

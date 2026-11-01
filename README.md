@@ -2,7 +2,14 @@
 
 A Node.js serverless backend (Vercel) for romanizing multilingual lyrics and text.
 
-## Current Scope
+## Initial Release Scope
+
+The initial release focuses on individual listening, lyric discovery, saved song
+libraries and language learning. Shared listening Sessions, room queues,
+invitations and public recaps are not part of this release. App authentication
+sessions and ordinary Spotify connections remain supported; they are not shared
+Sessions. See [the release boundary](docs/INITIAL_RELEASE_SCOPE.md) for retained
+security requirements and archived feature recovery.
 
 - Languages: `zh`, `yue`, `ja`, `ko`, `ru`
 - Endpoints:
