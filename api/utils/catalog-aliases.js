@@ -27,7 +27,7 @@ const key=song=>JSON.stringify([normalizeRecordingText(song.artist),normalizeRec
 const searchFields=(song,explicit)=>({catalog_id:song.catalog_id,title:song.title,artist:song.artist,album:song.album,duration:song.duration,
  ...(typeof explicit==='boolean'?{explicit}:{}),
  ...(song.artist_entities?.length?{artist_entities:song.artist_entities}:{})});
-function finish(request,songs,catalogID,method) {
+function finish(request,songs,catalogID,method,reviewedSearches=[]) {
  const priority=s=>{const index=CATALOG_TERRITORIES.indexOf(s.storefront);return index<0?99:index;};
  const ordered=[...songs].sort((a,b)=>priority(a)-priority(b)||key(a).localeCompare(key(b),'en'));
  // A catalog item supplies edition evidence; the caller cannot assert it.
@@ -43,7 +43,7 @@ function finish(request,songs,catalogID,method) {
  // Keep canonical queries and the same bounded set of trusted candidates.
  const localized=!ordered.some(s=>sameRecordingNames(s,request))
   ? complete.find(s=>recordingNames(s,entities).title===expected.title):null;
- const candidates=[...(localized?[localized]:[]),...complete,...complete.flatMap(s=>artists.map(a=>({...s,artist:a.artist})))];
+ const candidates=[...(localized?[localized]:[]),...reviewedSearches,...complete,...complete.flatMap(s=>artists.map(a=>({...s,artist:a.artist})))];
  const seen=new Set(),searches=candidates.filter(s=>{const k=key(s);if(seen.has(k))return false;seen.add(k);return true;}).map(s=>searchFields(s,explicit)).slice(0,8);
  const canonical=ordered.find(s=>s.storefront==='us')??ordered[0];
  const aliases=searches.filter(song=>key(song)!==key(request));
@@ -109,5 +109,9 @@ export async function resolveCatalogAliases(request,context={}) {
    }catch{return [];}
   },budget);songs=[...songs,...equivalents.flat()];
  }
- return finish(request,songs,catalogID,songs.some(s=>s.catalog_id!==catalogID)?'catalog_equivalent':'same_catalog_id');
+ const review=reviewedAliases.find(entry=>entry.acceptedRequests.some(song=>signature(request,song))
+  &&entry.anchors.some(anchor=>songs.some(song=>signature(song,anchor))));
+ const reviewedSearches=(review?.searchAliases??[]).filter(song=>song.catalog_id===catalogID&&Number.isFinite(song.duration)
+  &&Math.abs(song.duration-request.duration)<=0.5);
+ return finish(request,songs,catalogID,reviewedSearches.length?'reviewed_alias':songs.some(s=>s.catalog_id!==catalogID)?'catalog_equivalent':'same_catalog_id',reviewedSearches);
 }

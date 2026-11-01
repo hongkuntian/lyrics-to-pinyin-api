@@ -1,5 +1,6 @@
 import {lyricScriptFit,isLatinScriptFallback} from './lyric-script.js';
 import {timingRejectionReason,responseTimingNeedsRefresh} from './timing-plausibility.js';
+import {needsCompletenessDiscovery,qualifyLyricCompleteness} from './lyric-completeness.js';
 export function timingQuality(candidate) {
  const lines=candidate?.lyrics?.lines??[],duration=candidate?.song?.duration;
  const bounds={duration:duration??MAX_LYRIC_SECONDS,durationResolution:sourceDurationResolution(candidate?.lyrics,candidate?.song?.id)};
@@ -17,13 +18,15 @@ export function chooseLyricCandidate(current,candidate) {
  const currentScript=lyricScriptFit(current),candidateScript=lyricScriptFit(candidate);
  if(currentScript===-1&&candidateScript===1)return candidate;
  if(currentScript===1&&candidateScript===-1)return current;
- if(Boolean(current.lyrics.partial)!==Boolean(candidate.lyrics.partial))return current.lyrics.partial?candidate:current;
+ const currentPartial=qualifyLyricCompleteness(current,candidate).lyrics.partial;
+ const candidatePartial=qualifyLyricCompleteness(candidate,current).lyrics.partial;
+ if(Boolean(currentPartial)!==Boolean(candidatePartial))return currentPartial?candidate:current;
  const a=timingQuality(current),b=timingQuality(candidate);
  if(a.usable!==b.usable)return b.usable?candidate:current;
  return current;
 }
 import {validVocalTiming,validSourceTiming,validTimingProvenance,vocalCoverage,sourceDurationResolution,validTimingTimestamp,MAX_LYRIC_SECONDS} from './vocal-timing.js';
-export const VOCAL_SELECTION_CAPABILITY='measured-vocal-selection-7:outer-whitespace-1:qrc-literal-ampersands-1:kugou-krc-2:qq-qrc-4:plain-word-window-1:native-script-1:temporal-plausibility-1:ja-reading-2';
+export const VOCAL_SELECTION_CAPABILITY='measured-vocal-selection-7:outer-whitespace-1:qrc-literal-ampersands-1:kugou-krc-2:qq-qrc-4:plain-word-window-1:native-script-1:temporal-plausibility-1:ja-reading-2:corroborated-completeness-1';
 
 // A provider capability grants a lookup opportunity, never timing authority.
 // Only validated cues from the selected source's own recording may outrank LRC.
@@ -47,6 +50,7 @@ export function needsTimingDiscovery(candidate,{measured=true}={}) {
  if(!candidate)return true;
  if(candidate.lyrics.instrumental)return false;
  if(isLatinScriptFallback(candidate))return true;
+ if(needsCompletenessDiscovery(candidate))return true;
  if(measuredSelectionProtected(candidate))return false;
  return candidate.lyrics.partial||!timingQuality(candidate).usable
   ||(measured&&!hasCompleteMeasuredVocalTiming(candidate));
@@ -57,6 +61,7 @@ export function needsTimingDiscovery(candidate,{measured=true}={}) {
 export function lyricResponseLifetimeMs(response) {
  if(responseTimingNeedsRefresh(response))return 300000;
  if(isLatinScriptFallback(response))return 300000;
+ if(needsCompletenessDiscovery({song:response.song,lyrics:{...response.quality,lines:(response.lines??[]).map(line=>({...line,text:line.original}))}}))return 300000;
  if(response.quality?.partial===true||(response.quality?.synced===false&&response.quality?.instrumental!==true))return 300000;
  if(response.metadata?.word_timing_upgrade_supported===true) {
   const timing=response.metadata.lyric_timing;
@@ -71,7 +76,8 @@ export function lyricResponseLifetimeMs(response) {
 export function chooseMeasuredLyricCandidate(current,candidate) {
  const selected=chooseLyricCandidate(current,candidate);
  if(selected!==current || !current || !candidate)return selected;
- if(current.lyrics.partial || candidate.lyrics.partial || current.lyrics.instrumental || candidate.lyrics.instrumental)return current;
+ if(qualifyLyricCompleteness(current,candidate).lyrics.partial || qualifyLyricCompleteness(candidate,current).lyrics.partial
+  || current.lyrics.instrumental || candidate.lyrics.instrumental)return current;
  if(lyricScriptFit(current)===1&&isLatinScriptFallback(candidate))return current;
  const a=timingQuality(current),b=timingQuality(candidate);
  if(a.usable&&b.usable&&!measuredSelectionProtected(current)) {

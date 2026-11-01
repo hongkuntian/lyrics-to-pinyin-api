@@ -1,10 +1,47 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {hedgedLookup} from '../../api/utils/hedged-lookup.js';
+import {completenessCandidate,fullerCandidate} from '../helpers/lyric-completeness-fixture.js';
 const defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:()=>resolve()};};
 const tick=()=>new Promise(r=>setImmediate(r));
 const until=async predicate=>{for(let attempt=0;attempt<100&&!predicate();attempt++)await tick();assert.ok(predicate(),'expected lookup event');};
 const plain={song:{duration:100},lyrics:{lines:[{text:'words',timestamp:null}]}},timed={song:{duration:100},lyrics:{lines:[{text:'words',timestamp:12}]}};
+test('an early-cutoff source cannot abort a slower fuller untimed source or publish an unqualified snapshot',async()=>{
+ const ready=defer(),published=[],excerpt=completenessCandidate(),full=fullerCandidate();let started=false;
+ const work=hedgedLookup(['excerpt','full'],async name=>{
+  if(name==='excerpt')return excerpt;
+  started=true;await ready.promise;return full;
+ },{delayMs:1,untimedGraceMs:1,completenessGraceMs:100,onCandidate:value=>published.push(value)});
+ await until(()=>started);assert.deepEqual(published,[]);ready.resolve();
+ assert.equal(await work,full);assert.deepEqual(published,[full]);
+});
+test('completeness discovery has one fixed deadline, two slots and cancels remaining work',async context=>{
+ context.mock.timers.enable({apis:['setTimeout','Date']});
+ const excerpt=completenessCandidate(),second=defer(),third=defer(),signals=[],started=[];let active=0,peak=0,settled=false;
+ const work=hedgedLookup(['first','second','third'],async(name,signal)=>{
+  started.push(name);signals.push(signal);active++;peak=Math.max(peak,active);
+  if(name!=='first')await(name==='second'?second:third).promise;
+  active--;return excerpt;
+ },{completenessGraceMs:20,onCandidate:()=>assert.fail('excerpt must not publish progressively')}).then(value=>{settled=true;return value;});
+ await until(()=>started.length===3);assert.ok(peak<=2);
+ context.mock.timers.tick(15);second.resolve();await tick();assert.equal(settled,false);
+ context.mock.timers.tick(5);assert.equal(await work,excerpt);assert.equal(signals[2].aborted,true);third.resolve();
+});
+test('an earlier word timer cannot cut short completeness discovery',async context=>{
+ context.mock.timers.enable({apis:['setTimeout','Date']});
+ const excerptReady=defer(),fullReady=defer(),excerpt=completenessCandidate(),full=fullerCandidate(),started=[];
+ let settled=false;
+ const work=hedgedLookup([{name:'plain'},{name:'excerpt'},{name:'full',supportsVocalTiming:true}],async api=>{
+  started.push(api.name);
+  if(api.name==='plain')return completenessCandidate({timed:false});
+  await(api.name==='excerpt'?excerptReady:fullReady).promise;
+  return api.name==='excerpt'?excerpt:full;
+ },{delayMs:1,wordTimingGraceMs:10,completenessGraceMs:30}).then(value=>{settled=true;return value;});
+ await until(()=>started.includes('excerpt'));context.mock.timers.tick(1);
+ await until(()=>started.includes('full'));excerptReady.resolve();await tick();
+ context.mock.timers.tick(10);await tick();assert.equal(settled,false);
+ fullReady.resolve();assert.equal(await work,full);
+});
 for(const cause of ['earlier-formatter-finishes','untimed-grace-expires'])test(`known complete timing wins while presentation is pending: ${cause}`,async()=>{
  const a=defer(),b=defer();let pending=0;
  const winner=hedgedLookup(['plain','timed'],async name=>name==='plain'?plain:timed,{delayMs:1,untimedGraceMs:5,onCandidate:async candidate=>{pending++;await(candidate===plain?a:b).promise;}});

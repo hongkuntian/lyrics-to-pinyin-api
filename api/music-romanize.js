@@ -25,6 +25,7 @@ import {cleanLyrics,hasUsableLyrics} from './utils/lyric-quality.js';
 import {LYRIC_NORMALIZATION_VERSION,LYRIC_SELECTION_REVISION,publicRawLyrics} from './utils/lyric-annotations.js';
 import {applyTimingCorrection,lyricSourceNeedsRefresh} from './utils/timing-corrections.js';
 import {hedgedLookup} from './utils/hedged-lookup.js';
+import {needsCompletenessDiscovery} from './utils/lyric-completeness.js';
 import {lookupReviewedRecording,hasReviewedCatalogSource} from './utils/reviewed-recordings.js';
 import {lookupOfficialTranscription,hasOfficialCatalogSource} from './utils/official-transcriptions.js';
 import {lookupListeningReviewedRecording,hasListeningCatalogSource} from './utils/listening-reviewed-recordings.js';
@@ -165,7 +166,7 @@ export function createMusicRomanizeService(dependencies={}) {
                   if(ordinary)matched=true;
                   let lyrics=cleanLyrics(raw??await measure(`${label}_lyrics`,()=>api.getLyrics(song.id,{...target,signal,song})),{duration:song.duration,title:song.title,artist:song.artist,catalogID:catalog_id});
                   if(rejectRecordingLyricsFn(lyrics?.lines??[],request))throw new RecordingMismatchError('lyric_version_conflict');
-                  const candidate=await applyTimingCorrectionFn({song,lyrics,api,target},request,{signal,deadline:providerDeadline});
+                  const candidate=await applyTimingCorrectionFn({song,lyrics,api,target,recordingTarget:request},request,{signal,deadline:providerDeadline});
                   return hasUsableLyrics(candidate.lyrics,{duration:candidate.song.duration})?candidate:null;
                 };
                 const fresh=probe?null:await hintedRecording(api,target,hintContext,{signal,deadline:providerDeadline,budgetMs:sourceHintBudgetMs,neteaseBudgetMs:neteaseSourceHintBudgetMs,measure});
@@ -174,7 +175,7 @@ export function createMusicRomanizeService(dependencies={}) {
                   hintCandidate=await validateSource(fresh.song,fresh.lyrics);
                   if(hintCandidate){
                     matched=true;
-                    if(preferred||!isLatinScriptFallback(hintCandidate)&&(!api.supportsVocalTiming||!needsTimingDiscovery(hintCandidate)))return hintCandidate;
+                    if(preferred||!needsTimingDiscovery(hintCandidate,{measured:api.supportsVocalTiming===true}))return hintCandidate;
                     // Formatting belongs to the acquisition, not this provider
                     // slot. Continue discovery inside the original deadline;
                     // publication still rechecks the best candidate and signal.
@@ -287,7 +288,7 @@ export function createMusicRomanizeService(dependencies={}) {
         };
         let publishedCandidate=null;
         publishCandidate=async candidate=> {
-          if(!scope || isLatinScriptFallback(candidate) || chooseLyricCandidate(publishedCandidate,candidate)!==candidate)return;
+          if(!scope || isLatinScriptFallback(candidate) || needsCompletenessDiscovery(candidate) || chooseLyricCandidate(publishedCandidate,candidate)!==candidate)return;
           const response=await responseFor(candidate);
           if(response?.song&&chooseLyricCandidate(publishedCandidate,candidate)===candidate){publishedCandidate=candidate;scope.publish(response,{requestID,serverTiming:timings.join(', ')});}
         };

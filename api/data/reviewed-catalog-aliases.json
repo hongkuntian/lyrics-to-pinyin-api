@@ -4,6 +4,41 @@
     {
       "acceptedRequests": [
         {
+          "catalog_id": "1089186523",
+          "artist": "Ikimonogakari",
+          "title": "Blue Bird",
+          "album": "Chou Ikimonobakari Tennen Kinen Members Best Selection",
+          "duration": 215.707
+        }
+      ],
+      "anchors": [
+        {
+          "catalog_id": "1089186523",
+          "artist": "Ikimonogakari",
+          "title": "Blue Bird",
+          "album": "Chou Ikimonobakari Tennen Kinen Members Best Selection",
+          "duration": 215.707
+        }
+      ],
+      "searchAliases": [
+        {
+          "catalog_id": "1089186523",
+          "artist": "Ikimonogakari",
+          "title": "ブルーバード",
+          "album": "Chou Ikimonobakari Tennen Kinen Members Best Selection",
+          "duration": 215.707
+        }
+      ],
+      "reviewedDate": "2026-11-01",
+      "provenance": [
+        "https://itunes.apple.com/lookup?id=1089186523&country=us",
+        "https://www.sonymusic.co.jp/json/v2/artist/Ikimonogakari/discography/ESCL-5560",
+        "Apple and Sony identify the 2016-03-15 compilation, disc 2 track 3; Sony supplies the native title. This is a reviewed search alias, not a claimed Apple storefront localization or timing equivalence."
+      ]
+    },
+    {
+      "acceptedRequests": [
+        {
           "artist": "Hebe Tien",
           "title": "A Little Happiness (From \"Our Times\")",
           "album": "A Little Happiness (From \"Our Times\") - Single",

@@ -5,6 +5,23 @@ const request={artist:'Emil Wakin Chau',title:'Friends',album:'Friends',duration
 const en={kind:'song',trackId:161282089,artistName:request.artist,trackName:request.title,collectionName:'Friends',trackTimeMillis:312333};
 const zh={...en,artistName:'周華健',trackName:'朋友',collectionName:'朋友'};
 const fetchFn=async url=>({ok:true,json:async()=>({results:new URL(url).searchParams.get('country')==='tw' ? [zh]:[en]})});
+test('reviewed label title aliases require the complete live catalog anchor',async()=>{
+ const request={catalog_id:'1089186523',artist:'Ikimonogakari',title:'Blue Bird',album:'Chou Ikimonobakari Tennen Kinen Members Best Selection',duration:215.707};
+ const anchor={kind:'song',trackId:1089186523,artistName:request.artist,trackName:request.title,collectionName:request.album,trackTimeMillis:215707};
+ const context={appleCatalog:null,fetchFn:async()=>({ok:true,json:async()=>({results:[anchor]})})};
+ const aliases=await resolveCatalogAliases(request,context);
+ assert.ok(aliases.some(song=>song.title==='ブルーバード'&&song.artist===request.artist));
+ assert.equal(aliases.resolution.method,'reviewed_alias');
+ assert.equal(aliases.resolution.canonical_recording_id,'apple:1089186523');
+ assert.ok(aliases.resolution.catalog_items.every(song=>song.provenance==='itunes'));
+ for(const change of [{artist:'Cover'},{title:'Blue Bird (Live)'},{album:'Other album'},{duration:216.5},{catalog_id:'999'}]){
+  assert.ok(!(await resolveCatalogAliases({...request,...change},context)).some(song=>song.title==='ブルーバード'));
+ }
+ for(const change of [{trackName:'Blue Bird (Live)'},{artistName:'Cover'},{collectionName:'Other album'},{trackTimeMillis:216500}]){
+  const changed={...context,fetchFn:async()=>({ok:true,json:async()=>({results:[{...anchor,...change}]})})};
+  assert.ok(!(await resolveCatalogAliases(request,changed)).some(song=>song.title==='ブルーバード'));
+ }
+});
 test('quoted TV-theme suffix discovery retains original request proof and strict catalog evidence',async()=>{
  const target={artist:'Hacken Lee',title:'紅日 - 電視劇「他來自天堂」主題曲',album:'紅日',duration:287};
  const song={kind:'song',trackId:1443394970,artistName:target.artist,trackName:'紅日',collectionName:target.album,trackTimeMillis:287173};

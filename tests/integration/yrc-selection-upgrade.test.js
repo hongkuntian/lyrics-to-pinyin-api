@@ -12,7 +12,7 @@ const until=async predicate=>{const end=Date.now()+2000;while(!predicate()){asse
 for(const provider of ['apple','spotify'])test(`${provider}: fast line-only source stays readable, slower exact YRC becomes final and durable`,async()=>{
  const gate=deferred();
  const line={name:'LRCAPI',searchSong:async()=>({id:99,title:appleRequest.title,artist:appleRequest.artist,creditedArtistNames:[appleRequest.artist],album:appleRequest.album,duration:240,source:'lrclib'}),
-  getLyrics:async()=>({lines:[{text:'Synthetic line edition one',timestamp:9},{text:'Synthetic line edition two',timestamp:59},{text:'Synthetic line edition three',timestamp:119}]})};
+  getLyrics:async()=>({lines:[{text:'Synthetic line edition one',timestamp:9},{text:'Synthetic line edition two',timestamp:59},{text:'Synthetic line edition three',timestamp:159}]})};
  const f=yrcService({getAvailableAPIsFn:()=>[f.api,line],speculativeDiscovery:false,hedgeDelayMs:1,wordTimingGraceMs:1000});
  const original=f.api.searchSong;f.api.searchSong=async(...args)=>{await gate.promise;return original(...args);};
  const request=provider==='apple'?appleRequest:spotifyRequest;
