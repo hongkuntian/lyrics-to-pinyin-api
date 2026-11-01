@@ -1,3 +1,4 @@
+import {readFile} from 'node:fs/promises';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createMusicRomanizeService as createMusicRomanizeHandler} from '../../api/music-romanize.js';
@@ -147,6 +148,34 @@ test('new credit families refresh current-revision caches into new immutable sou
     const current=await response({cache:old});
     const currentDoc=makeDocument(recording,current,current.metadata.selection_revision);
     assert.deepEqual(current.lines,fresh.lines,text);
+    assert.notEqual(currentDoc.id,oldDoc.id,text);
+    assert.notEqual(currentDoc.sourceHash,oldDoc.sourceHash,text);
+    assert.deepEqual(old,snapshot,text);
+  }
+});
+
+const orchestralCredits=JSON.parse(await readFile(new URL('../fixtures/production-credit-grammar.json',import.meta.url))).orchestralScreenshotCredits;
+
+test('orchestral screenshot credits leave fresh model inputs and refresh only contaminated cached sources',async()=>{
+  const fresh=await response();
+  const input={...data,lines:[...orchestralCredits.map(text=>({text,timestamp:0})),...data.lines]};
+  for(const reviewed of [false,true]) {
+    const current=await response({input,reviewed});
+    assert.deepEqual(current.lines,fresh.lines);
+    assert.deepEqual(current.song_details.credits.slice(0,orchestralCredits.length).map(credit=>credit.original),orchestralCredits);
+    const context=JSON.parse(requestBody(makeDocument(recording,current,current.metadata.selection_revision)).input[0].content);
+    assert.deepEqual(context.sourceDocument.occurrences.map(row=>row.lyricText),fresh.lines.map(row=>row.original));
+    for(const text of orchestralCredits)assert.ok(!JSON.stringify(context).includes(text));
+  }
+  for(const text of orchestralCredits) {
+    const old=structuredClone(fresh);
+    old.metadata.timestamp=new Date().toISOString();
+    old.lines.splice(1,0,{original:text,romanized:'metadata',timestamp:8});
+    delete old.metadata.lyric_structure;delete old.lyric_structure;
+    const snapshot=structuredClone(old),oldDoc=makeDocument(recording,old,old.metadata.selection_revision);
+    const current=await response({cache:old}),currentDoc=makeDocument(recording,current,current.metadata.selection_revision);
+    assert.deepEqual(current.lines,fresh.lines,text);
+    assert.equal(current.metadata.selection_revision,fresh.metadata.selection_revision);
     assert.notEqual(currentDoc.id,oldDoc.id,text);
     assert.notEqual(currentDoc.sourceHash,oldDoc.sourceHash,text);
     assert.deepEqual(old,snapshot,text);

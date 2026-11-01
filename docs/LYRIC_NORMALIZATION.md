@@ -206,3 +206,29 @@ immutable document while leaving old stored sources and saved results readable.
 New translation and original Study against a contaminated old source fail before
 allowance reservation or model invocation. There is no bulk migration or
 background regeneration of saved content.
+
+## Shared production-credit policy
+
+`api/data/lyric-credit-policy.json` owns the version-1 complete-role aliases and
+bounded role grammar executed by `api/utils/lyric-credit-policy.js`. The native
+app mirrors it at `Lyrica/lyric-credit-policy.json` and executes the identical
+`production-credit-grammar.json` corpus. Before publishing a policy change, run
+`python3 scripts/check-lyric-credit-policy.py --backend-root /path/to/lyrics-to-pinyin-api`
+from the app checkout, then run both runtimes' tests. The parity check is
+read-only and does not introduce external dependencies into `npm test`.
+
+The 左手指月 / 萨顶顶 screenshot supplies eight orchestral, recording, studio and
+distribution labels in the corpus's `orchestralScreenshotCredits`; its exact
+provider item and recording duration were not established. Other variants are
+authored regressions. Rules match complete normalized roles, including compounds
+whose every atom is recognized, rather than contributor/title blacklists or
+arbitrary colon rows. Ambiguous vocal labels and verified performed bodies retain
+their existing protection.
+
+Fresh sources extract these credits into existing `song_details.credits` before
+pronunciation and translation context. Current-revision contaminated stored
+sources use targeted reacquisition with a new immutable identity; old documents,
+hashes and saved results remain unchanged. Native cache/offline projection uses
+the same policy, retaining credits in Song details and preserving original source
+IDs and timing. Neither the selection revision nor annotation revision changes,
+and saved translations are not silently regenerated or rebound.

@@ -71,7 +71,33 @@
     "包装剪辑: Practice contributor",
     "视频设计: Practice contributor",
     "视频制作: Practice contributor",
-    "视频剪辑: Practice contributor"
+    "视频剪辑: Practice contributor",
+    "铜管/弦乐:国际首席爱乐乐团",
+    "铜管/弦乐录音师:李巍",
+    "铜管/弦乐录音棚:中国剧院录音棚",
+    "人声录音师:李杨/曹洋",
+    "人声录音棚:55Tec Studio/C-VOICE STUDIO",
+    "混音录音棚:BIG.J Studio",
+    "音乐制作出品:中英音乐",
+    "音乐发行:智慧大狗/天才联盟",
+    "銅管 ／ 弦樂 錄音工程師 ： Practice contributor",
+    "銅管/弦樂錄音棚：Practice contributor",
+    "人聲錄音棚：Practice contributor",
+    "混音錄音棚：Practice contributor",
+    "音樂製作出品：Practice contributor",
+    "音樂發行：Practice contributor",
+    "木管录音工作室：Practice contributor",
+    "弦乐录音室：Practice contributor",
+    "铜管录音助理：Practice contributor",
+    "Brass / Strings recording studio: Practice contributor",
+    "Woodwinds recording engineer: Practice contributor",
+    "Vocal recording studio: Practice contributor",
+    "和声录音工程师：Practice contributor",
+    "制作助理：Practice contributor",
+    "和声编谱：Practice contributor",
+    "友情大合唱：Practice contributor",
+    "音乐联合制作出品方：Practice contributor",
+    "音乐独家发行公司：Practice contributor"
   ],
   "preserved": [
     "我说：别哭",
@@ -91,7 +117,25 @@
     "Cover design of my dreams: you",
     "混音/我的心：一起唱",
     "Mixing and my heart: stay",
-    "和声：一起唱"
+    "和声：一起唱",
+    "人声：一起唱",
+    "铜管响起：一起唱",
+    "铜管/今夜：一起唱",
+    "铜管/弦乐录音棚外：一起唱",
+    "铜管/弦乐录音棚说：一起唱",
+    "人声录音棚里的梦：一起唱",
+    "混音录音棚说：一起唱",
+    "音乐发行的梦：一起唱",
+    "音乐制作出品之后：一起唱",
+    "音乐制作出品说：一起唱",
+    "音乐制作出品发行：一起唱",
+    "音乐音乐发行：一起唱",
+    "人声录音师：",
+    "人声录音师：\n一起唱",
+    "/铜管：一起唱",
+    "铜管/：一起唱",
+    "铜管//弦乐：一起唱",
+    "Vocal recording studio tonight: sing with me"
   ],
   "creditBlocks": [
     [
@@ -100,5 +144,15 @@
       "封面设计：米一嗷",
       "联合出品：QQ音乐·新鲜制造×C.Z·梦想成真"
     ]
+  ],
+  "orchestralScreenshotCredits": [
+    "铜管/弦乐:国际首席爱乐乐团",
+    "铜管/弦乐录音师:李巍",
+    "铜管/弦乐录音棚:中国剧院录音棚",
+    "人声录音师:李杨/曹洋",
+    "人声录音棚:55Tec Studio/C-VOICE STUDIO",
+    "混音录音棚:BIG.J Studio",
+    "音乐制作出品:中英音乐",
+    "音乐发行:智慧大狗/天才联盟"
   ]
 }

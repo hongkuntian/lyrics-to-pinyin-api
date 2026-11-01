@@ -1,7 +1,7 @@
 import {createRequire} from 'node:module';
-import chinese from 'chinese-conv';
 import {revalidatedVocalLine} from './vocal-timing.js';
 import {classifyLyricNotice} from './lyric-notices.js';
+import {creditLabelKey,ambiguousProductionRoles as ambiguousRoles,isProductionRole} from './lyric-credit-policy.js';
 const require=createRequire(import.meta.url);
 const roster=require('../data/lyric-performers.json');
 export const LYRIC_NORMALIZATION_VERSION='lyric-annotations-3';
@@ -26,107 +26,7 @@ export function publicRawLyrics(response) {
 }
 
 // Normalize labels for comparison only. Never rewrite the sung words.
-const labelKey=text=>chinese.sify(text).normalize('NFKC').toLowerCase().replace(/\s+/gu,'');
-// Each row is one role with equivalent names. Bilingual labels must consume the
-// entire label and describe the same role; arbitrary English suffixes are unsafe.
-const roles=[
-  [["词","作词","填词","改编词"],["lyrics","lyrics by","lyricist"]],
-  [["曲","作曲"],["composer","composed by","composition"]],
-  [["词曲"],["music and lyrics","lyrics and music"]],
-  [["编曲"],["arrangement","arranger","arranged by","music arrangement"]],
-  [["制作人","制作"],["producer","produced by","production"]],
-  [["制作助理","助理制作","助理制作人"],["production assistant","assistant producer"]],
-  [["配唱制作人","配唱制作"],["vocal producer","vocal production"]],
-  [["监制","出品监制"],["executive producer","supervisor"]],
-  [["统筹","制作统筹"],["coordinator","coordination"]],
-  [["音乐统筹"],["music coordinator","music coordination"]],
-  [["演唱","演唱者","歌手","主唱"],["singer","artist","vocals","performed by"]],
-  [["出品人"],["presenter"]],
-  [["录音","录音师","录音工程师"],["recorded by","recording engineer","recording"]],
-  [["录音室","录音棚","录音工作室"],["recording studio"]],
-  [["鼓录音室"],["drum recording studio"]],
-  [["混音","混音师","混音工程师"],["mixed by","mixing engineer","mixing"]],
-  [["混音室","混音工作室","混音录音室"],["mixing studio"]],
-  [["母带","母带工程师","母带处理工程师","母带后期处理"],["mastered by","mastering engineer","mastering"]],
-  [["母带工作室","母带处理工作室"],["mastering studio"]],
-  [["混音/母带处理工作室","混音&母带处理工作室"],["mixing/mastering studio"]],
-  [["和声编写","和声编写及演唱"],["backing vocals arrangement","background vocal arrangement"]],
-  [["人声编辑"],["vocal editing","vocal editor"]],
-  [["弦乐","弦乐编写","弦乐编曲","弦乐团"],["strings","string arrangement","strings arrangement","string orchestra"]],
-  [["管弦乐编写","管弦乐编曲"],["orchestration","orchestral arrangement"]],
-  [["管弦乐团"],["orchestra"]],
-  [["小提琴"],["violin","violins"]],
-  [["第一小提琴","一提","小提琴一"],["first violin","first violins","violin I","violin 1"]],
-  [["第二小提琴","二提","小提琴二"],["second violin","second violins","violin II","violin 2"]],
-  [["中提琴"],["viola","violas"]],
-  [["大提琴"],["cello","cellos"]],
-  [["低音提琴","倍低音提琴"],["double bass","contrabass"]],
-  [["吉他"],["guitar"]],
-  [["木吉他","原声吉他"],["acoustic guitar"]],
-  [["电吉他"],["electric guitar"]],
-  [["吉他独奏"],["guitar solo"]],
-  [["贝斯","低音吉他"],["bass","bass guitar"]],
-  [["鼓"],["drums"]],
-  [["钢琴"],["piano"]],
-  [["键盘"],["keyboard","keyboards"]],
-  [["打击乐"],["percussion"]],
-  [["笛","笛子","长笛"],["flute","dizi"]],
-  [["萨克斯","萨克斯风"],["saxophone"]],
-  [["小号"],["trumpet"]],
-  [["长号"],["trombone"]],
-  [["圆号"],["horn","French horn"]],
-  [["二胡"],["erhu"]],
-  [["古筝"],["guzheng"]],
-  [["琵琶"],["pipa"]],
-  [["音乐总监"],["music director"]],
-  [["指挥"],["conductor"]],
-  [["发行","发行公司"],["distribution","distributor"]],
-  [["发行合作"],["distribution cooperation"]],
-  [["出品","出品方","版权"],["copyright"]],
-  [["制作公司"],["production company"]],
-  [["后期制作"],["post production","post-production"]],
-  [["母带管理"],["master management"]],
-  [["艺人经纪"],["artist management"]],
-  [["原唱"],["original artist","original singer"]],
-  [["制作团队"],["production team"]],
-  [["出品团队"],["presentation team"]],
-  [["出版","出版公司","音乐出版"],["publisher","publishing","music publisher"]],
-  [["词/曲OP"],["lyrics/music original publisher"]],
-  [["词/曲SP"],["lyrics/music sub publisher"]],
-  [[],["OP","SP","original publisher","sub publisher","sub-publisher","program","programming","PGM","programmer","programmed by"]],
-  [["戏腔念白"],["theatrical vocals"]],
-  [["和声"],["backing vocal","backing vocals"]],
-  [["和声"],["background vocal","background vocals"]]
-];
-const roleLabels=new Set(roles.flatMap(([zh,en])=>[
-  ...zh,...en,...zh.flatMap(a=>en.flatMap(b=>[a+b,b+a,a+'('+b+')',b+'('+a+')']))
-]).map(labelKey));
-// Match complete instrument/engineering roles with bounded production
-// modifiers. A colon or an arbitrary suffix never establishes a credit.
-const composedRole=/^(?:(?:(?:[1-9][0-9]?(?:st|nd|rd|th)|first|second|third|principal|lead|solo|assistant))?(?:strings?|violins?|violas?|cellos?|doublebass|contrabass|c\.?bass|guitars?|bass|drums?|piano|keyboards?|percussion|flute|saxophone|trumpet|trombone|horn|orchestra)(?:assistant|arrangement|arranger|recording(?:engineer|assistant)?|engineer|technician|contractor|director|conductor)?|(?:assistant|additional|chief|head)?(?:recording|mixing|mastering)(?:engineer|assistant|studio)?|(?:第?[一二三四五六七八九十0-9]+|首席|助理)?(?:弦乐|管弦乐|小提琴|中提琴|大提琴|低音提琴|倍低音提琴|吉他|贝斯|鼓|钢琴|键盘|打击乐|长笛|萨克斯|小号|长号|圆号|二胡|古筝|琵琶)(?:编写|编曲|录音|录音师|录音助理|助理|技师|统筹|监制|指挥|团)?)$/u;
-// Rights/release roles compose bounded semantic parts, not arbitrary colon
-// labels. Keep the complete-label grammar aligned with native display cleanup.
-const ownershipRole=new RegExp([
-  '^(?:',
-  '(?:(?:词曲|词|曲|歌曲|音乐|录音(?:作品)?|音像|母带|mv|musicvideo)(?:[/&+、及和](?:词曲|词|曲|歌曲|音乐|录音(?:作品)?|音像|母带|mv|musicvideo))*)?(?:版权|[著着]作权)(?:管理|代理|运营|授权|许可|归属|所有)?(?:方|人|公司)?',
-  '|(?:联合|共同|独家|全球|执行|协同)?(?:出品|制作|发行|出版|宣发|策划|营销|推广)(?:人|方|公司|团队|统筹|协力|支持)?',
-  '|(?:(?:lyrics?|music|composition|soundrecording|master|musicvideo)(?:(?:and|&|/)(?:lyrics?|music|composition|soundrecording|master|musicvideo))*)?copyright(?:management|administration|administrator|owner|holder|licensing)?',
-  '|(?:co-?|joint|executive|exclusive|global|additional)?(?:production|producer|presentation|presenter|distribution|distributor|publishing|publisher)(?:company|team)?',
-  ')$'
-].join(''),'u');
-const artworkRole=/^(?:(?:封面|视觉|平面|美术|海报|包装|字体|视频)(?:设计|制作|统筹|总监|指导|绘制|插画|剪辑|后期|拍摄)|(?:cover|artwork|visual|graphic|poster|packaging|video|typography)(?:design|illustration|direction|production|editing|photography|coordination))$/u;
-const engineeringRole=/^(?:录音|混音|母带)(?:后期)?(?:处理|制作)(?:工程师|师|室|工作室)?$/u;
-// Vocal production combines a bounded vocal role with an explicit arranging
-// task or guest-credit modifier. Bare chorus/backing-vocal cues stay ambiguous.
-const vocalProductionRole=/^(?:(?:和声|和音|合声|伴唱|背景人声|合唱)(?:编谱|编写|编曲|编排|编配|设计)(?:及演唱)?|(?:友情|特邀|特别|嘉宾|客串)(?:大?合唱|和声|和音|合声|伴唱|背景人声)|(?:(?:backing|background)vocals?|vocals?|harmony|choral|choir)(?:arrangement|arranger)|guest(?:(?:backing|background)?vocals?|choir|chorus))$/u;
-function compositeProductionRole(key) {
-  const atom=part=>!ambiguousRoles.has(part)
-    && (roleLabels.has(part)||[composedRole,ownershipRole,artworkRole,engineeringRole,vocalProductionRole].some(pattern=>pattern.test(part)));
-  if(atom(key))return true;
-  // Admit role lists only when every component is a complete production role.
-  const parts=key.split(/[\/&+、及]|and/u);
-  return parts.length>1&&parts.every(part=>part&&atom(part));
-}
+const labelKey=creditLabelKey;
 // A whole-row recording code may omit the ISRC label. Never match a code
 // embedded in prose, a partial code, or a different numeric identifier.
 const isrcPattern=/^\s*(?:ISRC\s*[:：]?\s*)?([A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9](?:-?[0-9]){4})\s*$/iu;
@@ -134,7 +34,6 @@ function recordingCode(text) {
   if(text.length>80 || /[\r\n\v\f\u0085\u2028\u2029]/u.test(text))return null;
   return text.normalize('NFKC').match(isrcPattern)?.[1]??null;
 }
-const ambiguousRoles=new Set(['chorus','和声','和音','合声','backingvocal','backingvocals']);
 const sourceCredit=/^取材自歌曲[《〈].+[》〉]\s*[（(]\s*[词詞]\s*[:：].+曲\s*[:：].+[）)]$/u;
 const wrappedInstrumentals=new Set(['music','instrumental','interlude','intro','outro','间奏','前奏','尾奏','伴奏','纯音乐']);
 const isInstrumentalMarker=text=>{
@@ -210,8 +109,7 @@ function creditRole(text,aliases) {
     const compactNames=/^[\p{Script=Han}]{2,4}(?:[ 、/／&,，]+[\p{Script=Han}]{2,4})+$/u.test(roster);
     return namedPerformers(roster,aliases) || (key!=='chorus' && compactNames)?'production_credit':null;
   }
-  return roleLabels.has(key)||composedRole.test(key)
-    || (compositeProductionRole(key)&&!namedPerformers(parts[1],aliases))?'production_credit':null;
+  return isProductionRole(key)&&!namedPerformers(parts[1],aliases)?'production_credit':null;
 }
 
 const performanceRoles=new Set(['男声','女声','戏腔']);
