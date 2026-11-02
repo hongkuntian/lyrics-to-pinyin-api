@@ -42,13 +42,23 @@ matching album and duration within 0.5 seconds. Spotify treats only that same
 anchored description as presentation metadata while preserving its structured
 credits, version and duration checks. Arbitrary dash subtitles are not removed.
 
+For Japanese parenthetical work names, `全話OP` is a description of that same
+work's opening theme. Matching retains the entire work name and all performer,
+version and duration checks; it does not equate a bare title, another anime,
+numbered OP, ED or TV-size label. After an admitted romanized exact match,
+LRCLIB gets one additional artist-and-base-title search within its existing
+deadline. This recovers reported Spotify `7dIi9GxNOaCJ75ZDLIQo70` (Sho Oosawa,
+257.950 seconds): exact LRCLIB `10923290` has romanized plain text, while
+`9684459` has Japanese text and provider line timestamps under the same work's
+`全話OP` label. This is metadata/source validation, not acoustic verification.
+
 Latin-only candidates remain last-resort fallbacks. They leave a fixed bounded
 discovery window, do not flash as progressive readable results, and are returned
 at completion if no better usable source is found. LRCLIB continues its existing
 bounded searches after an exact timed fallback; outages or rate limits preserve
 an already admitted positive. Explicit source previews remain available.
 
-The acquisition capability includes `native-script-1`, invalidating old server
+The acquisition capability includes `native-script-2`, invalidating old server
 selection caches without changing the response contract or selection revision.
 Latin-only fallbacks expire after five minutes, including timed ones. Existing
 saved/native documents are not rewritten; Reload lyrics requests fresh selection.

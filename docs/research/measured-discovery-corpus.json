@@ -13,6 +13,28 @@
   ],
   "cases": [
     {
+      "caseID": "spotify-7dIi9GxNOaCJ75ZDLIQo70",
+      "platform": "spotify",
+      "metadataEvidence": "Exact user-linked Spotify track resolved with the Spotify catalog connector on 2026-11-02; no inferred market, ISRC or explicit flag. Reported romanized source retained as a regression, independently of timing availability.",
+      "catalogURI": "spotify:track:7dIi9GxNOaCJ75ZDLIQo70",
+      "catalogURL": "https://open.spotify.com/track/7dIi9GxNOaCJ75ZDLIQo70",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "7dIi9GxNOaCJ75ZDLIQo70",
+          "metadata": {
+            "origin": "spotify",
+            "title": "Butter-Fly (デジモンアドベンチャー)",
+            "artists": ["Sho Oosawa"],
+            "artist_ids": ["2CjRvmpvJbyoGeXA4OtSYp"],
+            "album": "JAPAN ANIMESONG COLLECTION VOL.7 [アニソン・ジャパン]",
+            "duration_ms": 257950
+          }
+        }
+      }
+    },
+    {
       "caseID": "reported-hacken-red-sun-script",
       "platform": "metadata-only",
       "metadataEvidence": "User screenshot title, artist and album; LRCLIB exact record 9217531 supplies 287 seconds. Playback platform and catalog ID were not established.",

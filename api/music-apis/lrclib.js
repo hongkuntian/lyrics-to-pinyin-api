@@ -1,7 +1,7 @@
 import {BaseMusicAPI} from './base.js';
 import {fetchJSON} from '../utils/fetch-json.js';
 import {parseLRC} from '../utils/lrc.js';
-import {findRecording,findLyricsRecording,recordingScore,searchTitle,sameRecordingNames,recordingNames,RecordingMismatchError} from '../utils/recording-match.js';
+import {findRecording,findLyricsRecording,recordingScore,searchTitle,japaneseThemeSearchTitle,sameRecordingNames,recordingNames,RecordingMismatchError} from '../utils/recording-match.js';
 import chinese from 'chinese-conv';
 import {cleanLyrics,hasUsableLyrics} from '../utils/lyric-quality.js';
 import {isRejectedLyrics,isRejectedRecordingLyrics} from '../utils/rejected-lyrics.js';
@@ -45,6 +45,15 @@ export class LRCAPI extends BaseMusicAPI {
     };
     try { await search({artist_name:artist,track_name:title}); } catch(error) { if(error.status===429) {const fallback=attempt();if(fallback)return fallback;throw error;}failure=error; }
     const direct=attempt();if(direct&&!needsDiscovery(direct)) return direct;
+    // LRCLIB's literal title query can hide the same Japanese theme under a
+    // full-series OP description. One artist-bound query broadens discovery;
+    // every result still validates the complete requested work and recording.
+    const themeTitle=direct&&isFallback(direct)?japaneseThemeSearchTitle(searchTitle(title)):null;
+    if(themeTitle) {
+      try { await search({artist_name:artist,track_name:themeTitle}); }
+      catch(error) { if(error.status===429)return attempt();failure=error; }
+      const theme=attempt();if(theme&&!needsDiscovery(theme))return theme;
+    }
     // Discovery may be broad; acceptance still requires verified recording
     // names and duration. LRCLIB search is script-sensitive.
     const base=searchTitle(title),simple=simplifyRecordingScript(base), variants=/\p{Script=Han}/u.test(base) ? [...new Set([simple,chinese.tify(simple)])]:[base];

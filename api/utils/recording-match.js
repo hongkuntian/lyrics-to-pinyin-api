@@ -39,6 +39,19 @@ const unwrappedAlbum=value=>value.replace(/^Optional\("(.*)"\)$/, '$1');
 export const stripTitleDescription=value=>value.normalize('NFKC').replace(/\s*\((?:from\s+[^()]+|(?:love\s+)?theme\s+(?:song\s+)?from\s+[^()]+|[^()]*(?:主题曲|主題曲|插曲|片尾曲|片頭曲|片头曲|主题歌|主題歌)[^()]*|抖音[热熱]歌)\)/gi,description=>/\b(live|remaster(?:ed)?|instrumental|karaoke|acapella|cover|remix|demo)\b|现场|現場|演唱会|演唱會|重制|重製|伴奏|翻唱/i.test(description) ? description : '').trim();
 export const stripThemeDescriptionSuffix=value=>value.normalize('NFKC').replace(/\s+[-–—]\s+(?:電視劇|电视剧|電影|电影|動畫|动画)[「《][^「」《》\n]+[」》](?:主題曲|主题曲|片尾曲|片頭曲|片头曲|插曲|主題歌|主题歌)\s*$/u,
  description=>sensitiveCredit.test(description)?description:'').trim();
+const japaneseThemeDescription=/\s*\(([^()\r\n]*[\p{Script=Hiragana}\p{Script=Katakana}][^()\r\n]*)\)$/u;
+function normalizeJapaneseThemeTitle(value) {
+  const title=value.normalize('NFKC'),match=title.match(japaneseThemeDescription);
+  // 全話OP describes the same work's opening theme across all episodes.
+  // Keep the complete work name; OP numbers, TV sizes and other labels differ.
+  return match&&!sensitiveCredit.test(match[1])&&match[1].endsWith('全話OP')
+    ?title.slice(0,match.index)+` (${match[1].slice(0,-4)})`:title;
+}
+export function japaneseThemeSearchTitle(value) {
+  const title=value.normalize('NFKC'),match=title.match(japaneseThemeDescription);
+  // Discovery only: full work/performer/version/duration admission still runs.
+  return match&&!sensitiveCredit.test(match[1])?title.slice(0,match.index).trim():null;
+}
 export function normalizedAlbum(value) {
   return normalizeRecordingText(unwrappedAlbum(value).replace(/\s+-\s+(single|ep)$/i,''));
 }
@@ -50,7 +63,7 @@ export function recordingNames({title='',artist='',artist_entities=[]},knownEnti
   const entityNames=artistEntityNames([...artist_entities,...knownEntities]);
   const credits=[artist,...guests].flatMap(value=>splitCredits(value,entityNames))
     .map(normalizeRecordingText).filter(Boolean).sort();
-  return {title:normalizeRecordingText(base),credits:[...new Set(credits)]};
+  return {title:normalizeRecordingText(normalizeJapaneseThemeTitle(base)),credits:[...new Set(credits)]};
 }
 export function sameRecordingNames(a,b) {
   if(b.recordingProvider==='spotify')return sameSpotifyRecordingNames(a,b);
@@ -260,7 +273,7 @@ function creditSegmentations(value,knownNames) {
 function spotifyTitle(value='') {
   const guests=[];
   const base=stripTitleDescription(stripThemeDescriptionSuffix(value)).replace(/\(\s*live\s*版?\s*\)/gi,'(Live)').replace(/\s*\((?:feat\.?|ft\.?|featuring|with)\s+([^()]+)\)/gi,(_,credit)=>{guests.push(credit);return '';});
-  return {title:normalizeRecordingText(base),guests};
+  return {title:normalizeRecordingText(normalizeJapaneseThemeTitle(base)),guests};
 }
 const structuredNames=song=>Array.isArray(song.creditedArtistNames)&&song.creditedArtistNames.length>0
   &&song.creditedArtistNames.every(n=>typeof n==='string'&&n.trim())?song.creditedArtistNames:null;
