@@ -32,8 +32,8 @@ test('Apple catalog-validated localized targets can corroborate a fuller source'
  assert.equal(JSON.stringify(response.body).includes('recordingTarget'),false);
 });
 
-for(const available of [true,false])test(`reviewed native title recovers the Apple recording without restoring quarantined timing: available=${available}`,async()=>{
- const request={artist:'Ikimonogakari',title:'Blue Bird',album:'Chou Ikimonobakari Tennen Kinen Members Best Selection',duration:215.707,catalog_id:'1089186523',storefront:'us'};
+for(const duration of [215,215.707])for(const available of [true,false])test(`reviewed native title recovers the Apple recording without restoring quarantined timing: duration=${duration}, available=${available}`,async()=>{
+ const request={artist:'Ikimonogakari',title:'Blue Bird',album:'Chou Ikimonobakari Tennen Kinen Members Best Selection',duration,catalog_id:'1089186523'};
  const anchor={kind:'song',trackId:1089186523,trackName:request.title,artistName:request.artist,collectionName:request.album,trackTimeMillis:215707};
  const opening=Array.from({length:4},(_,index)=>`朝の光が街を照らして新しい物語を始める${index}`);
  const later=Array.from({length:4},(_,index)=>`夕方の風が窓を開いて遠い旅の続きを語り始める${index}`);
@@ -48,6 +48,7 @@ for(const available of [true,false])test(`reviewed native title recovers the App
   assert.deepEqual(response.body.lines.map(line=>line.original),(available?full:excerpt).lyrics.lines.map(line=>line.text));
   assert.equal(response.body.metadata.catalog_resolution.method,'reviewed_alias');
   assert.equal(response.body.metadata.catalog_resolution.canonical_recording_id,'apple:1089186523');
+  assert.equal(response.body.metadata.catalog_resolution.accepted_request.duration,duration);
   assert.equal(response.body.quality.partial,false);
   if(available){
    assert.equal(String(response.body.song.id),'468823329');

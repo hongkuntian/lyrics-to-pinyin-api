@@ -22,6 +22,32 @@ test('reviewed label title aliases require the complete live catalog anchor',asy
   assert.ok(!(await resolveCatalogAliases(request,changed)).some(song=>song.title==='ブルーバード'));
  }
 });
+test('whole-second playback requests preserve reviewed aliases for the exact live catalog ID',async()=>{
+ const request={catalog_id:'1089186523',artist:'Ikimonogakari',title:'Blue Bird',album:'Chou Ikimonobakari Tennen Kinen Members Best Selection',duration:215};
+ const anchor={kind:'song',trackId:1089186523,artistName:request.artist,trackName:request.title,collectionName:request.album,trackTimeMillis:215707};
+ const context={appleCatalog:null,fetchFn:async()=>({ok:true,json:async()=>({results:[anchor]})})};
+ const aliases=await resolveCatalogAliases(request,context);
+ assert.ok(aliases.some(song=>song.title==='ブルーバード'));
+ assert.equal(aliases.resolution.accepted_request.duration,215);
+ assert.equal(aliases.resolution.canonical_recording_id,'apple:1089186523');
+ assert.ok(aliases.every(song=>song.duration===215.707));
+ for(const change of [{duration:214},{duration:215.1},{catalog_id:'999'},{artist:'Cover'},{title:'Blue Bird (Live)'},{album:'Other album'}])
+  assert.ok(!(await resolveCatalogAliases({...request,...change},context)).some(song=>song.title==='ブルーバード'));
+ for(const trackTimeMillis of [214000,216000,216500])
+  assert.ok(!(await resolveCatalogAliases(request,{...context,fetchFn:async()=>({ok:true,json:async()=>({results:[{...anchor,trackTimeMillis}]})})})).some(song=>song.title==='ブルーバード'));
+});
+for(const transport of ['itunes','apple_music'])test(`${transport}: whole-second precision is bounded to an already identified catalog item`,async()=>{
+ const request={catalog_id:'161282089',artist:'Emil Wakin Chau',title:'Friends',album:'Friends',duration:312};
+ const english={...en,trackTimeMillis:312875},chinese={...zh,trackTimeMillis:312875};
+ const context={appleCatalog:transport==='apple_music'?{lookup:async(id,storefront)=>{const song=storefront==='tw'?chinese:english;return [{catalog_id:String(song.trackId),artist:song.artistName,title:song.trackName,album:song.collectionName,duration:312.875,storefront,provenance:'apple_music'}];}}:null,
+  fetchFn:async url=>({ok:true,json:async()=>({results:transport==='itunes'?[new URL(url).searchParams.get('country')==='tw'?chinese:english]:[]})})};
+ const aliases=await resolveCatalogAliases(request,context);
+ assert.ok(aliases.some(song=>song.title==='朋友'));
+ assert.equal(aliases.resolution.accepted_request.duration,312);
+ assert.deepEqual(await resolveCatalogAliases({...request,duration:312.1},context),[]);
+ assert.deepEqual(await resolveCatalogAliases({...request,catalog_id:'999'},context),[]);
+ assert.deepEqual(await resolveCatalogAliases({...request,catalog_id:undefined},context),[]);
+});
 test('quoted TV-theme suffix discovery retains original request proof and strict catalog evidence',async()=>{
  const target={artist:'Hacken Lee',title:'紅日 - 電視劇「他來自天堂」主題曲',album:'紅日',duration:287};
  const song={kind:'song',trackId:1443394970,artistName:target.artist,trackName:'紅日',collectionName:target.album,trackTimeMillis:287173};

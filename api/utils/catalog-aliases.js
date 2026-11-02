@@ -4,7 +4,10 @@ import {recordingScore,recordingNames,sameRecordingNames,normalizeRecordingText,
 import {configuredAppleCatalog,sameCatalogRecording,CATALOG_RESOLUTION_VERSION} from './apple-catalog.js';
 const require=createRequire(import.meta.url);
 const {recordings:reviewedAliases}=require('../data/reviewed-catalog-aliases.json');
-const signature=(a,b)=>a.catalog_id===b.catalog_id&&Number.isFinite(a.duration)&&Math.abs(a.duration-b.duration)<=0.5
+const matchesCatalogDuration=(request,song)=>request.catalog_id===song.catalog_id&&Number.isFinite(request.duration)&&request.duration>0
+ &&Number.isFinite(song.duration)&&song.duration>0&&(Math.abs(request.duration-song.duration)<=0.5
+  ||Number.isInteger(request.duration)&&Math.floor(song.duration)===request.duration);
+const signature=(a,b)=>matchesCatalogDuration(a,b)
  &&['title','artist','album'].every(key=>typeof a[key]==='string'&&typeof b[key]==='string'&&normalizeRecordingText(a[key])===normalizeRecordingText(b[key]));
 const valid=song=>typeof song.title==='string'&&typeof song.artist==='string'&&Number.isFinite(song.duration);
 const item=(song,storefront)=>({catalog_id:String(song.trackId),title:song.trackName,artist:song.artistName,album:song.collectionName,duration:song.trackTimeMillis/1000,
@@ -76,7 +79,7 @@ export async function resolveCatalogAliases(request,context={}) {
  }
  const results=await mapBounded(countries,async(country,signal)=>{
   if(signal.aborted)return [];
-  if(appleCatalog){try{const songs=await withDeadline(child=>appleCatalog.lookup(catalogID,country,{...context,signal:child}),Math.min(800,Math.max(1,deadline-Date.now())),signal);if(songs.some(song=>Math.abs(song.duration-request.duration)<=0.5))return songs;}catch{}}
+  if(appleCatalog){try{const songs=await withDeadline(child=>appleCatalog.lookup(catalogID,country,{...context,signal:child}),Math.min(800,Math.max(1,deadline-Date.now())),signal);if(songs.some(song=>matchesCatalogDuration({...request,catalog_id:catalogID},song)))return songs;}catch{}}
   try{
    const lang={tw:'zh_tw',cn:'zh_cn'}[country];
    const params=new URLSearchParams({id:catalogID,country,...(lang?{lang}:{})});
@@ -84,7 +87,7 @@ export async function resolveCatalogAliases(request,context={}) {
     .filter(s=>s.kind==='song'&&String(s.trackId)===catalogID).map(s=>item(s,country)).filter(valid);
   }catch{return [];}
  },budget);
- let songs=[...discovered,...results.flat()].filter(s=>s.catalog_id===catalogID&&Math.abs(s.duration-request.duration)<=0.5);
+ let songs=[...discovered,...results.flat()].filter(s=>matchesCatalogDuration({...request,catalog_id:catalogID},s));
  const entities=songs.flatMap(s=>s.artist_entities??[]);
  const expected=recordingNames(lookupRequest,entities);
  const titleMatches=songs.filter(s=>recordingNames(s).title===expected.title);
@@ -111,7 +114,6 @@ export async function resolveCatalogAliases(request,context={}) {
  }
  const review=reviewedAliases.find(entry=>entry.acceptedRequests.some(song=>signature(request,song))
   &&entry.anchors.some(anchor=>songs.some(song=>signature(song,anchor))));
- const reviewedSearches=(review?.searchAliases??[]).filter(song=>song.catalog_id===catalogID&&Number.isFinite(song.duration)
-  &&Math.abs(song.duration-request.duration)<=0.5);
+ const reviewedSearches=(review?.searchAliases??[]).filter(song=>matchesCatalogDuration({...request,catalog_id:catalogID},song));
  return finish(request,songs,catalogID,reviewedSearches.length?'reviewed_alias':songs.some(s=>s.catalog_id!==catalogID)?'catalog_equivalent':'same_catalog_id',reviewedSearches);
 }

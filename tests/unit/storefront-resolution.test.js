@@ -40,7 +40,7 @@ test('a slow optional territory cannot discard completed original-ID evidence',a
 test('equivalent IDs and matching ISRC do not excuse version, duration or performer conflicts',()=>{
  const anchor={catalog_id:'1',isrc:'USABC2300001',duration:220,title:'Song',artist:'Singer',album:'Album',artist_ids:['42'],content_rating:'explicit'};
  assert.ok(sameCatalogRecording(anchor,{...anchor,catalog_id:'2'}));
- for(const change of [{duration:224},{title:'Song (Live)'},{artist_ids:['42','99']},{content_rating:'clean'},{isrc:'USABC2300002'},{title:'Song (Remastered)'},{title:'Song (Acoustic)'}])
+ for(const change of [{duration:224},{duration:220.707},{title:'Song (Live)'},{artist_ids:['42','99']},{content_rating:'clean'},{isrc:'USABC2300002'},{title:'Song (Remastered)'},{title:'Song (Acoustic)'}])
   assert.equal(sameCatalogRecording(anchor,{...anchor,catalog_id:'2',...change}),false);
  assert.equal(sameCatalogRecording({...anchor,isrc:null},{...anchor,catalog_id:'2'}),false);
 });
