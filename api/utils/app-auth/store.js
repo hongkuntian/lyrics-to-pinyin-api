@@ -1,5 +1,4 @@
 import {randomBytes} from 'node:crypto';
-import {createAuthPrivacyWriters} from '../listening-v2/privacy-writers.js';
 import {digest,LibraryError,lockAuthWriter} from '../song-library/store.js';
 import {attest,assertion} from './verification.js';
 const first=async(db,sql,args=[])=>(await db.query(sql,args)).rows[0]??null;
@@ -15,10 +14,8 @@ export function authPolicy(env=process.env) {
   return {audience,environment,prefix,bundles};
 }
 export class AppAuthStore {
-  #privacyWriters;
-  constructor(db,{policy,attestFn=attest,assertionFn=assertion,sessionsPrivacy}={}) {
+  constructor(db,{policy,attestFn=attest,assertionFn=assertion}={}) {
     this.db=db;this.policy=policy??authPolicy();this.attestFn=attestFn;this.assertionFn=assertionFn;
-    this.#privacyWriters=createAuthPrivacyWriters(db,sessionsPrivacy);
     // No underlying credential/key/user reenable exists in challenge/register/
     // session. Their real SQL and shared anchors stay unchanged. Same-C bearer
     // replacement is lifecycle-neutral; never emit a closure for session expiry.

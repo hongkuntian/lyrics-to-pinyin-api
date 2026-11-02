@@ -1,5 +1,3 @@
-// SOURCE-AUTHORED ONLY: Root must review/apply at this path before execution.
-// Real PostgreSQL only; never imports this artifact in place. V2 remains off.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,lstat,realpath} from 'node:fs/promises';
@@ -26,17 +24,6 @@ const sourcePins={
  "api/utils/app-auth/verification.js": "203e2e2a59706162e8987320b57be12a4dbf98d3784fce5b4298099f0a848995",
  "api/utils/artist-alias-recovery.js": "d57a500e7d7ad94e2873fe7a85fd0438f05b4fc998713b147797f6366819ad10",
  "api/utils/language-detection.js": "5f617664f96fdf7b3aa0ce2bad6e33dde5a8b0594b247cd89a21fcfaef986c32",
- "api/utils/listening-v2/admission.js": "f680a7203a14c974b7a6d5cd83cf420a475a1cee3ca86803c8d6f9e2d3496375",
- "api/utils/listening-v2/auth-context.js": "6d674aea80278c68aee2fa167da714c4987ff0530be44ff095544056b9671da6",
- "api/utils/listening-v2/errors.js": "dac70423b7f56295f3b6d1fed410a87edda06432dbf8fd892ed84e98170d049c",
- "api/utils/listening-v2/privacy-codec.js": "f4ab488efed5e80ea03ade63d715b80bb42886c20e1502ed0c52612bd7f19879",
- "api/utils/listening-v2/privacy-lifecycle.js": "e796198976900acaf5502799cf9fda12be24f3f820b02d56de2a90a611ca5c90",
- "api/utils/listening-v2/privacy-writers.js": "9c6db7c5bd3c3cc4bff34c1b46cc53ca68d6571a443d33bbcf26eb0b98954f34",
- "api/utils/listening-v2/protocol.js": "4369c15340ea2e4a11a1afbab3407541103a816e015f7ad355243a2d18885fee",
- "api/utils/listening-v2/tickets.js": "84c3b8ff87773fc61dbe07f7cfbc6c25a8c7f84a93275ae22bf321912759d046",
- "api/utils/listening/account.js": "6102a77618cbab5f5e34670631bda16e0671ca052c86ed769fc584db2d3c1268",
- "api/utils/listening/model.js": "154e7cf816619735d0930aded1eab1cd0ee574934075cf35865fbc35b903ecd5",
- "api/utils/listening/store.js": "2814ddcdcc95934b6b0fe6b945042ac422c4f3f9becafcb513a78a698da3d3f4",
  "api/utils/lyric-annotations.js": "bd2c25e30b9d15a2f4639126567ce61308d2cd307611d0f889ab384763e4e957",
  "api/utils/lyric-language.js": "e16db0efaf0cded166656b2867b0a3cd734337226e69741843f42b5ca8b9feac",
  "api/utils/lyric-notices.js": "81a09582bd460a94115518f243e8f964110baec31b13a67df351ec7730e55bde",
@@ -102,17 +89,16 @@ const sourcePins={
  "db/026-spotify-recordings.sql": "021f00794aff62b6f1d33206790f83891dd6ea259f27dde685834beecd864256",
  "db/027-spotify-background.sql": "75bf8f52f2dad2fac88fb8af8d2af11e773fc1324e84a7577e92bdd8cf14aae5",
  "db/028-selected-lyrics-learning.sql": "010de0b73bf215dcd53d51b55f69a4e2943483d7aa948a574bbf1318d9f44966",
- "db/029-listening-sessions.sql": "fe9adc6d732edbc9175ed4a2823f6e84821f760099bcf72957da6a8a7a09afc8",
  "db/032-auth-token-row-locks.sql": "c19650a29438ebeea186203d954fee8e144a65ca6d42ad91bc38c18f1f7e5df6",
  "scripts/library-migrations.js": "b2bcfb3ea471555c048f9258b45f745f8ef56cbdfcda08cbbdd2ed0d1e40b422",
  "scripts/membership-role-grants.js": "6c92eaf3fb68a69c66d2d182afacebfce87cdf8ed5d9d98c659c2c9c95dd8117"
 };
 // Explicit changed-input pin refresh comes ONLY from Root's supplied clean
 // immutable commit, never hashes accepted from the current working files.
-const refreshPinPaths=['scripts/library-migrations.js','scripts/membership-role-grants.js','db/035-listening-account-delete-privileges.sql'];
+const refreshPinPaths=["api/utils/app-auth/admin.js","api/utils/app-auth/store.js","api/utils/app-auth/auth-context.js","api/utils/app-auth/errors.js","api/utils/membership/accounts.js","api/utils/membership/account-data-privacy.js","api/utils/song-library/store.js","api/utils/spotify/service.js","scripts/library-migrations.js","scripts/membership-role-grants.js","db/036-account-data-privacy.sql"];
 const gitRoot=fileURLToPath(new URL('../../',import.meta.url));
 const git=(...args)=>execFileSync('git',args,{cwd:gitRoot,encoding:'utf8',stdio:['ignore','pipe','pipe'],env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}}).trim();
-const correction='035-listening-account-delete-privileges.sql';
+const correction='036-account-data-privacy.sql';
 const aclMetadataSHA256='7ee564f93b162fc2b75d6ed791622414c2e44449ff776cc61705644b433e1972';
 const existingTokenFields=['digest','user_id','revoked','created_at','expires_at'];
 const observed={
@@ -146,9 +132,9 @@ async function manifest(){
  const file=await lstat(path);assert.ok(file.isFile()&&!file.isSymbolicLink());assert.equal(file.uid,uid);
  assert.equal(file.mode&0o077,0,'manifest must be private');
  const marker=JSON.parse(await readFile(path,'utf8'));
- assert.equal(marker.purpose,'lyrica-sessions-v2-local-qualification');assert.equal(marker.ownerUID,uid);
+ assert.equal(marker.purpose,'lyrica-auth-local-qualification');assert.equal(marker.ownerUID,uid);
  assert.equal(marker.active,true);assert.equal(marker.TCPListening,false);
- assert.match(marker.socketDirectory,/^\/tmp\/lyrica-sessions-pg-[A-Za-z0-9_-]+$/);
+ assert.match(marker.socketDirectory,/^\/tmp\/lyrica-auth-pg-[A-Za-z0-9_-]+$/);
  const socket=await lstat(marker.socketDirectory);
  assert.ok(socket.isDirectory()&&!socket.isSymbolicLink());assert.equal(socket.uid,uid);assert.equal(socket.mode&0o077,0);
  assert.ok(isAbsolute(marker.dataDirectory));
@@ -170,10 +156,8 @@ async function connect(){
  ({AppAuthStore}=await import('../../api/utils/app-auth/store.js'));
  ({AccountStore}=await import('../../api/utils/membership/accounts.js'));
  ({SpotifyStore}=await import('../../api/utils/spotify/store.js'));
- ({createCurrentAuthContext}=await import('../../api/utils/listening-v2/auth-context.js'));
+ ({createCurrentAuthContext}=await import('../../api/utils/app-auth/auth-context.js'));
  const registered=await import('../../scripts/library-migrations.js');migrationNames=registered.migrationNames;
- // This original 032 harness retains every receipt/ACL/race assertion on its
- // exact historical prefix. New 035 proof lives in its dedicated harness.
  migrateLibrary=async database=>{
   const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>n!==correction));
   try{return await registered.migrateLibrary(database);}
@@ -344,8 +328,8 @@ async function usingDatabase(fn){
  if(errors.length)throw combine(errors,'scenario and cleanup failed');
 }
 async function baseline(h){
- const saved=[...migrationNames],publicNames=saved.filter(name=>Number(name.slice(0,3))<=29);
- assert.deepEqual(publicNames.map(name=>Number(name.slice(0,3))),Array.from({length:29},(_,i)=>i+1));
+ const saved=[...migrationNames],publicNames=saved.filter(name=>Number(name.slice(0,3))<=28);
+ assert.deepEqual(publicNames.map(name=>Number(name.slice(0,3))),Array.from({length:28},(_,i)=>i+1));
  assert.deepEqual(saved,[...publicNames,migration,correction],'exact current registry; original harness selects only through 032');
  migrationNames.splice(0,migrationNames.length,...publicNames);
  try{assert.deepEqual(await migrateLibrary(h.db('baseline')),publicNames);}
@@ -496,9 +480,9 @@ async function connection(h,f){
 }
 async function noRoomWrites(h){
  assert.equal((await h.query("SELECT to_regnamespace('listening_v2')::text AS name")).rows[0].name,null);
- const rows=(await h.query(`SELECT (SELECT count(*) FROM listening_rooms)::text AS rooms,
-  (SELECT count(*) FROM listening_commands)::text AS commands,(SELECT count(*) FROM listening_outbox)::text AS outbox`)).rows;
- assert.deepEqual(rows,[{rooms:'0',commands:'0',outbox:'0'}]);
+ const rows=(await h.query(`SELECT to_regclass('public.listening_rooms')::text AS rooms,
+  to_regclass('public.listening_commands')::text AS commands,to_regclass('public.listening_outbox')::text AS outbox`)).rows;
+ assert.deepEqual(rows,[{rooms:null,commands:null,outbox:null}]);
 }
 async function authRace(h,order,observerFailure=false){
  const f=await seed(h,'race-seed'),c=await connection(h,f),hold=h.barrier(),pending=[],errors=[],trace=[];
@@ -575,7 +559,7 @@ async function upgradeAndMethods(h,t){
  assert.deepEqual(await tokens(h),before);
  const settings=(await h.query("SELECT current_setting('statement_timeout') AS statement,current_setting('lock_timeout') AS lock,current_setting('idle_in_transaction_session_timeout') AS idle,current_setting('TimeZone') AS timezone")).rows[0];
  assert.deepEqual(settings,{statement:'8s',lock:'3s',idle:'15s',timezone:'UTC'});
- // Account privileges are precisely the actual 025/027/028/029 conditional
+ // Account privileges are precisely the actual 025/027/028 conditional
  // grants from the baseline, with no runtime metadata copied to that role.
  assert.equal((await h.query("SELECT has_column_privilege($1,'public.library_tokens','revoked','UPDATE') AS allowed",[account])).rows[0].allowed,true);
  await t.test('restricted actual challenge/register/session/authenticate and Spotify enrollment/adoption/current-auth',async()=>{
@@ -608,7 +592,7 @@ test('manual actual PostgreSQL token-lock and restricted auth frontier qualifica
   // Node subtest failure does not throw from t.test; refuse dependent work if
   // role setup did not finish, while the encompassing finally still cleans up.
   assert.equal(ownedRoles.length,2,'late-role scenario must provision owned aliases');await assertRoles();
-  await t.test('001-029 baseline -> 032 -> actual restricted methods and two-client races',{timeout:45000},sub=>usingDatabase(h=>upgradeAndMethods(h,sub)));
+  await t.test('001-028 baseline -> 032/036 -> actual restricted methods and two-client races',{timeout:45000},sub=>usingDatabase(h=>upgradeAndMethods(h,sub)));
  }catch(error){errors.push(error);}
  finally{
   for(const h of [...databases])try{await dispose(h);}catch(error){errors.push(error);}

@@ -50,8 +50,3 @@ for(const method of ['create','adopt'])test('Spotify '+method+' rolls back if it
  assert.deepEqual(await normal.read(connection.id),method==='create'?null:connection);
  assert.equal((await f.db.query('SELECT expires_at FROM library_tokens WHERE digest=$1',[user.credentialDigest])).rows[0].expires_at,null);
 });
-
-test('AccountStore closed lifecycle option cannot accept a cleanup/auth permit callback',()=>{
- const db={query(){throw Error('construction SQL');},transaction(){throw Error('construction SQL');}};
- assert.throws(()=>new AccountStore(db,{policy,sessionsPrivacy:{coordinatorEnvironment:'test',authorize:()=>true}}),{code:'sessions_privacy_unavailable'});
-});

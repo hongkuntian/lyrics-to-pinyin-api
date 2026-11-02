@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {setTimeout} from 'node:timers/promises';
-import {createWriterAuthContext} from '../../api/utils/listening-v2/auth-context.js';
+import {createWriterAuthContext} from '../../api/utils/app-auth/auth-context.js';
 import {flushSpotifyCleanup} from '../../api/utils/spotify/revocation.js';
 import {libraryDB} from '../helpers/library-db.js';
 import {AccountStore} from '../../api/utils/membership/accounts.js';
@@ -421,8 +421,26 @@ test('HTTP maps stale exact evidence to existing app_access_revoked and leaks no
  for(const secret of [current.session,digest(current.session),current.user.credentialDigest])assert.equal(JSON.stringify(res.body).includes(secret),false);
 });
 
-test('Sessions lifecycle constructor is optional, closed and pure on the actual AccountStore',()=>{
+test('AccountStore construction performs no database work',()=>{
  const db={query(){throw Error('construction SQL');},transaction(){throw Error('construction SQL');}};
- new AccountStore(db,{policy});new AccountStore(db,{policy,sessionsPrivacy:{coordinatorEnvironment:'test'}});
- assert.throws(()=>new AccountStore(db,{policy,sessionsPrivacy:{coordinatorEnvironment:'test',permit:true}}),{code:'sessions_privacy_unavailable'});
+ new AccountStore(db,{policy});
+});
+
+for(const state of ['empty','populated'])test('account deletion refuses '+state+' retained V2 schema before external revocation',async context=>{
+ const fixtureData=await fixture(context),{current}=await signedAccount(fixtureData),input=await appleInput(fixtureData,current.user,'delete');
+ await fixtureData.db.exec('CREATE SCHEMA listening_v2');
+ if(state==='populated')await fixtureData.db.exec("CREATE TABLE listening_v2.output_guards(id text PRIMARY KEY, data jsonb); INSERT INTO listening_v2.output_guards VALUES('guard','{\"retained\":true}')");
+ let revocations=0;fixtureData.apple.revoke=async()=>{revocations++;};
+ const before=await accountState(fixtureData);
+ await assert.rejects(fixtureData.accounts.delete(current.user,input,await authentication(fixtureData,current.user)),{code:'account_data_cleanup_required',status:503});
+ assert.equal(revocations,0);assert.deepEqual(await accountState(fixtureData),before);
+ if(state==='populated')assert.deepEqual((await fixtureData.db.query('SELECT * FROM listening_v2.output_guards')).rows,[{id:'guard',data:{retained:true}}]);
+});
+
+test('retained schema appearing after preflight rolls back every transactional deletion write',async context=>{
+ const fixtureData=await fixture(context),{current}=await signedAccount(fixtureData),input=await appleInput(fixtureData,current.user,'delete');
+ fixtureData.apple.revoke=async()=>{await fixtureData.db.exec('CREATE SCHEMA listening_v2');};
+ const before=await accountState(fixtureData);
+ await assert.rejects(fixtureData.accounts.delete(current.user,input,await authentication(fixtureData,current.user)),{code:'account_data_cleanup_required',status:503});
+ assert.deepEqual(await accountState(fixtureData),before);
 });

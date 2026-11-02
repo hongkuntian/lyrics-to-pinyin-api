@@ -203,8 +203,8 @@ test('same-credential renewal preserves key and credential, accepts nullable App
  assert.equal((await db.query("SELECT revoked FROM library_tokens WHERE user_id='reader-a'")).rows[0].revoked,false);
 });
 
-test('configured AppAuth keeps real challenge/register/session on unchanged live C without V2 schema',async t=>{
- const f=await fixture(t),auth=new AppAuthStore(f.store.db,{policy,sessionsPrivacy:{coordinatorEnvironment:'test'},
+test('AppAuth keeps real challenge/register/session on unchanged live credential without retired schema',async t=>{
+ const f=await fixture(t),auth=new AppAuthStore(f.store.db,{policy,
  attestFn:()=>({publicKey:'fixture',receipt:Buffer.from('fixture')}),assertionFn:({assertion})=>Number(assertion.toString())});
  const first=await enroll(auth),second=await mint(auth,'token-a',2);
  await assert.rejects(auth.authenticate(first.token),{code:'session_expired'});assert.equal((await auth.authenticate(second.token)).id,'reader-a');

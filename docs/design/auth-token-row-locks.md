@@ -1,153 +1,33 @@
-# Auth token row-lock authority
+# Authentication token row-lock admission
 
-Status: implemented and qualified as the narrow prerequisite to the coordinated authentication writer.
+## Maintained contract
 
-Root qualified the combined implementation with 1,526 hermetic passes and zero failures/skips, 42 actual owner-role PostgreSQL cases, and eight further restricted-role PostgreSQL cases. Exact migration 032 committed on the bound live PG18.6 target on 26 October 2026 before publishing the changed V1 writers. Runtime token locking now admits; existing token-field UPDATE, INSERT and DELETE remain denied. See [executed evidence and limits](auth-token-lock-postgres.md#root-verification-and-deployment). V2 capabilities remain disabled.
+`db/032-auth-token-row-locks.sql` supplies the narrow token-row write privilege required by ordered authentication readers and writers. Generic authentication is maintained independently of the retired shared-listening feature. See [writer ordering](auth-writer-order.md), [current authentication](current-auth-context.md) and [manual PostgreSQL qualification](auth-token-lock-postgres.md).
 
+PostgreSQL locking reads require an UPDATE privilege even when the query changes no business value. The migration adds `public.library_tokens.lock_anchor boolean NOT NULL DEFAULT false`, guarded by a named validated false-only CHECK, then conditionally grants exactly `UPDATE(lock_anchor)` to the existing `lyra_runtime_v1` role. It grants no token identity, owner, revocation, expiry or other authority-field UPDATE; no INSERT, DELETE, TRUNCATE, GRANT OPTION or schema CREATE; no role, login or credential is created. The anchor never reaches a public DTO.
 
-## Source and measured requirement
+Readers retain token `FOR UPDATE`; ordered writers use `FOR NO KEY UPDATE`. Their lock matrix and actual reader/writer operations require real PostgreSQL proof, not an inference from successful setup. Neither the anchor nor a successful zero-row locking query grants user authorization.
 
-Backend base: `7c851bab92eca52abcf215bd77ede3a4f9b5cb90`. Read the full approved
-Sessions architecture, SHA-256
-`7d4bd6a6d6b8b6c7be2044a2be61c0fd7841c1ba77d9e982bd592e7d1a24f049`,
-backend AGENTS, migrations 001/021/025/028/029/030/031, actual migration/replay
-helpers, APP_AUTH deployment security and existing role/migration/auth tests.
-The original source author inspected that base independently. Root subsequently
-composed the reviewed writer and migration in one qualified candidate; the
-execution record above supersedes the initial source-only handoff status.
+## Catalog and replay guards
 
-Root's retained `runtime-auth-lock-privileges-1.json` at
-`/Users/hongkuntian/.codex/lyra-workflow/evidence/redesign-parity-20261025/`
-records `lyra_runtime_v1` token SELECT=true, any token UPDATE=false and table
-UPDATE=false. `SELECT digest FROM public.library_tokens WHERE false FOR UPDATE`
-was refused with SQLSTATE 42501; users NO KEY UPDATE, keys FOR UPDATE and
-sessions FOR UPDATE admitted zero rows. This is supplied read-safe runtime
-evidence, not an experiment performed by this source author. No DB was opened.
+The migration fixes name/operator lookup to `pg_catalog` while validating exact relation/column/constraint catalogs. The anchor must have the built-in boolean type, scalar typmod/dimensions, NOT NULL, ordinary local noninherited/nonidentity/nongenerated form and explicit false default. Its named CHECK must be local, validated, nondeferrable, false-only and bound to exactly this column with the expected canonical catalog expression. Different definitions refuse with SQLSTATE 23514 and fixed `auth_token_lock_*_catalog_mismatch` diagnostics; they are never silently repaired.
 
-Coordinated auth writers/current-auth need a real token FOR UPDATE lock under
-the approved canonical users -> tokens -> keys order, after any required
-earlier settings/identity anchors. PostgreSQL requires UPDATE privilege on at
-least one column for row-locking SELECT. A SELECT grant alone is insufficient.
-This patch supplies that missing prerequisite; it does not qualify ordering,
-deadline handling, real role inheritance or concurrent writer correctness.
+These are checks of the migration's authority objects, not a complete database, trigger, RLS, inheritance or effective-ACL audit. Catalog deparser behavior needs target-PostgreSQL qualification.
 
-## Selected authority and alternatives
+The active migration manifest is 001–028, 032 and 036. Retired feature SQL 029/030/031/033/034/035 remains immutable but unregistered. Existing historical receipts remain intact. The runner skips matching receipts and refuses changed SQL hashes with `migration_changed`; it is not a general drift auditor. Never edit an old migration or receipt to hide drift.
 
-Add `public.library_tokens.auth_lock_anchor boolean NOT NULL DEFAULT false`
-with named CHECK `auth_lock_anchor IS FALSE`. Grant only
-`UPDATE(auth_lock_anchor)` to an already-existing `lyra_runtime_v1`. No grant
-option, role creation, SELECT expansion or other role grant is added. Ordinary
-auth paths keep selecting their explicit fields and taking the token row lock;
-they do not perform a dummy UPDATE.
+`replayMembershipRoleGrants` reads the unchanged conditional privilege bodies from 025/028/032 and the neutral retained-account-data body from 036 in one atomic outer DO statement. It does not replay retired feature SQL, perform DDL/data backfill or alter migration receipts. The 032 replay validates the existing anchor before granting and refuses missing or changed definitions without recreating them. If schema precedes role creation, later provisioning must replay and verify the narrow grant. Replay does not invent token SELECT or missing historical bootstrap privileges.
 
-The only admitted anchor value is false. A same-value UPDATE is possible and
-can create a tuple version/WAL and hold a row lock; it confers no identity or
-credential state. True and NULL refuse. Runtime still cannot update digest,
-user_id, revoked, created_at or expires_at, insert/delete/truncate tokens,
-create schema, rotate/unrevoke/reassign/extend credentials or grant unlimited
-access. Existing account/owner powers are preserved, not redesigned here.
-Future code must keep the anchor nonsemantic and avoid introducing a trigger
-or policy that derives auth authority from its same-value writes.
+## Data and authorization consequences
 
-| Alternative | Benefit | Reason not selected |
-| --- | --- | --- |
-| Inert false-only anchor | Per-token FOR UPDATE without granting any existing token field; default preserves named-column inserts | One extra internal column; same-value writes remain possible; schema/role qualification required |
-| UPDATE on digest, owner, revoked, created_at or expires_at | No extra column | Grants real token mutation authority, including a no-op-looking grant that also permits changed values; rejected |
-| Table UPDATE or account-role reuse | Simple privilege administration | Grants rotation, unrevocation, owner/expiry and other powers; rejected |
-| Weaker lock or timing-only check | No UPDATE grant | Does not preserve the required token FOR UPDATE serialization; rejected |
-| SECURITY DEFINER lock function | Could encapsulate a privileged lock | Adds an explicitly prohibited privileged function/security boundary; rejected |
-| Separate lock/identity table or global/advisory auth mutex | Can serialize outside token privileges | Adds another authority structure or changes contention/ordering rather than locking the existing token; rejected |
+Existing named-column token inserts receive false by default. Token identity, revocation and expiry do not change; no app local data migrates. Internal whole-row SQL would now contain the anchor, so maintained public paths must continue explicit projections. Current-auth handles, canonical user/token/key/session lock order, preimage revalidation, deliberate-mutation postimages, deadline checks and Spotify revocation remain independent requirements. Authentication sessions are retained and are not shared listening Sessions.
 
-## Migration, drift and receipt boundary
+The 036 retained-data repair is independent of token row locking. It checks the optional historical V1 family and grants only `SELECT(user_id)` on its rate-window table to an existing account role. It does not recreate feature schemas or establish full late-role prerequisites. Account deletion refuses a retained `listening_v2` namespace until a qualified data-only disposition exists; the retired admission/protocol runtime is not an erasure implementation.
 
-Migration 032 touches only public.library_tokens and the existing runtime
-role's anchor-column ACL. It neither reads nor depends on listening_v2 or
-030/031. Register 032 immediately after 029; leave 030 and 031 unregistered.
-Do not renumber/rewrite historical migrations or change historical receipts.
+## Verification and deployment
 
-`BEGIN;` is the first bytes and `COMMIT;` terminates the file, matching the
-actual runner's anchored stripping regex. The runner retains its existing
-single transaction and advisory migration lock: schema, backfills from any
-earlier fresh migrations, grants and checksummed receipts commit together.
-No new auth mutex or transaction boundary is introduced. A SQL or receipt
-failure must roll back the whole fresh run/upgrade. Exact direct reapplication
-is supported; it does not manufacture a runner receipt.
+The hermetic integration suite uses real migration SQL, the actual runner/replay helper and restricted synthetic roles. Its baseline is exactly 001–028, followed by 032/036. Assertions cover pre-032 permission failure, zero/populated-row lock admission, authority-field denials, anchor/check drift, immutable receipts, transactional grant/receipt rollback, hostile search paths, role absence and late replay. These fixtures do not prove deployed roles, production bootstrap or real PostgreSQL concurrency.
 
-There is no IF NOT EXISTS schema-fingerprint promise. A missing anchor may be
-added only to the ordinary, nonpartitioned, noninherited public token table;
-an orphan named constraint refuses. Both direct application and role replay
-validate the anchor's built-in boolean type, scalar typmod/dimensions,
-NOT NULL, ordinary/local/noninherited/nonidentity/nongenerated form, explicit
-false default, and the named local validated nondeferrable false-only CHECK
-with exactly this column key and canonical catalog expression. Missing or
-different definitions raise SQLSTATE 23514 with a fixed
-`auth_token_lock_*_catalog_mismatch` diagnostic. Equivalent-but-differently
-defined objects are deliberately refused for review, not silently repaired.
-These checks cover this migration's authority objects, not the whole token
-schema, all ACL inheritance, triggers, RLS or a complete database fingerprint.
-Catalog deparser behavior itself still needs Root's target-PostgreSQL proof.
+Run the [manual qualification](auth-token-lock-postgres.md) on the explicitly approved clean commit for actual-method, restricted-role and two-client lock evidence. Record that result separately from `npm test` and read-only database inventory. Historical results qualify only the original archived commit.
 
-The runner refuses changed bytes for an existing receipt with
-`migration_changed`; it skips SQL for a matching receipt and therefore is
-not a general post-receipt drift auditor. Do not edit receipts to conceal
-drift. Grant replay revalidates its anchor before granting and fails closed
-on drift; it never recreates a missing column/constraint or reruns DDL.
-
-The actual role helper now reads 032 in addition to its unchanged 025/028
-inputs. Its `DO $$ BEGIN ... END $$;` regex selects only 032's conditional
-GRANT block, including its read-only catalog guard. The separate schema block
-uses a distinct dollar tag. When schema precedes role provisioning, an absent
-runtime role remains absent, with no login/credential invention. Later owner
-provisioning may invoke the existing helper to replay the idempotent block.
-Replay does not add token SELECT or other missing bootstrap privileges.
-
-## Wire and local data consequences
-
-Static inspection of all maintained api/scripts/db token references at the
-pinned base found explicit token projections in AppAuthStore.credential and
-authenticate, SongLibraryStore.authenticate/createUser, AccountStore's token
-join, Spotify owner checks, current-auth and privacy composition. No token
-`SELECT *`, `t.*`, `RETURNING *` or whole-token JSON serialization reaches a
-public DTO. Wildcards on App Attest keys, account identities, other tables and
-lyric documents do not project tokens. Existing named-column token inserts
-receive false by default. No existing token identity/revocation/expiry value
-is changed and no app local data migrates. An intentional internal SQL
-`SELECT * FROM library_tokens` after application will include the new column;
-future public code must continue explicit projections. Root checked the combined R2 candidate: public token projections remain
-explicit, including the conflict-time owner check. The anchor is not public DTO data.
-
-## Authored proof and deployment gate
-
-The new integration file uses actual public migration SQL, actual
-`migrateLibrary`, actual `replayMembershipRoleGrants` and a restricted synthetic
-NOLOGIN `lyra_runtime_v1`. The minimal observed-role fixture temporarily selects
-the historical 001-029 manifest through the actual runner, restores it in
-finally, and adds only measured token SELECT plus schema USAGE to existing
-public-migration grants. It is not a full production bootstrap. No account
-writer or current-auth implementation is mocked to grant extra privileges.
-
-Authored cases cover pre-032 zero/populated-row 42501; post-032 zero and real
-row lock admission; false-only anchor and all prior authority-field denials;
-unchanged identity/expiry and old ACLs; no schema CREATE; exact manifest with
-030/031 absent; checksums and immutable receipts; fresh/upgrade atomic rollback
-after the grant but before its receipt; direct idempotence under a hostile
-search_path; role absence/late replay with no DDL/backfill or tuple rewrites;
-and table/type/default/nullability/generated/check drift and replay refusal.
-These tests have not run. Syntax-only Node checks do not parse SQL or prove
-PostgreSQL privileges, atomicity, production bootstrap or concurrency.
-
-Root must run the sealed tests-only red candidate against the immutable base,
-then the combined green candidate and applicable full gate, independently
-review it, and qualify actual runtime/account roles and concurrent ordered
-writers on the target PostgreSQL version. **Apply and verify 032 with owner
-authority before deploying any live writer/current-auth path that requires
-token FOR UPDATE.** The ordinary production build verifies the latest receipt;
-keep migration credentials outside runtime configuration as APP_AUTH requires.
-If schema ran before role provisioning, verify the later replay before writer
-deployment. A receipt alone does not prove that the later role has its grant.
-No V2 query, route, capability or feature enablement follows from this patch.
-
-Rollback keeps the additive false-only schema and narrow grant. Roll back
-dependent writer code only to a compatible version; do not drop the anchor,
-widen token UPDATE or rewrite migration history as a recovery shortcut. No
-down migration, role creation, DB change or deployment was performed here.
+Apply and verify 032 with schema-owner authority before deploying a live writer/current-auth path requiring token locks. Verify both schema receipt and actual effective runtime/account permissions, database identity and late-role replay. Keep migration credentials outside runtime configuration. A receipt does not establish the later role's grant. Rollback retains the additive false-only anchor and narrow grant; roll code back only to a compatible version, never drop the anchor or widen authority-field UPDATE as a shortcut.

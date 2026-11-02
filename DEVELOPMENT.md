@@ -40,6 +40,15 @@ npm test
 
 `npm test` runs all of the above in sequence.
 
+### Initial release boundary
+
+Shared listening Sessions are outside the [initial release scope](docs/INITIAL_RELEASE_SCOPE.md).
+Do not restore its room endpoints, worker, command schemas or feature test suites
+to make an import or historical fixture pass. Keep ordinary account/App Attest
+session authorization, account-delete privileges, Spotify connection security and
+listening-reviewed lyric-timing tests. Historical SQL migrations and receipts are
+not disposable feature code; migration changes require separate review.
+
 ### Optional live checks
 
 - `npm run test:live`
