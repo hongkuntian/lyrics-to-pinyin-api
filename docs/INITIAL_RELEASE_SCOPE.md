@@ -53,6 +53,17 @@ without destroying output guards or external cleanup identifiers. Retiring the
 worker also requires checking retained rooms, outbox work and provider-playlist
 cleanup obligations; do not infer their absence from source removal.
 
+For an existing database, apply the reviewed migration with
+`migrateLibrary(database, {expectedPending: [{name, sha256}]})`. The runner holds
+its transaction and advisory lock while checking every active receipt and the
+complete ordered pending name/digest list, before applying any migration SQL.
+Any additional, missing, already-applied or changed migration fails closed.
+For this retirement, only `036-account-data-privacy.sql` is eligible; retain its
+reviewed digest with the deployment evidence. Disable
+`LYRA_LIBRARY_MIGRATE_ON_BUILD` for the production build after that bounded
+upgrade. Its broad migration mode also repairs source content and translation
+reuse and is not part of this release operation.
+
 ## Archived source
 
 The removed feature source and its historical design/qualification evidence are

@@ -14,12 +14,12 @@ migrationNames.push('028-selected-lyrics-learning.sql');
 migrationNames.push('032-auth-token-row-locks.sql');
 // Retained account-data deletion rights without creating optional feature schema.
 migrationNames.push('036-account-data-privacy.sql');
-export async function migrateLibrary(database) {
+export async function migrateLibrary(database,{expectedPending}={}) {
   return database.transaction(async db=> {
     await db.query("SET LOCAL lock_timeout='5s'");
     await db.query('SELECT pg_advisory_xact_lock(71309,1)');
     await db.query('CREATE TABLE IF NOT EXISTS library_schema_migrations(name text PRIMARY KEY,sha256 text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
-    const applied=[];
+    const pending=[];
     for(const name of migrationNames) {
       const sql=await readFile(new URL(`../db/${name}`,import.meta.url),'utf8');
       const hash=createHash('sha256').update(sql).digest('hex');
@@ -28,7 +28,13 @@ export async function migrateLibrary(database) {
         if(prior.sha256!==hash) throw Object.assign(new Error('migration_changed'),{code:'migration_changed'});
         continue;
       }
-      // The runner owns the transaction so schema, backfill and receipts commit together.
+      pending.push({name,sql,hash});
+    }
+    if(expectedPending!==undefined&&(!Array.isArray(expectedPending)||expectedPending.length!==pending.length
+      ||pending.some(({name,hash},index)=>expectedPending[index]?.name!==name||expectedPending[index]?.sha256!==hash)))
+      throw Object.assign(new Error('migration_plan_changed'),{code:'migration_plan_changed'});
+    const applied=[];
+    for(const {name,sql,hash} of pending) {
       await db.query(sql.replace(/^BEGIN;\s*/, '').replace(/COMMIT;\s*$/, ''));
       await db.query('INSERT INTO library_schema_migrations(name,sha256) VALUES($1,$2)',[name,hash]);
       applied.push(name);
