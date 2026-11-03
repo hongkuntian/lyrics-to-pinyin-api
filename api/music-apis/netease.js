@@ -168,6 +168,12 @@ export class NeteaseAPI extends BaseMusicAPI {
     const spotify=context.recordingProvider==='spotify',expected=recordingNames(request);
     const expectedCredits=spotify?(request.creditedArtistNames??[]).map(normalizeRecordingText).sort():expected.credits;
     if(!performers.length || performers.length>3 || performers.length!==expectedCredits.length)return;
+    // Search already supplied a plausible recording with different credit
+    // labels. Resolve its catalog identity while the provider profile loads;
+    // neither result can authorize lyrics without the ordinary admission rules.
+    const identity=spotify&&request.creditedArtistIDs&&typeof context.resolveArtistIdentities==='function'
+      &&performers.some(p=>!expectedCredits.includes(normalizeRecordingText(p.name)))
+      ?context.resolveArtistIdentities({signal:context.signal}).catch(()=>[]):null;
     const aliases=await Promise.all(performers.map(async performer=>{
       const direct=[performer.name].filter(name=>expectedCredits.includes(normalizeRecordingText(name)));
       if(direct.length)return direct[0];
@@ -188,7 +194,7 @@ export class NeteaseAPI extends BaseMusicAPI {
         profiles.has(String(p.id))?await profiles.get(String(p.id)):[p.name]])));
       let evidence=buildArtistAliasEvidence(song,performers,request,verifiedProfiles);
       if(!evidence&&request.creditedArtistIDs&&typeof context.resolveArtistIdentities==='function') {
-        const identities=await context.resolveArtistIdentities({signal:context.signal});
+        const identities=await (identity??context.resolveArtistIdentities({signal:context.signal}));
         context.signal?.throwIfAborted();
         evidence=buildArtistIdentityEvidence(song,performers,request,verifiedProfiles,identities);
       }

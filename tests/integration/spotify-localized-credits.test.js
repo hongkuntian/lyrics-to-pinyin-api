@@ -230,6 +230,18 @@ const zhangRecording={version:2,provider:'spotify',item_id:'1123456789ABCDEFGHIJ
 const zhangSong={id:188177,name:'天天想你',artists:[{id:6459,name:'张雨生'}],album:{name:'天天想你'},duration:252866};
 const zhangProfile={6459:{id:6459,name:'张雨生',alias:['Tom Chang','小宝']}};
 
+test('NetEase verifies artist identity while its mismatched-credit profile is loading',async()=>{
+ const {api}=fixture({song:zhangSong,performerProfiles:zhangProfile,lyricPayload:qianLiLyrics});
+ let releaseProfile,identityStarted=false;
+ const profile=api.namesForArtist.bind(api),gate=new Promise(resolve=>{releaseProfile=resolve;});
+ api.namesForArtist=async(...args)=>{await gate;assert.equal(identityStarted,true);return profile(...args);};
+ const resolve=resolverFor(zhangRecording,zhangSong,zhangProfile);
+ const target=identityTarget(zhangRecording,async(...args)=>{identityStarted=true;releaseProfile();return resolve(...args);});
+ const {artist,title,...context}=target;
+ const song=await api.searchSong(artist,title,context);
+ assert.equal(song.id,zhangSong.id);assert.ok(song.artistAliasEvidence);
+});
+
 const ameiRecording={version:2,provider:'spotify',item_id:'2123456789ABCDEFGHIJKL',metadata:{origin:'spotify',
  title:'聽海',artists:['A-Mei Chang'],artist_ids:['6noxsCszBEEK04kCehugOp'],album:'BAD BOY',duration_ms:318333}};
 const ameiSong={id:327584,name:'听海',artists:[{id:10559,name:'张惠妹'}],album:{name:'BAD BOY'},duration:318626};

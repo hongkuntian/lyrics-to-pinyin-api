@@ -1,5 +1,13 @@
 # Automatic artist identity enrichment
 
+Each Spotify acquisition shares one identity snapshot across provider lookups,
+including explicit refresh. NetEase starts that bounded lookup when a plausible
+recording has different contributor labels, in parallel with its artist-profile
+request. Existing identity caches and all recording/source checks remain in force.
+Cancelling one provider only cancels its wait; request completion or cancellation
+retires the shared work. Identity failure still permits an independent readable
+source and never establishes that lyrics or measured timing are absent.
+
 Artist names are display labels. The Spotify lyric request retains a complete
 ordered `metadata.artist_ids` array, parallel to `metadata.artists`, when catalog
 IDs are available. Partial or duplicate ID sets are omitted by native catalog

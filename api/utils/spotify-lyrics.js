@@ -27,6 +27,7 @@ import {waitUntil} from '@vercel/functions';
 import {LibraryError} from './song-library/store.js';
 import {NETEASE_TITLE_CAPABILITY} from './netease-title-evidence.js';
 import {createArtistIdentityResolver,ARTIST_IDENTITY_CAPABILITY} from './artist-identities.js';
+import {requestArtistIdentities} from './request-artist-identities.js';
 import {spotifyRecording,spotifyRequestHash,spotifySearchRequest,independentProvider,sourceCapsule,spotifyBinding,verifySpotifyBinding,attachSpotifyMatchEvidence} from './song-library/spotify-recording.js';
 
 // The same independent provider path serves durable acquisition and readable
@@ -95,6 +96,9 @@ export function createSpotifyLyricsService(dependencies={}) {
         if(!apis.length)return {status:404,body:{code:'lyrics_absent'}};
         let mismatch=null,timedOut=false,unavailable=false;
         const deadline=Math.min(Date.now()+16000,req.lyricDelivery?.deadlineAtMS??Infinity),localizations=[];
+        const identities=requestArtistIdentities((ids,options)=>measure('artist_identity_lookup',()=>resolveArtistIdentities(ids,options)),
+          target.creditedArtistIDs,{signal:req.lyricDelivery?.signal,refresh:options.refresh===true});
+        try {
         const onVerifiedArtistCredits=credits=>{
           if(!Array.isArray(credits?.names)||!Array.isArray(credits.aliases)||credits.names.length!==target.creditedArtistNames.length
             ||credits.aliases.length!==credits.names.length||credits.names.length>3
@@ -105,12 +109,11 @@ export function createSpotifyLyricsService(dependencies={}) {
         };
         const lookup=async(api,parentSignal,localization=null)=>{
           const label=api.name.replace(/[^a-zA-Z0-9_]/g,'');
-          let hintCandidate=null,identityLookup;
+          let hintCandidate=null;
           try {
             return await withDeadline(async signal=>{
               const localized=localization?{...target,artist:localization.names.join(' & '),creditedArtistNames:localization.names}:target;
-              const searchTarget={...localized,...(target.creditedArtistIDs?{resolveArtistIdentities:({signal})=>
-                identityLookup??=measure('artist_identity_lookup',()=>resolveArtistIdentities(target.creditedArtistIDs,{signal,refresh:options.refresh===true}))}:{})};
+              const searchTarget={...localized,...(target.creditedArtistIDs?{resolveArtistIdentities:options=>identities.read(options)}:{})};
               const {artist,title,...context}=searchTarget;
               const validateSource=async(song,raw)=>{
                 if(!song)return null;
@@ -227,6 +230,7 @@ export function createSpotifyLyricsService(dependencies={}) {
           if(redis&&!cacheUnavailable(redis))waitUntilFn(withDeadline(()=>setCachedFn(redis,key,entry,ttlMs/1000),cacheTimeoutMs).catch(error=>suspendCache(redis,error)));
         }
         return {status:200,body:response,candidate};
+        }finally{identities.close();}
       };
       const task=compute();inflight.set(workKey,task);
       try{return send(await task);}finally{if(inflight.get(workKey)===task)inflight.delete(workKey);}
