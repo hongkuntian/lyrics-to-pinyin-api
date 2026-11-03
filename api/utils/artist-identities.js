@@ -4,18 +4,23 @@ import {BoundedCache} from './bounded-cache.js';
 import {withDeadline} from './fetch-json.js';
 import {getCached,setLyricsCached,cacheUnavailable,suspendCache} from './cache.js';
 
-export const ARTIST_IDENTITY_CAPABILITY='wikidata-artist-identities-1';
+export const ARTIST_IDENTITY_CAPABILITY='wikidata-artist-identities-2';
 const TTL=86400000,NEGATIVE_TTL=300000,MAX_NAMES=256,MAX_BYTES=2097152;
 const id=value=>typeof value==='string'&&/^[A-Za-z0-9]{22}$/.test(value);
 const entityID=value=>typeof value==='string'&&/^Q[1-9]\d{0,18}$/.test(value);
 const scalar=value=>typeof value==='string'&&value.trim().length>0&&Array.from(value).length<=512&&!/[\p{C}]/u.test(value);
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const fingerprint=value=>hash([value.policy,value.spotifyArtistID,value.entityID,value.entityRevision,value.names,value.neteaseArtistIDs]);
+const qqMID=value=>typeof value==='string'&&/^\d{3}[A-Za-z0-9]{11}$/.test(value);
+const fingerprint=value=>hash([value.policy,value.spotifyArtistID,value.entityID,value.entityRevision,value.names,value.neteaseArtistIDs,
+ ...(value.version===2?[value.qqSingerMIDs]:[])]);
 // Cache freshness is an acquisition rule. Historical documents keep the exact
 // accepted snapshot; expiration cannot invalidate their saved learning content.
 export function validArtistIdentity(value,{now=Date.now(),fresh=false}={}) {
  try {
-  return value?.version===1&&value.policy===ARTIST_IDENTITY_CAPABILITY&&id(value.spotifyArtistID)&&entityID(value.entityID)
+  return (value?.version===1&&value.policy==='wikidata-artist-identities-1'&&value.qqSingerMIDs===undefined
+    ||value?.version===2&&value.policy===ARTIST_IDENTITY_CAPABILITY&&Array.isArray(value.qqSingerMIDs)
+      &&value.qqSingerMIDs.length<=16&&value.qqSingerMIDs.every(qqMID)&&new Set(value.qqSingerMIDs).size===value.qqSingerMIDs.length)
+   &&id(value.spotifyArtistID)&&entityID(value.entityID)
    &&Number.isSafeInteger(value.entityRevision)&&value.entityRevision>0
    &&Array.isArray(value.names)&&value.names.length>0&&value.names.length<=MAX_NAMES&&value.names.every(scalar)
    &&new Set(value.names).size===value.names.length
@@ -42,8 +47,8 @@ function snapshot(entity,spotifyArtistID,now) {
  })];
  if(!names.length||!names.every(scalar)||names.length>1024)return null;
  const distinct=[...new Set(names)].sort();if(distinct.length>MAX_NAMES)return null;
- const value={version:1,policy:ARTIST_IDENTITY_CAPABILITY,spotifyArtistID,entityID:entity.id,entityRevision:entity.lastrevid,
-  names:distinct,neteaseArtistIDs:claims(entity,'P10445').sort(),verifiedAtMS:now,expiresAtMS:now+TTL};
+ const value={version:2,policy:ARTIST_IDENTITY_CAPABILITY,spotifyArtistID,entityID:entity.id,entityRevision:entity.lastrevid,
+  names:distinct,neteaseArtistIDs:claims(entity,'P10445').sort(),qqSingerMIDs:claims(entity,'P10410').sort(),verifiedAtMS:now,expiresAtMS:now+TTL};
  value.fingerprint=fingerprint(value);return validArtistIdentity(value)?value:null;
 }
 export function createArtistIdentityResolver({fetchFn=fetch,redis=null,getFn=getCached,setFn=setLyricsCached,now=Date.now,budgetMs=2200,cacheTimeoutMs=200}={}) {

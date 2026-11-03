@@ -205,3 +205,41 @@ Kugou download `0x1002e68a4`, KRC decode `0x1002d076c`, row parser
 `0x1002d0f5c`; QQ legacy download `0x1002f8efc`; Apple syllable path
 `0x1002f01b4` and TTML delegate `0x1002d7a2c`. Addresses refer only to this
 slice, not another app release.
+
+## Spotify Jay Chou identity recovery (2026-11-02)
+
+The screenshot recordings are not identified by item ID. Two representative
+Spotify requests reproduce the missing measured-source admission:
+`5pIcwtJYNJx93l420oR2Vm` (晴天, 269746 ms) and
+`77jIEebt4z9WzaI6LsntDG` (不能說的秘密, 296533 ms), both credited to
+Jay Chou (`2elBjNSdBE2Y3f0j1mjrql`). Public embeds verified those titles,
+durations and artist IDs. The corpus album fields remain representative inputs,
+not independently verified full Spotify metadata or proof of screenshot identity.
+
+QQ legacy search finds measured sources `97773` and `403778`, but their
+周杰伦 credits do not match Jay Chou. English-credit smartbox discovery returned
+no suggestions for either request. Fresh song details therefore need to be
+retrieved for eligible legacy results before multilingual identity recovery.
+Wikidata Q238819 revision 2562500269 supplied the exact Spotify artist claim
+and non-deprecated QQ singer MID `0025NhlN2yWrP4`; both fresh QQ details reported
+that MID and numeric singer ID `4558`. Names alone do not authorize this bridge.
+
+The recovery requires exact fresh song ID/MID echoes, an exact QQ singer MID
+claim, unique contributor assignment, matching album metadata and all existing
+recording/version/duration/ISRC/explicitness checks. Its provider-specific proof
+survives cache and durable-document validation without changing the original
+Spotify request identity. Identity snapshots and acquisition caches are versioned;
+historical NetEase identity snapshots cannot authorize QQ recovery.
+
+The final combined-provider local production-service replay admitted complete
+measured QQ timing for both requests: 晴天 returned 54 rows and 547 cues in
+4713 ms; 不能說的秘密 returned 35 rows and 360 cues in 3486 ms. An earlier
+isolated QQ attempt still returned 409 for the second request, while a later
+instrumented service attempt succeeded with the unchanged 2200 ms identity
+budget. That failed attempt is not evidence of upstream absence, and its
+transient cause was not established. These observations do not prove acoustic
+alignment, authenticated deployed acquisition or physical-app adoption.
+
+The retained Dynamic Lyrics executable is unavailable for a new inspection.
+Existing static evidence establishes QQ QRC, Kugou KRC and Apple syllable-TTML
+paths, but does not identify the source it selected for either screenshot.

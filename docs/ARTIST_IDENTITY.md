@@ -6,7 +6,7 @@ IDs are available. Partial or duplicate ID sets are omitted by native catalog
 projection and the background observer; contributors are never dropped.
 
 Ordinary provider aliases remain the fast path. When a fresh NetEase performer
-profile cannot resolve the original Spotify credits, one bounded Wikidata lookup
+profile or QQ song detail cannot resolve the original Spotify credits, one bounded Wikidata lookup
 can recover multilingual names by exact Spotify artist ID. The resolver first
 requires a unique non-deprecated entity mapping, then verifies its current ID
 claim and entity revision. It never searches for a person by fuzzy name.
@@ -19,6 +19,20 @@ assignment must be unique and complete. Artist evidence changes spelling only;
 the normal recording/version/duration/ISRC/explicitness checks remain, and this
 recovery additionally requires matching album metadata. Provider artist IDs and
 the original catalog artist IDs are retained in separate source/request evidence.
+
+QQ requires a direct non-deprecated `P10410` singer MID claim, not profile-name
+corroboration. Every aliased contributor must have that exact MID in fresh
+`get_song_detail_yqq` data. Search labels alone cannot authorize recovery. QQ
+legacy search candidates that pass the unchanged non-artist and album gates
+receive one bounded fresh-detail batch, with exact song ID and MID echoes,
+before identity recovery. This also covers English credits absent from smartbox
+suggestions; unresolved fresh contenders and lyric-sheet ties still fail closed.
+QQ numeric singer IDs, singer MIDs, native names and the original Spotify artist IDs
+remain bound in the evidence through memory/Redis caches and durable library
+reopen. The QQ-specific recovery policy cannot be replayed as NetEase evidence.
+Snapshot capability 2 fingerprints the QQ claims; original capability-1 NetEase
+snapshots retain their historical validation semantics but cannot authorize QQ.
+Spotify acquisition caches include the new identity capability.
 
 The former manual NetEase artist alias entries are removed. This mechanism is
 script-independent; unavailable aliases still produce ordinary provider or

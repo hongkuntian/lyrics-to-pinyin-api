@@ -923,6 +923,48 @@
       "catalogURI": "spotify:track:7BYMjh3vWnHU4IFyfZdIDO"
     },
     {
+      "caseID": "spotify-5pIcwtJYNJx93l420oR2Vm",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5pIcwtJYNJx93l420oR2Vm",
+          "metadata": {
+            "origin": "spotify",
+            "title": "晴天",
+            "artists": ["Jay Chou"],
+            "album": "葉惠美",
+            "duration_ms": 269746,
+            "artist_ids": ["2elBjNSdBE2Y3f0j1mjrql"]
+          }
+        }
+      },
+      "catalogURI": "spotify:track:5pIcwtJYNJx93l420oR2Vm",
+      "limitations": "Public Spotify embed verifies title, sole artist ID and duration; album is representative request metadata. Exact screenshot playback ID and full catalog metadata are not retained."
+    },
+    {
+      "caseID": "spotify-77jIEebt4z9WzaI6LsntDG",
+      "platform": "spotify",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "77jIEebt4z9WzaI6LsntDG",
+          "metadata": {
+            "origin": "spotify",
+            "title": "不能說的秘密",
+            "artists": ["Jay Chou"],
+            "album": "不能說的秘密 電影原聲帶",
+            "duration_ms": 296533,
+            "artist_ids": ["2elBjNSdBE2Y3f0j1mjrql"]
+          }
+        }
+      },
+      "catalogURI": "spotify:track:77jIEebt4z9WzaI6LsntDG",
+      "limitations": "Public Spotify embed verifies title, sole artist ID and duration; album is representative request metadata. Exact screenshot playback ID and full catalog metadata are not retained."
+    },
+    {
       "caseID": "spotify-7mubQiRZ1Q94ZN3zCrNbzn",
       "platform": "spotify",
       "request": {

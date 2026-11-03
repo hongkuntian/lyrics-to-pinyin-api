@@ -26,7 +26,7 @@ import {BoundedCache} from './bounded-cache.js';
 import {waitUntil} from '@vercel/functions';
 import {LibraryError} from './song-library/store.js';
 import {NETEASE_TITLE_CAPABILITY} from './netease-title-evidence.js';
-import {createArtistIdentityResolver} from './artist-identities.js';
+import {createArtistIdentityResolver,ARTIST_IDENTITY_CAPABILITY} from './artist-identities.js';
 import {spotifyRecording,spotifyRequestHash,spotifySearchRequest,independentProvider,sourceCapsule,spotifyBinding,verifySpotifyBinding,attachSpotifyMatchEvidence} from './song-library/spotify-recording.js';
 
 // The same independent provider path serves durable acquisition and readable
@@ -43,7 +43,8 @@ export function createSpotifyLyricsService(dependencies={}) {
     const response=entry?.response,candidate=entry?.candidate;
     try {
       if(!candidate||String(candidate.id)!==String(response?.song?.id)||recordingScore(candidate,spotifySearchRequest(r))<0)return false;
-      if((candidate.neteaseTitleEvidence||candidate.artistAliasEvidence)&&(candidate.source!=='netease'||independentProvider(response.metadata?.source)!=='netease'
+      if(candidate.neteaseTitleEvidence&&candidate.source!=='netease')return false;
+      if((candidate.neteaseTitleEvidence||candidate.artistAliasEvidence)&&(!['netease','qq'].includes(candidate.source)||independentProvider(response.metadata?.source)!==candidate.source
         ||candidate.title!==response.song?.title?.original||candidate.artist!==response.song?.artist?.original))return false;
       if(rejectRecordingLyricsFn(response.lines.map(l=>({text:l.original})),spotifySearchRequest(r)))return false;
       if(hasEmbeddedLyricCredits(response,spotifySearchRequest(r)))return false;
@@ -74,7 +75,7 @@ export function createSpotifyLyricsService(dependencies={}) {
       // Native raw timing requests and the library loader both request v2.
       // Explicit v1/omitted raw calls retain their separate provider/cache policy.
       const sourceVersion=options.lyric_sources_version??1;
-      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}:${NETEASE_TITLE_CAPABILITY}:${PROVIDER_LANGUAGE_EVIDENCE_VERSION}:sources-${sourceVersion}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
+      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}:${NETEASE_TITLE_CAPABILITY}:${PROVIDER_LANGUAGE_EVIDENCE_VERSION}:${ARTIST_IDENTITY_CAPABILITY}:sources-${sourceVersion}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const send=result=>{if(result.candidate)attachSpotifyMatchEvidence(result.body,result.candidate);res.setHeader('X-Lyrics-Cache',result.cache??'MISS');return reply(result.status,result.body);};
       const cached=!options.refresh&&cache.get(key);
       if(cached&&validate('cache_validation',()=>validCached(cached,r)))return send({status:200,body:cached.response,candidate:cached.candidate,cache:'MEMORY'});
@@ -214,9 +215,9 @@ export function createSpotifyLyricsService(dependencies={}) {
         const ttlMs=lyricResponseLifetimeMs(response);
         // Late ordinary work cannot replace a newer explicit refresh in memory.
         const candidate={id:String(song.id),title:song.title,artist:song.artist,duration:song.duration,
-          ...(song.neteaseTitleEvidence||song.artistAliasEvidence?{source:'netease'}:{}),
+          ...(song.neteaseTitleEvidence||song.artistAliasEvidence?{source:song.source}:{}),
           ...Object.fromEntries(['neteaseTitleEvidence','artistAliasEvidence'].filter(k=>song[k]!==undefined).map(k=>[k,structuredClone(song[k])])),
-          ...Object.fromEntries(['album','creditedArtistNames','creditedArtistIDs','isrc','explicit'].filter(k=>song[k]!==undefined).map(k=>[k,song[k]]))};
+          ...Object.fromEntries(['album','creditedArtistNames','creditedArtistIDs','creditedArtistMIDs','isrc','explicit'].filter(k=>song[k]!==undefined).map(k=>[k,song[k]]))};
         const entry={response,candidate,metadata:{acquisition_started_at:acquisitionStartedAt}};
         if(canHint)verifiedContext=verifiedContext??contexts.spotify(r,response,acquisitionStartedAt);
         if(verifiedContext)contexts.save(contexts.hint(verifiedContext,selected,acquisitionStartedAt));

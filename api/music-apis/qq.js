@@ -7,6 +7,7 @@ import {decryptQRC} from '../utils/vendor/qq-qrc-codec.js';
 import {parseQRC,qrcBody} from '../utils/qq-qrc.js';
 import {sameRecordingNames,sameRecordingVersions,recordingNames,normalizeRecordingText,normalizedAlbum,stripTitleDescription,recordingScore,findRecording,RecordingMismatchError,searchTitle} from '../utils/recording-match.js';
 import {simplifyRecordingScript} from '../utils/recording-script.js';
+import {buildArtistIdentityEvidence} from '../utils/artist-alias-recovery.js';
 
 const maxBytes=512*1024,legacyOrigin='https://c.y.qq.com',musicuOrigin='https://u.y.qq.com';
 const comm={ct:24,cv:4747474,format:'json',inCharset:'utf-8',outCharset:'utf-8',notice:0,platform:'yqq.json',needNewCode:1,g_tk:5381,chid:'0'};
@@ -145,7 +146,7 @@ function metadata(raw,detail=false,allowMissingAlbum=false) {
   title=primaryComplete?primary:fullTitle;
  }
  const song={source:'qq',id:songID,qqMID:songMID,title,artist,...(completeAlbum?{album}:{}),duration:raw.interval,
-  creditedArtistNames:names,artist_entities:entities,
+  creditedArtistNames:names,creditedArtistIDs:raw.singer.map(s=>id(s.id)),creditedArtistMIDs:raw.singer.map(s=>s.mid),artist_entities:entities,
   providerTitle:detail?(raw.name??raw.title):primary,...(raw.subtitle?{subtitle:raw.subtitle}:{}),
   ...(detail?{providerDisplayTitle:display,providerDisplayArtistNames:raw.singer.map(s=>s.title||s.name)}:{}),
   ...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),...(raw.isrc?{isrc:raw.isrc}:{})};
@@ -320,6 +321,36 @@ async function hydrate(songs,context,responses=new Map(),failures=new Map()) {
   await Promise.race([Promise.all(workers),failed]);
  }finally{context.signal?.removeEventListener('abort',relay);}
 }
+async function recoverArtistIdentities(records,request,context,state) {
+ if(request.recordingProvider!=='spotify'||!request.creditedArtistIDs||typeof context.resolveArtistIdentities!=='function')return;
+ const candidates=[...records.values()].filter(song=>!compatible(song,request)
+  &&song.album&&request.album&&normalizedAlbum(song.album)===normalizedAlbum(request.album)
+  &&recordingScore({...song,artistAliasEvidence:undefined,creditedArtistNames:request.creditedArtistNames},request)>=0);
+ if(!candidates.length)return;
+ const pending=candidates.filter(song=>!boundLabels.has(song));
+ if(pending.length) {
+  const payload={comm};
+  for(const song of pending)payload[`details_${song.id}`]={module:'music.pf_song_detail_svr',method:'get_song_detail_yqq',param:{song_id:Number(song.id)}};
+  const batch=await requestJSON(`${musicuOrigin}/cgi-bin/musicu.fcg`,payload,context);
+  for(const previous of pending) {
+   const detail=batch[`details_${previous.id}`],raw=detail?.data?.track_info;
+   if(detail?.code!==0||!object(raw)||id(raw.id)!==previous.id||raw.mid!==previous.qqMID)throw mismatch();
+   const song=metadata(raw,true);
+   if(!song)throw mismatch();
+   languageEvidence.set(song,qqLanguageObservations(song.id,detail.data));records.set(song.id,song);
+  }
+ }
+ let identities;
+ try{identities=await (state.identities??=Promise.resolve().then(()=>context.resolveArtistIdentities({signal:context.signal})));}
+ catch(error){cancelled(context.signal);if(error.name==='AbortError')throw error;return;}
+ cancelled(context.signal);
+ for(const previous of candidates) {
+  const song=records.get(previous.id);
+  const performers=song.creditedArtistNames.map((name,index)=>({id:song.creditedArtistIDs[index],mid:song.creditedArtistMIDs[index],name}));
+  const evidence=buildArtistIdentityEvidence(song,performers,request,new Map(),identities);
+  if(evidence)song.artistAliasEvidence=evidence;
+ }
+}
 async function selectRecording(records,request,context,responses,failures,{measured=false}={}) {
  const ranked=[...records.values()].filter(s=>compatible(s,request)).map(song=>({song,score:recordingScore(song,request)})).sort((a,b)=>b.score-a.score);
  if(!ranked.length)return null;const best=ranked.filter(s=>Math.abs(s.score-ranked[0].score)<1e-9).map(s=>s.song);
@@ -336,6 +367,7 @@ export class QQMusicAPI extends BaseMusicAPI {
   const request={...context,artist,title},records=new Map(),responses=new Map(),failures=new Map(),state={unresolved:false,excluded:new Set()};
   try {
    await fastDiscover(`${title} ${artist}`,request,context,records,responses,state);
+   await recoverArtistIdentities(records,request,context,state);
    if(!state.unresolved){const selected=await selectRecording(records,request,context,responses,failures,{measured:true});if(selected)return selected;}
   }catch(error){if(error.name==='AbortError'||context.signal?.aborted)throw error;}
   cancelled(context.signal);const songs=await discover(`${artist} ${searchTitle(title)}`,context);
@@ -348,6 +380,7 @@ export class QQMusicAPI extends BaseMusicAPI {
   // A legacy subset cannot erase fresh version labels, missing potentially
   // eligible metadata, or a measured-sheet conflict from the fast discovery.
   if(state.unresolved)throw mismatch();if(!records.size)return null;
+  await recoverArtistIdentities(records,request,context,state);
   const selected=await selectRecording(records,request,context,responses,failures);if(!selected)throw mismatch();return selected;
  }
  async getLyrics(songId,context={}) {
@@ -372,7 +405,9 @@ export class QQMusicAPI extends BaseMusicAPI {
    lyric:{module:'music.musichallSong.PlayLyricInfo',method:'GetPlayLyricInfo',param:lyricParam(value,1)}},context);
   const response=batch.details;if(!object(response))throw providerError();
   if(response.code!==0||!object(response.data))throw providerError();const song=metadata(response.data.track_info,true);
-  if(!song||song.id!==value||!compatible(song,context))throw mismatch();
+  if(!song||song.id!==value)throw mismatch();
+  await recoverArtistIdentities(new Map([[value,song]]),context,context,{});
+  if(!compatible(song,context))throw mismatch();
   languageEvidence.set(song,qqLanguageObservations(song.id,response.data));
   bindSheetPermission(song,context);
   const lyrics=await fetchLyrics(song,context,batch.lyric??null);return {song,lyrics};

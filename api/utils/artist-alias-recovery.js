@@ -3,6 +3,7 @@ import {validArtistIdentity} from './artist-identities.js';
 
 export const ARTIST_ALIAS_RECOVERY_POLICY='artist-alias-recovery-1';
 export const ARTIST_ID_ALIAS_POLICY='artist-id-alias-recovery-1';
+export const QQ_ARTIST_ID_ALIAS_POLICY='artist-id-qq-alias-recovery-1';
 const text=value=>typeof value==='string'&&value.trim().length>0&&value.length<=512&&!/\p{C}/u.test(value);
 const positiveID=value=>/^[1-9]\d{0,19}$/.test(String(value));
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'
@@ -38,7 +39,8 @@ export function artistAliasRule(a,b) {
 const requestSignature=request=>({itemID:request.recordingItemID,title:request.title,album:request.album,
   duration:request.duration,artists:request.creditedArtistNames,...(request.creditedArtistIDs?{artistIDs:request.creditedArtistIDs}:{}),isrc:request.isrc??null,explicit:request.explicit??null});
 const sourceSignature=song=>({id:String(song.id),provider:song.source,title:song.title,artist:song.artist,album:song.album,
-  duration:song.duration,artists:song.creditedArtistNames,...(song.creditedArtistIDs?{artistIDs:song.creditedArtistIDs}:{}),isrc:song.isrc??null,explicit:song.explicit??null});
+  duration:song.duration,artists:song.creditedArtistNames,...(song.creditedArtistIDs?{artistIDs:song.creditedArtistIDs}:{}),
+  ...(song.creditedArtistMIDs?{artistMIDs:song.creditedArtistMIDs}:{}),isrc:song.isrc??null,explicit:song.explicit??null});
 function eligible(song,request) {
   return request?.recordingProvider==='spotify'&&/^[A-Za-z0-9]{22}$/.test(request.recordingItemID??'')
     &&song?.source==='netease'&&positiveID(song.id)&&text(song.title)&&text(request.title)
@@ -71,6 +73,7 @@ function validPerformers(performers,song) {
     &&new Set(performers.map(p=>p?.id)).size===performers.length
     &&performers.every((p,i)=>p&&positiveID(p.id)&&typeof p.id==='string'&&p.name===song.creditedArtistNames[i]
       &&(song.creditedArtistIDs===undefined||p.id===song.creditedArtistIDs[i])
+      &&(song.source!=='qq'||p.mid===song.creditedArtistMIDs?.[i])
       &&Array.isArray(p.names)&&p.names.length>0&&p.names.length<=32&&p.names.every(text)
       &&normalizeRecordingText(p.names[0])===normalizeRecordingText(p.name));
 }
@@ -85,7 +88,7 @@ export function buildArtistAliasEvidence(song,performers,request,profiles) {
 export function recoveredArtistNames(song,request) {
   try {
     const e=song.artistAliasEvidence;
-    if(e?.policy===ARTIST_ID_ALIAS_POLICY)return recoveredIdentityNames(song,request);
+    if(e?.policy===ARTIST_ID_ALIAS_POLICY&&song.source==='netease'||e?.policy===QQ_ARTIST_ID_ALIAS_POLICY&&song.source==='qq')return recoveredIdentityNames(song,request);
     if(!eligible(song,request)||e?.version!==1||e.policy!==ARTIST_ALIAS_RECOVERY_POLICY
       ||!same(e.source,sourceSignature(song))||!same(e.request,requestSignature(request))||!validPerformers(e.performers,song))return null;
     const matches=assignments(e.performers,request.creditedArtistNames);
@@ -96,7 +99,7 @@ export function recoveredArtistNames(song,request) {
 
 function identityEligible(song,request) {
   return request?.recordingProvider==='spotify'&&/^[A-Za-z0-9]{22}$/.test(request.recordingItemID??'')
-    &&song?.source==='netease'&&positiveID(song.id)&&text(song.album)&&text(request.album)
+    &&['netease','qq'].includes(song?.source)&&positiveID(song.id)&&text(song.album)&&text(request.album)
     &&normalizedAlbum(song.album)===normalizedAlbum(request.album)
     &&Array.isArray(request.creditedArtistNames)&&request.creditedArtistNames.length>0&&request.creditedArtistNames.length<=3
     &&request.creditedArtistNames.every(text)&&new Set(request.creditedArtistNames.map(normalizeRecordingText)).size===request.creditedArtistNames.length
@@ -106,20 +109,24 @@ function identityEligible(song,request) {
     &&Array.isArray(song.creditedArtistNames)&&song.creditedArtistNames.length===request.creditedArtistNames.length
     &&Array.isArray(song.creditedArtistIDs)&&song.creditedArtistIDs.length===song.creditedArtistNames.length
     &&song.creditedArtistIDs.every(v=>typeof v==='string'&&positiveID(v))&&new Set(song.creditedArtistIDs).size===song.creditedArtistIDs.length
+    &&(song.source!=='qq'||Array.isArray(song.creditedArtistMIDs)&&song.creditedArtistMIDs.length===song.creditedArtistNames.length
+      &&song.creditedArtistMIDs.every(value=>typeof value==='string'&&/^\d{3}[A-Za-z0-9]{11}$/.test(value))
+      &&new Set(song.creditedArtistMIDs).size===song.creditedArtistMIDs.length)
     // Identity evidence changes names only. All ordinary recording gates still
     // run, including the existing duration policy used by provider aliases.
     &&recordingScore({...song,artistAliasEvidence:undefined,creditedArtistNames:request.creditedArtistNames},request)>=0;
 }
-function identitySupports(identity,performer,requested,requestedID) {
+function identitySupports(identity,performer,requested,requestedID,provider) {
   if(!validArtistIdentity(identity)||identity.spotifyArtistID!==requestedID)return false;
   const names=new Set(identity.names.map(normalizeRecordingText));
   if(!names.has(normalizeRecordingText(requested))||!names.has(normalizeRecordingText(performer.name)))return false;
+  if(provider==='qq')return identity.version===2&&identity.qqSingerMIDs.includes(performer.mid);
   if(identity.neteaseArtistIDs.length)return identity.neteaseArtistIDs.includes(performer.id);
   // Some entities lack a NetEase ID. Require two distinct fresh provider
   // profile names, including its canonical name; a shared homonym is insufficient.
   return new Set(performer.names.filter(name=>names.has(normalizeRecordingText(name))).map(normalizeRecordingText)).size>=2;
 }
-function identityAssignments(performers,request,identities) {
+function identityAssignments(performers,request,identities,provider) {
   const found=[];
   const visit=(at,used,chosen)=>{
     if(found.length>1)return;
@@ -130,7 +137,7 @@ function identityAssignments(performers,request,identities) {
       if(p.names.some(name=>normalizeRecordingText(name)===normalizeRecordingText(requested)))
         visit(at+1,new Set([...used,i]),[...chosen,{...p,requested,requestedID,rule:'exact'}]);
       else {
-        const matched=identities.filter(identity=>identitySupports(identity,p,requested,requestedID));
+        const matched=identities.filter(identity=>identitySupports(identity,p,requested,requestedID,provider));
         if(matched.length===1)visit(at+1,new Set([...used,i]),[...chosen,{...p,requested,requestedID,rule:'catalog_artist_identity',identity:matched[0]}]);
       }
     }
@@ -139,11 +146,11 @@ function identityAssignments(performers,request,identities) {
 }
 export function buildArtistIdentityEvidence(song,performers,request,profiles,identities) {
   if(!identityEligible(song,request)||!Array.isArray(performers)||!Array.isArray(identities)||identities.length>3)return null;
-  const entries=performers.map(p=>({id:String(p.id),name:p.name,names:(profiles.get(String(p.id))??[p.name]).slice(0,32)}));
+  const entries=performers.map(p=>({id:String(p.id),...(song.source==='qq'?{mid:p.mid}:{}),name:p.name,names:(profiles.get(String(p.id))??[p.name]).slice(0,32)}));
   if(!validPerformers(entries,song))return null;
-  const matches=identityAssignments(entries,request,identities);
+  const matches=identityAssignments(entries,request,identities,song.source);
   if(matches.length!==1||!matches[0].some(p=>p.rule==='catalog_artist_identity'))return null;
-  return {version:1,policy:ARTIST_ID_ALIAS_POLICY,source:sourceSignature(song),request:requestSignature(request),performers:matches[0]};
+  return {version:1,policy:song.source==='qq'?QQ_ARTIST_ID_ALIAS_POLICY:ARTIST_ID_ALIAS_POLICY,source:sourceSignature(song),request:requestSignature(request),performers:matches[0]};
 }
 function recoveredIdentityNames(song,request) {
   const e=song.artistAliasEvidence;
@@ -151,7 +158,7 @@ function recoveredIdentityNames(song,request) {
     ||!validPerformers(e.performers,song))return null;
   const identities=e.performers.flatMap(p=>p.identity?[p.identity]:[]);
   const base=e.performers.map(({requested,requestedID,rule,identity,...p})=>p);
-  const matches=identityAssignments(base,request,identities);
+  const matches=identityAssignments(base,request,identities,song.source);
   return matches.length===1&&matches[0].some(p=>p.rule==='catalog_artist_identity')&&same(matches[0],e.performers)?matches[0].map(p=>p.requested):null;
 }
 
