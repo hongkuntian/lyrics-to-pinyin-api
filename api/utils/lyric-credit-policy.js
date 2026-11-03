@@ -11,6 +11,8 @@ const roleLabels=new Set(policy.roleGroups.flatMap(({chinese:zh,english:en})=>[
 ]).map(creditLabelKey));
 const patterns=Object.values(policy.patterns).map(pattern=>new RegExp(pattern,'u'));
 const compoundSeparator=new RegExp(policy.compoundSeparator,'u');
+const creditBlockContributor=new RegExp(policy.creditBlockContributor,'u');
+export const isCreditBlockContributor=body=>creditBlockContributor.test(creditLabelKey(body));
 export function isProductionRole(key) {
   const atom=part=>!ambiguousProductionRoles.has(part)
     && (roleLabels.has(part)||patterns.some(pattern=>part.match(pattern)?.[0]===part));

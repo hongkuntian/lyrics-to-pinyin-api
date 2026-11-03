@@ -320,7 +320,21 @@ test('combined engineering and artwork roles corroborate a backing-vocal roster 
       assert.deepEqual(cleanLyrics(result),result);
       assert.equal(hasEmbeddedLyricCredits({lines:data.lines.map(l=>({original:l.text}))}),true);
     }
-    const sung={lines:rows(['和声：一起唱',...credits.slice(1),'我说：慢慢听'])};
+    const sung={lines:rows(['和声：一起唱',...credits,'我说：慢慢听'])};
     assert.deepEqual(cleanLyrics(sung).lines,[sung.lines[0],sung.lines.at(-1)]);
   }
+});
+
+test('mixed-script backing names and choir teams need an uninterrupted confirmed credit block',()=>{
+  const vocalCredits=['和声:赫拉Hera','合唱:一寸光年团队'];
+  for(const texts of [vocalCredits,['音频编辑:蔡志成',...vocalCredits],
+    [...vocalCredits,'艺人统筹:YY音乐@云云、君君'],
+    ['音频编辑:蔡志成',...vocalCredits,'一起唱','艺人统筹:YY音乐@云云、君君']]) {
+    const data={lines:rows(texts)};
+    assert.deepEqual(cleanLyrics(data).lines,data.lines.filter(line=>vocalCredits.includes(line.text)||line.text==='一起唱'));
+  }
+  const data={lines:rows(['小阿七：和声:赫拉Hera','小阿七：合唱:一寸光年团队'])};
+  const result=cleanLyrics(data,{artist:'小阿七'});
+  assert.deepEqual(result.lines.map(line=>line.text),vocalCredits);
+  assert.deepEqual(cleanLyrics(result,{artist:'小阿七'}),result);
 });

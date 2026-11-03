@@ -1,7 +1,7 @@
 import {createRequire} from 'node:module';
 import {revalidatedVocalLine} from './vocal-timing.js';
 import {classifyLyricNotice} from './lyric-notices.js';
-import {creditLabelKey,ambiguousProductionRoles as ambiguousRoles,isProductionRole} from './lyric-credit-policy.js';
+import {creditLabelKey,ambiguousProductionRoles as ambiguousRoles,isProductionRole,isCreditBlockContributor} from './lyric-credit-policy.js';
 const require=createRequire(import.meta.url);
 const roster=require('../data/lyric-performers.json');
 export const LYRIC_NORMALIZATION_VERSION='lyric-annotations-3';
@@ -122,6 +122,7 @@ export function lyricCreditRoles(lines,options={},protectedIndices=new Set()) {
     if(protectedIndices.has(i)) return;
     const text=(line.text??'').trim(),direct=creditRole(text,aliases);
     if(direct) {result.set(i,direct);return;}
+    if(/[\r\n\v\f\u0085\u2028\u2029]/u.test(text))return;
     const parts=text.match(/^([^:：]+)[:：]\s*(.+)$/u);
     if(!parts) return;
     const key=labelKey(parts[1]),body=labelKey(parts[2]);
@@ -129,7 +130,7 @@ export function lyricCreditRoles(lines,options={},protectedIndices=new Set()) {
     const known=namedPerformers(parts[2].trim(),aliases);
     const name=body.replace(/(?:@[^\s@/／&,，、]+|[（(][a-z0-9][a-z0-9._-]{0,39}[）)])$/u,'');
     const personalName=/^[\p{Script=Han}]{2,4}$/u.test(name) && surnames.has([...name][0]);
-    if(!known && !personalName) return;
+    if(!known && !personalName && !(ambiguousRoles.has(key)&&isCreditBlockContributor(body))) return;
     if(performanceRoles.has(key) && known) result.set(i,'production_credit');
     else candidates.set(i,{key,body});
   });
@@ -142,13 +143,17 @@ export function lyricCreditRoles(lines,options={},protectedIndices=new Set()) {
       result.set(i,'production_credit');result.set(i+1,'production_credit');
     }
   }
-  let changed=true;
-  while(changed) {
-    changed=false;
-    for(const i of candidates.keys()) if(!result.has(i)
-      && ((result.has(i-2)&&result.has(i-1)) || (result.has(i-1)&&result.has(i+1)) || (result.has(i+1)&&result.has(i+2)))) {
-      result.set(i,'production_credit');changed=true;
+  let blockStart=0;
+  while(blockStart<lines.length) {
+    if(!result.has(blockStart)&&!candidates.has(blockStart)) {blockStart++;continue;}
+    let blockEnd=blockStart,confirmed=0;
+    while(blockEnd<lines.length&&(result.has(blockEnd)||candidates.has(blockEnd))) {
+      if(result.get(blockEnd)==='production_credit')confirmed++;
+      blockEnd++;
     }
+    if(confirmed>=2)for(let index=blockStart;index<blockEnd;index++)
+      if(candidates.has(index))result.set(index,'production_credit');
+    blockStart=blockEnd;
   }
   return result;
 }

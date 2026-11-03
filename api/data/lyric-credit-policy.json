@@ -48,6 +48,7 @@
     {
       "chinese": [
         "制作人",
+        "歌曲制作人",
         "制作"
       ],
       "english": [
@@ -105,6 +106,14 @@
         "music coordinator",
         "music coordination"
       ]
+    },
+    {
+      "chinese": ["艺人统筹"],
+      "english": ["artist coordinator", "artist coordination"]
+    },
+    {
+      "chinese": ["音频编辑"],
+      "english": ["audio editing", "audio editor"]
     },
     {
       "chinese": [
@@ -661,12 +670,14 @@
   ],
   "ambiguousRoles": [
     "chorus",
+    "合唱",
     "和声",
     "和音",
     "合声",
     "backingvocal",
     "backingvocals"
   ],
+  "creditBlockContributor": "^(?:[\\u3400-\\u9FFF]{2,4}[a-z][a-z0-9]{1,19}|[\\u3400-\\u9FFF]{2,12}(?:团队|合唱团|合唱队|乐团))$",
   "patterns": {
     "composedRole": "^(?:(?:(?:[1-9][0-9]?(?:st|nd|rd|th)|first|second|third|principal|lead|solo|assistant))?(?:brass|woodwinds?|strings?|violins?|violas?|cellos?|doublebass|contrabass|c\\.?bass|guitars?|bass|drums?|piano|keyboards?|percussion|flute|saxophone|trumpet|trombone|horn|orchestra)(?:assistant|arrangement|arranger|recording(?:engineer|assistant|studio)?|engineer|technician|contractor|director|conductor)?|(?:assistant|additional|chief|head)?(?:recording|mixing|mastering)(?:engineer|assistant|studio)?|(?:第?[一二三四五六七八九十0-9]+|首席|助理)?(?:铜管|木管|弦乐|管弦乐|小提琴|中提琴|大提琴|低音提琴|倍低音提琴|吉他|贝斯|鼓|钢琴|键盘|打击乐|长笛|萨克斯|小号|长号|圆号|二胡|古筝|琵琶)(?:编写|编曲|录音|录音师|录音工程师|录音室|录音棚|录音工作室|录音助理|助理|技师|统筹|监制|指挥|团)?)$",
     "artworkRole": "^(?:(?:封面|视觉|平面|美术|海报|包装|字体|视频)(?:设计|制作|统筹|总监|指导|绘制|插画|剪辑|后期|拍摄)|(?:cover|artwork|visual|graphic|poster|packaging|video|typography)(?:design|illustration|direction|production|editing|photography|coordination))$",
