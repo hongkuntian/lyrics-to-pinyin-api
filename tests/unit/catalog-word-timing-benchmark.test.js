@@ -56,6 +56,19 @@ test('larger live sweeps bound case concurrency without dropping or duplicating 
  await assert.rejects(runCatalogBenchmark({corpus,modes:[service],concurrency:3}),/invalid_benchmark/);
 });
 
+test('both live cohorts retain the exact source-positive empty-duplicate report without routing hints',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ for(const file of ['measured-discovery-corpus.json','source-positive-word-timing-corpus.json']) {
+  const corpus=JSON.parse(await readFile(new URL('../../docs/research/'+file,import.meta.url),'utf8'));
+  const rows=corpus.cases.filter(c=>c.caseID==='apple-1455596862-empty-duplicate');
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].request.catalog_id,'1455596862');
+  assert.equal(rows[0].availabilityEvidence.source.itemID,'1875149452');
+  assert.equal(rows[0].request.source_hint,undefined);
+  assert.equal(rows[0].request.music_platform,undefined);
+ }
+});
+
 test('frozen availability evidence retains a failed counterpart in the coverage denominator',async()=>{
  const corpus={version:1,limitations:[],cases:[{caseID:'eligible-miss',platform:'apple',request,availabilityEvidence:{fromCaseID:'prior-source-positive'}}]};
  const report=await runCatalogBenchmark({corpus,modes:[mode('candidate',{},504)]});

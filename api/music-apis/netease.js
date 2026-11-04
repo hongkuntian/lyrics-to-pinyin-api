@@ -130,13 +130,19 @@ export class NeteaseAPI extends BaseMusicAPI {
     best.lyricsData??=await this.getLyrics(best.id,{...context,song:best});
     const cleaned=song=>cleanLyrics(song.lyricsData,{duration:song.duration,title:song.title,artist:song.artist});
     const baseline=cleaned(best);
-    if(!baseline?.lines.length||baseline.partial||baseline.instrumental||hasCompleteMeasuredVocalTiming({song:best,lyrics:baseline}))return best;
+    if(baseline?.partial||baseline?.instrumental||hasCompleteMeasuredVocalTiming({song:best,lyrics:baseline}))return best;
     const text=lyrics=>normalizeRecordingText(lyrics.lines.map(l=>l.text).join(''));
-    const expected=text(baseline);if(!expected)return best;
+    const expected=baseline?.lines.length?text(baseline):null;
+    // An empty duplicate cannot supply a transcription fingerprint. Recover
+    // only within the exact normalized catalog album in that case; the source
+    // must still independently pass every recording and measured-cue check.
+    const eligible=family.filter(({song})=>song!==best&&(expected
+      ||normalizedAlbum(song.album)===normalizedAlbum(best.album)&&normalizedAlbum(song.album)===normalizedAlbum(request.album)));
+    if(!eligible.length)return best;
     try {
       // Optional acquisition owns a fixed sub-budget inside the caller's
       // unchanged provider deadline. Failure keeps the readable primary.
-      const companions=family.filter(({song})=>song!==best).sort((a,b)=>recordingScore(b.song,request)-recordingScore(a.song,request)
+      const companions=eligible.sort((a,b)=>recordingScore(b.song,request)-recordingScore(a.song,request)
         ||String(a.song.id).localeCompare(String(b.song.id),'en',{numeric:true})).slice(0,3);
       const selected=await withDeadline(async signal=>{
         const controller=new AbortController(),relay=()=>controller.abort();
@@ -149,7 +155,7 @@ export class NeteaseAPI extends BaseMusicAPI {
             const raw=song.lyricsData??await this.getLyrics(song.id,{...context,signal:controller.signal,song});
             controller.signal.throwIfAborted();song.lyricsData=raw;
             const lyrics=cleaned(song);
-            if(!lyrics||lyrics.partial||lyrics.instrumental||text(lyrics)!==expected
+            if(!lyrics||lyrics.partial||lyrics.instrumental||expected&&text(lyrics)!==expected
               ||!hasCompleteMeasuredVocalTiming({song,lyrics}))throw new Error('No complete measured edition');
             return song;
           }));

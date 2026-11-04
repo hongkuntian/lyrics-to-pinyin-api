@@ -50,6 +50,91 @@ test('a complete primary YRC does not query any companion release',async()=>{
  assert.deepEqual(f.calls.filter(u=>u.pathname==='/lyric/new').map(u=>Number(u.searchParams.get('id'))),[primary.id]);
 });
 
+// Reported Apple 1455596862: the empty duplicate is 8 ms from the catalog
+// duration, while the source with YRC is 34 ms away. Lyrics remain synthetic.
+const duet={artist:'Tay Kewei',title:'小幸运 (feat. 沈志豪)',album:'七年之氧 - EP',duration:320.227,catalog_id:'1455596862',storefront:'ca'};
+const duetRaw=(id,duration)=>({id,name:'小幸运',artists:[{id:10829,name:'郑可为'},{id:12475225,name:'沈志豪'}],album:{name:'七年之氧'},duration});
+const emptyDuet=duetRaw(2069627243,320235),timedDuet=duetRaw(1875149452,320261);
+function duetFixture({empty={nolyric:true,lrc:{lyric:''}},companion=timedDuet,provider='apple',...extra}={}) {
+ return fixture({rows:[emptyDuet,companion],sheets:{[emptyDuet.id]:empty,[timedDuet.id]:{yrc:{lyric:yrc}}},
+  profile:{id:10829,name:'郑可为',transNames:['Tay Kewei']},...duet,
+  ...(provider==='spotify'?{recordingProvider:'spotify',creditedArtistNames:['Tay Kewei','沈志豪']}:{}),...extra});
+}
+
+for(const provider of ['apple','spotify'])test(`${provider}: an empty nearest-duration duplicate cannot hide same-album measured lyrics`,async()=>{
+ for(const empty of [{nolyric:true,lrc:{lyric:''}},{uncollected:true,lrc:{lyric:''}},{lrc:{lyric:'[00:00]作词：虚构作者'}}]) {
+  const f=duetFixture({empty,provider});
+  const song=await f.api.searchSong(duet.artist,duet.title,f.context);
+  assert.equal(song.id,timedDuet.id);
+  assert.equal(measuredVocalCoverage({song,lyrics:song.lyricsData}).complete,true);
+  assert.deepEqual(f.calls.filter(u=>u.pathname==='/lyric/new').map(u=>Number(u.searchParams.get('id'))),[emptyDuet.id,timedDuet.id]);
+ }
+});
+
+test('empty-primary recovery still requires same album, all performer IDs, version and duration',async()=>{
+ for(const change of [
+  {album:{name:'Other compilation'}},
+  {artists:[{id:10829,name:'郑可为'},{id:999,name:'沈志豪'}]},
+  {artists:[{id:10829,name:'郑可为'}]},
+  {name:'小幸运 (Live)'},{duration:320800},{originCoverType:2}
+ ]) {
+  const f=duetFixture({companion:{...timedDuet,...change}});
+  assert.equal((await f.api.searchSong(duet.artist,duet.title,f.context)).id,emptyDuet.id);
+  assert.ok(!f.calls.some(u=>u.pathname==='/lyric/new'&&Number(u.searchParams.get('id'))===timedDuet.id),JSON.stringify(change));
+ }
+});
+
+test('empty-primary recovery rejects incomplete cues and preserves explicit instrumentals',async()=>{
+ for(const empty of [{nolyric:true,lrc:{lyric:''}},{lrc:{lyric:'[00:00]纯音乐，请欣赏'}}]) {
+  const f=duetFixture({empty});
+  f.context.fetchFn=((original)=>async(url,init)=>{
+   if(new URL(url).pathname==='/lyric/new'&&new URL(url).searchParams.get('id')===String(timedDuet.id))
+    return answer({code:200,yrc:{lyric:yrc.replace('(10120,2000,0)','(10120,-1,0)')}});
+   return original(url,init);
+  })(f.context.fetchFn);
+  assert.equal((await f.api.searchSong(duet.artist,duet.title,f.context)).id,emptyDuet.id);
+ }
+ const f=duetFixture({empty:{lrc:{lyric:'[00:00]纯音乐，请欣赏'}}});
+ assert.equal((await f.api.searchSong(duet.artist,duet.title,f.context)).id,emptyDuet.id);
+ assert.deepEqual(f.calls.filter(u=>u.pathname==='/lyric/new').map(u=>Number(u.searchParams.get('id'))),[emptyDuet.id]);
+});
+
+test('empty-primary recovery shares the companion deadline and cancels pending reads',async()=>{
+ for(const cancel of [false,true]) {
+  const controller=new AbortController();let started,aborted=false;
+  const ready=new Promise(resolve=>{started=resolve;});
+  const f=duetFixture({signal:controller.signal,sheets:{
+   [emptyDuet.id]:{nolyric:true,lrc:{lyric:''}},
+   [timedDuet.id]:({signal})=>new Promise((_,reject)=>{
+    signal.addEventListener('abort',()=>{aborted=true;reject(Object.assign(new Error('cancelled'),{name:'AbortError'}));},{once:true});started();
+   })
+  }});
+  const start=Date.now(),work=f.api.searchSong(duet.artist,duet.title,f.context);
+  await ready;
+  if(cancel){controller.abort();await assert.rejects(work,{name:'AbortError'});}
+  else assert.equal((await work).id,emptyDuet.id);
+  assert.equal(aborted,true);
+  assert.ok(Date.now()-start<3000);
+  assert.equal(f.calls.filter(u=>u.pathname==='/lyric/new').length,2);
+ }
+});
+
+for(const provider of ['apple','spotify'])test(`${provider}: handler recovers the reported empty duet duplicate with bound measured cues`,async()=>{
+ const f=duetFixture({provider}),original=f.api.searchSong.bind(f.api);
+ f.api.searchSong=(a,t,c)=>original(a,t,{...c,fetchFn:f.context.fetchFn});
+ const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[f.api],speculativeDiscovery:false,
+  resolveCatalogAliasesFn:async()=>[],lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
+  getDefaultRomanizationSystemFn:()=> 'none',logger:{info(){},error(){}}});
+ const itemID='0123456789ABCDEFGHIJKL';
+ const body=provider==='apple'?duet:{recording:{version:2,provider:'spotify',item_id:itemID,metadata:{origin:'spotify',title:duet.title,artists:['Tay Kewei','沈志豪'],album:duet.album,duration_ms:320227}}};
+ const res=createMockRes();await service({method:'POST',body},res);
+ assert.equal(res.statusCode,200);
+ assert.equal(String(res.body.song.id),String(timedDuet.id));
+ assert.equal(res.body.metadata.lyric_timing.source,`netease:${timedDuet.id}:yrc`);
+ assert.equal(res.body.metadata.lyric_timing.recordingID,provider==='apple'?duet.catalog_id:itemID);
+ assert.equal(res.body.lines.reduce((n,l)=>n+(l.vocalTiming?.segments.length??0),0),2);
+});
+
 test('missing or invalid performer IDs cannot establish companion release identity',async()=>{
  for(const id of [0,undefined,-1,'invalid']) {
   const artists=[{id,name:'齐秦'}],f=fixture({rows:[{...primary,artists},{...measured,artists}],artist:'齐秦'});

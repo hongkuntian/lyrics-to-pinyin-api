@@ -102,3 +102,25 @@ LRCLIB checks fuller plain text alongside an abbreviated synced field and contin
 Plain, partial and unresolved early-cutoff results expire after five minutes in server response caches; ordinary full timed and instrumental results retain the normal one-day lifetime. Reading Redis or disk preserves the original remaining freshness. Optional catalog localizations can upgrade plain lyrics within the existing bounded lookup; unavailable upgrades preserve readable words. The `corroborated-completeness-1` capability invalidates response, canonical and verified-context selection caches without changing API response version `2.5.0`, selection revision `lyrics-selection-2026-09-30-storefront-1`, or the public response shape.
 
 Automatic durable-library heads use this same freshness policy, using the playback request duration even when the source response omits it. A stale early-cutoff positive rechecks with `refresh:true`; an upstream outage retains the readable stored edition. The whole-document retention comparison also applies corroborated completeness before protecting timing: a verified fuller untimed edition can replace a timed excerpt, and a subsequent timed excerpt cannot regress the fuller head. Apple comparisons require matching server-bound request keys; localized source names additionally need the same validated canonical recording. Spotify comparisons retain the admitted candidate evidence stored with the source. Refresh creates or selects an immutable edition rather than rewriting the old source, its hash or existing learning/translation records. Exact-text timing-donor attachments remain separate and cannot append missing verses.
+
+## Empty duplicate recovery
+
+NetEase metadata ranking can prefer an empty duplicate by a few milliseconds.
+After an unambiguous recording match, an empty or credit-only lyric sheet may
+recover complete measured lyrics from the same normalized catalog album. Each
+companion must independently pass recording admission, retain the exact full
+performer ID set and version, and be within 0.5 seconds of both request and
+anchor. Explicit instrumentals and partial transcriptions retain their existing
+policy. A readable anchor still requires matching complete normalized text;
+without an anchor transcription, cross-album recovery is disallowed.
+
+The existing three-companion, 1.5-second sub-budget and caller deadline remain
+unchanged. Adopt a complete source edition, including its own words, cues and
+provenance; never graft timing onto another sheet. The internal acquisition cache
+capability is `measured-releases-2`; accepted source hashes remain unchanged.
+Apple catalog `1455596862` is covered by hermetic Apple/Spotify handler regressions
+and both maintained live discovery cohorts. The source-positive cohort is checked
+by the existing daily measured-timing coverage workflow, with a separate 100%
+requirement for this regression so the aggregate threshold cannot hide its miss.
+Live coverage measures
+admission and cue coverage, not audible alignment or phone adoption.

@@ -987,6 +987,30 @@
         }
       },
       "catalogURI": "spotify:track:7mubQiRZ1Q94ZN3zCrNbzn"
+    },
+    {
+      "caseID": "apple-1455596862-empty-duplicate",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1455596862&country=ca",
+      "metadataEvidence": "Exact user-linked Apple catalog item resolved 2026-11-03. NetEase 1875149452 independently passes recording admission with 522/522 measured cue coverage; nearer-duration duplicate 2069627243 has no usable lyrics. No acoustic verification.",
+      "request": {
+        "catalog_id": "1455596862",
+        "storefront": "ca",
+        "artist": "Tay Kewei",
+        "title": "小幸运 (feat. 沈志豪)",
+        "album": "七年之氧 - EP",
+        "duration": 320.227
+      },
+      "availabilityEvidence": {
+        "fromCaseID": "apple-1455596862-empty-duplicate",
+        "observedAt": "2026-11-03",
+        "source": {
+          "provider": "NeteaseAPI",
+          "itemID": "1875149452",
+          "timing": "netease:1875149452:yrc"
+        },
+        "metadataOnly": true
+      }
     }
   ]
 }

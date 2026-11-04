@@ -44,9 +44,19 @@ jobs:
           --corpus docs/research/source-positive-word-timing-corpus.json
           --runs "$REPETITIONS" --concurrency 2 --minimum-available-rate "$MINIMUM_RATE"
           --out measured-timing-coverage.json
+      - name: Require complete timing for the empty-duplicate regression
+        if: always()
+        run: >-
+          node scripts/benchmark-catalog-word-timing.mjs
+          --corpus docs/research/source-positive-word-timing-corpus.json
+          --case-ids apple-1455596862-empty-duplicate
+          --runs 1 --concurrency 1 --minimum-available-rate 1
+          --out empty-duplicate-coverage.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: measured-timing-coverage-${{ github.sha }}
-          path: measured-timing-coverage.json
+          path: |
+            measured-timing-coverage.json
+            empty-duplicate-coverage.json
           if-no-files-found: error
