@@ -16,6 +16,8 @@ const numericID=value=>typeof value==='string' && /^\d{1,20}$/.test(value);
 const present=value=>typeof value==='string' && value.trim().length>0;
 const credits=artist=>recordingNames({artist,title:''}).credits;
 const closeDuration=(a,b)=>Number.isFinite(a) && Number.isFinite(b) && Math.abs(a-b)<=0.5;
+const validFingerprint=source=>source.lyricsFingerprintVersion==='parsed-lrc-v1'
+  && typeof source.lyricsFingerprint==='string' && /^[a-f0-9]{64}$/.test(source.lyricsFingerprint);
 function sameSignature(actual,expected) {
   return numericID(actual.catalog_id) && actual.catalog_id===expected.catalog_id
     && ['title','artist','album'].every(key=>present(actual[key]))
@@ -50,7 +52,7 @@ function verifiedLrclibSource(raw,expected) {
     && JSON.stringify(credits(raw.artistName))===JSON.stringify(credits(expected.artist))
     && normalizedAlbum(raw.albumName)===normalizedAlbum(expected.album)
     && closeDuration(raw.duration,expected.duration)
-    && /^[a-f0-9]{64}$/.test(expected.lyricsFingerprint??'');
+    && validFingerprint(expected);
 }
 function checkAbort(signal) {
   if(signal?.aborted) {const error=new Error('Lookup cancelled');error.name='AbortError';throw error;}
@@ -115,9 +117,12 @@ export async function lookupReviewedRecording(request,context={}, {reviews=recor
       if(tag[1].toLowerCase()==='ti' && normalizeRecordingText(value)!==normalizeRecordingText(song.title)) return null;
       if(tag[1].toLowerCase()==='ar' && JSON.stringify(credits(value))!==JSON.stringify(credits(song.artist))) return null;
     }
-    const lyrics=cleanLyrics({lines:parseLRC(response.lrc.lyric),source:sourceProvider,songId:song.id},
+    const parsed={lines:parseLRC(response.lrc.lyric),source:sourceProvider,songId:song.id};
+    if(entry.source.lyricsFingerprint!==undefined || entry.source.lyricsFingerprintVersion!==undefined) {
+      if(!validFingerprint(entry.source) || timingFingerprint(parsed)!==entry.source.lyricsFingerprint) return null;
+    }
+    const lyrics=cleanLyrics(parsed,
       {duration:song.duration,title:song.title,artist:song.artist,catalogID:request.catalog_id});
-    if(entry.source.lyricsFingerprint && timingFingerprint(lyrics)!==entry.source.lyricsFingerprint) return null;
     // These reviewed recordings contain vocals. An empty/credit-only/instrumental
     // mutation must not turn a known vocal recording into an instrumental success.
     if(!lyrics?.lines.length || lyrics.instrumental) return null;

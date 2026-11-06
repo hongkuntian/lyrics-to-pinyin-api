@@ -11,7 +11,7 @@ const lines=[{text:'Fixture sunrise',timestamp:17.51},{text:'Fixture moonlight',
 const lyric='[00:17.51]Fixture sunrise\n[03:07.72]Fixture moonlight';
 function fixture(mutate=()=>{}) {
   assert.ok(entry);
-  const review={...entry,source:{...entry.source,lyricsFingerprint:timingFingerprint({lines})}};
+  const review={...entry,source:{...entry.source,lyricsFingerprintVersion:'parsed-lrc-v1',lyricsFingerprint:timingFingerprint({lines})}};
   const calls=[];
   const fetchFn=async(url,init)=>{
     calls.push(url);assert.ok(init.signal);

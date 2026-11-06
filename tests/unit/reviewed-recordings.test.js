@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {lookupReviewedRecording as lookupReviewed} from '../../api/utils/reviewed-recordings.js';
 import {timingFingerprint} from '../../api/utils/timing-corrections.js';
+import {parseLRC} from '../../api/utils/lrc.js';
 import {withDeadline} from '../../api/utils/fetch-json.js';
 const require=createRequire(import.meta.url);
 const {recordings:productionRecordings}=require('../../api/data/reviewed-recordings.json');
 const clone=value=>JSON.parse(JSON.stringify(value));
 // Entirely synthetic text proves fetched lines/timing flow through unchanged.
-const rawLyrics='[00:00.00]词曲: Test Author\n[00:15.50]Fixture sunrise\n[00:30.25]Fixture moonlight';
+const rawLyrics='[00:00.00]词曲: Test Author\n[00:01.00]制作统筹: Test Producer\n[00:15.50]Fixture sunrise\n[00:30.25]Fixture moonlight';
 const recordings=productionRecordings.filter(entry=>(entry.source.provider??'netease')==='netease').map(entry=>({...entry,source:{...entry.source,
-  ...(entry.source.lyricsFingerprint?{lyricsFingerprint:timingFingerprint({lines:[{text:'Fixture sunrise',timestamp:15.5},{text:'Fixture moonlight',timestamp:30.25}]})}:{})}}));
+  ...(entry.source.lyricsFingerprint?{lyricsFingerprintVersion:'parsed-lrc-v1',lyricsFingerprint:timingFingerprint({lines:parseLRC(rawLyrics)})}:{})}}));
 const lookupReviewedRecording=(request,context)=>lookupReviewed(request,context,{reviews:recordings});
 function fixture(entry,mutate=()=>{},signal) {
   const calls=[],signals=[];
@@ -103,6 +104,32 @@ test('listening-reviewed NetEase source rejects changed words or timestamps',asy
       if(u.pathname==='/lyric')body.lrc.lyric=lyric;
     })),null);
   }
+});
+test('reviewed source fingerprints precede mutable credit and singer-cue normalization',async()=>{
+  const entry=clone(recordings.find(entry=>entry.source.lyricsFingerprint));
+  const lyric='[00:00.00]制作统筹: Test Producer\n[00:01.00]母带: Test Engineer\n[00:15.50]Aria:Fixture sunrise\n[00:20.50]Bram:Fixture daylight\n[00:25.50]Aria:Fixture evening\n[00:30.25]Bram:Fixture moonlight';
+  entry.source.lyricsFingerprint=timingFingerprint({lines:parseLRC(lyric)});
+  const context=fixture(entry,(body,url)=>{if(url.pathname==='/lyric')body.lrc.lyric=lyric;});
+  const result=await lookupReviewed(entry.acceptedRequests[0],context,{reviews:[entry]});
+  assert.ok(result);
+  assert.deepEqual(result.lyrics.lines.map(line=>line.text),['Fixture sunrise','Fixture daylight','Fixture evening','Fixture moonlight']);
+  assert.notEqual(timingFingerprint(result.lyrics),entry.source.lyricsFingerprint);
+  for(const changed of [lyric.replace('sunrise','different'),lyric.replace('15.50','16.50'),lyric.replace('Test Producer','Different Producer')]) {
+    const changedContext=fixture(entry,(body,url)=>{if(url.pathname==='/lyric')body.lrc.lyric=changed;});
+    assert.equal(await lookupReviewed(entry.acceptedRequests[0],changedContext,{reviews:[entry]}),null);
+  }
+});
+test('unknown, missing or malformed reviewed fingerprint versions fail closed',async()=>{
+  for(const version of [undefined,'cleaned-v0','parsed-lrc-v2']) {
+    const entry=clone(recordings.find(entry=>entry.source.lyricsFingerprint));
+    entry.source.lyricsFingerprintVersion=version;
+    assert.equal(await lookupReviewed(entry.acceptedRequests[0],fixture(entry),{reviews:[entry]}),null);
+  }
+  const entry=clone(recordings.find(entry=>entry.source.lyricsFingerprint));
+  entry.source.lyricsFingerprint='not-a-digest';
+  assert.equal(await lookupReviewed(entry.acceptedRequests[0],fixture(entry),{reviews:[entry]}),null);
+  delete entry.source.lyricsFingerprint;
+  assert.equal(await lookupReviewed(entry.acceptedRequests[0],fixture(entry),{reviews:[entry]}),null);
 });
 test('reviewed exact-ID requests overlap slow upstream reads without skipping identity checks',async()=>{
   const entry=recordings.find(x=>x.source.lyricsFingerprint),context=fixture(entry);

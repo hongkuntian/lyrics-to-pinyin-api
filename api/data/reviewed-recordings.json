@@ -198,7 +198,8 @@
             "name": "赵传"
           }
         ],
-        "lyricsFingerprint": "c210d412adbd06911b30f006404b8cab3f36266792181d5fbcf150d044096f41"
+        "lyricsFingerprintVersion": "parsed-lrc-v1",
+        "lyricsFingerprint": "33fe85f6bba443c9d1cabaec7a0e73272ad814ee5d0ed07175223e16f9b862cc"
       },
       "provenance": [
         {
@@ -280,7 +281,8 @@
             "name": "英雄联盟"
           }
         ],
-        "lyricsFingerprint": "edf08e43863bc433f9d3cc3e9c435668cd38a7b013efe84277da161f4424269c"
+        "lyricsFingerprintVersion": "parsed-lrc-v1",
+        "lyricsFingerprint": "e753201c21b81cc8efd5495f367feffcb0d06995c63d1c87b9dab3c194c24af2"
       },
       "provenance": [
         "https://music.apple.com/us/song/6763663750",
@@ -337,6 +339,7 @@
         "artist": "李佳薇",
         "album": "甲乙丙丁",
         "duration": 210,
+        "lyricsFingerprintVersion": "parsed-lrc-v1",
         "lyricsFingerprint": "7a80bfb7296b75a5988e5b830eabbba14d68a4d21d06b872402c33b2a5f0762b"
       },
       "provenance": [
