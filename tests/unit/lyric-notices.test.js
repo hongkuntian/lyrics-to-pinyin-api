@@ -59,7 +59,7 @@ test('a verified raw performer cue wins before notice and production-role classi
     assert.equal(validLyricStructure(result.lyricStructure,response(result).lines),true);
     assert.deepEqual(cleanLyrics(result,{artist:'Singer'}),result);
     assert.equal(hasEmbeddedLyricCredits(response(result)),false);
-    assert.equal(hasEmbeddedLyricCredits({...response(data),song:{artist:{original:'Singer'}}}),false);
+    assert.equal(hasEmbeddedLyricCredits({...response(data),song:{artist:{original:'Singer'}}}),true);
   }
 });
 test('canonical prefix exemptions require the whole exact mapping, not unchecked or inherited speaker fields',()=>{

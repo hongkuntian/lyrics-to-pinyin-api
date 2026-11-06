@@ -6,6 +6,20 @@ import {LYRIC_NORMALIZATION_VERSION,hasEmbeddedLyricCredits,normalizeLyricAnnota
 const top={artist:'TOP Debut Boy Group',duration:271.291};
 const rows=texts=>texts.map((text,i)=>({text,timestamp:i*4+1}));
 
+test('document-local performer cue corpus preserves vocal timing and canonical identity',async()=>{
+  const fixtures=JSON.parse(await readFile(new URL('../fixtures/performer-cue-grammar.json',import.meta.url),'utf8'));
+  for(const fixture of fixtures) {
+    const data={source:'netease',lines:rows(fixture.rows)};
+    const result=cleanLyrics(data,{artist:'Other singer'});
+    assert.deepEqual(result.lines.map(line=>line.text),fixture.visible.map(([,text])=>text),fixture.name);
+    assert.deepEqual(result.lines.map(line=>line.timestamp),fixture.visible.map(([index])=>data.lines[index].timestamp),fixture.name);
+    assert.deepEqual(cleanLyrics(result,{artist:'Other singer'}),result,fixture.name);
+    assert.equal(hasEmbeddedLyricCredits({lines:result.lines.map(line=>({original:line.text})),
+      metadata:{lyric_structure:result.lyricStructure}}),false,fixture.name);
+    assert.deepEqual(data.lines.map(line=>line.text),fixture.rows);
+  }
+});
+
 test('assistant production and qualified vocal roles compose without song or contributor exceptions',()=>{
   const credits=[
     '制作助理：Practice contributor','助理制作人：Practice contributor',
@@ -137,7 +151,7 @@ test('corroborated performance credits leave every source array at header, middl
 });
 test('unconfirmed voice names, sung cues and separated roles remain performed content',()=>{
   for(const texts of [['男声：一起唱','戏腔：一起唱','和声：一起唱'],['男声：单色凌','一起唱','戏腔：单色凌'],
-    ['男声：单色凌','女声：曾婕'],['男：一起唱','女：慢慢听'],['戏腔：单色凌'],['和声：曾婕']]) {
+    ['男声：单色凌','女声：曾婕'],['戏腔：单色凌'],['和声：曾婕']]) {
     const data={lines:rows(texts)};assert.deepEqual(cleanLyrics(data).lines,data.lines);
     assert.equal(hasEmbeddedLyricCredits({lines:data.lines.map(l=>({original:l.text}))}),false);
   }

@@ -16,12 +16,28 @@ saved sources. Credits remain in Song details; their extraction never shifts a
 retained vocal timestamp or reassigns a saved occurrence ID.
 
 A bilingual label must consume the whole label and refer to one role. Unknown suffixes and
-ambiguous chorus text remain readable. Performer labels require names from
+ambiguous chorus text remain readable. Performer labels can use names from
 verified artist metadata, explicitly supplied performer identities, or the
 reviewed artist roster in `api/data/lyric-performers.json`. The roster is scoped
 to the group, not one song. Complete combined labels require every member to
-match. Generic chorus/gender cues require a confirmed named-performer cue in
-the same document. Unknown names and bracketed sung words remain unchanged.
+match. Unknown aliases can also be inferred within one document, never added
+to a global artist roster: at least two compact name-shaped labels must recur,
+cover at least half of eligible nonempty rows (at least four rows), and switch
+labels at least twice. Each unknown alias needs two distinct sung bodies or a
+standalone marker; repeating the same refrain is not independent evidence.
+Han labels use the existing compact personal-name grammar; other labels require
+a capitalized single-token name shape. Combined labels cannot bootstrap
+inference and every component must qualify independently. Isolated, sparse,
+multiline and non-name-shaped colon/bracket text stays readable.
+
+Generic chorus/gender cues require a confirmed named-performer cue or paired
+male/female cues in the same document. This includes standalone `男：` / `女：`
+rows without moving their timestamps onto following vocal rows. Canonically
+stripped vocal bodies never participate in new cue inference or get stripped
+again. Native display applies the same evidence rules to cached/offline lyrics,
+preserving the raw rows, timing and source/learning identity. Printed cues flag
+only contaminated sources for the existing immutable-source refresh path; no
+selection-version bump or background translation regeneration is required.
 
 Production labels can list multiple complete roles with `/`, `&`, `+`, `、`,
 `及` or English `and`. Every component must independently be an unambiguous

@@ -66,6 +66,31 @@ test('old server cache is replaced and the clean document has a distinct source 
   assert.deepEqual(current.lines,fresh.lines);
 });
 
+test('document-local duet cues refresh stale sources without rewriting historical documents',async()=>{
+  for(const texts of [
+    ['汪:第一段','Yumi:第二段','汪:第三段','Yumi:第四段','汪/Yumi：一起唱'],
+    ['男：','第一段','女：','第二段','合：一起唱']
+  ]) {
+    const input={source:'netease',lines:texts.map((text,index)=>({text,timestamp:index*4}))};
+    const fresh=await response({input});
+    assert.ok(fresh.lines.every(line=>!/^汪[:/]|^Yumi:|^[男女合]：/u.test(line.original)));
+    assert.deepEqual(fresh.lines.map(line=>line.timestamp),texts.length===5&&texts[0]==='男：'?[4,12,16]:[0,4,8,12,16]);
+    const old=structuredClone(fresh);
+    old.metadata.timestamp=new Date().toISOString();
+    old.lines=texts.map((original,index)=>({original,romanized:original,timestamp:index*4}));
+    delete old.metadata.lyric_structure;delete old.lyric_structure;
+    const snapshot=structuredClone(old),oldDoc=makeDocument(recording,old,old.metadata.selection_revision);
+    const current=await response({input,cache:old}),currentDoc=makeDocument(recording,current,current.metadata.selection_revision);
+    assert.deepEqual(current.lines,fresh.lines);
+    assert.notEqual(currentDoc.id,oldDoc.id);
+    assert.notEqual(currentDoc.sourceHash,oldDoc.sourceHash);
+    assert.deepEqual(old,snapshot);
+    const context=JSON.parse(requestBody(currentDoc).input[0].content);
+    assert.deepEqual(context.sourceDocument.occurrences.map(row=>row.lyricText),fresh.lines.map(line=>line.original));
+    assert.ok(currentDoc.structure.speakers.length>=2);
+  }
+});
+
 test('lyrics, cached translation and job status remain compatible with API v1 clients',async t=>{
   const {db,store}=await libraryDB();t.after(()=>db.close());
   const source=await response(),pending=[];
