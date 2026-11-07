@@ -50,7 +50,7 @@ test('provisional text cannot qualify a refusal, bad notes or a different termin
  const wrong=structuredClone(normal);wrong.at(-1).response.model='other';
  await assert.rejects(()=>generate(doc,{apiKey:'test',fetchFn:async()=>response(wrong,2),onLine(){}}),e=>e.code==='provider_configuration_changed'&&e.actualMicros===null);
  const refused=structuredClone(normal);refused.at(-1).response.output[1].content[0]={type:'refusal',refusal:'No'};
- await assert.rejects(()=>generate(doc,{apiKey:'test',fetchFn:async()=>response(refused,3),onLine(){}}));
+ await assert.rejects(()=>generate(doc,{apiKey:'test',fetchFn:async()=>response(refused,3),onLine(){}}),e=>e.code==='provider_refused'&&e.actualMicros!==null);
  const bad=JSON.parse(text);bad.sourceNotes=[{sourceID:'L0001',sourceQuote:'invented',kind:'uncertain_source',explanation:'A guess'}];
  const badNotes=events({},JSON.stringify(bad));Object.assign(badNotes.at(-1).response,{model:'gpt-6-luna',service_tier:'default',usage:{input_tokens:10,output_tokens:10}});
  await assert.rejects(()=>generate(doc,{apiKey:'test',fetchFn:async()=>response(badNotes,3),onLine(){}}),e=>e.code==='invalid_source_evidence');

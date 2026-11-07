@@ -51,6 +51,7 @@ export async function responseStream(result,{onText,onResponse=()=>{}}={}) {
   if(['response.completed','response.failed','response.incomplete'].includes(e.type)){
    const r=e.response;onResponse(r);if(!r||!responseID||r.id!==responseID)invalid();
    if(e.type!=='response.completed'||r.status!=='completed')throw new LibraryError('provider_incomplete',502);
+   if(Array.isArray(r.output)&&r.output.some(item=>item.type==='message'&&Array.isArray(item.content)&&item.content.some(part=>part.type==='refusal')))throw new LibraryError('provider_refused',422);
    const item=r.output?.[message?.index],part=item?.content?.[textID];
    if(!message||!index(textID)||item?.id!==message.id||item.type!=='message'||part?.type!=='output_text'||part.text!==text)invalid();terminal=r;
   }
