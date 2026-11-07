@@ -1,0 +1,955 @@
+{
+  "version": 1,
+  "basis": "model-authored diagnostic",
+  "cases": [
+    {
+      "id": "ja-challenge-001",
+      "text": "この歌は子供たちに人気がある。",
+      "targets": [
+        {
+          "source": "人気",
+          "occurrence": 0,
+          "readings": [
+            "にんき"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: popularity; counterexample to blanket hitoke substitution."
+    },
+    {
+      "id": "ja-challenge-002",
+      "text": "投票で一位になり、彼の人気は高まった。",
+      "targets": [
+        {
+          "source": "人気",
+          "occurrence": 0,
+          "readings": [
+            "にんき"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: public popularity explicitly grounded by a vote."
+    },
+    {
+      "id": "ja-challenge-003",
+      "text": "人気のない店。",
+      "targets": [
+        {
+          "source": "人気",
+          "occurrence": 0,
+          "readings": [
+            "にんき",
+            "ひとけ"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Ambiguous: either unpopular or without people; no single singer reading is asserted."
+    },
+    {
+      "id": "ja-challenge-004",
+      "text": "人影も話し声も消え、人気の絶えた駅に雨が降る。",
+      "targets": [
+        {
+          "source": "人気",
+          "occurrence": 0,
+          "readings": [
+            "ひとけ"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary context: human presence, with explicit absence of people and voices."
+    },
+    {
+      "id": "ja-challenge-005",
+      "text": "人気の歌手が、人気の絶えた広場で歌う。🎤",
+      "targets": [
+        {
+          "source": "人気",
+          "occurrence": 0,
+          "readings": [
+            "にんき"
+          ],
+          "allowUnresolved": false
+        },
+        {
+          "source": "人気",
+          "occurrence": 1,
+          "readings": [
+            "ひとけ"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary contrast within one string; occurrence indexes are zero based."
+    },
+    {
+      "id": "ja-challenge-006",
+      "text": "君は小さな絵を描くのが上手だ。",
+      "targets": [
+        {
+          "source": "上手",
+          "occurrence": 0,
+          "readings": [
+            "じょうず"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: skill."
+    },
+    {
+      "id": "ja-challenge-007",
+      "text": "駆け引きでは、妹のほうが一枚上手だった。",
+      "targets": [
+        {
+          "source": "上手",
+          "occurrence": 0,
+          "readings": [
+            "うわて"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: idiomatic superiority; counterexample to blanket jouzu substitution."
+    },
+    {
+      "id": "ja-challenge-008",
+      "text": "舞台の上手から、赤い衣装の役者が現れた。",
+      "targets": [
+        {
+          "source": "上手",
+          "occurrence": 0,
+          "readings": [
+            "かみて"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: theatrical stage direction."
+    },
+    {
+      "id": "ja-challenge-009",
+      "text": "字を書くのは下手でも、手紙は心を運ぶ。",
+      "targets": [
+        {
+          "source": "下手",
+          "occurrence": 0,
+          "readings": [
+            "へた"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: lack of skill."
+    },
+    {
+      "id": "ja-challenge-010",
+      "text": "役者は舞台の下手へ静かに退場した。",
+      "targets": [
+        {
+          "source": "下手",
+          "occurrence": 0,
+          "readings": [
+            "しもて"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: theatrical stage direction."
+    },
+    {
+      "id": "ja-challenge-011",
+      "text": "相手を怒らせぬよう、下手に出て頼んだ。",
+      "targets": [
+        {
+          "source": "下手",
+          "occurrence": 0,
+          "readings": [
+            "したて",
+            "したで"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Contextually determinate humble-approach idiom; lexical variants したて and したで are both accepted."
+    },
+    {
+      "id": "ja-challenge-012",
+      "text": "この野菜は生のまま食べられる。",
+      "targets": [
+        {
+          "source": "生",
+          "occurrence": 0,
+          "readings": [
+            "なま"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: uncooked; counterexample to blanket sei substitution."
+    },
+    {
+      "id": "ja-challenge-013",
+      "text": "どんな夜も、生きていれば朝に会える。",
+      "targets": [
+        {
+          "source": "生きて",
+          "occurrence": 0,
+          "readings": [
+            "いきて"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: full inflected target, including okurigana."
+    },
+    {
+      "id": "ja-challenge-014",
+      "text": "春の朝、小さな命が生まれた。",
+      "targets": [
+        {
+          "source": "生まれた",
+          "occurrence": 0,
+          "readings": [
+            "うまれた"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: birth; full past form."
+    },
+    {
+      "id": "ja-challenge-015",
+      "text": "雨のあと、庭に若い草が生える。",
+      "targets": [
+        {
+          "source": "生える",
+          "occurrence": 0,
+          "readings": [
+            "はえる"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: plant growth."
+    },
+    {
+      "id": "ja-challenge-016",
+      "text": "生物学の本を閉じ、窓の鳥を見る。",
+      "targets": [
+        {
+          "source": "生物学",
+          "occurrence": 0,
+          "readings": [
+            "せいぶつがく"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate compound; do not replace the whole compound with a raw-food reading."
+    },
+    {
+      "id": "ja-challenge-017",
+      "text": "青い生地を切って、旗を縫おう。",
+      "targets": [
+        {
+          "source": "生地",
+          "occurrence": 0,
+          "readings": [
+            "きじ"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary textile sense; compound counterexample."
+    },
+    {
+      "id": "ja-challenge-018",
+      "text": "昨日は一人で港へ行った。",
+      "targets": [
+        {
+          "source": "行った",
+          "occurrence": 0,
+          "readings": [
+            "いった"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: past of going; contextual counterexample to okonatta."
+    },
+    {
+      "id": "ja-challenge-019",
+      "text": "静かな教室で、小さな式を行った。",
+      "targets": [
+        {
+          "source": "行った",
+          "occurrence": 0,
+          "readings": [
+            "おこなった"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: carried out a ceremony; same surface as the preceding case."
+    },
+    {
+      "id": "ja-challenge-020",
+      "text": "夜明けの海へ行こう！🌅",
+      "targets": [
+        {
+          "source": "行こう",
+          "occurrence": 0,
+          "readings": [
+            "いこう",
+            "ゆこう"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Ambiguous lexical variation: both volitional forms are accepted; no singer choice asserted."
+    },
+    {
+      "id": "ja-challenge-021",
+      "text": "次の実験は、晴れた日に行おう。",
+      "targets": [
+        {
+          "source": "行おう",
+          "occurrence": 0,
+          "readings": [
+            "おこなおう"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: volitional of carrying out, with okurigana counterexample."
+    },
+    {
+      "id": "ja-challenge-022",
+      "text": "あの坂を越えて行けば、海が見える。",
+      "targets": [
+        {
+          "source": "行けば",
+          "occurrence": 0,
+          "readings": [
+            "いけば",
+            "ゆけば"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Ambiguous lexical variation: both ordinary and lyrical going readings accepted."
+    },
+    {
+      "id": "ja-challenge-023",
+      "text": "確認を丁寧に行えば、間違いは減る。",
+      "targets": [
+        {
+          "source": "行えば",
+          "occurrence": 0,
+          "readings": [
+            "おこなえば"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: conditional of carrying out; counterexample to global iku substitution."
+    },
+    {
+      "id": "ja-challenge-024",
+      "text": "続きを知るために、その本を開こう。",
+      "targets": [
+        {
+          "source": "開こう",
+          "occurrence": 0,
+          "readings": [
+            "ひらこう"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: transitive opening of a book; volitional form."
+    },
+    {
+      "id": "ja-challenge-025",
+      "text": "風で扉が開いた。",
+      "targets": [
+        {
+          "source": "開いた",
+          "occurrence": 0,
+          "readings": [
+            "あいた",
+            "ひらいた"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Ambiguous: both intransitive opening readings fit the physical door."
+    },
+    {
+      "id": "ja-challenge-026",
+      "text": "空いた席に、そっと腰を下ろした。",
+      "targets": [
+        {
+          "source": "空いた",
+          "occurrence": 0,
+          "readings": [
+            "あいた"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary vacancy sense; counterexample to suita."
+    },
+    {
+      "id": "ja-challenge-027",
+      "text": "腹が空いたから、おにぎりを食べよう。",
+      "targets": [
+        {
+          "source": "空いた",
+          "occurrence": 0,
+          "readings": [
+            "すいた"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate hunger sense; counterexample to aita."
+    },
+    {
+      "id": "ja-challenge-028",
+      "text": "水に潜る前に、息を止めた。",
+      "targets": [
+        {
+          "source": "止めた",
+          "occurrence": 0,
+          "readings": [
+            "とめた"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary breath-holding sense."
+    },
+    {
+      "id": "ja-challenge-029",
+      "text": "その作業を止めよう。",
+      "targets": [
+        {
+          "source": "止めよう",
+          "occurrence": 0,
+          "readings": [
+            "とめよう",
+            "やめよう"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Ambiguous: suspend/stop the work or discontinue doing it; both volitional readings allowed."
+    },
+    {
+      "id": "ja-challenge-030",
+      "text": "雨が止んだら、庭へ出よう。",
+      "targets": [
+        {
+          "source": "止んだ",
+          "occurrence": 0,
+          "readings": [
+            "やんだ"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate past form; do not substitute tometa."
+    },
+    {
+      "id": "ja-challenge-031",
+      "text": "うれしくて、涙が止まらない。",
+      "targets": [
+        {
+          "source": "止まらない",
+          "occurrence": 0,
+          "readings": [
+            "とまらない"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate negative form; okurigana must be retained."
+    },
+    {
+      "id": "ja-challenge-032",
+      "text": "今なら、君の言葉の意味が分かった。",
+      "targets": [
+        {
+          "source": "分かった",
+          "occurrence": 0,
+          "readings": [
+            "わかった"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: understanding; past form."
+    },
+    {
+      "id": "ja-challenge-033",
+      "text": "残ったパンを、二人で分けよう。",
+      "targets": [
+        {
+          "source": "分けよう",
+          "occurrence": 0,
+          "readings": [
+            "わけよう"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: sharing; volitional form."
+    },
+    {
+      "id": "ja-challenge-034",
+      "text": "理由も分からず、ただ空を見ていた。",
+      "targets": [
+        {
+          "source": "分からず",
+          "occurrence": 0,
+          "readings": [
+            "わからず"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate negative connective; preserve the full inflection."
+    },
+    {
+      "id": "ja-challenge-035",
+      "text": "小さな喜びを、みんなで分かち合おう。",
+      "targets": [
+        {
+          "source": "分かち合おう",
+          "occurrence": 0,
+          "readings": [
+            "わかちあおう"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate compound verb volitional; counterexample to replacing a short stem only."
+    },
+    {
+      "id": "ja-challenge-036",
+      "text": "朝から夜まで、一日中ここで待っていた。",
+      "targets": [
+        {
+          "source": "一日中",
+          "occurrence": 0,
+          "readings": [
+            "いちにちじゅう"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary duration compound; counterexample to blanket tsuitachi substitution."
+    },
+    {
+      "id": "ja-challenge-037",
+      "text": "四月一日付で、新しい部署へ移る。",
+      "targets": [
+        {
+          "source": "一日",
+          "occurrence": 0,
+          "readings": [
+            "ついたち",
+            "いっぴ"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Ambiguous accepted register variation: first of the month, including business reading いっぴ."
+    },
+    {
+      "id": "ja-challenge-038",
+      "text": "今日という時代を、私たちは生きている。",
+      "targets": [
+        {
+          "source": "今日",
+          "occurrence": 0,
+          "readings": [
+            "きょう",
+            "こんにち"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Ambiguous: current day versus present age; both plausible in lyrical wording."
+    },
+    {
+      "id": "ja-challenge-039",
+      "text": "明日、またここで会おう。",
+      "targets": [
+        {
+          "source": "明日",
+          "occurrence": 0,
+          "readings": [
+            "あした",
+            "あす",
+            "みょうにち"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Ambiguous register variation: all three tomorrow readings accepted."
+    },
+    {
+      "id": "ja-challenge-040",
+      "text": "子供だった私も、少しずつ大人になった。",
+      "targets": [
+        {
+          "source": "大人",
+          "occurrence": 0,
+          "readings": [
+            "おとな"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary contrast with child; whole lexical reading."
+    },
+    {
+      "id": "ja-challenge-041",
+      "text": "一人で歩く夜にも、灯りはある。",
+      "targets": [
+        {
+          "source": "一人",
+          "occurrence": 0,
+          "readings": [
+            "ひとり"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary person-count expression."
+    },
+    {
+      "id": "ja-challenge-042",
+      "text": "二人で見上げた空は、まだ青い。",
+      "targets": [
+        {
+          "source": "二人",
+          "occurrence": 0,
+          "readings": [
+            "ふたり"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary person-count expression."
+    },
+    {
+      "id": "ja-challenge-043",
+      "text": "道を行く人々に、花の香りが届く。",
+      "targets": [
+        {
+          "source": "人々",
+          "occurrence": 0,
+          "readings": [
+            "ひとびと"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: iteration mark and voiced second component."
+    },
+    {
+      "id": "ja-challenge-044",
+      "text": "家賃のことで、大家さんに電話した。",
+      "targets": [
+        {
+          "source": "大家",
+          "occurrence": 0,
+          "readings": [
+            "おおや"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: landlord; counterexample to taika."
+    },
+    {
+      "id": "ja-challenge-045",
+      "text": "彼女は書道の大家として知られている。",
+      "targets": [
+        {
+          "source": "大家",
+          "occurrence": 0,
+          "readings": [
+            "たいか"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: acknowledged master of an art; counterexample to ooya."
+    },
+    {
+      "id": "ja-challenge-046",
+      "text": "次の角を右に曲がれば、駅が見える。",
+      "targets": [
+        {
+          "source": "角",
+          "occurrence": 0,
+          "readings": [
+            "かど"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary street-corner sense."
+    },
+    {
+      "id": "ja-challenge-047",
+      "text": "鹿の角が、朝の光を受けていた。",
+      "targets": [
+        {
+          "source": "角",
+          "occurrence": 0,
+          "readings": [
+            "つの"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate: antler; counterexample to blanket kado substitution."
+    },
+    {
+      "id": "ja-challenge-048",
+      "text": "この箱は重いから、二人で運ぼう。",
+      "targets": [
+        {
+          "source": "重い",
+          "occurrence": 0,
+          "readings": [
+            "おもい"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate adjective; do not confuse with the stacking verb."
+    },
+    {
+      "id": "ja-challenge-049",
+      "text": "白い紙を静かに重ねよう。",
+      "targets": [
+        {
+          "source": "重ねよう",
+          "occurrence": 0,
+          "readings": [
+            "かさねよう"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate stacking verb volitional; preserve okurigana."
+    },
+    {
+      "id": "ja-challenge-050",
+      "text": "このカレーは唐辛子が多くて辛い。",
+      "targets": [
+        {
+          "source": "辛い",
+          "occurrence": 0,
+          "readings": [
+            "からい"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary food taste; explicit chilli context."
+    },
+    {
+      "id": "ja-challenge-051",
+      "text": "別れの悲しみを抱えた夜は辛い。",
+      "targets": [
+        {
+          "source": "辛い",
+          "occurrence": 0,
+          "readings": [
+            "つらい"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate emotional pain; counterexample to karai."
+    },
+    {
+      "id": "ja-challenge-052",
+      "text": "窓の外で風の音がする。",
+      "targets": [
+        {
+          "source": "音",
+          "occurrence": 0,
+          "readings": [
+            "おと",
+            "ね"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Ambiguous stylistic lexical choice: both sound readings accepted for wind in lyric-like text."
+    },
+    {
+      "id": "ja-challenge-053",
+      "text": "雲の切れ間に、丸い月が浮かぶ。",
+      "targets": [
+        {
+          "source": "月",
+          "occurrence": 0,
+          "readings": [
+            "つき"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary celestial body sense."
+    },
+    {
+      "id": "ja-challenge-054",
+      "text": "月曜日の朝、また同じ橋を渡る。",
+      "targets": [
+        {
+          "source": "月曜日",
+          "occurrence": 0,
+          "readings": [
+            "げつようび"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate compound; counterexample to replacing every 月 with tsuki."
+    },
+    {
+      "id": "ja-challenge-055",
+      "text": "冷たい風が、頬をかすめてゆく。",
+      "targets": [
+        {
+          "source": "風",
+          "occurrence": 0,
+          "readings": [
+            "かぜ"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate ordinary moving-air sense."
+    },
+    {
+      "id": "ja-challenge-056",
+      "text": "葉は風に揺れ、海辺へ流れてゆく。",
+      "targets": [
+        {
+          "source": "葉",
+          "occurrence": 0,
+          "readings": [
+            "は"
+          ],
+          "allowUnresolved": false
+        },
+        {
+          "source": "海辺",
+          "occurrence": 0,
+          "readings": [
+            "うみべ"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate lexical targets with は and へ particles in context; particle spelling is not independently scored as phonetic kana."
+    },
+    {
+      "id": "ja-challenge-057",
+      "text": "私は絵を描いて、家へ帰ろう。",
+      "targets": [
+        {
+          "source": "私",
+          "occurrence": 0,
+          "readings": [
+            "わたし",
+            "わたくし"
+          ],
+          "allowUnresolved": false
+        },
+        {
+          "source": "絵",
+          "occurrence": 0,
+          "readings": [
+            "え"
+          ],
+          "allowUnresolved": false
+        },
+        {
+          "source": "家",
+          "occurrence": 0,
+          "readings": [
+            "いえ",
+            "うち"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Ambiguous lexical/register variants accepted; は・を・へ occur as particles. Readings use lexical hiragana, not a whole-line phonetic transcript."
+    },
+    {
+      "id": "ja-challenge-058",
+      "text": "彼は「青山（あおやま）」と名乗り、笑った。",
+      "targets": [
+        {
+          "source": "青山",
+          "occurrence": 0,
+          "readings": [
+            "あおやま"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Determinate only because the invented sentence explicitly provides this person's reading; not a universal surname rule."
+    },
+    {
+      "id": "ja-challenge-059",
+      "text": "名札には「星凪」とだけ書いてあった。",
+      "targets": [
+        {
+          "source": "星凪",
+          "occurrence": 0,
+          "readings": [],
+          "allowUnresolved": true
+        }
+      ],
+      "notes": "Unresolved allowed: model-coined personal name with no pronunciation supplied; do not invent one."
+    },
+    {
+      "id": "ja-challenge-060",
+      "text": "「燦織XQ」――この架空のバンドの歌、届くかな？🎧✨",
+      "targets": [
+        {
+          "source": "燦織XQ",
+          "occurrence": 0,
+          "readings": [],
+          "allowUnresolved": true
+        },
+        {
+          "source": "歌",
+          "occurrence": 0,
+          "readings": [
+            "うた"
+          ],
+          "allowUnresolved": false
+        }
+      ],
+      "notes": "Unresolved allowed for coined mixed-script band name; ordinary lexical target remains determinate despite quotes, dash, question mark, and emoji."
+    }
+  ]
+}

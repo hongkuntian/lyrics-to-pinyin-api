@@ -1,12 +1,13 @@
 import {digest,LibraryError} from './song-library/store.js';
 import {reviewedJapaneseSpans,documentReadingRecording} from './japanese-reading-overrides.js';
+import {contextualJapaneseTokens} from './japanese-context-readings.js';
 
 // A profile describes a notation, not a translation target or the UI language.
 // Future phonetic approximations must declare a readerLanguage and limitations;
 // no direction is inferred from the existence of two other profiles.
 export const profiles=Object.freeze([
-  {id:'ja-hepburn',version:'1',sourceLanguage:'ja',kind:'romanization',notation:'hepburn',outputScript:'Latn',readerLanguage:null,label:'Japanese · Romaji',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-2'},
-  {id:'ja-kana',version:'1',sourceLanguage:'ja',kind:'native-reading',notation:'kana',outputScript:'Hira',readerLanguage:null,label:'Japanese · Kana',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-2'},
+  {id:'ja-hepburn',version:'1',sourceLanguage:'ja',kind:'romanization',notation:'hepburn',outputScript:'Latn',readerLanguage:null,label:'Japanese · Romaji',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3'},
+  {id:'ja-kana',version:'1',sourceLanguage:'ja',kind:'native-reading',notation:'kana',outputScript:'Hira',readerLanguage:null,label:'Japanese · Kana',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3'},
   {id:'ko-revised',version:'1',sourceLanguage:'ko',kind:'romanization',notation:'revised',outputScript:'Latn',readerLanguage:null,label:'Korean · Romanization',engineVersion:'koroman-1.0.16-lyra-1'}
 ].map(p=>Object.freeze({...p,status:'beta',basis:'text',limitations:['Text-derived reading; the recorded performance may differ.']})));
 export function profileFor(id){const p=profiles.find(p=>p.id===id);if(!p)throw new LibraryError('unsupported_pronunciation_profile',422);return p;}
@@ -66,7 +67,7 @@ export async function analyzeReading(text,language,{recording}={}){
     // Some analyzers drop unsupported Unicode. Never repair their offsets by guessing.
     if(tokens.map(t=>t.surface_form).join('')!==run.source.normalize('NFC')||graphemes(run.source.normalize('NFC')).length!==run.upper-run.lower){segments.push(unresolved(run));continue;}
     const groups=[];
-    for(const token of tokens){
+    for(const token of contextualJapaneseTokens(tokens)){
       const native=token.reading??(!/\p{Script=Han}/u.test(token.surface_form)?token.surface_form:null);
       const pronounced=token.pronunciation??native;
       const previous=groups.at(-1);

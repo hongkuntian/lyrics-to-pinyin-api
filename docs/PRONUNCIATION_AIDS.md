@@ -47,3 +47,11 @@ Hermetic tests exercise particles, multi-kanji words, kana, long vowels, geminat
 A broader local 60-line exploratory review motivated the inflection fixes, but is not an independent accuracy score. Beta status remains until a representative J-pop/K-pop corpus and native-reader review justify a stronger claim.
 
 Sources: [Kuroshiro](https://github.com/hexenq/kuroshiro), [Koroman](https://github.com/gerosyab/koroman), [official Korean romanization rules](https://www.korean.go.kr/front_eng/roman/roman_01.do). Redistribution notices are retained in `THIRD_PARTY_NOTICES.md` and the function bundles.
+
+## Contextual Japanese readings
+
+Engine `kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3` adds bounded conventional-text corrections after analyzer reconstruction and before reading groups are rendered. It handles standalone one/two-person counters, 人気者, and selected deserted-place, food and empty-container contexts. Numeral chains, compounds and punctuation boundaries constrain matching. Lexical kana and pronounced kana remain separate; ambiguous 明日/行く keep the analyzer best effort. Existing recording-bound artistic readings retain priority. No Japanese speech or learning-admission capability is enabled.
+
+The development and independent challenge corpora are model-authored diagnostics, not fluent review or recording/population accuracy. `scripts/evaluate-reading-context.mjs CORPUS BASELINE_SOURCE OUTPUT` compares target readings and reports fixes, regressions and targets that cannot be scored from complete groups. Retain the baseline module from `git show 9680332f9425dc0728a6dba6af89dc87cd28b201:api/utils/pronunciation-aids.js`. The harness resolves dependencies from the current checkout; dependency versions must match the lockfile for a comparable replay.
+
+Reading references: [Kanji Kentei's 辛 entry](https://www.kanjipedia.jp/kanji/0003594700/), [Cambridge's 辛い entry](https://dictionary.cambridge.org/ja/dictionary/japanese-english/辛い), and [Kuromoji token fields](https://github.com/takuyaa/kuromoji.js). The narrow contextual selections remain best-effort rules.
