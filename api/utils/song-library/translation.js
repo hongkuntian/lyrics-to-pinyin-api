@@ -1,3 +1,4 @@
+import {JSONLeaves,responseStream} from './response-stream.js';
 import {canonicalJSON} from './spotify-recording.js';
 import {modelNames,hasIndependentContext} from './model-context.js';
 import {createRequire} from 'node:module';
@@ -89,15 +90,26 @@ export function parseTranslation(text,doc) {
   }
   return {lines,sourceNotes,rejectedNotes};
 }
-export async function generate(doc,{apiKey,fetchFn=fetch,target='en',generationRequest=null}={}) {
+export async function generate(doc,{apiKey,fetchFn=fetch,target='en',generationRequest=null,onLine=null}={}) {
   if(!apiKey) throw new LibraryError('generation_not_configured',503);
   const body=generationRequest??requestBody(doc,target);let response=null,actualMicros=null;
   if(hasIndependentContext(doc)&&canonicalJSON(body)!==canonicalJSON(requestBody(doc,target,{model:body.model,legacy:body.max_output_tokens===16384})))throw new LibraryError('source_context_unavailable');
+  const leaves=onLine?new JSONLeaves((path,value)=>{
+    if(path.length!==2||path[0]!=='translations')return;
+    const occurrence=doc.structure.occurrences.find(o=>o.sourceID===path[1]);
+    if(!occurrence)throw new LibraryError('invalid_translation_coverage',502);
+    const names=doc.structure.speakers.flatMap(s=>[s.id,s.displayName,s.sourceLabel,...(s.sourceLabel==='合'?['All']:[])]);
+    if(!value.trim()||value.length>4000||/[\n\r\v\f\u0085\u2028\u2029]/.test(value)||names.some(n=>value.startsWith(n+':')||value.startsWith(n+'：')))throw new LibraryError('invalid_translation_coverage',502);
+    onLine({sourceID:occurrence.sourceID,lyricText:value});
+  }):null;
   try {
     const result=await fetchFn('https://api.openai.com/v1/responses',{method:'POST',
-      headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(270_000)});
-    const text=await result.text();if(Buffer.byteLength(text)>2_000_000) throw new LibraryError('provider_response_too_large',502);
-    try {response=JSON.parse(text);}catch{throw new LibraryError('invalid_provider_response',502);}
+      headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify(onLine?{...body,stream:true}:body),signal:AbortSignal.timeout(270_000)});
+    if(onLine){response=await responseStream(result,{onText:delta=>leaves.feed(delta),onResponse:r=>{response=r;actualMicros=r?.model===body.model&&r?.service_tier===body.service_tier?usageMicros(r?.usage,body.model):null;}});}
+    else {
+      const text=await result.text();if(Buffer.byteLength(text)>2_000_000) throw new LibraryError('provider_response_too_large',502);
+      try {response=JSON.parse(text);}catch{throw new LibraryError('invalid_provider_response',502);}
+    }
     if(!result.ok) throw new LibraryError('provider_rejected',502);
     if(response.model!==body.model||response.service_tier!==body.service_tier) throw new LibraryError('provider_configuration_changed',502);
     actualMicros=usageMicros(response.usage,body.model);

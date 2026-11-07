@@ -144,3 +144,23 @@ Sources: [Vercel storage](https://vercel.com/docs/storage),
 [Luna configuration/pricing](https://developers.openai.com/api/docs/models/gpt-6-luna),
 [OpenAI spend limits](https://developers.openai.com/api/docs/guides/spend-limits),
 [untrusted-input isolation](https://developers.openai.com/api/docs/guides/agent-builder-safety).
+
+## Progressive translation delivery
+
+A `translate` request can opt into `delivery:"progressive-v1"`. Cached and
+already-running results keep their ordinary JSON shape. A claimed new/queued
+job returns NDJSON frames: `start`, zero or more `line`, then `complete` or
+`failed`. Each frame binds `version:1`, stream/job UUIDs, document/hash, target
+and an increasing sequence beginning at 1. A line carries
+`{sourceID,lyricText}`; complete carries the ordinary committed public translation.
+The provider prompt, model, schema, recipe and accounting stay unchanged.
+
+Lines are provisional display data: they have no accepted translation revision,
+are never saved separately, and cannot be used as Study context. A completed
+provider terminal, exact text identity, full-song coverage, source-note validation
+and durable storage are required before complete. A later failure invalidates
+the drafts. The claimed worker owns provider work and settlement independently
+of the response observer. Disconnect or backpressure detaches the observer;
+it never cancels settlement or submits another generation. Recover using the
+same job's existing status/current/resume-only contracts, not another reservation.
+There is no durable partial replay service.

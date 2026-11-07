@@ -46,3 +46,31 @@ PGlite, and the response contract: `npm test`. Live language-quality review and
 native UI acceptance belong to the Study milestone and are separate from schema
 validation. Provider prompts treat lyrics/metadata/translations as untrusted
 quoted data, and model output has no write authority over accepted translations.
+
+## Cached line help (additive contract 1)
+
+`explain_line` accepts `documentID`, `sourceHash`, numeric `contractVersion:1`,
+`explanationLanguage:"en"`, the v2 `studyText`, optional `contextTranslation`, and
+`manifest:[{id,selection}]`. Each selection uses v2 grapheme ranges/text hashes;
+its ID is `w<lower>-<upper>`. Supply 1–32 nonoverlapping selections in ascending
+order from one occurrence. The client supplies its actual selectable word ranges;
+the model does not choose boundaries. Longer lines use deterministic consecutive
+32-selection chunks. Phrase and whole-line singleton requests remain independent.
+
+The response is `batch` rather than `explanation`. It binds document/hash,
+translation/context revision, studied layer, recipe `study-line-1` and the exact
+manifest. Its `items` contain the selection ID, short `meaning`, `context`,
+`uncertainty`, authoritative selected `sourceQuote`, and empty `grammar`. Internal
+exact-row evidence is validated per item and removed from the public answer.
+Every item must validate before any content is saved. Grounding is an identity
+check, not a semantic-quality guarantee.
+
+One batch reserves one existing Study allowance and one provider operation. It
+uses the existing queued/running/ready/failed/unknown lifecycle; the first
+selection is only the row's storage anchor. A batch-specific key and frozen
+request contain the complete ordered manifest, so the tapped word cannot create
+a second job. `readOnly:true` never reserves work; `resumeOnly:true` can dispatch
+an existing queued row, never create one. Unknown or failed work never silently
+regenerates or falls back to paid singleton calls. All existing account,
+private-source, language-direction, current-context and spending checks apply.
+Non-English explanation requests retain their v2 singleton contract.

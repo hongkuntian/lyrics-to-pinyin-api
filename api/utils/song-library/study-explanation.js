@@ -74,6 +74,9 @@ export function parseGroundedExplanation(text,doc,translation,selection) {
 export async function generateExplanation(doc,translation,selection,{apiKey,fetchFn=fetch,explanationLanguage='en',generationRequest=null}={}) {
   const body=generationRequest??explanationBody(doc,translation,selection,explanationLanguage);
   if(hasIndependentContext(doc)&&canonicalJSON(body)!==canonicalJSON(explanationBody(doc,translation,selection,explanationLanguage,{model:body.model,grounded:body.text?.format?.name===GROUNDING_FORMAT})))throw new LibraryError('source_context_unavailable');
+  return requestStudy(body,{apiKey,fetchFn,parse:text=>body.text?.format?.name===GROUNDING_FORMAT?parseGroundedExplanation(text,doc,translation,selection):parseExplanation(text,selection)});
+}
+export async function requestStudy(body,{apiKey,fetchFn=fetch,parse}={}) {
   let response=null,actualMicros=null;
   try {
     const result=await fetchFn('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(240_000)});
@@ -85,7 +88,7 @@ export async function generateExplanation(doc,translation,selection,{apiKey,fetc
     const parts=(response.output??[]).filter(x=>x.type==='message').flatMap(x=>x.content??[]);
     if(parts.some(p=>p.type==='refusal'))throw new LibraryError('provider_refused',422);
     const output=parts.filter(p=>p.type==='output_text');if(output.length!==1)throw new LibraryError('invalid_explanation',502);
-    const content=body.text?.format?.name===GROUNDING_FORMAT?parseGroundedExplanation(output[0].text,doc,translation,selection):parseExplanation(output[0].text,selection);
+    const content=parse(output[0].text);
     return {content,actualMicros,response};
   } catch(error) { const failure=error instanceof LibraryError?error:new LibraryError('provider_unavailable',502);failure.actualMicros=actualMicros;failure.providerResponse=response;throw failure; }
 }

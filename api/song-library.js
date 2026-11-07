@@ -11,6 +11,8 @@ import {lyricSourceNeedsRefresh} from './utils/timing-corrections.js';
 import {hasEmbeddedLyricCredits} from './utils/lyric-annotations.js';
 import {LEGACY_MODEL} from './utils/song-library/model-policy.js';
 import {generate,requestBody,reservationMicros,translationRecipe} from './utils/song-library/translation.js';
+import {translationDelivery} from './utils/song-library/translation-delivery.js';
+import {lineSelections,lineKey,lineBody,generateLine,publicLine,LINE_RECIPE} from './utils/song-library/study-line.js';
 import {executeTranslationJob} from './utils/song-library/translation-worker.js';
 import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
 
@@ -26,7 +28,7 @@ import {shouldRetainLyricDocument} from './utils/song-library/lyric-retention.js
 import {lyricResponseLifetimeMs} from './utils/lyric-selection.js';
 
 export const config={maxDuration:300,supportsResponseStreaming:true};
-const actions={selected_source:['provider','itemID','query','expectedTextHash'],capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
+const actions={selected_source:['provider','itemID','query','expectedTextHash'],capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly','delivery'],explain_line:['documentID','sourceHash','contractVersion','studyText','manifest','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeService()) {
   return async (recording,{refresh=false,delivery}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
@@ -35,11 +37,11 @@ export function lyricLoader(handler=createMusicRomanizeService()) {
     return result.body;
   };
 }
-export function createSongLibraryService({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,apiKey=process.env.OPENAI_API_KEY,
+export function createSongLibraryService({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,lineFn=generateLine,apiKey=process.env.OPENAI_API_KEY,
   selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null,pronunciationFn=annotationFor,pronunciationProfiles=enabledProfiles,
   lyricSourceNeedsRefreshFn=lyricSourceNeedsRefresh,loadSelectedSource=createLyricSourceLoader(),selectedSourceTimeoutMs=6000}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
-  const execute=(db,id,doc)=>executeTranslationJob(db,id,{apiKey,generateFn,doc});
+  const execute=(db,id,doc,observer=null)=>executeTranslationJob(db,id,{apiKey,generateFn,doc,observer});
   return withLyricsDelivery(async(req,res)=> {
     const started=performance.now(),timings=[];
     let lyricCache;
@@ -63,6 +65,23 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       const checkAccess=async doc=>{if(doc.selectedSourceCapsule||doc.selectedSource)await db.assertDocumentAccess(user.id,doc);};
       const generationCurrent=doc=>db.isGenerationDocumentCurrent?db.isGenerationDocumentCurrent(doc,selectionRevision):db.isCurrentDocument(doc.id,selectionRevision);
       const policy=languagePolicy??environmentLanguagePolicy();
+      if(input.delivery!==undefined&&input.delivery!=='progressive-v1')throw new LibraryError('invalid_request',400);
+      const launch=async(job,doc,target)=>{
+        if(input.delivery!=='progressive-v1'){
+          waitUntilFn(execute(db,job.id,doc).catch(()=>logger.error('translation_worker_storage_failure',{jobID:job.id})));return false;
+        }
+        const observer=translationDelivery(res,doc,target,job);
+        const work=(async()=>{
+          try{
+            const result=await execute(db,job.id,doc,observer);
+            if(!result?.claimed)return;
+            const saved=result.state==='ready'?await db.translation(doc.id,target):null;
+            if(saved)observer.complete(publicTranslation(saved,doc));else observer.failed(result.code??'review_required');
+          }catch{observer.failed('store_unavailable');}
+          finally{observer.end();}
+        })();
+        waitUntilFn(work);await work;return observer.started;
+      };
       if(input.action==='selected_source') {
         const {action,...fields}=input,request=selectedSourceRequest(fields);
         let candidate;
@@ -74,7 +93,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         const doc=await db.saveSelectedDocument(value,user.id);
         return send(200,{state:'ready',document:publicDocument(doc)});
       }
-      if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
+      if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),translationDelivery:['progressive-v1'],lineHelp:{contractVersion:1,recipe:LINE_RECIPE,maxSelections:32,languages:['en']},pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
       if(input.action==='pronunciation') {
         if(typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string'||typeof input.profileID!=='string')throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
@@ -155,7 +174,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         if(existing) {
           if(existing.state==='queued') {
             if(!apiKey)throw new LibraryError('generation_not_configured',503);
-            waitUntilFn(execute(db,existing.id,doc).catch(()=>logger.error('translation_worker_storage_failure',{jobID:existing.id})));
+            if(await launch(existing,doc,target))return;
           }
           if(['failed','unknown'].includes(existing.state))return send(409,{state:existing.state,job:existing,code:existing.errorCode??'review_required'});
           res.setHeader('Retry-After','3');return send(202,{state:'preparing',job:existing});
@@ -172,14 +191,14 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         const body=requestBody(doc,target);
         const result=await db.reserve({userID:user.id,documentID:doc.id,target,recipe:translationRecipe(target),reservedMicros:reservationMicros(body),generationRequest:body,allowGeneration:!!input.allowGeneration});
         if(result.kind==='ready')return send(200,{state:'ready',translation:publicTranslation(result.translation,doc)});
-        if(result.job.state==='queued')waitUntilFn(execute(db,result.job.id,doc).catch(()=>logger.error('translation_worker_storage_failure',{jobID:result.job.id})));
+        if(result.job.state==='queued'&&await launch(result.job,doc,target))return;
         if(result.kind==='unknown'||result.kind==='failed')return send(409,{state:result.kind,job:result.job,code:result.job.errorCode??'review_required'});
         res.setHeader('Retry-After','3');return send(202,{state:'preparing',job:result.job});
       }
-      if(input.action==='explain') {
-        const v2=input.contractVersion===2;
-        if((input.contractVersion!==undefined&&input.contractVersion!==1&&!v2)||(v2&&typeof input.explanationLanguage!=='string'))throw new LibraryError('invalid_request',400);
-        const allowed=(v2?['action','documentID','sourceHash','contractVersion','studyText','selection','explanationLanguage','contextTranslation']:
+      if(input.action==='explain'||input.action==='explain_line') {
+        const batch=input.action==='explain_line',v2=batch||input.contractVersion===2;
+        if((batch&&input.contractVersion!==1)||(input.contractVersion!==undefined&&input.contractVersion!==1&&!v2)||(v2&&typeof input.explanationLanguage!=='string'))throw new LibraryError('invalid_request',400);
+        const allowed=(batch?['action',...actions.explain_line]:v2?['action','documentID','sourceHash','contractVersion','studyText','selection','explanationLanguage','contextTranslation']:
           ['action','documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion']).concat(['allowGeneration','readOnly','resumeOnly']);
         if(Object.keys(input).some(k=>!allowed.includes(k))||typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string')throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
@@ -203,10 +222,12 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
             if(!saved||saved.id!==context.revisionID)throw new LibraryError('translation_revision_superseded');
           }
         }
-        const selection=v2?selectionV2(doc,input,saved):selectionFor(doc,input);
-        const key=explanationKey(doc,saved,selection,language),recipe=explanationRecipe(selection,language);
+        const selections=batch?lineSelections(doc,input,saved):null;
+        const selection=batch?selections[0]:v2?selectionV2(doc,input,saved):selectionFor(doc,input);
+        const key=batch?lineKey(doc,saved,selections):explanationKey(doc,saved,selection,language),recipe=batch?LINE_RECIPE:explanationRecipe(selection,language);
+        const serialize=row=>batch?{batch:publicLine(row,doc,saved,selections)}:{explanation:publicExplanation(row)};
         const prior=await existingExplanation(db.db,key);
-        if(prior?.state==='ready')return send(200,{state:'ready',explanation:publicExplanation(prior)});
+        if(prior?.state==='ready')return send(200,{state:'ready',...serialize(prior)});
         if(['failed','unknown'].includes(prior?.state))return send(409,{state:prior.state,code:prior.error_code??'review_required'});
         if(input.readOnly)return send(200,prior?{state:'preparing',phase:prior.state}:{state:'missing'});
         if(input.resumeOnly&&!prior)return send(200,{state:'missing'});
@@ -216,16 +237,18 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
           if(hasEmbeddedLyricCredits(doc.response)||!await generationCurrent(doc))throw new LibraryError('source_revision_superseded');
           if(doc.selectedSourceCapsule&&!input.allowGeneration)throw new LibraryError('generation_required');
           if(!apiKey)throw new LibraryError('generation_not_configured',503);
-          const body=explanationBody(doc,saved,selection,language);
+          const body=batch?lineBody(doc,saved,selections):explanationBody(doc,saved,selection,language);
           row=(await reserveExplanation(db.db,{key,doc,translation:saved,selection,recipe,userID:user.id,explanationLanguage:language,
             generationRequest:body,amount:reservationMicros(body),allowGeneration:!!input.allowGeneration})).row;
         }
-        if(row.state==='ready')return send(200,{state:'ready',explanation:publicExplanation(row)});
+        if(row.state==='ready')return send(200,{state:'ready',...serialize(row)});
         if(['failed','unknown'].includes(row.state))throw new LibraryError(row.error_code??'review_required');
         if(row.state==='queued'&&!apiKey)throw new LibraryError('generation_not_configured',503);
         if(row.state==='queued')waitUntilFn((async()=>{
           if(!await claimExplanation(db.db,row.id))return;
-          try { const result=await explainFn(doc,saved,selection,{apiKey,explanationLanguage:row.explanation_language,
+          try {
+            if(batch&&!row.generation_request)throw new LibraryError('generation_configuration_unavailable');
+            const result=await (batch?lineFn:explainFn)(doc,saved,batch?selections:selection,{apiKey,explanationLanguage:row.explanation_language,
             generationRequest:row.generation_request??explanationBody(doc,saved,selection,'en',{model:LEGACY_MODEL})});await finishExplanation(db.db,row.id,result); }
           catch(error) { await finishExplanation(db.db,row.id,{actualMicros:error.actualMicros??null,response:error.providerResponse??null,errorCode:error.code??'worker_interrupted'}); }
         })().catch(()=>logger.error('study_worker_storage_failure',{jobID:row.id})));
