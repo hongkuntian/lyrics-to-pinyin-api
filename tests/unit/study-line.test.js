@@ -8,7 +8,7 @@ const input={contractVersion:1,explanationLanguage:'en',studyText:{layer:'origin
 const selections=()=>lineSelections(doc,input,null);
 const output=()=>({items:selections().map(s=>({id:s.id,meaning:'selected meaning',context:'contextual use',uncertainty:'',evidence:['meaning','context'].map(field=>({field,sourceID:'L0001',layer:'original',sourceQuote:'我不走'}))}))});
 test('line manifest binding, stable key, lean schema and host-owned quotes',()=>{
- const s=selections(),body=lineBody(doc,null,s);assert.equal(body.text.format.name,'study_line_1');assert.ok(!body.text.format.schema.properties.items.items.properties.grammar);
+ const s=selections(),body=lineBody(doc,null,s);assert.equal(body.text.format.name,'study_line_1');assert.equal(body.reasoning.effort,'high');assert.ok(!body.text.format.schema.properties.items.items.properties.grammar);
  assert.equal(lineKey(doc,null,s),lineKey(doc,null,selections()));assert.notEqual(lineKey(doc,null,s),lineKey(doc,null,[s[0]]));
  const parsed=parseLine(JSON.stringify(output()),doc,null,s);assert.equal(parsed.items[1].sourceQuote,'不');assert.equal(parsed.items[0].grammar,'');assert.equal(LINE_RECIPE,'study-line-1');
 });
