@@ -65,6 +65,11 @@ exact-row evidence is validated per item and removed from the public answer.
 Every item must validate before any content is saved. Grounding is an identity
 check, not a semantic-quality guarantee.
 
+The new line recipe uses GPT-6 Luna with `high` reasoning. Meanings describe the
+selected part's contribution in its actual construction; they must not force an
+independent dictionary gloss onto a fragment. Context explanations stay local
+and concise. The existing singleton and song-translation recipes are unchanged.
+
 One batch reserves one existing Study allowance and one provider operation. It
 uses the existing queued/running/ready/failed/unknown lifecycle; the first
 selection is only the row's storage anchor. A batch-specific key and frozen
