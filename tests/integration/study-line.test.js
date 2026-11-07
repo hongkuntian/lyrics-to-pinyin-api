@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {EventEmitter} from 'node:events';
+import {readFile} from 'node:fs/promises';
+import {validateSchema} from '../contracts/schema-validator.js';
+const responseSchema=JSON.parse(await readFile(new URL('../../contracts/song-library.schema.json',import.meta.url)));
 import {libraryDB,source} from '../helpers/library-db.js';
 import {createSongLibraryService} from '../../api/song-library.js';
 import {digest} from '../../api/utils/song-library/store.js';
@@ -21,7 +24,9 @@ async function fixture(t,options={}){
 test('line cache-only/resume-only do not admit; concurrent generation settles one batch',async t=>{
  const f=await fixture(t);assert.equal((await f.call({...f.request,readOnly:true})).body.state,'missing');assert.equal((await f.call({...f.request,resumeOnly:true})).body.state,'missing');assert.equal(f.calls(),0);
  await Promise.all([f.call(f.request),f.call(f.request)]);await Promise.all(f.pending);
- const result=await f.call({...f.request,readOnly:true},'token-b');assert.equal(result.body.batch.items.length,2);assert.equal(result.body.batch.items[1].sourceQuote,'今天');assert.equal(result.body.explanation,undefined);assert.equal(f.calls(),1);
+ const result=await f.call({...f.request,readOnly:true},'token-b');assert.equal(result.body.batch.items.length,2);assert.equal(result.body.batch.items[1].sourceQuote,'今天');assert.deepEqual(validateSchema(responseSchema,result.body),[]);
+ const malformed=structuredClone(result.body);delete malformed.batch.items[0].sourceQuote;assert.ok(validateSchema(responseSchema,malformed).length);
+ const wrongRecipe=structuredClone(result.body);wrongRecipe.batch.recipe='study-occurrence-2';assert.ok(validateSchema(responseSchema,wrongRecipe).length);assert.equal(result.body.explanation,undefined);assert.equal(f.calls(),1);
  assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM study_explanations')).rows[0].n),1);assert.equal(Number((await f.store.budget()).daily),1000);
 });
 test('line authorization, malformed ranges, wrong source/context and language fail without spend',async t=>{
