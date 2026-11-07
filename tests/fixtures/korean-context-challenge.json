@@ -1,0 +1,359 @@
+{
+  "version": 1,
+  "basis": "model-authored diagnostic",
+  "cases": [
+    {
+      "id": "vowel-ui-01",
+      "text": "의자",
+      "romanizations": [
+        "uija"
+      ],
+      "notes": "S1 vowel table; retain ui."
+    },
+    {
+      "id": "vowel-ui-02",
+      "text": "희망",
+      "romanizations": [
+        "huimang"
+      ],
+      "notes": "S1: ui is retained even when pronounced i."
+    },
+    {
+      "id": "vowel-diphthong",
+      "text": "돼지",
+      "romanizations": [
+        "dwaeji"
+      ],
+      "notes": "S1 vowel and consonant tables."
+    },
+    {
+      "id": "liaison-flower",
+      "text": "꽃이",
+      "romanizations": [
+        "kkochi"
+      ],
+      "notes": "S2 §13; consonant moves before the particle vowel."
+    },
+    {
+      "id": "liaison-clothes",
+      "text": "옷을",
+      "romanizations": [
+        "oseul"
+      ],
+      "notes": "S2 §13."
+    },
+    {
+      "id": "liaison-field",
+      "text": "밭에",
+      "romanizations": [
+        "bate"
+      ],
+      "notes": "S2 §13; e does not trigger palatalization."
+    },
+    {
+      "id": "liaison-chicken",
+      "text": "닭을",
+      "romanizations": [
+        "dalgeul"
+      ],
+      "notes": "S3; both cluster members survive before the particle vowel."
+    },
+    {
+      "id": "inflection-read-vowel",
+      "text": "읽어요",
+      "romanizations": [
+        "ilgeoyo"
+      ],
+      "notes": "S2 §14; both cluster members survive before the ending vowel."
+    },
+    {
+      "id": "inflection-sit-vowel",
+      "text": "앉아요",
+      "romanizations": [
+        "anjayo"
+      ],
+      "notes": "S2 §14."
+    },
+    {
+      "id": "liaison-price",
+      "text": "값을",
+      "romanizations": [
+        "gapseul"
+      ],
+      "notes": "S2 §14 plus S1 induced-tensing exception; not a full phonetic rendering."
+    },
+    {
+      "id": "inflection-absent",
+      "text": "없어",
+      "romanizations": [
+        "eopseo"
+      ],
+      "notes": "S2 §14 plus S1 induced-tensing exception."
+    },
+    {
+      "id": "liaison-soul",
+      "text": "넋이",
+      "romanizations": [
+        "neoksi"
+      ],
+      "notes": "S2 §14 plus S1 induced-tensing exception."
+    },
+    {
+      "id": "nasal-soup",
+      "text": "국물",
+      "romanizations": [
+        "gungmul"
+      ],
+      "notes": "S4 §18."
+    },
+    {
+      "id": "nasal-eating",
+      "text": "먹는",
+      "romanizations": [
+        "meongneun"
+      ],
+      "notes": "S4 §18."
+    },
+    {
+      "id": "nasal-front-door",
+      "text": "앞문",
+      "romanizations": [
+        "ammun"
+      ],
+      "notes": "S4 §18, applied to the closed syllable before m."
+    },
+    {
+      "id": "nasal-existing",
+      "text": "있는",
+      "romanizations": [
+        "inneun"
+      ],
+      "notes": "S4 §18."
+    },
+    {
+      "id": "nasal-wearing",
+      "text": "입는",
+      "romanizations": [
+        "imneun"
+      ],
+      "notes": "S4 §18, applied before n."
+    },
+    {
+      "id": "nasal-liquid-independence",
+      "text": "독립",
+      "romanizations": [
+        "dongnip"
+      ],
+      "notes": "S1 assimilation; S4 §§18–19."
+    },
+    {
+      "id": "liquid-holiday",
+      "text": "설날",
+      "romanizations": [
+        "seollal"
+      ],
+      "notes": "S5 §20."
+    },
+    {
+      "id": "liquid-heater",
+      "text": "난로",
+      "romanizations": [
+        "nallo"
+      ],
+      "notes": "S5 §20."
+    },
+    {
+      "id": "liquid-blade",
+      "text": "칼날",
+      "romanizations": [
+        "kallal"
+      ],
+      "notes": "S5 §20."
+    },
+    {
+      "id": "nasal-liquid-arrangement",
+      "text": "정리",
+      "romanizations": [
+        "jeongni"
+      ],
+      "notes": "S5 §19."
+    },
+    {
+      "id": "nasal-liquid-beverage",
+      "text": "음료",
+      "romanizations": [
+        "eumnyo"
+      ],
+      "notes": "S5 §19."
+    },
+    {
+      "id": "palatal-stubbornly",
+      "text": "굳이",
+      "romanizations": [
+        "guji"
+      ],
+      "notes": "S2 §17."
+    },
+    {
+      "id": "palatal-together",
+      "text": "같이",
+      "romanizations": [
+        "gachi"
+      ],
+      "notes": "S1 explicit RR example."
+    },
+    {
+      "id": "palatal-sunrise",
+      "text": "해돋이",
+      "romanizations": [
+        "haedoji"
+      ],
+      "notes": "S1 explicit RR example."
+    },
+    {
+      "id": "palatal-aspiration",
+      "text": "굳히다",
+      "romanizations": [
+        "guchida"
+      ],
+      "notes": "S1 explicit RR example."
+    },
+    {
+      "id": "h-delete-like",
+      "text": "좋아",
+      "romanizations": [
+        "joa"
+      ],
+      "notes": "S6; h deletes before a vowel ending."
+    },
+    {
+      "id": "h-aspirate-put",
+      "text": "놓고",
+      "romanizations": [
+        "noko"
+      ],
+      "notes": "S6 §12; h and g combine to k."
+    },
+    {
+      "id": "h-delete-many",
+      "text": "많아",
+      "romanizations": [
+        "mana"
+      ],
+      "notes": "S6 §12; h deletes and n links forward."
+    },
+    {
+      "id": "h-delete-dislike",
+      "text": "싫어요",
+      "romanizations": [
+        "sireoyo"
+      ],
+      "notes": "S6 §12; h deletes and l links forward as r."
+    },
+    {
+      "id": "h-nasal-put",
+      "text": "놓는",
+      "romanizations": [
+        "nonneun"
+      ],
+      "notes": "S4 §18 and S6 §12."
+    },
+    {
+      "id": "cluster-noun-before-g",
+      "text": "닭고기",
+      "romanizations": [
+        "dakgogi"
+      ],
+      "notes": "S3: noun cluster reduces to k before g; induced tensing is not doubled in RR."
+    },
+    {
+      "id": "cluster-verb-before-g",
+      "text": "읽고",
+      "romanizations": [
+        "ilgo"
+      ],
+      "notes": "S7 §11 exception: verb-stem cluster keeps l before g; induced tensing is not doubled in RR."
+    },
+    {
+      "id": "cluster-adjective-before-g",
+      "text": "맑게",
+      "romanizations": [
+        "malge"
+      ],
+      "notes": "S7 §11 exception; induced tensing is not doubled in RR."
+    },
+    {
+      "id": "cluster-lb-step",
+      "text": "밟고",
+      "romanizations": [
+        "bapgo"
+      ],
+      "notes": "S8 §10 exception for 밟-; induced tensing is not doubled in RR."
+    },
+    {
+      "id": "cluster-lb-wide",
+      "text": "넓고",
+      "romanizations": [
+        "neolgo"
+      ],
+      "notes": "S7/S8: regular ㄼ reduction keeps l; induced tensing is not doubled in RR."
+    },
+    {
+      "id": "cluster-lb-compound",
+      "text": "넓죽하다",
+      "romanizations": [
+        "neopjukada"
+      ],
+      "notes": "S8: exceptional p; induced j-tensing is not doubled; g+h contracts to k."
+    },
+    {
+      "id": "cluster-lb-step-vowel",
+      "text": "밟아요",
+      "romanizations": [
+        "balbayo"
+      ],
+      "notes": "S2 §14: both cluster members survive before a vowel ending."
+    },
+    {
+      "id": "cluster-lb-wide-vowel",
+      "text": "넓어요",
+      "romanizations": [
+        "neolbeoyo"
+      ],
+      "notes": "S2 §14: both cluster members survive before a vowel ending."
+    },
+    {
+      "id": "spaces-weather",
+      "text": "오늘 맑아요",
+      "romanizations": [
+        "oneul malgayo"
+      ],
+      "notes": "Model-authored phrase; S2 §14 inside the adjective; preserve the word space."
+    },
+    {
+      "id": "spaces-flower",
+      "text": "꽃을 봐요",
+      "romanizations": [
+        "kkocheul bwayo"
+      ],
+      "notes": "Model-authored phrase; S2 §13 inside the noun; preserve the word space."
+    },
+    {
+      "id": "insertion-flower-leaf",
+      "text": "꽃잎",
+      "romanizations": [
+        "kkonnip"
+      ],
+      "notes": "S5 §29 n-insertion then S4 nasal assimilation."
+    },
+    {
+      "id": "insertion-pill",
+      "text": "알약",
+      "romanizations": [
+        "allyak"
+      ],
+      "notes": "S1 explicit RR example; inserted n assimilates to l."
+    }
+  ],
+  "language": "ko"
+}

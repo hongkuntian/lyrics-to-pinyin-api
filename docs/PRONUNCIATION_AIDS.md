@@ -55,3 +55,9 @@ Engine `kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3` adds bounded conventional-text co
 The development and independent challenge corpora are model-authored diagnostics, not fluent review or recording/population accuracy. `scripts/evaluate-reading-context.mjs CORPUS BASELINE_SOURCE OUTPUT` compares target readings and reports fixes, regressions and targets that cannot be scored from complete groups. Retain the baseline module from `git show 9680332f9425dc0728a6dba6af89dc87cd28b201:api/utils/pronunciation-aids.js`. The harness resolves dependencies from the current checkout; dependency versions must match the lockfile for a comparable replay.
 
 Reading references: [Kanji Kentei's 辛 entry](https://www.kanjipedia.jp/kanji/0003594700/), [Cambridge's 辛い entry](https://dictionary.cambridge.org/ja/dictionary/japanese-english/辛い), and [Kuromoji token fields](https://github.com/takuyaa/kuromoji.js). The narrow contextual selections remain best-effort rules.
+
+## Korean cluster audit
+
+Engine `koroman-1.0.16-lyra-2` corrects the standard verb/adjective ㄺ-before-ㄱ exception on a finite set of stems (읽/맑/밝/늙/묽/긁/굵) and endings. The transformed Hangul is used only as a pronunciation intermediate for RR output. Canonical reading, source bytes and grapheme ranges remain the original Hangul. Noun compounds such as 닭고기 and ordinary endings such as 읽다 retain the existing analysis.
+
+The audit corpus also covers liaison, assimilation, palatalization and ㅎ; it does not imply all Korean pronunciation exceptions are solved. References: [NIKL standard-pronunciation explanation for 읽고/맑게](https://www.korean.go.kr/front/onlineQna/onlineQnaView.do?mn_id=&pageIndex=1&qna_seq=316913) and [official Revised Romanization](https://www.korean.go.kr/front_eng/roman/roman_01.do). RR remains distinct from full phonetics and from a recording's actual singing.

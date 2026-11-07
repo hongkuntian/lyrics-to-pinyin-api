@@ -1,6 +1,7 @@
 import {digest,LibraryError} from './song-library/store.js';
 import {reviewedJapaneseSpans,documentReadingRecording} from './japanese-reading-overrides.js';
 import {contextualJapaneseTokens} from './japanese-context-readings.js';
+import {koreanPronunciationInput} from './korean-context-readings.js';
 
 // A profile describes a notation, not a translation target or the UI language.
 // Future phonetic approximations must declare a readerLanguage and limitations;
@@ -8,7 +9,7 @@ import {contextualJapaneseTokens} from './japanese-context-readings.js';
 export const profiles=Object.freeze([
   {id:'ja-hepburn',version:'1',sourceLanguage:'ja',kind:'romanization',notation:'hepburn',outputScript:'Latn',readerLanguage:null,label:'Japanese · Romaji',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3'},
   {id:'ja-kana',version:'1',sourceLanguage:'ja',kind:'native-reading',notation:'kana',outputScript:'Hira',readerLanguage:null,label:'Japanese · Kana',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3'},
-  {id:'ko-revised',version:'1',sourceLanguage:'ko',kind:'romanization',notation:'revised',outputScript:'Latn',readerLanguage:null,label:'Korean · Romanization',engineVersion:'koroman-1.0.16-lyra-1'}
+  {id:'ko-revised',version:'1',sourceLanguage:'ko',kind:'romanization',notation:'revised',outputScript:'Latn',readerLanguage:null,label:'Korean · Romanization',engineVersion:'koroman-1.0.16-lyra-2'}
 ].map(p=>Object.freeze({...p,status:'beta',basis:'text',limitations:['Text-derived reading; the recorded performance may differ.']})));
 export function profileFor(id){const p=profiles.find(p=>p.id===id);if(!p)throw new LibraryError('unsupported_pronunciation_profile',422);return p;}
 export function enabledProfiles(env=process.env){
@@ -57,7 +58,7 @@ export async function analyzeReading(text,language,{recording}={}){
     if(!run.active){segments.push(plain(run));continue;}
     if(language==='ko'){
       const {romanize}=await import('koroman');
-      const romanized=romanize(run.source.normalize('NFC'),{usePronunciationRules:true,useHyphen:false});
+      const romanized=romanize(koreanPronunciationInput(run.source),{usePronunciationRules:true,useHyphen:false});
       if(/[\p{Script=Hangul}\p{Script=Han}]/u.test(romanized))segments.push(unresolved(run));
       else segments.push({...plain(run),reading:run.source.normalize('NFC'),romanized,status:'resolved'});
       continue;

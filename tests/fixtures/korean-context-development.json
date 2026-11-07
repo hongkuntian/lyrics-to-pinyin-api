@@ -1,0 +1,187 @@
+{
+  "version": 1,
+  "language": "ko",
+  "basis": "model-authored diagnostic with NIKL standard-pronunciation and RR references",
+  "cases": [
+    {
+      "text": "읽고",
+      "romanizations": [
+        "ilgo"
+      ]
+    },
+    {
+      "text": "맑게",
+      "romanizations": [
+        "malge"
+      ]
+    },
+    {
+      "text": "밝고",
+      "romanizations": [
+        "balgo"
+      ]
+    },
+    {
+      "text": "늙고",
+      "romanizations": [
+        "neulgo"
+      ]
+    },
+    {
+      "text": "묽게",
+      "romanizations": [
+        "mulge"
+      ]
+    },
+    {
+      "text": "긁고",
+      "romanizations": [
+        "geulgo"
+      ]
+    },
+    {
+      "text": "굵게",
+      "romanizations": [
+        "gulge"
+      ]
+    },
+    {
+      "text": "읽기",
+      "romanizations": [
+        "ilgi"
+      ]
+    },
+    {
+      "text": "맑거나",
+      "romanizations": [
+        "malgeona"
+      ]
+    },
+    {
+      "text": "읽다",
+      "romanizations": [
+        "ikda"
+      ]
+    },
+    {
+      "text": "맑다",
+      "romanizations": [
+        "makda"
+      ]
+    },
+    {
+      "text": "밝다",
+      "romanizations": [
+        "bakda"
+      ]
+    },
+    {
+      "text": "늙다",
+      "romanizations": [
+        "neukda"
+      ]
+    },
+    {
+      "text": "닭고기",
+      "romanizations": [
+        "dakgogi"
+      ]
+    },
+    {
+      "text": "국물",
+      "romanizations": [
+        "gungmul"
+      ]
+    },
+    {
+      "text": "한국어",
+      "romanizations": [
+        "hangugeo"
+      ]
+    },
+    {
+      "text": "같이",
+      "romanizations": [
+        "gachi"
+      ]
+    },
+    {
+      "text": "신라",
+      "romanizations": [
+        "silla"
+      ]
+    },
+    {
+      "text": "꽃잎",
+      "romanizations": [
+        "kkonnip"
+      ]
+    },
+    {
+      "text": "좋아",
+      "romanizations": [
+        "joa"
+      ]
+    },
+    {
+      "text": "밟고",
+      "romanizations": [
+        "bapgo"
+      ]
+    },
+    {
+      "text": "넓다",
+      "romanizations": [
+        "neolda"
+      ]
+    },
+    {
+      "text": "값이",
+      "romanizations": [
+        "gapsi"
+      ]
+    },
+    {
+      "text": "앉아",
+      "romanizations": [
+        "anja"
+      ]
+    },
+    {
+      "text": "독립",
+      "romanizations": [
+        "dongnip"
+      ]
+    },
+    {
+      "text": "백마",
+      "romanizations": [
+        "baengma"
+      ]
+    },
+    {
+      "text": "종로",
+      "romanizations": [
+        "jongno"
+      ]
+    },
+    {
+      "text": "해돋이",
+      "romanizations": [
+        "haedoji"
+      ]
+    },
+    {
+      "text": "굳히다",
+      "romanizations": [
+        "guchida"
+      ]
+    },
+    {
+      "text": "같이 노래해",
+      "romanizations": [
+        "gachi noraehae"
+      ]
+    }
+  ]
+}

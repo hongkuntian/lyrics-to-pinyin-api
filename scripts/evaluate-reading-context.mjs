@@ -8,6 +8,7 @@ import * as candidate from '../api/utils/pronunciation-aids.js';
 const [corpusPath,baselinePath,outputPath] = process.argv.slice(2);
 if (!outputPath) throw new Error('Usage: node scripts/evaluate-reading-context.mjs CORPUS BASELINE_SOURCE OUTPUT');
 const corpus = JSON.parse(await readFile(corpusPath,'utf8'));
+const language = corpus.language ?? 'ja', profile = language === 'ko' ? 'ko-revised' : 'ja-kana';
 const sourceURL = new URL('../api/utils/pronunciation-aids.js',import.meta.url);
 const require = createRequire(sourceURL);
 const baselineSource = (await readFile(baselinePath,'utf8')).replace(/from\s+(['"])(\.\.?\/[^'"]+)\1/g,
@@ -31,10 +32,11 @@ function selectedReading(text,segments,target) {
 }
 const rows=[];
 for(const [index,row] of corpus.cases.entries()) {
-  const old=await baseline.analyzeReading(row.text,'ja'),current=await candidate.analyzeReading(row.text,'ja');
-  if(row.kana) {
-    const before=baseline.renderReading(old,'ja-kana').text,after=candidate.renderReading(current,'ja-kana').text;
-    rows.push({id:row.id??index,text:row.text,expected:[row.kana],before,after,beforeCorrect:before===row.kana,afterCorrect:after===row.kana});
+  const old=await baseline.analyzeReading(row.text,language),current=await candidate.analyzeReading(row.text,language);
+  if(row.kana || row.romanizations) {
+    const expected=row.romanizations??[row.kana];
+    const before=baseline.renderReading(old,profile).text,after=candidate.renderReading(current,profile).text;
+    rows.push({id:row.id??index,text:row.text,expected,before,after,beforeCorrect:expected.includes(before),afterCorrect:expected.includes(after)});
   } else for(const target of row.targets) {
     const before=selectedReading(row.text,old.segments,target),after=selectedReading(row.text,current.segments,target);
     const correct=value=>target.readings.includes(value.reading)||(target.allowUnresolved&&value.status==='unresolved');
