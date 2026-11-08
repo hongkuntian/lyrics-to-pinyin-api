@@ -34,7 +34,8 @@ export async function evaluate({apiKey,corpus,translate=generate,explain=generat
   const allJobs=jobs.slice();
   if(onlyDirections!==null)jobs.splice(0,jobs.length,...allJobs.filter(j=>onlyDirections.includes(`${j.item.language}:${j.target}`)));
   const reserve=jobs.reduce((n,j)=>n+reservationMicros(j.translationRequest)+reservationMicros(j.studyRequest),2_400_000);
-  if(allJobs.length!==12||reserve>3_000_000)throw new Error('evaluation_budget_exceeded');
+  // At most eight sources × four targets; reservations stay within USD 5 per run.
+  if(allJobs.length!==corpus.cases.length*targets.length-corpus.cases.filter(c=>targets.includes(c.language==='zh'?'zh-Hans':c.language)).length||allJobs.length>32||reserve>5_000_000)throw new Error('evaluation_budget_exceeded');
   log(JSON.stringify({event:'multilingual_evaluation_start',cases:jobs.length,reservedMicros:reserve,corpusHash:hash(JSON.stringify(corpus))}));
   let index=0,failed=0;
   async function worker() {
@@ -80,7 +81,7 @@ export function emitRecord(log,record) {
   const count=Math.ceil(encoded.length/2000);
   for(let index=0;index<count;index++)log(JSON.stringify({event:'multilingual_evaluation_chunk',direction:record.direction,index,count,data:encoded.slice(index*2000,(index+1)*2000)}));
 }
-export const corpora=Object.freeze({beta:'corpus.json',expansion:'expansion-corpus.json'});
+export const corpora=Object.freeze({beta:'corpus.json',expansion:'expansion-corpus.json','expansion-2':'expansion-2-corpus.json'});
 export function corpusFile(name='beta') {
   if(!Object.hasOwn(corpora,name))throw new Error('invalid_evaluation_corpus');
   return new URL(`../evaluation/multilingual/${corpora[name]}`,import.meta.url);

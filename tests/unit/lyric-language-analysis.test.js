@@ -25,3 +25,16 @@ test('English passages do not erase verified Mandarin pronunciation for the Han 
  const result=analyzeLyricLanguage(lines,{genres:['Mandopop'],verified:true});
  assert.equal(result.mixed,true);assert.equal(result.pronunciation_language,'zh');
 });
+
+test('Hindi in Latin letters is labelled hi-Latn without catching other Latin-script lyrics',()=>{
+ const hindi=['Khidki maine nahin kholi.','Tumne kaha "kal", par yeh nahin kaha ki kiska kal.','Shayad baat baarish ki thi.','Subah main tumse rukne ko nahin kehta.'];
+ const result=analyzeLyricLanguage(hindi);
+ assert.equal(result.primary,'hi-Latn');assert.equal(result.mixed,false);assert.equal(result.pronunciation_language,null);
+ assert.deepEqual([...new Set(result.lines.map(l=>l.language))],['hi-Latn']);
+ for(const lines of [['I want to be with you tonight','Hold me close and never let go','Dancing on the floor until the morning comes'],
+  ['Mahal kita, hindi kita iiwan','Ikaw ang aking mundo at buhay','Huwag kang lumayo sa akin'],
+  ['Aku cinta padamu selamanya','Jangan pergi tinggalkan diriku','Kau bintang di langit malam'],
+  ['Không phải em đã mở cửa sổ','Anh nói ngày mai nhưng ngày mai của ai']])
+  assert.notEqual(analyzeLyricLanguage(lines).primary,'hi-Latn');
+ assert.notEqual(analyzeLyricLanguage(['मैं तुमसे रुकने को नहीं कहता','Main tumse rukne ko nahin kehta hoon aur kya']).primary,'hi-Latn');
+});

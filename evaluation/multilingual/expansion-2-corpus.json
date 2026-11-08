@@ -1,0 +1,188 @@
+{
+  "version": 1,
+  "license": "Original evaluation lyrics authored for Lyra; not commercial song lyrics.",
+  "cases": [
+    {
+      "id": "de-window",
+      "language": "de",
+      "title": "Das offene Fenster",
+      "lines": [
+        "Nicht ich habe das Fenster geöffnet.",
+        "Du sagst „morgen“, aber nicht, wessen Morgen.",
+        "Du sagst, das Meer behält unsere Namen.",
+        "Vielleicht meinst du den Regen.",
+        "Ich trage dein Schweigen nach Hause.",
+        "Niemand hat versprochen zurückzukommen.",
+        "Am Morgen bitte ich dich nicht darum, zu bleiben.",
+        "Am Abend bitte ich dich, nicht zu bleiben.",
+        "Rosa lacht und sagt, sie kommt wieder, aber nicht, wann.",
+        "Das Fenster wartet; ich vielleicht nicht."
+      ],
+      "selection": {"line": 7, "text": "bitte ich dich, nicht zu bleiben"},
+      "checks": [
+        "Line 1 denies that the speaker opened the window (someone else did).",
+        "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
+        "Rosa is a person's name, not the colour pink or a rose.",
+        "Informal du stays second-person singular; no plural or formal shift is invented.",
+        "Line 2 asks whose tomorrow, not when or from whom.",
+        "The selected phrase is a request with a negated infinitive (nicht zu bleiben)."
+      ]
+    },
+    {
+      "id": "it-window",
+      "language": "it",
+      "title": "La finestra aperta",
+      "lines": [
+        "Non sono io che ho aperto la finestra.",
+        "Dici «domani», ma non dici di chi.",
+        "Dici che il mare terrà i nostri nomi.",
+        "Forse parli della pioggia.",
+        "Porto a casa il tuo silenzio.",
+        "Nessuno ha promesso di tornare.",
+        "Di mattina non ti chiedo di restare.",
+        "Di sera ti chiedo di non restare.",
+        "Stella ride e dice che torna, ma non dice quando.",
+        "La finestra aspetta; io forse no."
+      ],
+      "selection": {"line": 7, "text": "ti chiedo di non restare"},
+      "checks": [
+        "Line 1 denies that the speaker opened the window.",
+        "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
+        "Stella is a person's name, not a star.",
+        "No gender is invented for the speaker; tu stays informal singular.",
+        "Line 2's 'di chi' asks whose tomorrow.",
+        "The selected phrase asks the listener not to stay (di non restare)."
+      ]
+    },
+    {
+      "id": "id-window",
+      "language": "id",
+      "title": "Jendela yang terbuka",
+      "lines": [
+        "Bukan aku yang membuka jendela itu.",
+        "Kau bilang \"besok\", tapi tak bilang besok siapa.",
+        "Kau bilang laut akan menyimpan nama kita.",
+        "Mungkin maksudmu hujan.",
+        "Kubawa pulang diammu.",
+        "Tak ada yang berjanji akan kembali.",
+        "Pagi hari, aku tidak memintamu tinggal.",
+        "Sore hari, aku memintamu untuk tidak tinggal.",
+        "Bintang tertawa dan bilang akan datang lagi, tapi tak bilang kapan.",
+        "Jendela itu menunggu; aku mungkin tidak."
+      ],
+      "selection": {"line": 7, "text": "memintamu untuk tidak tinggal"},
+      "checks": [
+        "Line 1 denies that the speaker opened the window.",
+        "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
+        "Bintang is a person's name, not a star.",
+        "Kita is inclusive (you and I); it must not exclude the listener.",
+        "Line 5 carries the listener's silence (diammu) home; it is not the speaker's silence.",
+        "No gender is invented for the speaker, the listener or Bintang."
+      ]
+    },
+    {
+      "id": "vi-window",
+      "language": "vi",
+      "title": "Cửa sổ mở",
+      "lines": [
+        "Người mở cửa sổ không phải là em.",
+        "Anh nói \"ngày mai\", nhưng không nói ngày mai của ai.",
+        "Anh nói biển sẽ giữ tên của chúng ta.",
+        "Có lẽ anh đang nói về cơn mưa.",
+        "Em mang sự im lặng của anh về nhà.",
+        "Chẳng ai hứa sẽ quay về.",
+        "Buổi sáng, em không xin anh ở lại.",
+        "Buổi chiều, em xin anh đừng ở lại.",
+        "Mai cười và nói sẽ lại đến, nhưng không nói khi nào.",
+        "Cửa sổ vẫn chờ; còn em thì chưa chắc."
+      ],
+      "selection": {"line": 7, "text": "em xin anh đừng ở lại"},
+      "checks": [
+        "Line 1 denies that the speaker opened the window.",
+        "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
+        "Mai is a person's name, not tomorrow or apricot blossom.",
+        "Em and anh are the speaker and the listener; no names, ages or other people are invented from them.",
+        "Chúng ta is inclusive (you and I).",
+        "The selected phrase asks the listener not to stay (đừng ở lại)."
+      ]
+    },
+    {
+      "id": "ru-window",
+      "language": "ru",
+      "title": "Открытое окно",
+      "lines": [
+        "Окно открыто не мной.",
+        "Ты говоришь «завтра», но не говоришь, чьё.",
+        "Ты говоришь, что море сохранит наши имена.",
+        "Может быть, ты имеешь в виду дождь.",
+        "Я несу твоё молчание домой.",
+        "Никто не обещал вернуться.",
+        "Утром я не прошу тебя остаться.",
+        "Вечером я прошу тебя не оставаться.",
+        "Вера смеётся и говорит, что придёт снова, но не говорит когда.",
+        "Окно ждёт; а я, может быть, нет."
+      ],
+      "selection": {"line": 7, "text": "прошу тебя не оставаться"},
+      "checks": [
+        "Line 1 denies that the speaker opened the window.",
+        "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
+        "Вера is a person's name, not faith.",
+        "Ты stays informal singular; no gender is invented for the speaker or the listener.",
+        "Line 2 asks whose tomorrow.",
+        "The selected phrase asks the listener not to stay (не оставаться)."
+      ]
+    },
+    {
+      "id": "hi-latn-window",
+      "language": "hi-Latn",
+      "title": "Khuli khidki",
+      "lines": [
+        "Khidki maine nahin kholi.",
+        "Tumne kaha \"kal\", par yeh nahin kaha ki kiska kal.",
+        "Tumne kaha samundar hamare naam yaad rakhega.",
+        "Shayad baat baarish ki thi.",
+        "Tumhari khamoshi mere saath ghar jaati hai.",
+        "Kisi ne laut aane ka vaada nahin kiya.",
+        "Subah main tumse rukne ko nahin kehta.",
+        "Shaam ko kehta hoon, mat ruko.",
+        "Chanda hansti hai aur kehti hai phir aayegi, par kab, yeh nahin batati.",
+        "Khidki intezaar karti hai; main shayad nahin."
+      ],
+      "selection": {"line": 7, "text": "mat ruko"},
+      "checks": [
+        "Line 1 denies that the speaker opened the window.",
+        "Line 7 negates the saying (I don't ask you to stay); line 8 tells you not to stay. The two must stay distinct.",
+        "Chanda is a person's name, not the moon.",
+        "Line 2 asks whose kal; kal may be rendered as tomorrow, but the question is whose, not when.",
+        "The text is Hindi in Latin letters; it must not be treated as English or rewritten into Devanagari.",
+        "The selected mat ruko is a direct negative command (don't stay)."
+      ]
+    },
+    {
+      "id": "th-window",
+      "language": "th",
+      "title": "หน้าต่างที่เปิดอยู่",
+      "lines": [
+        "ไม่ใช่ฉันที่เปิดหน้าต่าง",
+        "เธอบอกว่า \"พรุ่งนี้\" แต่ไม่ได้บอกว่าพรุ่งนี้ของใคร",
+        "เธอบอกว่าทะเลจะจำชื่อของเราไว้",
+        "บางทีเธออาจหมายถึงฝน",
+        "ฉันพาความเงียบของเธอกลับบ้าน",
+        "ไม่มีใครสัญญาว่าจะกลับมา",
+        "ตอนเช้า ฉันไม่ขอให้เธออยู่ต่อ",
+        "ตอนเย็น ฉันขอให้เธออย่าอยู่ต่อ",
+        "ฟ้ายิ้มแล้วบอกว่าจะมาอีก แต่ไม่บอกว่าเมื่อไร",
+        "หน้าต่างยังรอ ส่วนฉันอาจจะไม่"
+      ],
+      "selection": {"line": 7, "text": "ขอให้เธออย่าอยู่ต่อ"},
+      "checks": [
+        "Line 1 denies that the speaker opened the window.",
+        "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
+        "ฟ้า is a person's name, not the sky.",
+        "Line 2 asks whose tomorrow.",
+        "No gender is invented for the speaker; เธอ is the listener, not a third person.",
+        "The selected phrase asks the listener not to stay (อย่าอยู่ต่อ)."
+      ]
+    }
+  ]
+}

@@ -102,3 +102,39 @@ is now admitted. Recorded usage for the four runs was USD 0.116.
 
 The recipe change stops reuse of translations accepted under the previous recipes
 for new readers; accepted translations remain readable and are not regenerated.
+
+## German, Italian, Indonesian, Vietnamese, Russian, Hindi and Thai (8 November 2026)
+
+`evaluation/multilingual/expansion-2-corpus.json` adds the same authored ten-line
+stress case in `de`, `it`, `id`, `vi`, `ru`, `hi-Latn` (Hindi in Latin letters) and
+`th`: denied agency, whose-tomorrow, "I don't ask you to stay" against "I ask you not
+to stay", and a name that is also a common word (Rosa, Stella, Bintang, Mai, Вера,
+Chanda, ฟ้า). One evaluation-only production build translated each case into fr, es
+and zh-Hans and explained the selected request in each (21 translations, 21
+explanations); two more builds resampled Indonesian and Thai. Recorded usage was
+USD 0.102.
+
+All 21 explanations passed: each separated the negated asking from the negative
+request and read the grammar correctly (bitten + nicht zu, chiedere di non,
+meminta-mu untuk tidak, xin … đừng, просить + не, mat + imperative, ขอให้ … อย่า).
+German, Italian, Vietnamese, Russian and Hindi translations passed in every target.
+Minor: Russian names stay in Cyrillic in fr/zh-Hans (the fidelity rule keeps source
+spelling), de→es rendered "wessen Morgen" as "la mañana" (the source noun also means
+morning) and Vietnamese line 10 was softened to "I'm not sure yet".
+
+Indonesian and Thai translations are held. Over three samples Bintang became "the
+star" in 4 of 9 translations and ฟ้า became "the sky" in 2 of 9, despite the existing
+rule that a possible personal name must not silently become its dictionary meaning
+(both lines also read naturally as personification). id→fr also garbled "besok
+siapa" (whose tomorrow) in 2 of 3 samples. Both languages remain translatable into
+English through `*:en`.
+
+Added translation directions: de/it/vi/ru/hi-Latn → fr, es, zh-Hans. Added
+explanation directions: de/it/id/vi/ru/hi-Latn/th → fr, es, zh-Hans.
+
+Source labels: the backend now labels Latin-letter Hindi `hi-Latn` (franc called it
+Hausa, `hau`) with the same conservative word test the app uses; Devanagari is never
+inferred and Urdu written the same way is indistinguishable. Responses cached before
+this change keep their old label until they expire, so those songs stay English-only
+until refreshed. Short Indonesian passages can still be labelled Malay (`zlm`); no
+`zlm` direction is admitted.

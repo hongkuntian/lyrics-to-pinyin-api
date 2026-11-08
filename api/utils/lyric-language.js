@@ -7,11 +7,26 @@ export const scriptsOf=text=>[
  ['Latn',/\p{Script=Latin}/u],['Cyrl',/\p{Script=Cyrillic}/u],['Arab',/\p{Script=Arabic}/u],['Deva',/\p{Script=Devanagari}/u],
  ['Thai',/\p{Script=Thai}/u],['Hebr',/\p{Script=Hebrew}/u],['Grek',/\p{Script=Greek}/u],['Taml',/\p{Script=Tamil}/u]
 ].filter(([,pattern])=>pattern.test(text)).map(([script])=>script).filter(s=>s!=='Hani'||!/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text));
+// Hindi as providers deliver it, in Latin letters; franc calls it Hausa. A
+// conservative lexical check mirrors the app's: frequent words that are rare as
+// standalone words in other Latin-script languages, plus broad coverage. Urdu
+// written the same way is indistinguishable by text alone.
+const hindiCore=new Set(('hai hain nahi nahin mujhe tujhe mera meri mere tera teri tere kya kyun kyon yeh woh aur bhi dil pyaar pyar ishq tum tumhe tumhein tumse tumne tumhari tumhara hum humein kuch kabhi abhi phir saath zindagi jaana mein hoon tha thi raha rahi rahe gaya gayi kaise kahan yahan wahan jab karo chalo dekho aaja jaane haan koi kahin apna apni apne raat sapne khwab aankhein aankhon baat baatein dard jaan mohabbat duniya lagta lagti hota hoti hoga khuli khidki subah kehta kehti rukne ruk sun suno chahiye chahta chahti mohe piya sajna kaha kisi shayad').split(' '));
+const hindiFunction=new Set('main ho na ke ki ka ko se to jo hi ye wo tak par bin ab'.split(' '));
+const latinOnly=text=>!/[^\p{Script=Latin}\p{M}\p{P}\p{S}\p{Z}\p{N}\s]/u.test(text);
+const latinWords=text=>text.toLowerCase().split(/[^\p{L}]+/u).filter(Boolean);
+export function romanizedHindi(text,{line=false}={}) {
+ if(!latinOnly(text))return false;
+ const words=latinWords(text);if(!words.length)return line;
+ const core=words.filter(w=>hindiCore.has(w)),covered=words.filter(w=>hindiCore.has(w)||hindiFunction.has(w)).length;
+ return line?core.length>=1&&covered/words.length>=0.25:words.length>=6&&new Set(core).size>=3&&covered/words.length>=0.3;
+}
 function classify(text) {
  const scripts=scriptsOf(text);
  if(scripts.includes('Jpan'))return {language:'ja',confidence:'script',scripts};
  if(scripts.includes('Kore'))return {language:'ko',confidence:'script',scripts};
  if(scripts.includes('Hani'))return {language:'zh',confidence:'script_only',scripts};
+ if(romanizedHindi(text))return {language:'hi-Latn',confidence:'estimated',scripts};
  const ranked=francAll(text,{minLength:80});
  const [best,score]=ranked[0]??['und',0],second=ranked[1]?.[1]??0;
  // Long lyrics can have close normalized scores between related languages.
@@ -22,7 +37,8 @@ function classify(text) {
 }
 export function analyzeLyricLanguage(lines,{genres=[],verified=false,providerEvidence,providerSource}={}) {
  const text=lines.join('\n'),overall=classify(text),scripts=[...new Set(lines.flatMap(scriptsOf))];
- const rows=lines.map(line=>classify(line));
+ // Within a romanized-Hindi song, a short Hindi line keeps the song's label.
+ const rows=lines.map(line=>overall.language==='hi-Latn'&&romanizedHindi(line,{line:true})?{language:'hi-Latn',confidence:'estimated',scripts:scriptsOf(line)}:classify(line));
  const languages=[...new Set(rows.filter(r=>r.language!=='und').map(r=>r.language))];
  const significant=new Set(scripts.filter(s=>s!=='Hani'));
  const latinPassages=lines.filter(line=>(line.match(/\p{Script=Latin}/gu)??[]).length>=12 && !/[\p{Script=Han}\p{Script=Hangul}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(line));
