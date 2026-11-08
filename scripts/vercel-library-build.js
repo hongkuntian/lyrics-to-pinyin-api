@@ -11,7 +11,7 @@ import {repairTranslationReuse} from './repair-translation-reuse.js';
 
 export function buildFailureCode(error) {
   const allowed=new Set(['migration_changed','library_schema_migration_required','invalid_language_policy',
-    'library_not_configured','migration_requires_production_build','ETIMEDOUT','ENOTFOUND','ECONNREFUSED','ECONNRESET']);
+    'library_not_configured','migration_requires_production_build','evaluation_only_complete','ETIMEDOUT','ENOTFOUND','ECONNREFUSED','ECONNRESET']);
   if(allowed.has(error?.code))return error.code;
   if(allowed.has(error?.message))return error.message;
   // PostgreSQL SQLSTATE is safe diagnostic classification; never emit its
@@ -52,6 +52,8 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
       // One build container evaluates once; other invocations leave it alone.
       const claim=await open('/tmp/lyra-multilingual-evaluation.lock','wx').catch(error=>{if(error.code!=='EEXIST')throw error;});
       if(claim){await claim.close();await runEvaluation();}
+      // An evaluation-only build must never become a promotable deployment.
+      if(process.env.LYRA_EVALUATION_ONLY_BUILD==='1')throw new Error('evaluation_only_complete');
     }
   }
   catch(error) {console.error(JSON.stringify({event:'library_build_failed',code:buildFailureCode(error)}));process.exitCode=1;}

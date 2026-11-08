@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {evaluate,documentFor,selectionForCase,emitRecord} from '../../scripts/evaluate-multilingual.js';
+import {evaluate,documentFor,selectionForCase,emitRecord,corpusFile} from '../../scripts/evaluate-multilingual.js';
+import {buildFailureCode} from '../../scripts/vercel-library-build.js';
 const corpus=JSON.parse(await readFile(new URL('../../evaluation/multilingual/corpus.json',import.meta.url),'utf8'));
 test('evaluation uses whole songs and exact original selections with bounded explicit calls',async()=>{
  const calls=[],logs=[];
@@ -27,4 +28,18 @@ test('long Unicode review records survive bounded build log chunks exactly',()=>
  assert.ok(chunks.length>1&&chunks.every(c=>JSON.stringify(c).length<2300));
  const decoded=JSON.parse(Buffer.from(chunks.map(c=>c.data).join(''),'base64').toString('utf8'));
  assert.deepEqual(decoded,record);
+});
+
+test('expansion corpus evaluates ja/ko/pt into every beta target with exact original selections',async()=>{
+ const expansion=JSON.parse(await readFile(corpusFile('expansion'),'utf8')),calls=[],logs=[];
+ assert.deepEqual(expansion.cases.map(c=>c.language),['ja','ko','pt']);
+ for(const item of expansion.cases){assert.equal(item.lines.length,10);const doc=documentFor(item),selection=selectionForCase(item,doc);assert.equal([...item.lines[item.selection.line]].slice(selection.lower,selection.upper).join(''),item.selection.text);}
+ const translate=async(doc,options)=>{calls.push(['translation',options.target]);return {content:{lines:doc.structure.occurrences.map(o=>({sourceID:o.sourceID,lyricText:o.lyricText}))},actualMicros:100};};
+ const explain=async(doc,translation,selection,options)=>{calls.push(['explanation',options.explanationLanguage]);assert.equal(translation,null);return {content:{},actualMicros:50};};
+ await evaluate({apiKey:'fixture',corpus:expansion,translate,explain,log:s=>logs.push(JSON.parse(s))});
+ const directions=new Set(logs.filter(l=>l.event==='multilingual_evaluation_chunk').map(l=>l.direction));
+ assert.deepEqual([...directions].sort(),['ja','ko','pt'].flatMap(s=>['en','es','fr','zh-Hans'].map(t=>`${s}:${t}`)).sort());
+ assert.equal(calls.length,24);
+ assert.throws(()=>corpusFile('../secret'),/invalid_evaluation_corpus/);
+ assert.equal(buildFailureCode(new Error('evaluation_only_complete')),'evaluation_only_complete');
 });

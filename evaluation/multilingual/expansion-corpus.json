@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "license": "Original evaluation lyrics authored for Lyra; not commercial song lyrics.",
+  "cases": [
+    {
+      "id": "ja-window",
+      "language": "ja",
+      "title": "開いた窓",
+      "lines": [
+        "窓を開けたのは私じゃない。",
+        "君は「明日」と言ったけれど、誰の明日かは言わなかった。",
+        "海が名前を覚えていると君は言った。",
+        "たぶん雨のことだったのだろう。",
+        "私は君の沈黙を家まで運ぶ。",
+        "誰も戻るとは約束していない。",
+        "朝には、行かないでとは言わない。",
+        "夕方には、行ってと言う。",
+        "ハルは笑って、また来ると言った。",
+        "窓は待っている。私は待たないかもしれない。"
+      ],
+      "selection": {
+        "line": 6,
+        "text": "行かないで"
+      },
+      "checks": [
+        "Line 1 denies that the speaker opened the window; do not turn it into the speaker not opening it or a closed window.",
+        "Line 7 negates the saying: the speaker does not say 'don't go'; it must not become 'I tell you not to go'.",
+        "Line 8 is a request to leave, contrasting with line 7.",
+        "ハル is a person's name, not the season spring.",
+        "No gender, lover, death or reunion is invented for 君 or the speaker.",
+        "The selected 行かないで is a negative request (please don't go) embedded in a quoted, negated saying."
+      ]
+    },
+    {
+      "id": "ko-window",
+      "language": "ko",
+      "title": "열린 창문",
+      "lines": [
+        "창문을 연 건 내가 아니야.",
+        "너는 \"내일\"이라고 했지만, 누구의 내일인지는 말하지 않았어.",
+        "바다가 우리 이름을 기억할 거라고 너는 말했지.",
+        "아마 비를 말한 거였겠지.",
+        "나는 너의 침묵을 집까지 데려가.",
+        "아무도 돌아온다고 약속하지 않았어.",
+        "아침에는 가지 말라고 하지 않아.",
+        "저녁에는 가라고 말해.",
+        "하늘이는 웃으며 또 온다고 했어.",
+        "창문은 기다려. 나는 기다리지 않을지도 몰라."
+      ],
+      "selection": {
+        "line": 6,
+        "text": "가지 말라고"
+      },
+      "checks": [
+        "Line 1 denies that the speaker opened the window.",
+        "Line 7 negates the saying (I don't tell you not to go); it must not become a request not to go.",
+        "Line 8 tells the listener to go, contrasting with line 7.",
+        "하늘이 is a person's name (from 하늘, sky) and must stay a name.",
+        "Casual 반말 register should stay informal where the target language marks register.",
+        "No gender, lover, death or reunion is invented.",
+        "The selected 가지 말라고 is a quoted negative command (-지 말라고) inside a negated verb of saying."
+      ]
+    },
+    {
+      "id": "pt-window",
+      "language": "pt",
+      "title": "A janela aberta",
+      "lines": [
+        "Não fui eu quem abriu a janela.",
+        "Você disse \"amanhã\", mas não disse de quem.",
+        "Você disse que o mar guardaria nossos nomes.",
+        "Talvez estivesse falando da chuva.",
+        "Levo o seu silêncio para casa.",
+        "Ninguém prometeu voltar.",
+        "De manhã, não peço que você fique.",
+        "À tarde, peço que você não fique.",
+        "Luz sorri e diz que volta, mas não diz quando.",
+        "A janela espera; eu talvez não."
+      ],
+      "selection": {
+        "line": 7,
+        "text": "peço que você não fique"
+      },
+      "checks": [
+        "Line 1 denies that the speaker opened the window (it was not me who opened it).",
+        "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
+        "Luz is a name, not light.",
+        "Brazilian você register stays second-person singular; no plural or formal shift is invented.",
+        "Line 2's 'de quem' asks whose tomorrow, not from whom.",
+        "The selected phrase is a request with a negated subjunctive (não fique)."
+      ]
+    }
+  ]
+}
