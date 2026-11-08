@@ -56,3 +56,33 @@ requests retain their exact snapshots across deployments.
 Rollback new generation by restoring both environment policies to `["*:en"]` and
 deploying normally. Saved target-specific content remains readable. No destructive
 migration or cache reset is needed.
+
+## Japanese, Korean and Portuguese directions (8 November 2026)
+
+`evaluation/multilingual/expansion-corpus.json` adds one authored ten-line stress
+case each for `ja`, `ko` and `pt` (denied agency, whose-tomorrow, negated saying
+versus negative request, a name that is also a common word, unstated speaker and
+addressee). The production builders translated each case into en/fr/es/zh-Hans and
+explained one original selection in each language: 12 translations and 12
+explanations, USD 0.036 recorded usage. They ran in an evaluation-only production
+build (`LYRA_EVALUATION_ONLY_BUILD=1`), which logs records to stderr and always fails,
+so it cannot be promoted. A first run lost its records because the packaging wrapper
+discards preflight stdout; it was rerun unchanged.
+
+All 12 explanations passed: each separated the negated saying from the quoted
+request/command, kept the speaker and addressee unstated and gave accurate grammar.
+Japanese and Portuguese translations passed in every target; Korean es/zh-Hans
+passed. Two Korean translations failed in the first sample and passed in a second:
+ko→en invented "no one" as the subject of lines 7–8 (inverting line 8), and ko→fr
+made someone other than 하늘이 the one who will come again. ko→en is already admitted
+by `*:en`; this is recorded as an intermittent beta risk. ko→fr translation is held;
+ko→fr explanation is admitted. Names stay in source script (ハル, 하늘이) rather than
+being romanized, and ja→fr rendered 名前 as singular; both are minor.
+
+Added translation directions: ja/pt → fr, es, zh-Hans; ko → es, zh-Hans. Added
+explanation directions: ja/ko/pt → fr, es, zh-Hans. The production policy was
+verified equal to the previous file by SHA-256 fingerprints logged from an
+evaluation-only build (secret values are redacted from Vercel logs) before both
+environment lists were replaced with this file. This is one model-assisted review of
+authored stress cases, not bilingual certification or a real-song benchmark.
+Rollback restores the previous lists (the file at its prior commit) and redeploys.

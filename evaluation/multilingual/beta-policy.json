@@ -12,7 +12,15 @@
     "es:zh-Hans",
     "zh:fr",
     "zh:es",
-    "zh:zh-Hans"
+    "zh:zh-Hans",
+    "ja:fr",
+    "ja:es",
+    "ja:zh-Hans",
+    "ko:es",
+    "ko:zh-Hans",
+    "pt:fr",
+    "pt:es",
+    "pt:zh-Hans"
   ],
   "explanation": [
     "*:en",
@@ -30,6 +38,15 @@
     "zh:zh-Hans",
     "zh-Hans:fr",
     "zh-Hans:es",
-    "zh-Hans:zh-Hans"
+    "zh-Hans:zh-Hans",
+    "ja:fr",
+    "ja:es",
+    "ja:zh-Hans",
+    "ko:fr",
+    "ko:es",
+    "ko:zh-Hans",
+    "pt:fr",
+    "pt:es",
+    "pt:zh-Hans"
   ]
 }
