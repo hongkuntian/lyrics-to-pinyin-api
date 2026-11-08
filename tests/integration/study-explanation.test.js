@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {libraryDB,source} from '../helpers/library-db.js';
+import {activateMembership} from '../helpers/membership.js';
 import {createSongLibraryService as createSongLibraryHandler} from '../../api/song-library.js';
 const content={meaning:'turn into through singing',context:'The day becomes a song.',grammar:'成 marks a result.',uncertainty:'',sourceQuote:'唱成'};
 async function fixture(t,overrides={}) {
@@ -58,7 +59,7 @@ test('interrupted Study stops waiting, restores membership allowance and never r
  const f=await fixture(t,{explainFn:async()=>{await barrier;return {content,actualMicros:2000,response:{id:'late'}};}});
  await f.db.query("UPDATE library_users SET access_kind='apple' WHERE id='reader-a'");
  const {MembershipStore}=await import('../../api/utils/membership/store.js');
- const membership=new MembershipStore(f.store.db);await membership.claimStarter('reader-a');
+ const membership=new MembershipStore(f.store.db);await activateMembership(f.store.db,'reader-a');
  await f.call({...f.request,allowGeneration:true});
  // Wait for the actual atomic claim, then simulate the expired server execution window.
  for(let i=0;i<20;i++) {
@@ -66,15 +67,15 @@ test('interrupted Study stops waiting, restores membership allowance and never r
   await new Promise(resolve=>setImmediate(resolve));
  }
  await f.db.query("UPDATE library_spend_operations SET submitted_at=now()-interval '7 minutes' WHERE kind='study_explanation'");
- assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,9);
+ assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,79);
  const result=await f.call({...f.request,readOnly:true});
  assert.equal(result.body.state,'unknown');assert.equal(result.body.code,'worker_interrupted');
- assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,10);
+ assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,80);
  assert.equal((await f.call({...f.request,resumeOnly:true})).body.state,'unknown');
  assert.ok(Number((await f.store.budget()).held)>0);
  release();await Promise.all(f.pending);
  assert.equal((await f.call({...f.request,readOnly:true})).body.state,'unknown');
- assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,10);
+ assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,80);
 });
 test('authorization, stale revisions and invalid selections issue no explanation request',async t=>{
  const f=await fixture(t);

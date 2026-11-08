@@ -8,7 +8,7 @@ import {createStoreNotificationHandler} from '../../api/store-notifications.js';
 import {MembershipStore} from '../../api/utils/membership/store.js';
 import {LibraryError} from '../../api/utils/song-library/store.js';
 
-test('membership HTTP requires app sessions, verified purchase data and explicit starter claims',async t=>{
+test('membership HTTP requires app sessions, verified purchase data and no starter action',async t=>{
  const f=await libraryDB();t.after(()=>f.db.close());
  await f.db.query("UPDATE library_users SET access_kind='apple' WHERE id='reader-a'");
  const token=randomUUID();await f.db.query("INSERT INTO account_identities(subject_hash,user_id,app_account_token) VALUES('subject','reader-a',$1)",[token]);
@@ -22,8 +22,8 @@ test('membership HTTP requires app sessions, verified purchase data and explicit
  assert.equal((await call({action:'status'})).body.allowances.translation.remaining,0);
  assert.equal((await call({action:'transaction',signedTransaction:'forged'})).statusCode,403);
  assert.equal((await call({action:'status'})).body.tier,'free');
- assert.equal((await call({action:'claimStarter'})).body.allowances.translation.remaining,2);
- assert.equal((await call({action:'claimStarter',allowance:100})).statusCode,400);
+ assert.equal((await call({action:'claimStarter'})).statusCode,400);
+ assert.equal((await call({action:'status'})).body.libraryTranslations.remaining,3);
 });
 
 test('notification HTTP verifies the signed envelope before storing any event',async()=>{

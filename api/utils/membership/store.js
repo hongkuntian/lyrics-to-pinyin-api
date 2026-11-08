@@ -1,6 +1,6 @@
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHash} from 'node:crypto';
 import {LibraryError} from '../song-library/store.js';
-import {first,monthlyPeriod,PRODUCTS,STARTER,PRO,PREVIEW} from './policy.js';
+import {first,monthlyPeriod,PRODUCTS,FREE,PRO,PREVIEW} from './policy.js';
 
 async function account(db,userID,{lock=false,includeDisabled=false}={}) {
   const user=await first(db,`SELECT * FROM library_users WHERE id=$1${includeDisabled?'':' AND NOT disabled'}${lock?' FOR UPDATE':''}`,[userID]);
@@ -8,15 +8,27 @@ async function account(db,userID,{lock=false,includeDisabled=false}={}) {
   return user;
 }
 async function entitlement(db,userID,now) {
-  return first(db,`SELECT * FROM membership_subscriptions WHERE user_id=$1 AND NOT revoked
-    AND period_start<=$2 AND expires_at>$2 ORDER BY CASE tier WHEN 'pro' THEN 0 ELSE 1 END,expires_at DESC LIMIT 1`,[userID,now]);
+  return first(db,`SELECT * FROM membership_subscriptions WHERE user_id=$1 AND NOT revoked AND tier='pro'
+    AND period_start<=$2 AND expires_at>$2 ORDER BY expires_at DESC LIMIT 1`,[userID,now]);
 }
 function grantDescription(sub,kind,now) {
-  if(sub?.tier==='pro') {
-    const period=monthlyPeriod(sub.period_start,now),end=new Date(Math.min(+period.end,+new Date(sub.expires_at)));
-    return {key:`pro:${sub.original_transaction_id}:${period.start.toISOString()}`,limit:PRO[kind],expires:end};
-  }
-  return {key:'starter-v1',limit:STARTER[kind],expires:null};
+  if(!sub)return null;
+  const period=monthlyPeriod(sub.period_start,now),end=new Date(Math.min(+period.end,+new Date(sub.expires_at)));
+  return {key:`pro:${sub.original_transaction_id}:${period.start.toISOString()}`,limit:PRO[kind],expires:end};
+}
+const LIBRARY_GRANT='library-free-v1';
+// One durable, idempotent ledger row per account and song document.
+function unlockOperation(userID,documentID) {
+  const hex=createHash('sha256').update(`library-translation:${userID}:${documentID}`).digest('hex');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-8${hex.slice(13,16)}-${(8|parseInt(hex[16],16)&3).toString(16)}${hex.slice(17,20)}-${hex.slice(20,32)}`;
+}
+async function libraryWindow(db,userID,now) {
+  const since=new Date(+new Date(now)-FREE.windowDays*86400000);
+  const rows=(await db.query(`SELECT u.created_at FROM membership_usage u JOIN membership_grants g ON g.id=u.grant_id
+    WHERE g.user_id=$1 AND g.period_key=$2 AND u.state='consumed' AND u.created_at>$3 ORDER BY u.created_at`,[userID,LIBRARY_GRANT,since])).rows;
+  const limit=FREE.libraryTranslationsPerWeek,used=rows.length;
+  const nextAvailableAt=used>=limit&&rows.length?new Date(+new Date(rows[used-limit].created_at)+FREE.windowDays*86400000).toISOString():null;
+  return {unlimited:false,limit,used:Math.min(used,limit),remaining:Math.max(0,limit-used),nextAvailableAt};
 }
 async function usage(db,grant) {
   if(!grant)return 0;
@@ -37,16 +49,39 @@ export async function reserveMemberUsage(db,userID,operationID,kind) {
   }
   const now=(await first(db,'SELECT now() AS now')).now,sub=await entitlement(db,userID,now);
   const terms=grantDescription(sub,kind,now);
-  if(sub?.tier==='pro')await db.query(`INSERT INTO membership_grants(id,user_id,kind,period_key,allowance,expires_at)
+  if(!terms)throw new LibraryError('membership_required',403);
+  await db.query(`INSERT INTO membership_grants(id,user_id,kind,period_key,allowance,expires_at)
     VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(user_id,kind,period_key) DO NOTHING`,[randomUUID(),userID,kind,terms.key,terms.limit,terms.expires]);
   const grant=await first(db,'SELECT * FROM membership_grants WHERE user_id=$1 AND kind=$2 AND period_key=$3 FOR UPDATE',[userID,kind,terms.key]);
-  if(!grant)throw new LibraryError('starter_required',403);
+  if(!grant)throw new LibraryError('membership_required',403);
   if(await usage(db,grant)>=grant.allowance)throw new LibraryError('membership_allowance_exhausted',429);
   await db.query(`INSERT INTO membership_usage(operation_id,user_id,grant_id,kind,state) VALUES($1,$2,$3,$4,'reserved')
     ON CONFLICT(operation_id) DO UPDATE SET grant_id=$3,state='reserved' WHERE membership_usage.state='released'`,[operationID,userID,grant.id,kind]);
 }
 export async function settleMemberUsage(db,operationID,success) {
   await db.query("UPDATE membership_usage SET state=$2 WHERE operation_id=$1 AND state='reserved'",[operationID,success?'consumed':'released']);
+}
+
+// Gates delivery of an existing shared translation. Members, beta and unlimited
+// accounts always read. A free account reads songs it already opened; opening a
+// new song needs an explicit unlock and uses one of its weekly library reads.
+export async function admitLibraryTranslation(database,userID,documentID,{unlock=false}={}) {
+  return database.transaction(async db=>{
+    const user=await account(db,userID,{lock:true});
+    if(user.access_kind==='beta'||user.unlimited_generation)return 'open';
+    const now=(await first(db,'SELECT now() AS now')).now;
+    if(await entitlement(db,userID,now))return 'open';
+    const operation=unlockOperation(userID,documentID);
+    if(await first(db,"SELECT 1 FROM membership_usage WHERE operation_id=$1 AND state='consumed'",[operation]))return 'open';
+    if(!unlock)return 'locked';
+    if((await libraryWindow(db,userID,now)).remaining<=0)throw new LibraryError('library_translation_limit',403);
+    await db.query(`INSERT INTO membership_grants(id,user_id,kind,period_key,allowance) VALUES($1,$2,'translation',$3,$4)
+      ON CONFLICT(user_id,kind,period_key) DO NOTHING`,[randomUUID(),userID,LIBRARY_GRANT,FREE.libraryTranslationsPerWeek]);
+    const grant=await first(db,"SELECT id FROM membership_grants WHERE user_id=$1 AND kind='translation' AND period_key=$2",[userID,LIBRARY_GRANT]);
+    await db.query(`INSERT INTO membership_usage(operation_id,user_id,grant_id,kind,state) VALUES($1,$2,$3,'translation','consumed')
+      ON CONFLICT(operation_id) DO NOTHING`,[operation,userID,grant.id]);
+    return 'open';
+  });
 }
 
 export class MembershipStore {
@@ -59,31 +94,19 @@ export class MembershipStore {
     const sub=await entitlement(this.db,userID,now),allowances={};
     for(const kind of Object.keys(PRO)) {
       const terms=grantDescription(sub,kind,now);
-      const grant=await first(this.db,'SELECT * FROM membership_grants WHERE user_id=$1 AND kind=$2 AND period_key=$3',[userID,kind,terms.key]);
-      const used=await usage(this.db,grant),limit=grant?.allowance??(sub?.tier==='pro'?terms.limit:0);
-      allowances[kind]={limit,used,remaining:Math.max(0,limit-used),resetsAt:terms.expires?.toISOString()??null};
+      const grant=terms&&await first(this.db,'SELECT * FROM membership_grants WHERE user_id=$1 AND kind=$2 AND period_key=$3',[userID,kind,terms.key]);
+      const used=await usage(this.db,grant),limit=grant?.allowance??terms?.limit??0;
+      allowances[kind]={limit,used,remaining:Math.max(0,limit-used),resetsAt:terms?.expires.toISOString()??null};
     }
-    const claimed=!!await first(this.db,"SELECT 1 FROM membership_grants WHERE user_id=$1 AND period_key='starter-v1' LIMIT 1",[userID]);
+    const unlimitedReading=user.access_kind==='beta'||user.unlimited_generation===true||!!sub;
+    const libraryTranslations=unlimitedReading?{unlimited:true,limit:null,used:0,remaining:null,nextAvailableAt:null}:await libraryWindow(this.db,userID,now);
     const preview=await first(this.db,'SELECT * FROM membership_preview_claims WHERE user_id=$1',[userID]);
     return {account:{id:userID,kind:user.access_kind,appAccountToken:identity?.app_account_token??null},
       tier:sub?.tier??'free',expiresAt:sub?new Date(sub.expires_at).toISOString():null,isBeta:user.access_kind==='beta',
-      generationUnlimited:user.unlimited_generation===true,allowances,starter:{claimed,eligible:user.access_kind==='apple'&&!claimed},
+      generationUnlimited:user.unlimited_generation===true,allowances,libraryTranslations,
       preview:{available:user.access_kind==='apple'&&!preview&&settings.live_enabled,expiresAt:preview?new Date(preview.expires_at).toISOString():null},
       capabilities:{purchases:settings.purchases_enabled,liveLyrics:settings.live_enabled,widgets:settings.widgets_enabled,carPlay:settings.carplay_enabled},
       products:Object.entries(PRODUCTS).map(([id,value])=>({id,...value}))};
-  }
-  async claimStarter(userID) {
-    await this.db.transaction(async db=>{
-      const settings=await first(db,'SELECT * FROM membership_settings WHERE id=1 FOR UPDATE');
-      const user=await account(db,userID,{lock:true});
-      if(user.access_kind!=='apple')throw new LibraryError('sign_in_required',403);
-      if(await first(db,"SELECT 1 FROM membership_grants WHERE user_id=$1 AND period_key='starter-v1'",[userID]))return;
-      const daily=Number((await first(db,"SELECT count(*) AS n FROM membership_grants WHERE period_key='starter-v1' AND kind='translation' AND created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'")).n);
-      if(daily>=settings.starter_daily_limit)throw new LibraryError('starter_temporarily_unavailable',503);
-      for(const [kind,limit] of Object.entries(STARTER))await db.query(`INSERT INTO membership_grants(id,user_id,kind,period_key,allowance)
-        VALUES($1,$2,$3,'starter-v1',$4) ON CONFLICT(user_id,kind,period_key) DO NOTHING`,[randomUUID(),userID,kind,limit]);
-    });
-    return this.snapshot(userID);
   }
   async recordTransaction(userID,value,{serverNotification=false}={}) {
     await this.db.transaction(async db=>{
@@ -141,7 +164,7 @@ export async function admitMemberRelay(database,userID,input) {
     const now=(await first(db,'SELECT now() AS now')).now,sub=await entitlement(db,userID,now);
     if(!sub) {
       const preview=await first(db,'SELECT * FROM membership_preview_claims WHERE user_id=$1 FOR UPDATE',[userID]);
-      if(!preview)throw new LibraryError('plus_required',403);
+      if(!preview)throw new LibraryError('membership_required',403);
       if(preview.activity_id!==input.activityID||preview.recording_id!==input.state.recordingID)throw new LibraryError('live_preview_recording_mismatch',403);
       if(new Date(preview.expires_at)<=now||preview.request_count>=PREVIEW.requests)throw new LibraryError('live_preview_ended',403);
     }

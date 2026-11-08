@@ -6,11 +6,12 @@ import {createWriterAuthContext} from '../../api/utils/app-auth/auth-context.js'
 import {flushSpotifyCleanup} from '../../api/utils/spotify/revocation.js';
 import {libraryDB} from '../helpers/library-db.js';
 import {AccountStore} from '../../api/utils/membership/accounts.js';
-import {MembershipStore} from '../../api/utils/membership/store.js';
+import {MembershipStore,admitLibraryTranslation} from '../../api/utils/membership/store.js';
 import {AppAuthStore} from '../../api/utils/app-auth/store.js';
 import {createAccountHandler} from '../../api/account.js';
 import {createMockRes} from '../helpers/mock-http.js';
 import {digest} from '../../api/utils/song-library/store.js';
+import {activateMembership} from '../helpers/membership.js';
 import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.js';
 const policy={audience:'test',environment:'production',prefix:'9ESZX68J8U',bundles:['com.test.Lyrica']};
 const bundleID=policy.bundles[0],credential='lyra_g_'+'a'.repeat(43),keyID=Buffer.alloc(32,3).toString('base64');
@@ -67,22 +68,22 @@ test('guest nonce binds key and bundle and fails closed when access is disabled'
   await f.db.query('UPDATE membership_settings SET public_access_enabled=false');
   await assert.rejects(f.accounts.guest(body),{code:'public_access_unavailable'});
 });
-test('Apple login migrates only this device and converges on the same account and starter',async t=>{
+test('Apple login migrates only this device and converges on the same account and membership',async t=>{
   const f=await fixture(t),g=await guest(f),a=await session(f,g),first=await login(f,a.user);
   await assert.rejects(f.auth.authenticate(a.session),{code:'session_expired'});
   const appleSession=await session(f,{...g,token:first.credential},2);
-  const members=new MembershipStore(f.store.db),snapshot=await members.claimStarter(first.userID);
-  assert.equal(snapshot.allowances.translation.remaining,2);
+  const members=new MembershipStore(f.store.db);await activateMembership(f.db,first.userID);const snapshot=await members.snapshot(first.userID);
+  assert.equal(snapshot.allowances.translation.remaining,20);
   const other=await guest(f,Buffer.alloc(32,4).toString('base64'),'lyra_g_'+'b'.repeat(43));
   const second=await login(f,(await session(f,other)).user);
   assert.equal(first.userID,second.userID);assert.equal((await members.snapshot(second.userID)).account.appAccountToken,snapshot.account.appAccountToken);
   assert.equal((await f.auth.authenticate(appleSession.session)).id,first.userID);
-  assert.equal((await members.claimStarter(second.userID)).allowances.translation.limit,2);
+  assert.equal((await members.snapshot(second.userID)).allowances.translation.limit,20);
 });
 test('account deletion requires matching fresh Apple proof, revokes devices and preserves spent grant identity',async t=>{
   const f=await fixture(t),g=await guest(f),loginResult=await login(f,(await session(f,g)).user);
   const signed=await session(f,{...g,token:loginResult.credential},2),members=new MembershipStore(f.store.db);
-  await members.claimStarter(signed.user.id);
+  await admitLibraryTranslation(f.store.db,signed.user.id,'opened-song',{unlock:true});
   const {challenge}=await f.accounts.challenge({purpose:'delete',bundleID},signed.user);
   const body={challenge,bundleID,identityToken:'identity',authorizationCode:'code'};
   const authenticate=f.apple.authenticate;f.apple.authenticate=async()=>({subjectHash:'other',refreshTokenEncrypted:'encrypted'});
@@ -92,7 +93,7 @@ test('account deletion requires matching fresh Apple proof, revokes devices and 
   const retained=(await f.db.query('SELECT * FROM account_identities')).rows[0];assert.equal(retained.refresh_token_encrypted,null);assert.ok(retained.deleted_at);
   const returning=await guest(f,Buffer.alloc(32,5).toString('base64'),'lyra_g_'+'c'.repeat(43));
   const result=await login(f,(await session(f,returning)).user);assert.equal(result.userID,signed.user.id);
-  assert.equal((await members.snapshot(result.userID)).starter.claimed,true);
+  assert.equal((await members.snapshot(result.userID)).libraryTranslations.used,1);
 });
 test('public account HTTP rejects anonymous identity operations, surplus fields and malformed attestations',async t=>{
   const f=await fixture(t),handler=createAccountHandler({store:f.accounts,authStore:f.auth});
@@ -376,16 +377,16 @@ test('fresh target credential unique failure rolls back identity creation and no
  assert.deepEqual(await accountState(f),before);
 });
 
-for(const sameOwner of [true,false])test('Apple '+(sameOwner?'A-to-A':'A-to-B')+' preserves original starter and user data while moving only the exact device',async t=>{
+for(const sameOwner of [true,false])test('Apple '+(sameOwner?'A-to-A':'A-to-B')+' preserves opened translations and user data while moving only the exact device',async t=>{
  const f=await fixture(t),{current,g}=await signedAccount(f),members=new MembershipStore(f.store.db);
- const original=await members.claimStarter(current.user.id);
+ await admitLibraryTranslation(f.store.db,current.user.id,'opened-song',{unlock:true});const original=await members.snapshot(current.user.id);
  await f.db.query('UPDATE library_users SET unlimited_generation=true WHERE id=$1',[current.user.id]);
  const other=await sibling(f,g);
  if(!sameOwner)f.apple.authenticate=async()=>({subjectHash:digest('second-subject'),refreshTokenEncrypted:'second-encrypted'});
  const result=await login(f,current.user);
  assert.equal(result.userID===current.user.id,sameOwner);
  const retained=await members.snapshot(current.user.id);
- assert.equal(retained.account.appAccountToken,original.account.appAccountToken);assert.equal(retained.starter.claimed,true);
+ assert.equal(retained.account.appAccountToken,original.account.appAccountToken);assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM membership_usage WHERE user_id=$1',[current.user.id])).rows[0].n),1);
  assert.equal((await f.db.query('SELECT unlimited_generation FROM library_users WHERE id=$1',[current.user.id])).rows[0].unlimited_generation,true);
  assert.equal((await f.db.query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[other.user.keyID])).rows[0].user_id,current.user.id);
  assert.equal((await f.db.query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[current.user.keyID])).rows[0].user_id,result.userID);

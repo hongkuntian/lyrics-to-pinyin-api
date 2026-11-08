@@ -4,13 +4,14 @@ import {libraryDB,source} from '../helpers/library-db.js';
 import {createSongLibraryService} from '../../api/song-library.js';
 import {generateExplanation} from '../../api/utils/song-library/study-explanation.js';
 import {digest} from '../../api/utils/song-library/store.js';
+import {activateMembership} from '../helpers/membership.js';
 import {MembershipStore} from '../../api/utils/membership/store.js';
 
 async function fixture(t,{invalidEvidence=false}={}) {
  const {db,store}=await libraryDB();t.after(()=>db.close());
  const pending=[];let calls=0;
  await db.query("UPDATE library_users SET access_kind='apple' WHERE id='reader-a'");
- const membership=new MembershipStore(store.db);await membership.claimStarter('reader-a');
+ const membership=new MembershipStore(store.db);await activateMembership(store.db,'reader-a');await store.db.query("UPDATE library_users SET access_kind='apple' WHERE id='reader-a'");
  const handler=createSongLibraryService({store,selectionRevision:'test',apiKey:'fixture',loadLyrics:async()=>source.response,
   explainFn:(doc,translation,selection,options)=>generateExplanation(doc,translation,selection,{...options,fetchFn:async(_url,request)=>{
    calls++;const body=JSON.parse(request.body);
@@ -38,7 +39,7 @@ test('English v2 admission validates real generator evidence, persists the uncha
  assert.equal(Object.hasOwn(ready.explanation,'evidence'),false);
  assert.equal((await f.call({...f.request,resumeOnly:true})).body.explanation.id,ready.explanation.id);
  assert.equal(f.calls(),1);assert.equal(Number((await f.store.budget()).held),0);
- assert.equal((await f.membership.snapshot('reader-a')).allowances.study.remaining,9);
+ assert.equal((await f.membership.snapshot('reader-a')).allowances.study.remaining,79);
  assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM translation_jobs')).rows[0].n),0);
 });
 
@@ -46,7 +47,7 @@ test('unusable generated evidence settles provider spend, refunds Study allowanc
  const f=await fixture(t,{invalidEvidence:true});assert.equal((await f.call({...f.request,allowGeneration:true})).code,202);await f.drain();
  const failed=(await f.call({...f.request,readOnly:true})).body;
  assert.equal(failed.state,'failed');assert.equal(failed.code,'invalid_explanation_evidence');
- assert.equal((await f.membership.snapshot('reader-a')).allowances.study.remaining,10);
+ assert.equal((await f.membership.snapshot('reader-a')).allowances.study.remaining,80);
  const budget=await f.store.budget();assert.ok(Number(budget.daily)>0);assert.equal(Number(budget.held),0);
  assert.equal((await f.call({...f.request,resumeOnly:true})).body.state,'failed');assert.equal(f.calls(),1);
  assert.equal((await f.db.query('SELECT content FROM study_explanations')).rows[0].content,null);

@@ -14,6 +14,7 @@ import {generate,requestBody,reservationMicros,translationRecipe} from './utils/
 import {translationDelivery} from './utils/song-library/translation-delivery.js';
 import {lineSelections,lineKey,lineBody,generateLine,publicLine,LINE_RECIPE} from './utils/song-library/study-line.js';
 import {executeTranslationJob} from './utils/song-library/translation-worker.js';
+import {admitLibraryTranslation} from './utils/membership/store.js';
 import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
 
 import {canonicalTarget,environmentLanguagePolicy,requireDirection,capabilities} from './utils/song-library/languages.js';
@@ -28,7 +29,7 @@ import {shouldRetainLyricDocument} from './utils/song-library/lyric-retention.js
 import {lyricResponseLifetimeMs} from './utils/lyric-selection.js';
 
 export const config={maxDuration:300,supportsResponseStreaming:true};
-const actions={selected_source:['provider','itemID','query','expectedTextHash'],capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly','delivery'],explain_line:['documentID','sourceHash','contractVersion','studyText','manifest','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],current:['documentID','sourceHash','revisionID','target'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
+const actions={selected_source:['provider','itemID','query','expectedTextHash'],capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly','delivery','unlock'],explain_line:['documentID','sourceHash','contractVersion','studyText','manifest','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],current:['documentID','sourceHash','revisionID','target','unlock'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
 export function lyricLoader(handler=createMusicRomanizeService()) {
   return async (recording,{refresh=false,delivery}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
@@ -39,7 +40,8 @@ export function lyricLoader(handler=createMusicRomanizeService()) {
 }
 export function createSongLibraryService({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,lineFn=generateLine,apiKey=process.env.OPENAI_API_KEY,
   selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null,pronunciationFn=annotationFor,pronunciationProfiles=enabledProfiles,
-  lyricSourceNeedsRefreshFn=lyricSourceNeedsRefresh,loadSelectedSource=createLyricSourceLoader(),selectedSourceTimeoutMs=6000}={}) {
+  lyricSourceNeedsRefreshFn=lyricSourceNeedsRefresh,loadSelectedSource=createLyricSourceLoader(),selectedSourceTimeoutMs=6000,
+  translationAccess=(store,userID,documentID,options)=>admitLibraryTranslation(store.db,userID,documentID,options)}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
   const execute=(db,id,doc,observer=null)=>executeTranslationJob(db,id,{apiKey,generateFn,doc,observer});
   return withLyricsDelivery(async(req,res)=> {
@@ -67,7 +69,8 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       const policy=languagePolicy??environmentLanguagePolicy();
       if(input.delivery!==undefined&&input.delivery!=='progressive-v1')throw new LibraryError('invalid_request',400);
       const launch=async(job,doc,target)=>{
-        if(input.delivery!=='progressive-v1'){
+        // Draft lines are translation content: stream them only to accounts that may read it.
+        if(input.delivery!=='progressive-v1'||await translationAccess(db,user.id,doc.id,{unlock:false})!=='open'){
           waitUntilFn(execute(db,job.id,doc).catch(()=>logger.error('translation_worker_storage_failure',{jobID:job.id})));return false;
         }
         const observer=translationDelivery(res,doc,target,job);
@@ -157,7 +160,12 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         await checkAccess(doc);
         if(doc.sourceHash!==input.sourceHash)throw new LibraryError('source_changed');
         const target=canonicalTarget(input.target);
+        if(input.unlock!==undefined&&input.unlock!==true&&input.unlock!=='true')throw new LibraryError('invalid_request',400);
         const saved=await db.translation(doc.id,target);
+        // Reading a shared translation is free for members. A free account opens
+        // a new song only through an explicit unlock; reopening it stays free.
+        const readable=async()=>await translationAccess(db,user.id,doc.id,{unlock:!!input.unlock})==='open';
+        const locked=()=>send(200,{state:'locked',target,documentID:doc.id,sourceHash:doc.sourceHash});
         // Revision checks never reserve money, queue generation, or require an OpenAI key.
         if(input.action==='current') {
           if(input.revisionID!==undefined&&(typeof input.revisionID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(input.revisionID)))
@@ -167,9 +175,10 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
             return send(200,job?{state:job.state,job}:{state:'missing',target,documentID:doc.id,sourceHash:doc.sourceHash});
           }
           if(saved.id===input.revisionID)return send(200,{state:'unchanged',revisionID:saved.id,target,documentID:doc.id,sourceHash:doc.sourceHash});
+          if(!await readable())return locked();
           return send(200,{state:'ready',translation:publicTranslation(saved,doc)});
         }
-        if(saved)return send(200,{state:'ready',translation:publicTranslation(saved,doc)});
+        if(saved)return await readable()?send(200,{state:'ready',translation:publicTranslation(saved,doc)}):locked();
         const existing=await db.existingTranslationJob(doc,target);
         if(existing) {
           if(existing.state==='queued') {
@@ -190,7 +199,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         requireDirection(policy,'translation',doc.response.song.language,target);
         const body=requestBody(doc,target);
         const result=await db.reserve({userID:user.id,documentID:doc.id,target,recipe:translationRecipe(target),reservedMicros:reservationMicros(body),generationRequest:body,allowGeneration:!!input.allowGeneration});
-        if(result.kind==='ready')return send(200,{state:'ready',translation:publicTranslation(result.translation,doc)});
+        if(result.kind==='ready')return await readable()?send(200,{state:'ready',translation:publicTranslation(result.translation,doc)}):locked();
         if(result.job.state==='queued'&&await launch(result.job,doc,target))return;
         if(result.kind==='unknown'||result.kind==='failed')return send(409,{state:result.kind,job:result.job,code:result.job.errorCode??'review_required'});
         res.setHeader('Retry-After','3');return send(202,{state:'preparing',job:result.job});
@@ -264,6 +273,8 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         const saved=job.state==='ready'?await db.translation(job.documentID,job.target):null;
         const doc=saved?await db.document(job.documentID):null;
         if(saved&&!doc)throw new LibraryError('document_not_found',404);
+        if(saved&&await translationAccess(db,user.id,doc.id,{unlock:false})!=='open')
+          return send(200,{state:'locked',job,target:job.target,documentID:doc.id,sourceHash:doc.sourceHash});
         return send(200,{state:job.state,job,...(saved?{translation:publicTranslation(saved,doc)}:{})});
       }
       if(typeof input.documentID==='string'){const source=await db.document(input.documentID);if(source)await checkAccess(source);}

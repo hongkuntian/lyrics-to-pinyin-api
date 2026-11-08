@@ -12,7 +12,7 @@ const {values,positionals}=parseArgs({allowPositionals:true,options:{
   'database-config-file':{type:'string'},'account-config-file':{type:'string'},set:{type:'string',multiple:true}
 }});
 const booleans=['public_access_enabled','purchases_enabled','live_enabled','widgets_enabled','carplay_enabled'];
-const limits=['starter_daily_limit','preview_daily_limit','relay_monthly_limit'];
+const limits=['preview_daily_limit','relay_monthly_limit'];
 let client;
 try {
   const command=positionals[0];

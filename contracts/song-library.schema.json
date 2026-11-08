@@ -41,6 +41,34 @@
       "required": [
         "version",
         "state",
+        "target",
+        "documentID",
+        "sourceHash"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "locked"
+        },
+        "target": {
+          "type": "string"
+        },
+        "documentID": {
+          "type": "string"
+        },
+        "sourceHash": {
+          "type": "string"
+        }
+      },
+      "description": "A saved shared translation exists but this free account has not opened this song; it carries no translation content. Send unlock=true on current to use one weekly library read."
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "state",
         "document"
       ],
       "properties": {

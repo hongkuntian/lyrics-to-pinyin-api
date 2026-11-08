@@ -15,7 +15,8 @@ test('membership responses keep account, allowances and actual capabilities in a
   assert.deepEqual(validateSchema(schema,value),[]);
   assert.equal(value.account.kind,kind);assert.equal(value.capabilities.purchases,false);
  }
- const value={version:1,...await store.claimStarter('reader-a')};
- assert.deepEqual(validateSchema(schema,value),[]);assert.equal(value.allowances.study.remaining,10);
+ const value={version:1,...await store.snapshot('reader-a')};
+ assert.equal(value.libraryTranslations.remaining,3);
  assert.ok(validateSchema(schema,{...value,tier:'lifetime'}).length);
+ assert.ok(validateSchema(schema,{...value,tier:'plus'}).length);
 });

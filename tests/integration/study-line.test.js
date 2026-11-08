@@ -54,10 +54,10 @@ test('progressive translation final is persisted before complete and cached repl
 test('one line batch consumes one existing member Study allowance, never one per word',async t=>{
  const f=await fixture(t);
  await f.db.query("UPDATE library_users SET access_kind='apple' WHERE id='reader-a'");
- const {MembershipStore}=await import('../../api/utils/membership/store.js');const membership=new MembershipStore(f.store.db);await membership.claimStarter('reader-a');
- assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,10);
+ const {MembershipStore}=await import('../../api/utils/membership/store.js');const membership=new MembershipStore(f.store.db);await (await import('../helpers/membership.js')).activateMembership(f.store.db,'reader-a');
+ assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,80);
  assert.equal((await f.call(f.request)).body.code,'generation_required');
  await f.call({...f.request,allowGeneration:true});await Promise.all(f.pending);
- assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,9);
- await f.call({...f.request,readOnly:true});assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,9);assert.equal(f.calls(),1);
+ assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,79);
+ await f.call({...f.request,readOnly:true});assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,79);assert.equal(f.calls(),1);
 });

@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {libraryDB,source} from '../helpers/library-db.js';
-import {MembershipStore,reserveMemberUsage,settleMemberUsage,admitMemberRelay} from '../../api/utils/membership/store.js';
+import {MembershipStore,reserveMemberUsage,settleMemberUsage,admitMemberRelay,admitLibraryTranslation} from '../../api/utils/membership/store.js';
 
 async function fixture(t) {
   const {db,store}=await libraryDB();t.after(()=>db.close());
@@ -11,34 +11,60 @@ async function fixture(t) {
   await db.query("INSERT INTO account_identities(subject_hash,user_id,app_account_token) VALUES('subject-a','reader-a',$1)",[appToken]);
   return {db,store,member:new MembershipStore(store.db),appToken};
 }
-test('starter is explicit, account scoped, idempotent and has an acquisition ceiling',async t=>{
+test('free accounts cannot generate; there is no starter grant',async t=>{
   const {db,member}=await fixture(t);
-  assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,0);
-  await assert.rejects(member.claimStarter('reader-b'),e=>e.code==='sign_in_required');
-  await Promise.all([member.claimStarter('reader-a'),member.claimStarter('reader-a')]);
   const snapshot=await member.snapshot('reader-a');
-  assert.equal(snapshot.allowances.translation.remaining,2);assert.equal(snapshot.allowances.study.remaining,10);
-  assert.equal(Number((await db.query('SELECT count(*) AS n FROM membership_grants')).rows[0].n),2);
-  await db.query('UPDATE membership_settings SET starter_daily_limit=0');
-  assert.equal((await member.claimStarter('reader-a')).starter.claimed,true);
-  await db.query("UPDATE library_users SET access_kind='apple' WHERE id='reader-b'");
-  await assert.rejects(member.claimStarter('reader-b'),e=>e.code==='starter_temporarily_unavailable');
+  assert.equal(snapshot.allowances.translation.remaining,0);assert.equal(snapshot.allowances.study.remaining,0);
+  assert.equal(snapshot.starter,undefined);assert.equal(snapshot.tier,'free');
+  assert.deepEqual(snapshot.libraryTranslations,{unlimited:false,limit:3,used:0,remaining:3,nextAvailableAt:null});
+  assert.equal(member.claimStarter,undefined);
+  await assert.rejects(db.transaction(tx=>reserveMemberUsage(tx,'reader-a',randomUUID(),'translation')),e=>e.code==='membership_required');
+  await db.query("UPDATE library_users SET access_kind='guest' WHERE id='reader-b'");
+  await assert.rejects(db.transaction(tx=>reserveMemberUsage(tx,'reader-b',randomUUID(),'study')),e=>e.code==='sign_in_required');
+  assert.equal(Number((await db.query('SELECT count(*) AS n FROM membership_grants')).rows[0].n),0);
 });
+const transaction=token=>({originalID:'1000',transactionID:'1001',productID:'com.hongkuntian.Lyra.pro.annual',
+  tier:'pro',environment:'Production',appAccountToken:token,starts:new Date(Date.now()-86400000),expires:new Date(Date.now()+300*86400000),signedAt:new Date(),revoked:false});
 test('reservations enforce each allowance; repeat operations and failed work never double debit',async t=>{
-  const {db,member}=await fixture(t);await member.claimStarter('reader-a');
+  const {db,member,appToken}=await fixture(t);await member.recordTransaction('reader-a',transaction(appToken));
   const a=randomUUID(),b=randomUUID(),c=randomUUID();
   const reserve=id=>db.transaction(tx=>reserveMemberUsage(tx,'reader-a',id,'translation'));
   await Promise.all([reserve(a),reserve(a),reserve(b)]);
+  await db.query("UPDATE membership_grants SET allowance=2 WHERE kind='translation'");
   await assert.rejects(reserve(c),e=>e.code==='membership_allowance_exhausted');
   await settleMemberUsage(db,a,false);await settleMemberUsage(db,a,false);
   assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,1);
   await reserve(c);await settleMemberUsage(db,c,true);await settleMemberUsage(db,c,false);
   assert.equal((await member.snapshot('reader-a')).allowances.translation.used,2);
   await db.transaction(tx=>reserveMemberUsage(tx,'reader-a',randomUUID(),'study'));
-  assert.equal((await member.snapshot('reader-a')).allowances.study.remaining,9);
+  assert.equal((await member.snapshot('reader-a')).allowances.study.remaining,79);
 });
-const transaction=token=>({originalID:'1000',transactionID:'1001',productID:'com.hongkuntian.Lyra.pro.annual',
-  tier:'pro',environment:'Production',appAccountToken:token,starts:new Date(Date.now()-86400000),expires:new Date(Date.now()+300*86400000),signedAt:new Date(),revoked:false});
+test('free accounts open three new library translations per rolling week and keep opened songs',async t=>{
+  const {db,member,appToken}=await fixture(t);
+  const admit=(user,doc,unlock=false)=>admitLibraryTranslation(db,user,doc,{unlock});
+  assert.equal(await admit('reader-a','doc-1'),'locked');
+  assert.equal((await member.snapshot('reader-a')).libraryTranslations.remaining,3);
+  await Promise.all([admit('reader-a','doc-1',true),admit('reader-a','doc-1',true)]);
+  assert.equal(await admit('reader-a','doc-1'),'open');
+  assert.equal(await admit('reader-a','doc-2',true),'open');assert.equal(await admit('reader-a','doc-3',true),'open');
+  let snapshot=(await member.snapshot('reader-a')).libraryTranslations;
+  assert.equal(snapshot.used,3);assert.equal(snapshot.remaining,0);assert.ok(new Date(snapshot.nextAvailableAt)>new Date());
+  await assert.rejects(admit('reader-a','doc-4',true),e=>e.code==='library_translation_limit'&&e.status===403);
+  assert.equal(await admit('reader-a','doc-4'),'locked');
+  assert.equal(await admit('reader-a','doc-2',true),'open');
+  await db.query("UPDATE membership_usage SET created_at=now()-interval '8 days' WHERE operation_id=(SELECT operation_id FROM membership_usage ORDER BY created_at LIMIT 1)");
+  snapshot=(await member.snapshot('reader-a')).libraryTranslations;
+  assert.equal(snapshot.remaining,1);assert.equal(snapshot.nextAvailableAt,null);
+  assert.equal(await admit('reader-a','doc-1'),'open');
+  assert.equal(await admit('reader-a','doc-4',true),'open');
+  await db.query("UPDATE library_users SET access_kind='guest' WHERE id='reader-b'");
+  assert.equal(await admit('reader-b','doc-1'),'locked');assert.equal(await admit('reader-b','doc-1',true),'open');
+  await member.recordTransaction('reader-a',transaction(appToken));
+  assert.equal(await admit('reader-a','doc-9'),'open');
+  assert.equal((await member.snapshot('reader-a')).libraryTranslations.unlimited,true);
+  await db.query("UPDATE library_users SET access_kind='beta' WHERE id='reader-b'");
+  assert.equal(await admit('reader-b','doc-8'),'open');
+});
 test('verified purchases bind one account; old restore data cannot reverse revocation',async t=>{
   const {db,member,appToken}=await fixture(t),value=transaction(appToken);
   let snapshot=await member.recordTransaction('reader-a',value);
@@ -50,7 +76,7 @@ test('verified purchases bind one account; old restore data cannot reverse revoc
   await member.recordTransaction('reader-a',{...value,revoked:true,signedAt:new Date(+value.signedAt+1000)});
   await member.recordTransaction('reader-a',value);
   assert.equal((await member.snapshot('reader-a')).tier,'free');
-  await assert.rejects(db.transaction(tx=>reserveMemberUsage(tx,'reader-a',randomUUID(),'study')),e=>e.code==='starter_required');
+  await assert.rejects(db.transaction(tx=>reserveMemberUsage(tx,'reader-a',randomUUID(),'study')),e=>e.code==='membership_required');
 });
 test('signed refund notifications remain effective while an account is deleted',async t=>{
   const {db,member,appToken}=await fixture(t),value=transaction(appToken);
@@ -83,22 +109,24 @@ test('one live preview binds a recording and activity, expires and caps attempte
 test('paid relay access follows expiry and the project budget while preserving beta compatibility',async t=>{
   const {db,member,appToken}=await fixture(t),value=transaction(appToken),input={activityID:'a',state:{recordingID:'r'}};
   await db.query('UPDATE membership_settings SET live_enabled=true,relay_monthly_limit=1');
-  await member.recordTransaction('reader-a',{...value,tier:'plus',productID:'com.hongkuntian.Lyra.plus.monthly'});
+  await member.recordTransaction('reader-a',{...value,productID:'com.hongkuntian.Lyra.pro.monthly'});
   await admitMemberRelay(db,'reader-a',input);
   await assert.rejects(admitMemberRelay(db,'reader-a',input),e=>e.code==='live_lyrics_budget_exhausted');
   await admitMemberRelay(db,'reader-b',input);
   await db.query("UPDATE membership_subscriptions SET expires_at=now()-interval '1 second'");
-  await assert.rejects(admitMemberRelay(db,'reader-a',input),e=>e.code==='plus_required');
+  await assert.rejects(admitMemberRelay(db,'reader-a',input),e=>e.code==='membership_required');
 });
 test('translation admission uses membership credits only for genuinely new work',async t=>{
-  const {db,member,store}=await fixture(t);await member.claimStarter('reader-a');await store.saveDocument(source);
+  const {member,store,appToken}=await fixture(t);await store.saveDocument(source);
   const args={userID:'reader-a',documentID:source.id,target:'en',recipe:'test',reservedMicros:10};
+  await assert.rejects(store.reserve({...args,allowGeneration:true}),e=>e.code==='membership_required');
+  await member.recordTransaction('reader-a',transaction(appToken));
   await assert.rejects(store.reserve(args),e=>e.code==='generation_required');
-  assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,2);
+  assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,20);
   const work=await store.reserve({...args,allowGeneration:true});assert.equal(work.kind,'created');
-  assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,1);
+  assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,19);
   assert.equal((await store.reserve(args)).kind,'pending');
-  assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,1);
+  assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,19);
   await store.claim(work.job.id);await store.fail(work.job.id,'provider_error',0);
-  assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,2);
+  assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,20);
 });

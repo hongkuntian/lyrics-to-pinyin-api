@@ -9,7 +9,7 @@ export async function checkSpotifyEligibility(db,userID,input){
  if(!row.live_enabled)throw new LibraryError('live_lyrics_unavailable',503);if(row.access_kind!=='apple')throw new LibraryError('sign_in_required',403);
  const sub=await first('SELECT 1 FROM membership_subscriptions WHERE user_id=$1 AND NOT revoked AND period_start<=now() AND expires_at>now() LIMIT 1',[userID]);
  if(!sub){const preview=await first('SELECT *,expires_at>now() AS valid FROM membership_preview_claims WHERE user_id=$1',[userID]);
-  if(!preview)throw new LibraryError('plus_required',403);
+  if(!preview)throw new LibraryError('membership_required',403);
   if(preview.activity_id!==input.activityID||preview.recording_id!==input.state.recordingID)throw new LibraryError('live_preview_recording_mismatch',403);
   if(!preview.valid||preview.request_count>=PREVIEW.requests)throw new LibraryError('live_preview_ended',403);
  }
