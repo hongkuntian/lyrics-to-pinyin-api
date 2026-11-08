@@ -85,9 +85,9 @@ export function corpusFile(name='beta') {
   if(!Object.hasOwn(corpora,name))throw new Error('invalid_evaluation_corpus');
   return new URL(`../evaluation/multilingual/${corpora[name]}`,import.meta.url);
 }
-export async function runEvaluation(env=process.env) {
+export async function runEvaluation(env=process.env,log=console.log) {
   const corpus=JSON.parse(await readFile(corpusFile(env.LYRA_EVALUATION_CORPUS||'beta'),'utf8'));
-  await evaluate({apiKey:env.OPENAI_API_KEY,corpus,onlyDirections:env.LYRA_EVALUATION_DIRECTIONS?JSON.parse(env.LYRA_EVALUATION_DIRECTIONS):null});
+  await evaluate({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections:env.LYRA_EVALUATION_DIRECTIONS?JSON.parse(env.LYRA_EVALUATION_DIRECTIONS):null});
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
   if(process.argv[2]!=='--live')throw new Error('explicit_live_flag_required');
