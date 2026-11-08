@@ -43,21 +43,21 @@ export async function verifyBuildSchema({env=process.env,open=database,migrate=m
   } finally {await db?.close();}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
+  // The packaging wrapper discards a preflight's stdout and reports only
+  // stderr of a failed step, so an evaluation-only build logs records there.
+  const evaluationOnly=process.env.LYRA_EVALUATION_ONLY_BUILD==='1',log=evaluationOnly?console.error:console.log;
   try {
-    await verifyBuildSchema();
+    await verifyBuildSchema({log});
     await evaluateContentInBuild();
     if(process.env.LYRA_MULTILINGUAL_EVALUATE_ON_BUILD==='1') {
       if(process.env.VERCEL!=='1'||process.env.VERCEL_ENV!=='production')throw new Error('evaluation_requires_production_build');
       // Vercel's legacy multi-function builder can invoke this hook repeatedly.
       // One build container evaluates once; other invocations leave it alone.
       const claim=await open('/tmp/lyra-multilingual-evaluation.lock','wx').catch(error=>{if(error.code!=='EEXIST')throw error;});
-      // The packaging wrapper discards a preflight's stdout and reports only
-      // stderr of a failed step, so an evaluation-only build logs records there.
-      const evaluationOnly=process.env.LYRA_EVALUATION_ONLY_BUILD==='1';
-      if(claim){await claim.close();await runEvaluation(process.env,evaluationOnly?console.error:console.log);}
-      // An evaluation-only build must never become a promotable deployment.
-      if(evaluationOnly)throw new Error('evaluation_only_complete');
+      if(claim){await claim.close();await runEvaluation(process.env,log);}
     }
+    // An evaluation-only build must never become a promotable deployment.
+    if(evaluationOnly)throw new Error('evaluation_only_complete');
   }
   catch(error) {console.error(JSON.stringify({event:'library_build_failed',code:buildFailureCode(error)}));process.exitCode=1;}
 }
