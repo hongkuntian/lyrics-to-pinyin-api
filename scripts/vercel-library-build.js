@@ -56,8 +56,15 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
       const claim=await open('/tmp/lyra-multilingual-evaluation.lock','wx').catch(error=>{if(error.code!=='EEXIST')throw error;});
       if(claim){await claim.close();await runEvaluation(process.env,log);}
     }
-    // An evaluation-only build must never become a promotable deployment.
-    if(evaluationOnly)throw new Error('evaluation_only_complete');
+    if(evaluationOnly) {
+      // Secret policy values are redacted from build logs; fingerprints let an
+      // operator compare the live policy with a versioned admission file.
+      const {createHash}=await import('node:crypto'),policy=environmentLanguagePolicy(process.env);
+      const fingerprint=list=>({count:list.length,sha256:createHash('sha256').update(JSON.stringify(list)).digest('hex')});
+      log(JSON.stringify({event:'language_policy_fingerprint',translation:fingerprint(policy.translation),explanation:fingerprint(policy.explanation)}));
+      // An evaluation-only build must never become a promotable deployment.
+      throw new Error('evaluation_only_complete');
+    }
   }
   catch(error) {console.error(JSON.stringify({event:'library_build_failed',code:buildFailureCode(error)}));process.exitCode=1;}
 }
