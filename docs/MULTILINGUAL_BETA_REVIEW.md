@@ -138,3 +138,21 @@ inferred and Urdu written the same way is indistinguishable. Responses cached be
 this change keep their old label until they expire, so those songs stay English-only
 until refreshed. Short Indonesian passages can still be labelled Malay (`zlm`); no
 `zlm` direction is admitted.
+
+## Personal names that are common words (8 November 2026)
+
+Recipes `song-clause-6-roles-2` (English) and `song-multilingual-4` add one rule: a
+word that is also a common noun or a natural thing but acts as a person (laughs,
+smiles, says, promises, comes back) is a personal name and keeps its source spelling
+in every target unless surrounding lines make the image clearly figurative. Two runs
+of the seven-language corpus in all 28 directions kept Bintang and ฟ้า as names in
+16 of 16 Indonesian and Thai translations (6 of 18 failed under the previous
+recipes) with no new error elsewhere. A ja/ko/pt run and a beta-corpus run kept every
+earlier fix (negated sayings, Luz, window versus door, changed refrain). Minor:
+ja→fr romanized ハル as Haru, hi-Latn→fr once rendered kal as "le lendemain", and
+Vietnamese line 10 is still softened. Recorded usage for the four runs was USD 0.183.
+
+Indonesian and Thai translation into fr, es and zh-Hans is now admitted (43
+translation, 46 explanation directions). As before, the recipe change stops reuse of
+translations accepted under the previous recipes for new readers; accepted
+translations remain readable.

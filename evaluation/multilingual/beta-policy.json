@@ -36,7 +36,13 @@
     "ru:zh-Hans",
     "hi-Latn:fr",
     "hi-Latn:es",
-    "hi-Latn:zh-Hans"
+    "hi-Latn:zh-Hans",
+    "id:fr",
+    "id:es",
+    "id:zh-Hans",
+    "th:fr",
+    "th:es",
+    "th:zh-Hans"
   ],
   "explanation": [
     "*:en",
