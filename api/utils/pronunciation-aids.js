@@ -11,8 +11,8 @@ export const profiles=Object.freeze([
   {id:'ja-hepburn',version:'1',sourceLanguage:'ja',kind:'romanization',notation:'hepburn',outputScript:'Latn',readerLanguage:null,label:'Japanese · Romaji',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3'},
   {id:'ja-kana',version:'1',sourceLanguage:'ja',kind:'native-reading',notation:'kana',outputScript:'Hira',readerLanguage:null,label:'Japanese · Kana',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3'},
   {id:'ko-revised',version:'1',sourceLanguage:'ko',kind:'romanization',notation:'revised',outputScript:'Latn',readerLanguage:null,label:'Korean · Romanization',engineVersion:'koroman-1.0.16-lyra-2'},
-  {id:'th-paiboon',version:'1',sourceLanguage:'th',kind:'romanization',notation:'paiboon',outputScript:'Latn',readerLanguage:null,label:'Thai · Paiboon',engineVersion:'wiktionary-20261108-icu-lyra-1',
-    limitations:['Readings from Wiktionary (CC BY-SA 4.0); words without an entry show no reading.']}
+  {id:'th-paiboon',version:'1',sourceLanguage:'th',kind:'romanization',notation:'paiboon',outputScript:'Latn',readerLanguage:null,label:'Thai · Paiboon',engineVersion:'wiktionary-20261108-icu-lyra-2',
+    limitations:['Readings from Wiktionary (CC BY-SA 4.0), plus a short list of exclamations reviewed for Lyrica; other words without an entry show no reading.']}
 ].map(p=>Object.freeze({...p,status:'beta',basis:'text',limitations:['Text-derived reading; the recorded performance may differ.',...(p.limitations??[])]})));
 export function profileFor(id){const p=profiles.find(p=>p.id===id);if(!p)throw new LibraryError('unsupported_pronunciation_profile',422);return p;}
 export function enabledProfiles(env=process.env){

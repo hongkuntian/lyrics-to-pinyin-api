@@ -156,3 +156,44 @@ Indonesian and Thai translation into fr, es and zh-Hans is now admitted (43
 translation, 46 explanation directions). As before, the recipe change stops reuse of
 translations accepted under the previous recipes for new readers; accepted
 translations remain readable.
+
+The 43-entry translation policy was written to the environment after the `c9c30db`
+production deployment had been created, and Vercel applies environment changes only
+to new deployments. Indonesian and Thai translation into fr, es and zh-Hans therefore
+first reached production with the next deployment (below). Update the policy before
+pushing the commit that should carry it.
+
+## Names in the target script, Malay, ellipsis (8 November 2026)
+
+Recipes `song-clause-6-roles-3` (English) and `song-multilingual-5` replace "keep the
+source spelling" for names: a name is never translated, and it is written in the
+target's script. Latin-script targets keep Latin names and romanize others with the
+usual system for the source (Pinyin without tones, Hepburn, Revised Romanization,
+common Russian transliteration, RTGS for Thai); Simplified Chinese keeps Han names and
+writes others in Latin letters. Attached particles (Korean 이) are dropped. Under the
+previous rule ハル, 하늘이, ฟ้า and Вера stayed in their own script inside English,
+French, Spanish and Chinese sentences. A second rule keeps the omitted action in a
+contrastive elliptical clause (the window waits; me, maybe not).
+
+One run of the eight-language corpus in all 32 directions, one ja/ko/pt run and one
+beta run (56 records, USD 0.138): every name was romanized and kept as a name (44 of
+44: Vera, Fa/Fah, Haru, Haneul/Haneuri, Suria, …), the morning/evening negation
+contrast held in all 32 expansion directions, and Vietnamese line 10 now keeps the
+contrast in every target ("I may not be"; 未必还在等). de→es "wessen Morgen" had already
+been right under the previous recipe. Minor: 하늘이 is romanized with its suffix
+(Haneuri) in three targets; French and once Chinese add a gendered pronoun for a
+name of unknown gender. Chinese-character names (zh→en Pinyin) are not in these
+corpora and remain unmeasured.
+
+Malay is now a source label, `ms`. franc scores Indonesian, Malay and related languages
+within a few hundredths, so short or casual Indonesian was labelled unknown (`und`,
+English-only) and franc's top guess for slangy Indonesian was even Madurese. When
+Indonesian and Malay are both within 0.05 of the top Malayic guess, marker words common
+in one standard and rare in the other decide (`indonesianOrMalay`); words both use in
+lyrics are not markers, and an undecided ind/zlm tie is Indonesian. The new `ms-window`
+case translated correctly into all four targets (French line 2 rendered "whose
+tomorrow" loosely). Malay translation into fr, es and zh-Hans is admitted (46
+translation directions). Malay explanations are held: all four lead with "don't
+leave" for *jangan tinggal* while the accepted translation says "not to stay"; the
+English explanation is still served through `*:en`. The explanation policy stays at
+46 directions.

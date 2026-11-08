@@ -44,11 +44,11 @@ test('expansion corpus evaluates ja/ko/pt into every beta target with exact orig
  assert.equal(buildFailureCode(new Error('evaluation_only_complete')),'evaluation_only_complete');
 });
 
-test('second expansion corpus covers seven sources with exact selections inside the budget',async()=>{
+test('second expansion corpus covers eight sources with exact selections inside the budget',async()=>{
  const expansion=JSON.parse(await readFile(corpusFile('expansion-2'),'utf8')),logs=[];
- assert.deepEqual(expansion.cases.map(c=>c.language),['de','it','id','vi','ru','hi-Latn','th']);
+ assert.deepEqual(expansion.cases.map(c=>c.language),['de','it','id','vi','ru','hi-Latn','th','ms']);
  for(const item of expansion.cases){assert.equal(item.lines.length,10);selectionForCase(item,documentFor(item));}
  const translate=async doc=>({content:{lines:doc.structure.occurrences.map(o=>({sourceID:o.sourceID,lyricText:o.lyricText}))},actualMicros:1});
  await evaluate({apiKey:'fixture',corpus:expansion,translate,explain:async()=>({content:{},actualMicros:1}),log:s=>logs.push(JSON.parse(s)),onlyDirections:expansion.cases.flatMap(c=>['fr','es','zh-Hans'].map(t=>`${c.language}:${t}`))});
- assert.equal(new Set(logs.filter(l=>l.event==='multilingual_evaluation_chunk').map(l=>l.direction)).size,21);
+ assert.equal(new Set(logs.filter(l=>l.event==='multilingual_evaluation_chunk').map(l=>l.direction)).size,24);
 });

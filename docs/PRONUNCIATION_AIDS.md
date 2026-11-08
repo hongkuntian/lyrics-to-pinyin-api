@@ -64,7 +64,7 @@ The audit corpus also covers liaison, assimilation, palatalization and ㅎ; it d
 
 ## Thai Paiboon profile
 
-`th-paiboon` (engine `wiktionary-20261108-icu-lyra-1`) reads Thai-script runs (spaces
+`th-paiboon` (engine `wiktionary-20261108-icu-lyra-2`) reads Thai-script runs (spaces
 included, so a spaced ๆ joins its word). `Intl.Segmenter('th')` supplies words; a
 word without a reading is re-read together with its neighbours as the fewest listed
 words that spell it exactly, which repairs ICU splits such as `เพ|ลง`. Readings come
@@ -72,5 +72,14 @@ from `api/data/thai-readings.json`: the first full Paiboon romanization per Wikt
 headword (CC BY-SA 4.0, see THIRD_PARTY_NOTICES.md), excluding bound forms, letter
 names, affixes and bare-consonant abbreviations. Rebuild with
 `node scripts/build-thai-readings.mjs <kaikki Thai.jsonl>`; the source checksum is
-pinned. A word with no entry is `unresolved`, never guessed; Latin text and digits
-are `verbatim`. The data file is bundled with the song-library function.
+pinned. `api/data/thai-readings-supplement.json` adds common exclamations, particles
+and three loanwords Wiktionary does not list (โอ้ `ôo`, เย้ `yée`, เบบี้ `bee-bîi`),
+written for Lyrica in the same conventions; Wiktionary takes precedence, and a unit
+test checks every single-syllable tone against consonant class, tone mark and
+live/dead syllable. Loanwords are only added when spelling fixes their tones, because
+Wiktionary records actual loan pronunciation (เมาส์ `máo`). A silenced letter the
+segmenter splits off (`แดน|ซ์`) joins its word without adding sound. On a
+subtitle-frequency sample the additions raise word coverage of the 2,000 most
+frequent tokens from 87% to 92%; the rest are mostly foreign names. Any other word
+with no entry is `unresolved`, never guessed; Latin text and digits are `verbatim`.
+Both data files are bundled with the song-library function.

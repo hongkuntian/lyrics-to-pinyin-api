@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {analyzeReading,renderReading,profiles,profileFor,annotationFor} from '../../api/utils/pronunciation-aids.js';
-import {compose} from '../../api/utils/thai-readings.js';
+import {compose,thaiSegments} from '../../api/utils/thai-readings.js';
+import {readFileSync} from 'node:fs';
 
 test('profiles explicitly separate source, script, notation and intended reader',()=>{
   assert.equal(profileFor('ja-hepburn').kind,'romanization');
@@ -107,4 +108,33 @@ test('Thai readings use Wiktionary Paiboon per segmented word and never guess a 
   assert.deepEqual(mixed.segments.filter(s=>s.status!=='verbatim'||/\S/.test(s.source)).map(s=>[s.source,s.status,s.romanized]),
     [['รัก','resolved','rák'],['love','verbatim',null],['๒๕๖๙','verbatim',null],['ฌฌฌฌ','unresolved',null]]);
   await assert.rejects(()=>annotationFor({id:'a'.repeat(64),sourceHash:'b'.repeat(64),response:{song:{language:'ko'}},structure:{occurrences:[]}},'th-paiboon'),/unsupported_pronunciation_direction/);
+});
+
+test('Thai additions fill words Wiktionary lacks, follow the tone rules and never override Wiktionary',()=>{
+ const supplement=JSON.parse(readFileSync(new URL('../../api/data/thai-readings-supplement.json',import.meta.url),'utf8')).entries;
+ const wiktionary=JSON.parse(readFileSync(new URL('../../api/data/thai-readings.json',import.meta.url),'utf8')).entries;
+ const read=text=>thaiSegments(text).filter(s=>s.wordLike).map(s=>[s.source,s.reading]);
+ assert.deepEqual(read('โอ้ละหนอ'),[['โอ้','ôo'],['ละ','lá'],['หนอ','nɔ̌ɔ']]);
+ assert.deepEqual(read('เบบี้'),[['เบบี้','bee-bîi']]);
+ // A silenced letter split off by the segmenter joins its word without adding sound.
+ assert.deepEqual(thaiSegments('แดนซ์').map(s=>[s.lower,s.upper,s.source,s.reading]),[[0,4,'แดนซ์','dɛɛn']]);
+ for(const word of Object.keys(supplement))assert.ok(!Object.hasOwn(wiktionary,word),`${word} is already in Wiktionary`);
+ // Single-syllable tones from consonant class, tone mark and live/dead syllable.
+ const mid=new Set('กจดตฎฏบปอ'),high=new Set('ขฃฉฐถผฝศษสห'),sonorant=new Set('งนมยวญณรลฬ');
+ const tone=word=>{
+  const consonants=[...word].filter(c=>c>='\u0E01'&&c<='\u0E2E');let initial=consonants[0],cls=mid.has(initial)?'mid':high.has(initial)?'high':'low',rest=consonants.slice(1);
+  if(initial==='ห'&&sonorant.has(rest[0])&&word.indexOf('ห')+1===word.indexOf(rest[0])){cls='high';rest=rest.slice(1);}
+  const finals=rest.filter(c=>c!=='อ'),mark=[...word].find(c=>'\u0E48\u0E49\u0E4A\u0E4B'.includes(c));
+  const short=/[\u0E30\u0E31\u0E36\u0E38\u0E47]/u.test(word)||(/\u0E34/u.test(word)&&!finals.length);
+  const live=finals.length?sonorant.has(finals.at(-1)):!short;
+  if(mark==='\u0E48')return cls==='low'?'falling':'low';
+  if(mark==='\u0E49')return cls==='low'?'high':'falling';
+  if(mark==='\u0E4A')return 'high';if(mark==='\u0E4B')return 'rising';
+  if(live)return cls==='high'?'rising':'mid';
+  return cls==='low'?(short?'high':'falling'):'low';
+ };
+ const marked=reading=>{const d=reading.normalize('NFD');return d.includes('\u0300')?'low':d.includes('\u0302')?'falling':d.includes('\u0301')?'high':d.includes('\u030C')?'rising':'mid';};
+ const single=Object.entries(supplement).filter(([,reading])=>!reading.includes('-'));
+ assert.ok(single.length>=30);
+ for(const [word,reading] of single)assert.equal(marked(reading),tone(word),`${word} ${reading}`);
 });

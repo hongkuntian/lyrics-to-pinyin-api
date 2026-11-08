@@ -42,7 +42,10 @@
     "id:zh-Hans",
     "th:fr",
     "th:es",
-    "th:zh-Hans"
+    "th:zh-Hans",
+    "ms:fr",
+    "ms:es",
+    "ms:zh-Hans"
   ],
   "explanation": [
     "*:en",

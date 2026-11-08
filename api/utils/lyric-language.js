@@ -1,7 +1,7 @@
 import {francAll} from 'franc-min';
 import {resolveProviderLanguageEvidence} from './provider-language-evidence.js';
 
-const toTag={eng:'en',spa:'es',fra:'fr',por:'pt',deu:'de',ita:'it',rus:'ru',ukr:'uk',bul:'bg',srp:'sr',hrv:'hr',pol:'pl',ces:'cs',slk:'sk',nld:'nl',swe:'sv',dan:'da',fin:'fi',nor:'no',nob:'nb',ron:'ro',hun:'hu',tur:'tr',ell:'el',ara:'ar',pes:'fa',urd:'ur',hin:'hi',ben:'bn',tam:'ta',tel:'te',mar:'mr',tha:'th',vie:'vi',ind:'id',tgl:'tl',heb:'he',jpn:'ja',kor:'ko',cmn:'zh',yue:'yue',cat:'ca',lit:'lt',lav:'lv',est:'et',sqi:'sq',kaz:'kk',uzn:'uz',aze:'az',bel:'be',mal:'ml',kan:'kn',guj:'gu',pan:'pa',nep:'ne',sin:'si',khm:'km',mya:'my',amh:'am',swh:'sw'};
+const toTag={eng:'en',spa:'es',fra:'fr',por:'pt',deu:'de',ita:'it',rus:'ru',ukr:'uk',bul:'bg',srp:'sr',hrv:'hr',pol:'pl',ces:'cs',slk:'sk',nld:'nl',swe:'sv',dan:'da',fin:'fi',nor:'no',nob:'nb',ron:'ro',hun:'hu',tur:'tr',ell:'el',ara:'ar',pes:'fa',urd:'ur',hin:'hi',ben:'bn',tam:'ta',tel:'te',mar:'mr',tha:'th',vie:'vi',ind:'id',zlm:'ms',tgl:'tl',heb:'he',jpn:'ja',kor:'ko',cmn:'zh',yue:'yue',cat:'ca',lit:'lt',lav:'lv',est:'et',sqi:'sq',kaz:'kk',uzn:'uz',aze:'az',bel:'be',mal:'ml',kan:'kn',guj:'gu',pan:'pa',nep:'ne',sin:'si',khm:'km',mya:'my',amh:'am',swh:'sw'};
 export const scriptsOf=text=>[
  ['Jpan',/[\p{Script=Hiragana}\p{Script=Katakana}]/u],['Kore',/\p{Script=Hangul}/u],['Hani',/\p{Script=Han}/u],
  ['Latn',/\p{Script=Latin}/u],['Cyrl',/\p{Script=Cyrillic}/u],['Arab',/\p{Script=Arabic}/u],['Deva',/\p{Script=Devanagari}/u],
@@ -21,6 +21,16 @@ export function romanizedHindi(text,{line=false}={}) {
  const core=words.filter(w=>hindiCore.has(w)),covered=words.filter(w=>hindiCore.has(w)||hindiFunction.has(w)).length;
  return line?core.length>=1&&covered/words.length>=0.25:words.length>=6&&new Set(core).size>=3&&covered/words.length>=0.3;
 }
+// Indonesian and Malay share most of their vocabulary; franc often scores them
+// within its tie margin. Words common in one standard and rare in the other
+// decide; words both use in lyrics (tak, takkan, tiada, bila, boleh, saja,
+// esok, kau) are deliberately left out. Without a decision, Indonesian.
+const indonesianMarkers=new Set('nggak enggak ngga gak bisa aja karena banget sih dong kok lho deh udah gimana bilang kayak gue lo emang jendela besok kapan uang sore cewek cowok'.split(' '));
+const malayMarkers=new Set('awak kerana sahaja faham nak mahu kat tingkap dah ni tu sikit jom pasal duit budak petang korang'.split(' '));
+export function indonesianOrMalay(text) {
+ const words=latinWords(text),id=words.filter(w=>indonesianMarkers.has(w)).length,ms=words.filter(w=>malayMarkers.has(w)).length;
+ return ms>=2&&ms>id?'ms':id>=2&&id>ms?'id':null;
+}
 function classify(text) {
  const scripts=scriptsOf(text);
  if(scripts.includes('Jpan'))return {language:'ja',confidence:'script',scripts};
@@ -32,13 +42,26 @@ function classify(text) {
  // Long lyrics can have close normalized scores between related languages.
  // These remain estimates; short/near-tied passages stay explicitly unknown.
  const margin=[...text].filter(c=>/\p{L}/u.test(c)).length>=300?0.003:0.02;
+ // franc also scores casual Indonesian as Madurese, Sundanese or Javanese by a
+ // few hundredths. Decisive marker words settle the Malayic cluster when both
+ // Indonesian and Malay are close to the top; an exact ind/zlm tie defaults to Indonesian.
+ const near=code=>(ranked.find(([c])=>c===code)?.[1]??0)>=score-0.05,malayic=['ind','zlm','mad','sun','jav'].includes(best)&&near('ind')&&near('zlm');
+ const marked=malayic?indonesianOrMalay(text):null;
+ if(marked)return {language:marked,confidence:'estimated',scripts};
+ if(['ind','zlm'].includes(best)&&['ind','zlm'].includes(ranked[1]?.[0])&&score-(ranked[2]?.[1]??0)>=margin)
+  return {language:best==='zlm'&&score-second>=margin?'ms':'id',confidence:'estimated',scripts};
  if(best==='und'||score-second<margin)return {language:'und',confidence:'unknown',scripts};
  return {language:toTag[best]??best,confidence:'estimated',scripts};
 }
 export function analyzeLyricLanguage(lines,{genres=[],verified=false,providerEvidence,providerSource}={}) {
  const text=lines.join('\n'),overall=classify(text),scripts=[...new Set(lines.flatMap(scriptsOf))];
  // Within a romanized-Hindi song, a short Hindi line keeps the song's label.
- const rows=lines.map(line=>overall.language==='hi-Latn'&&romanizedHindi(line,{line:true})?{language:'hi-Latn',confidence:'estimated',scripts:scriptsOf(line)}:classify(line));
+ // Within an Indonesian or Malay song, a line classified as either keeps the song's label.
+ const rows=lines.map(line=>{
+  if(overall.language==='hi-Latn'&&romanizedHindi(line,{line:true}))return {language:'hi-Latn',confidence:'estimated',scripts:scriptsOf(line)};
+  const row=classify(line);
+  return ['id','ms'].includes(overall.language)&&['id','ms'].includes(row.language)?{...row,language:overall.language}:row;
+ });
  const languages=[...new Set(rows.filter(r=>r.language!=='und').map(r=>r.language))];
  const significant=new Set(scripts.filter(s=>s!=='Hani'));
  const latinPassages=lines.filter(line=>(line.match(/\p{Script=Latin}/gu)??[]).length>=12 && !/[\p{Script=Han}\p{Script=Hangul}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(line));

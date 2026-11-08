@@ -1,7 +1,8 @@
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 let lexicon;
-const entries=()=>lexicon??=require('../data/thai-readings.json').entries;
+// Wiktionary readings first; Lyrica's reviewed additions fill words it does not list.
+const entries=()=>lexicon??={...require('../data/thai-readings-supplement.json').entries,...require('../data/thai-readings.json').entries};
 const graphemes=text=>Array.from(new Intl.Segmenter('und',{granularity:'grapheme'}).segment(text),x=>x.segment);
 const words=new Intl.Segmenter('th',{granularity:'word'});
 // A segmenter word missing from the list is read from the fewest listed words
@@ -25,6 +26,11 @@ export function thaiSegments(text){
     if(source==='ๆ'&&result[owner]?.wordLike){
       const word=result[owner];result.splice(owner+1).forEach(r=>{word.source+=r.source;});
       word.upper=offset+length;word.source+=source;word.reading=word.reading&&`${word.reading}-${word.reading}`;
+      offset+=length;continue;
+    }
+    // A silenced letter split off its word (แดน|ซ์) is part of that word and adds no sound.
+    if(/^[\u0E01-\u0E2E]{1,2}[\u0E34\u0E38]?\u0E4C$/u.test(source)&&previous?.wordLike&&previous.upper===offset&&!/\s/u.test(previous.source)){
+      previous.source+=source;previous.upper=offset+length;previous.reading=dictionary[previous.source]??previous.reading;
       offset+=length;continue;
     }
     const wordLike=part.isWordLike&&/\p{Script=Thai}/u.test(source)&&/\p{L}/u.test(source);

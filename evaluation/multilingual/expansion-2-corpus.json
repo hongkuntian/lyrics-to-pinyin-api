@@ -18,7 +18,10 @@
         "Rosa lacht und sagt, sie kommt wieder, aber nicht, wann.",
         "Das Fenster wartet; ich vielleicht nicht."
       ],
-      "selection": {"line": 7, "text": "bitte ich dich, nicht zu bleiben"},
+      "selection": {
+        "line": 7,
+        "text": "bitte ich dich, nicht zu bleiben"
+      },
       "checks": [
         "Line 1 denies that the speaker opened the window (someone else did).",
         "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
@@ -44,7 +47,10 @@
         "Stella ride e dice che torna, ma non dice quando.",
         "La finestra aspetta; io forse no."
       ],
-      "selection": {"line": 7, "text": "ti chiedo di non restare"},
+      "selection": {
+        "line": 7,
+        "text": "ti chiedo di non restare"
+      },
       "checks": [
         "Line 1 denies that the speaker opened the window.",
         "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
@@ -70,7 +76,10 @@
         "Bintang tertawa dan bilang akan datang lagi, tapi tak bilang kapan.",
         "Jendela itu menunggu; aku mungkin tidak."
       ],
-      "selection": {"line": 7, "text": "memintamu untuk tidak tinggal"},
+      "selection": {
+        "line": 7,
+        "text": "memintamu untuk tidak tinggal"
+      },
       "checks": [
         "Line 1 denies that the speaker opened the window.",
         "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
@@ -96,14 +105,18 @@
         "Mai cười và nói sẽ lại đến, nhưng không nói khi nào.",
         "Cửa sổ vẫn chờ; còn em thì chưa chắc."
       ],
-      "selection": {"line": 7, "text": "em xin anh đừng ở lại"},
+      "selection": {
+        "line": 7,
+        "text": "em xin anh đừng ở lại"
+      },
       "checks": [
         "Line 1 denies that the speaker opened the window.",
         "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
         "Mai is a person's name, not tomorrow or apricot blossom.",
         "Em and anh are the speaker and the listener; no names, ages or other people are invented from them.",
         "Chúng ta is inclusive (you and I).",
-        "The selected phrase asks the listener not to stay (đừng ở lại)."
+        "The selected phrase asks the listener not to stay (đừng ở lại).",
+        "Line 10 contrasts with line 9's waiting: as for me, not necessarily (waiting); it is not a statement about being unsure."
       ]
     },
     {
@@ -122,11 +135,14 @@
         "Вера смеётся и говорит, что придёт снова, но не говорит когда.",
         "Окно ждёт; а я, может быть, нет."
       ],
-      "selection": {"line": 7, "text": "прошу тебя не оставаться"},
+      "selection": {
+        "line": 7,
+        "text": "прошу тебя не оставаться"
+      },
       "checks": [
         "Line 1 denies that the speaker opened the window.",
         "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
-        "Вера is a person's name, not faith.",
+        "Вера is a person's name, not faith; Latin-script targets write it Vera (or Véra), never in Cyrillic.",
         "Ты stays informal singular; no gender is invented for the speaker or the listener.",
         "Line 2 asks whose tomorrow.",
         "The selected phrase asks the listener not to stay (не оставаться)."
@@ -148,7 +164,10 @@
         "Chanda hansti hai aur kehti hai phir aayegi, par kab, yeh nahin batati.",
         "Khidki intezaar karti hai; main shayad nahin."
       ],
-      "selection": {"line": 7, "text": "mat ruko"},
+      "selection": {
+        "line": 7,
+        "text": "mat ruko"
+      },
       "checks": [
         "Line 1 denies that the speaker opened the window.",
         "Line 7 negates the saying (I don't ask you to stay); line 8 tells you not to stay. The two must stay distinct.",
@@ -174,14 +193,46 @@
         "ฟ้ายิ้มแล้วบอกว่าจะมาอีก แต่ไม่บอกว่าเมื่อไร",
         "หน้าต่างยังรอ ส่วนฉันอาจจะไม่"
       ],
-      "selection": {"line": 7, "text": "ขอให้เธออย่าอยู่ต่อ"},
+      "selection": {
+        "line": 7,
+        "text": "ขอให้เธออย่าอยู่ต่อ"
+      },
       "checks": [
         "Line 1 denies that the speaker opened the window.",
         "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
-        "ฟ้า is a person's name, not the sky.",
+        "ฟ้า is a person's name, not the sky; every target writes it in Latin letters (Fa or Fah), never in Thai script.",
         "Line 2 asks whose tomorrow.",
         "No gender is invented for the speaker; เธอ is the listener, not a third person.",
         "The selected phrase asks the listener not to stay (อย่าอยู่ต่อ)."
+      ]
+    },
+    {
+      "id": "ms-window",
+      "language": "ms",
+      "title": "Tingkap yang terbuka",
+      "lines": [
+        "Bukan aku yang buka tingkap itu.",
+        "Kau kata \"esok\", tapi tak kata esok siapa.",
+        "Kau kata laut akan simpan nama kita.",
+        "Mungkin maksud kau hujan.",
+        "Kubawa pulang diammu.",
+        "Tiada siapa yang berjanji akan kembali.",
+        "Waktu pagi, aku tak minta kau tinggal.",
+        "Waktu petang, aku minta kau jangan tinggal.",
+        "Suria ketawa dan kata dia akan datang lagi, tapi tak kata bila.",
+        "Tingkap itu menunggu; aku mungkin tidak."
+      ],
+      "selection": {
+        "line": 7,
+        "text": "minta kau jangan tinggal"
+      },
+      "checks": [
+        "Line 1 denies that the speaker opened the window.",
+        "Line 7 negates the asking (I don't ask you to stay); line 8 asks you not to stay. The two must stay distinct.",
+        "Suria is a person's name, not the sun; it is written Suria in every target.",
+        "Kita is inclusive (you and I); it must not exclude the listener.",
+        "Line 9's bila means when (Malay), not if.",
+        "No gender is invented for the speaker, the listener or Suria (dia is gender-neutral)."
       ]
     }
   ]

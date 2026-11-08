@@ -38,3 +38,13 @@ test('Hindi in Latin letters is labelled hi-Latn without catching other Latin-sc
   assert.notEqual(analyzeLyricLanguage(lines).primary,'hi-Latn');
  assert.notEqual(analyzeLyricLanguage(['मैं तुमसे रुकने को नहीं कहता','Main tumse rukne ko nahin kehta hoon aur kya']).primary,'hi-Latn');
 });
+test('Indonesian and Malay near-ties resolve by marker words, defaulting to Indonesian',()=>{
+ // Original authored lines, not taken from any song.
+ const indonesianPoetic=['Bila malam datang aku takkan pergi','Kau bilang rindu ini cuma sementara','Tapi hatiku tak bisa melupakanmu','Biar bintang menjaga mimpi kita','Aku masih menunggu kabar darimu','Karena hanya kamu yang kucari','Jangan biarkan aku sendiri lagi','Kapan kau kembali ke kota ini'];
+ const indonesianCasual=['Udah lama banget kita nggak ketemu','Kamu kok diam aja dari tadi','Gimana kabarmu di sana sekarang','Aku kangen suara kamu yang dulu','Jangan bilang semua udah selesai','Kita jalan bareng lagi besok sore','Aku nggak mau kehilangan kamu','Sumpah aku masih sayang kamu'];
+ const malayCasual=['Awak tahu tak betapa aku rindu','Jom kita jalan sikit malam ni','Aku nak dengar suara awak lagi','Dah lama kita tak berjumpa','Pasal awak aku tak boleh tidur','Hati ni masih sayang kat awak','Jangan pergi petang tu tanpa kata','Aku mahu awak tahu semuanya'];
+ const malayStandard=['Kerana engkau aku masih di sini','Sahaja mahu melihat senyumanmu','Walau tingkap hatiku telah tertutup','Aku faham kau perlukan masa','Kenangan petang itu masih segar','Kau nak aku tunggu sampai bila','Kasih ini takkan pudar','Selamanya aku setia padamu'];
+ for(const lines of [indonesianPoetic,indonesianCasual]){const result=analyzeLyricLanguage(lines);assert.equal(result.primary,'id',lines[0]);assert.equal(result.mixed,false);}
+ for(const lines of [malayCasual,malayStandard]){const result=analyzeLyricLanguage(lines);assert.equal(result.primary,'ms',lines[0]);assert.equal(result.mixed,false);assert.ok(result.lines.every(l=>['ms','und'].includes(l.language)));}
+ assert.equal(analyzeLyricLanguage(['Esta noche caminamos juntos por la ciudad y hablamos de nuestros recuerdos.','Quiero volver a verte cuando salga el sol, porque todavía pienso en ti.']).primary,'es');
+});
