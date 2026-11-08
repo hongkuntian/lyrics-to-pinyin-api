@@ -61,3 +61,16 @@ Reading references: [Kanji Kentei's 辛 entry](https://www.kanjipedia.jp/kanji/0
 Engine `koroman-1.0.16-lyra-2` corrects the standard verb/adjective ㄺ-before-ㄱ exception on a finite set of stems (읽/맑/밝/늙/묽/긁/굵) and endings. The transformed Hangul is used only as a pronunciation intermediate for RR output. Canonical reading, source bytes and grapheme ranges remain the original Hangul. Noun compounds such as 닭고기 and ordinary endings such as 읽다 retain the existing analysis.
 
 The audit corpus also covers liaison, assimilation, palatalization and ㅎ; it does not imply all Korean pronunciation exceptions are solved. References: [NIKL standard-pronunciation explanation for 읽고/맑게](https://www.korean.go.kr/front/onlineQna/onlineQnaView.do?mn_id=&pageIndex=1&qna_seq=316913) and [official Revised Romanization](https://www.korean.go.kr/front_eng/roman/roman_01.do). RR remains distinct from full phonetics and from a recording's actual singing.
+
+## Thai Paiboon profile
+
+`th-paiboon` (engine `wiktionary-20261108-icu-lyra-1`) reads Thai-script runs (spaces
+included, so a spaced ๆ joins its word). `Intl.Segmenter('th')` supplies words; a
+word without a reading is re-read together with its neighbours as the fewest listed
+words that spell it exactly, which repairs ICU splits such as `เพ|ลง`. Readings come
+from `api/data/thai-readings.json`: the first full Paiboon romanization per Wiktionary
+headword (CC BY-SA 4.0, see THIRD_PARTY_NOTICES.md), excluding bound forms, letter
+names, affixes and bare-consonant abbreviations. Rebuild with
+`node scripts/build-thai-readings.mjs <kaikki Thai.jsonl>`; the source checksum is
+pinned. A word with no entry is `unresolved`, never guessed; Latin text and digits
+are `verbatim`. The data file is bundled with the song-library function.

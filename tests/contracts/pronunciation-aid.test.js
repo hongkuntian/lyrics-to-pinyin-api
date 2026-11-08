@@ -6,7 +6,7 @@ import {annotationFor} from '../../api/utils/pronunciation-aids.js';
 const schema=JSON.parse(await readFile(new URL('../../contracts/pronunciation-aid.schema.json',import.meta.url)));
 const envelope=JSON.parse(await readFile(new URL('../../contracts/song-library.schema.json',import.meta.url)));
 test('generated pronunciation profiles satisfy the additive contract and require notation and ranges',async()=>{
- for(const [language,profile,text] of [['ja','ja-hepburn','歌おう'],['ja','ja-kana','歌おう'],['ko','ko-revised','같이 노래해']]){
+ for(const [language,profile,text] of [['ja','ja-hepburn','歌おう'],['ja','ja-kana','歌おう'],['ko','ko-revised','같이 노래해'],['th','th-paiboon','ฉันรักเพลงนี้ love']]){
   const doc={id:'a'.repeat(64),sourceHash:'b'.repeat(64),response:{song:{language}},structure:{occurrences:[{sourceID:'L0001',lyricText:text}]}};
   const pronunciation=await annotationFor(doc,profile);
   assert.deepEqual(validateSchema(schema,pronunciation),[]);

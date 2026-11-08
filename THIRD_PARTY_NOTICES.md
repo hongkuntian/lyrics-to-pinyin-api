@@ -385,3 +385,18 @@ SOFTWARE.
 ## OpenCC-JS 1.4.2
 
 Spotify Live Lyrics uses OpenCC-JS solely for explicitly selected Chinese display script conversion. Canonical source text and recording bindings are retained. Code is MIT; bundled OpenCC dictionary data is Apache-2.0. The deployed bundles retain `opencc-js/LICENSE`, `THIRD_PARTY_LICENSES.md` and `LICENSES/Apache-2.0.txt` alongside this notice. Upstream: https://github.com/nk2028/opencc-js.
+
+
+## Wiktionary Thai readings (api/data/thai-readings.json)
+
+Thai Paiboon readings are derived from English Wiktionary
+(https://en.wiktionary.org/), as extracted by kaikki.org / Wiktextract
+(https://kaikki.org/dictionary/Thai/), retrieved 8 November 2026
+(SHA-256 a9afaf7191a4e2d9d976a893a58fb68039bce657784ca8af7cab48d35e0a2e66).
+Content by Wiktionary contributors, licensed under the Creative Commons
+Attribution-ShareAlike 4.0 International licence
+(https://creativecommons.org/licenses/by-sa/4.0/). Changes: the first full
+Paiboon romanization per Thai-script headword was kept; bound forms, letter
+names, affixes and bare-consonant abbreviations were removed
+(scripts/build-thai-readings.mjs). The derived list is distributed under
+CC BY-SA 4.0. The app credits Wiktionary where a Thai reading is shown.

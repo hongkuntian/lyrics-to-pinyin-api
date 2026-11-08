@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {analyzeReading,renderReading,profiles,profileFor,annotationFor} from '../../api/utils/pronunciation-aids.js';
+import {compose} from '../../api/utils/thai-readings.js';
 
 test('profiles explicitly separate source, script, notation and intended reader',()=>{
   assert.equal(profileFor('ja-hepburn').kind,'romanization');
@@ -84,4 +85,26 @@ test('selected-source documents use the reviewed source reading without changing
  validateSelectedDocument(doc);assert.equal(doc.response.lines[0].romanized,'azukete');
  const before=structuredClone(doc),annotation=await annotationFor(doc,'ja-kana');
  assert.equal(annotation.lines[0].text,'あずけて');assert.deepEqual(doc,before);
+});
+test('Thai readings use Wiktionary Paiboon per segmented word and never guess a missing word',async()=>{
+  const profile=profileFor('th-paiboon');
+  assert.equal(profile.sourceLanguage,'th');assert.equal(profile.notation,'paiboon');assert.equal(profile.outputScript,'Latn');
+  assert.ok(profile.limitations.some(l=>l.includes('Wiktionary')&&l.includes('CC BY-SA')));
+  const reading=await analyzeReading('ไม่ใช่ฉันที่เปิดหน้าต่าง','th');
+  assert.equal(renderReading(reading,'th-paiboon').text,'mâi-châi chǎn tîi bpə̀ət nâa-dtàang');
+  assert.deepEqual(reading.segments.map(s=>[s.lower,s.upper,s.source]),[[0,4,'ไม่ใช่'],[4,6,'ฉัน'],[6,7,'ที่'],[7,10,'เปิด'],[10,16,'หน้าต่าง']]);
+  // A segmenter compound absent from the list is read from listed parts.
+  assert.equal(compose('กลับมา'),'glàp-maa');assert.equal(compose('ฌฌฌฌ'),null);
+  // A listed word the segmenter splits (เพ|ลง) is re-read as one word.
+  const repaired=await analyzeReading('ร้องเพลงช้าๆ','th');
+  assert.deepEqual(repaired.segments.map(s=>[s.source,s.romanized]),[['ร้อง','rɔ́ɔng'],['เพลง','pleeng'],['ช้าๆ','cháa-cháa']]);
+  // ๆ repeats the preceding word, attached or after a space.
+  assert.equal(renderReading(await analyzeReading('ช้าๆ','th'),'th-paiboon').text,'cháa-cháa');
+  const spaced=await analyzeReading('เด็ก ๆ เล่น','th');
+  assert.deepEqual(spaced.segments.map(s=>[s.source,s.status]),[['เด็ก ๆ','resolved'],[' ','verbatim'],['เล่น','resolved']]);
+  // Latin and digits stay verbatim; an unknown Thai word stays unresolved, never guessed.
+  const mixed=await analyzeReading('รัก love ๒๕๖๙ ฌฌฌฌ','th');
+  assert.deepEqual(mixed.segments.filter(s=>s.status!=='verbatim'||/\S/.test(s.source)).map(s=>[s.source,s.status,s.romanized]),
+    [['รัก','resolved','rák'],['love','verbatim',null],['๒๕๖๙','verbatim',null],['ฌฌฌฌ','unresolved',null]]);
+  await assert.rejects(()=>annotationFor({id:'a'.repeat(64),sourceHash:'b'.repeat(64),response:{song:{language:'ko'}},structure:{occurrences:[]}},'th-paiboon'),/unsupported_pronunciation_direction/);
 });

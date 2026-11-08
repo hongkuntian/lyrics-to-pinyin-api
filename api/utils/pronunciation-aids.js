@@ -2,6 +2,7 @@ import {digest,LibraryError} from './song-library/store.js';
 import {reviewedJapaneseSpans,documentReadingRecording} from './japanese-reading-overrides.js';
 import {contextualJapaneseTokens} from './japanese-context-readings.js';
 import {koreanPronunciationInput} from './korean-context-readings.js';
+import {thaiSegments} from './thai-readings.js';
 
 // A profile describes a notation, not a translation target or the UI language.
 // Future phonetic approximations must declare a readerLanguage and limitations;
@@ -9,8 +10,10 @@ import {koreanPronunciationInput} from './korean-context-readings.js';
 export const profiles=Object.freeze([
   {id:'ja-hepburn',version:'1',sourceLanguage:'ja',kind:'romanization',notation:'hepburn',outputScript:'Latn',readerLanguage:null,label:'Japanese · Romaji',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3'},
   {id:'ja-kana',version:'1',sourceLanguage:'ja',kind:'native-reading',notation:'kana',outputScript:'Hira',readerLanguage:null,label:'Japanese · Kana',engineVersion:'kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3'},
-  {id:'ko-revised',version:'1',sourceLanguage:'ko',kind:'romanization',notation:'revised',outputScript:'Latn',readerLanguage:null,label:'Korean · Romanization',engineVersion:'koroman-1.0.16-lyra-2'}
-].map(p=>Object.freeze({...p,status:'beta',basis:'text',limitations:['Text-derived reading; the recorded performance may differ.']})));
+  {id:'ko-revised',version:'1',sourceLanguage:'ko',kind:'romanization',notation:'revised',outputScript:'Latn',readerLanguage:null,label:'Korean · Romanization',engineVersion:'koroman-1.0.16-lyra-2'},
+  {id:'th-paiboon',version:'1',sourceLanguage:'th',kind:'romanization',notation:'paiboon',outputScript:'Latn',readerLanguage:null,label:'Thai · Paiboon',engineVersion:'wiktionary-20261108-icu-lyra-1',
+    limitations:['Readings from Wiktionary (CC BY-SA 4.0); words without an entry show no reading.']}
+].map(p=>Object.freeze({...p,status:'beta',basis:'text',limitations:['Text-derived reading; the recorded performance may differ.',...(p.limitations??[])]})));
 export function profileFor(id){const p=profiles.find(p=>p.id===id);if(!p)throw new LibraryError('unsupported_pronunciation_profile',422);return p;}
 export function enabledProfiles(env=process.env){
   if(env.LYRA_PRONUNCIATION_PROFILES===undefined)return profiles;
@@ -28,7 +31,7 @@ async function japaneseEngine(){
   })().catch(error=>{japanese=null;throw error;});
   return japanese;
 }
-function script(char,language){return (language==='ja'?/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}ー]/u:/[\p{Script=Hangul}]/u).test(char);}
+function script(char,language){return (language==='ja'?/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}ー]/u:language==='th'?/[\p{Script=Thai} ]/u:/[\p{Script=Hangul}]/u).test(char);}
 function runs(text,language){
   const chars=graphemes(text),result=[];
   for(let i=0;i<chars.length;){let j=i+1,active=script(chars[i],language);while(j<chars.length&&script(chars[j],language)===active)j++;
@@ -39,7 +42,7 @@ const plain=run=>({lower:run.lower,upper:run.upper,source:run.source,reading:nul
 const unresolved=run=>({...plain(run),status:'unresolved'});
 
 export async function analyzeReading(text,language,{recording}={}){
-  if(typeof text!=='string'||!['ja','ko'].includes(language))throw new LibraryError('invalid_pronunciation_source',422);
+  if(typeof text!=='string'||!['ja','ko','th'].includes(language))throw new LibraryError('invalid_pronunciation_source',422);
   const segments=[];
   const overrides=language==='ja'?reviewedJapaneseSpans(text,recording):[];
   if(overrides.length){
@@ -56,6 +59,14 @@ export async function analyzeReading(text,language,{recording}={}){
   }
   for(const run of runs(text,language)){
     if(!run.active){segments.push(plain(run));continue;}
+    if(language==='th'){
+      // Each Thai word is its own segment; a word without a reading stays unresolved.
+      for(const word of thaiSegments(run.source)){
+        const span={lower:run.lower+word.lower,upper:run.lower+word.upper,source:word.source};
+        segments.push(word.reading?{...plain(span),reading:word.reading,romanized:word.reading,status:'resolved'}:word.wordLike?unresolved(span):plain(span));
+      }
+      continue;
+    }
     if(language==='ko'){
       const {romanize}=await import('koroman');
       const romanized=romanize(koreanPronunciationInput(run.source),{usePronunciationRules:true,useHyphen:false});
