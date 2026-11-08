@@ -86,3 +86,19 @@ evaluation-only build (secret values are redacted from Vercel logs) before both
 environment lists were replaced with this file. This is one model-assisted review of
 authored stress cases, not bilingual certification or a real-song benchmark.
 Rollback restores the previous lists (the file at its prior commit) and redeploys.
+
+## Clause roles in quoted speech (8 November 2026)
+
+Recipes `song-clause-6-roles-1` (English) and `song-multilingual-3` add three rules:
+omitted subjects take the reading the lyric supports (never a universal no one or
+everyone), quoted or reported speech keeps each negation on what it negates, and a
+named person's reported plan stays theirs. Three fresh runs of the ja/ko/pt corpus
+(36 translations, 36 explanations) had ko→en lines 7–8 and ko→fr line 9 correct
+every time, and no critical error in any direction. A beta-corpus run (12 directions
+plus translated-selection explanations) kept the September fixes: Luz, negation
+scope, window/door and changed refrains. Minor: one ja→fr run romanized ハル as
+"Haru" and repeated it; one ko→zh-Hans run dropped the 이 of 하늘이. ko→fr translation
+is now admitted. Recorded usage for the four runs was USD 0.116.
+
+The recipe change stops reuse of translations accepted under the previous recipes
+for new readers; accepted translations remain readable and are not regenerated.
