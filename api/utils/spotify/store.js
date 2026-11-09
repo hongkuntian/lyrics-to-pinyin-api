@@ -57,7 +57,8 @@ export class SpotifyStore {
    let changed=false;
    for(const s of Object.values(c.consumers??{}))if(s.expiresAt+86400000<=now){s.token=null;s.widgetToken=null;s.capability=null;s.capabilityDigest=null;s.snapshot=null;s.terminalPayload=null;s.status='ended';changed=true;}
    if(c.grantExpiresAt<=now){c.access=null;c.refresh=null;c.stage=null;c.status='reconnectRequired';changed=true;}
-   if(changed)await this.mutate(id,current=>{for(const [sessionID,s] of Object.entries(c.consumers??{}))if(s.expiresAt+86400000<=now)current.consumers[sessionID]=s;if(current.grantExpiresAt<=now){current.access=null;current.refresh=null;current.stage=null;current.status='reconnectRequired';}});
+   if(c.released&&c.released.until<=now)changed=true;
+   if(changed)await this.mutate(id,current=>{for(const [sessionID,s] of Object.entries(c.consumers??{}))if(s.expiresAt+86400000<=now)current.consumers[sessionID]=s;if(current.grantExpiresAt<=now){current.access=null;current.refresh=null;current.stage=null;current.status='reconnectRequired';}if(current.released&&current.released.until<=now)current.released=null;});
   }
   await this.db.query("DELETE FROM spotify_connections WHERE data->>'status'='disconnected' AND updated_at<$1",[new Date(now-30*86400000)]);
  }

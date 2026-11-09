@@ -121,6 +121,32 @@ export class SpotifyService {
   await this.store.mutate(c.id,(current,put)=>{if(current.status!=='disconnected')closeConnection(current,'disconnected',this.now(),put);});
   await this.store.revokeCapabilities(c.id);await this.drain(c.id);return {version:1,status:'disconnected'};
  }
+ // Returns the grant to the app that enrolled it, which owns it again from here: the phone
+ // holds Spotify by default and lends it to this broker only while Live Lyrics needs it.
+ // Closing ends every consumer and rotates the epoch. A lost reply is answered again for the
+ // same releaseID from a copy sealed to the closed epoch, purged by maintenance after a day.
+ async release(user,input){
+  let c=await this.owned(user,input.connectionID);
+  if(c.released?.releaseID===input.releaseID)return this.releasedDTO(c);
+  if(c.epoch!==input.connectionEpoch)fail('spotify_connection_replaced');
+  if(c.status!=='connected')fail(c.status==='pending'?'spotify_refresh_busy':'spotify_reconnect_required',409);
+  const time=this.now();
+  await this.store.mutate(c.id,(current,put)=>{
+   if(current.released?.releaseID===input.releaseID)return;
+   if(current.epoch!==input.connectionEpoch)fail('spotify_connection_replaced');
+   if(current.status!=='connected'||!current.refresh||!current.access)fail('spotify_reconnect_required',409);
+   if(current.stage||current.refreshLease?.until>time)fail('spotify_refresh_busy',409);
+   const refresh=this.open(current,current.refresh,'refresh'),access=this.open(current,current.access,'access'),expiresAtMS=current.expiresAtMS;
+   closeConnection(current,'released',time,put);
+   current.released={releaseID:input.releaseID,refresh:this.seal(current,refresh,'released-refresh'),access:this.seal(current,access,'released-access'),expiresAtMS,until:time+86400000};
+  });
+  await this.store.revokeCapabilities(c.id);await this.drain(c.id);
+  return this.releasedDTO(await this.store.read(c.id));
+ }
+ releasedDTO(c){
+  const r=c.released;if(!r||r.until<=this.now())fail('spotify_reconnect_required',409);
+  return {version:1,status:'released',grant:{accessToken:this.open(c,r.access,'released-access'),refreshToken:this.open(c,r.refresh,'released-refresh'),expiresAtMS:r.expiresAtMS}};
+ }
  sessionReply(c,s){return {version:1,status:s.status,session:{sessionID:s.sessionID,activityID:s.activityID,activityGeneration:s.generation,connectionID:c.id,connectionEpoch:c.epoch,tokenVersion:s.tokenVersion,recipeRevision:s.recipeRevision,expiresAtMS:s.expiresAt}};}
  async arm(user,input){
   const receivedAt=this.now();if(!Number.isSafeInteger(input.activityCreatedAtMS)||input.activityCreatedAtMS>receivedAt+2000||input.activityCreatedAtMS<=receivedAt-28500000)fail('invalid_request',400);

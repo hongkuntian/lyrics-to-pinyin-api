@@ -7,6 +7,7 @@ const identity=['connectionID','connectionEpoch'];
 const actions={
  'connection.enroll':['enrollmentID','refreshToken','scopeRawValue'],
  'connection.status':['enrollmentID'],'connection.access-token':identity,'connection.disconnect':[...identity,'enrollmentID'],
+ 'connection.release':[...identity,'releaseID'],
  'live.arm':[...identity,'armID','installationID','sessionID','activityID','activityGeneration','activityCreatedAtMS','token','tokenVersion','frequentPushesEnabled','recipe','recording'],
  'live.status':[...identity,'sessionID'],'live.token':[...identity,'sessionID','activityID','token','tokenVersion','frequentPushesEnabled'],
  'live.preferences':[...identity,'sessionID','recipe'],'live.hint':[...identity,'sessionID'],'live.stop':[...identity,'sessionID','reason'],
@@ -23,7 +24,7 @@ export function validateSpotifyInput(b,now=Date.now()){
  if(!b||Array.isArray(b)||b.version!==1||!Object.hasOwn(actions,b.action)||Buffer.byteLength(JSON.stringify(b))>16384||Object.keys(b).some(k=>!['version','action',...actions[b.action]].includes(k)))bad();
  let required=actions[b.action].filter(k=>b.action!=='live.token'||k!=='frequentPushesEnabled');if(b.action==='connection.disconnect'){if(b.enrollmentID!==undefined){if(b.connectionID!==undefined||b.connectionEpoch!==undefined)bad();required=['enrollmentID'];}else required=identity;}
  if(required.some(k=>!Object.hasOwn(b,k)))bad();
- for(const k of ['enrollmentID','armID','installationID','sessionID'])if(b[k]!==undefined&&!uuid(b[k]))bad();
+ for(const k of ['enrollmentID','armID','installationID','sessionID','releaseID'])if(b[k]!==undefined&&!uuid(b[k]))bad();
  for(const k of identity)if(b[k]!==undefined&&(typeof b[k]!=='string'||b[k].length<1||b[k].length>128))bad();
  if(b.activityID!==undefined&&(typeof b.activityID!=='string'||!/^[A-Za-z0-9-]{1,128}$/.test(b.activityID)))bad();
  for(const k of ['token','widgetToken'])if(b[k]!==undefined&&(typeof b[k]!=='string'||!/^([a-f0-9]{2}){32,256}$/.test(b[k])))bad();
@@ -53,6 +54,7 @@ export function createSpotifyHandler({authStore,runtime,runtimeFactory=createSpo
     else if(input.action==='connection.status')result=await service.status(user,input);
     else if(input.action==='connection.access-token')result=await service.access(user,input);
     else if(input.action==='connection.disconnect')result=await service.disconnect(user,input);
+    else if(input.action==='connection.release')result=await service.release(user,input);
     else if(input.action==='live.arm')result=await service.arm(user,input);
     else result=await service.live(user,input,input.action);
    }
