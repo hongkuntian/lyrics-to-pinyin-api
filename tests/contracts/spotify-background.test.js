@@ -13,6 +13,13 @@ test('frozen broker request shapes reject extra access authority and disconnect 
  assert.throws(()=>validateSpotifyInput({version:1,action:'connection.disconnect',enrollmentID,connectionID:'c',connectionEpoch:'e'}));
  assert.doesNotThrow(()=>validateSpotifyInput({version:1,action:'live.token',connectionID:'c',connectionEpoch:'e',sessionID:randomUUID(),activityID:'activity',token:'ab'.repeat(32),tokenVersion:2,frequentPushesEnabled:false}));
 });
+test('enrollment accepts the app\'s playback and library grants and rejects anything wider or without playback',()=>{
+ const base={version:1,action:'connection.enroll',enrollmentID:randomUUID(),refreshToken:'fixture'};
+ // 311379 is Lyrica's current request: playback plus read-only library browsing (SPTScope bits 0,1,4,6,14,15,18).
+ for(const scopeRawValue of [49152,114697,311379,49152|64])assert.doesNotThrow(()=>validateSpotifyInput({...base,scopeRawValue}),String(scopeRawValue));
+ for(const scopeRawValue of [0,16384,32768,311379&~16384,49152|128,49152|(1<<19),49152|(1<<20),-1,1.5,'49152',null])
+  assert.throws(()=>validateSpotifyInput({...base,scopeRawValue}),{code:'invalid_request'},String(scopeRawValue));
+});
 test('narrow snapshot token cannot call account, enrollment or arbitrary widget target actions',async()=>{
  let calls=0;const handler=createSpotifyHandler({runtime:{snapshot:async()=>{calls++;return {version:1,status:'registered',tokenVersion:3};}},authStore:{authenticate:async()=>{throw Error('must not authenticate capability');}},logger:{error(){}}});
  const res=createMockRes();await handler({method:'POST',headers:{authorization:'Bearer lyra_w_fixturecapability'},body:{version:1,action:'snapshot.token',widgetToken:'ab'.repeat(32),tokenVersion:3}},res);
