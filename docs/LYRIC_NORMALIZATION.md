@@ -255,3 +255,27 @@ hashes and saved results remain unchanged. Native cache/offline projection uses
 the same policy, retaining credits in Song details and preserving original source
 IDs and timing. Neither the selection revision nor annotation revision changes,
 and saved translations are not silently regenerated or rebound.
+
+## Performance and programming credits
+
+The 後來的我們 / Mayday screenshot exposes four missing production-role forms:
+`钢琴 / MIDI编写`, `Sound Produce`, `弦乐演奏`, and `和声演唱`.
+They are retained in `maydayScreenshotCredits`; the last contributor row is
+partially covered by the player in the image. The provider ID and installed
+build are unknown. Native demos use the visible credit text, original practice
+vocals and authored timestamps, not a claimed capture of the recording.
+
+Instrument roles now compose with performance/player and programming duties;
+MIDI, computer and synthesizer roles compose with writing/programming duties;
+sound, music and audio roles compose with production duties. Explicit backing
+vocal performance labels such as `和声演唱` qualify without a name-shape test
+or neighboring credits, including long rosters, stage names and affiliations.
+This deliberately broadens role recognition rather than adding song/name rules.
+Bare ambiguous chorus cues still need corroboration, and full-label matching
+preserves ordinary prose and unknown role components. Verified performed bodies
+remain protected. The shared corpus checks credit blocks at the beginning,
+middle and end, sung neighbors, repeated normalization and unchanged vocal timing.
+
+Both fresh backend cleanup and native cached/saved projection execute this
+policy. The existing targeted refresh handles newly detected credits; immutable
+source IDs and saved translation bindings are preserved, without a bulk reset.

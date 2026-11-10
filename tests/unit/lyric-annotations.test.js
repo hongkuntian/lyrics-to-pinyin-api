@@ -310,6 +310,11 @@ test('composed ownership and release roles remove credits without treating colon
     assert.equal(result.credits.length,1);
     assert.deepEqual(cleanLyrics(result,{artist:'Eason Chan'}),result);
     assert.equal(hasEmbeddedLyricCredits({lines:[{original:credit}]}),true);
+    const performed=cleanLyrics({lines:rows([`Eason Chan：${credit}`])},{artist:'Eason Chan'});
+    assert.deepEqual(performed.lines.map(line=>line.text),[credit]);
+    assert.deepEqual(cleanLyrics(performed,{artist:'Eason Chan'}),performed);
+    assert.equal(hasEmbeddedLyricCredits({lines:performed.lines.map(line=>({original:line.text})),
+      metadata:{lyric_structure:performed.lyricStructure}}),false);
   }
   for(const text of fixture.preserved) {
     const data={lines:rows([...fixture.screenshotCredits,text,...fixture.screenshotCredits])};

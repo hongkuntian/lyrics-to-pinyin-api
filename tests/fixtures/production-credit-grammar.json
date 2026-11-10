@@ -103,7 +103,62 @@
     "和声编谱：Practice contributor",
     "友情大合唱：Practice contributor",
     "音乐联合制作出品方：Practice contributor",
-    "音乐独家发行公司：Practice contributor"
+    "音乐独家发行公司：Practice contributor",
+    "钢琴 / MIDI编写：百田留衣",
+    "Sound Produce：百田留衣",
+    "弦乐演奏：李琪北京室内乐团",
+    "和声演唱：百田留衣 / 可乐 / 阿璞（八三夭）/ 黄士杰",
+    "钢琴演奏：Practice contributor",
+    "钢琴演奏者：Practice contributor",
+    "钢琴编配：Practice contributor",
+    "弦乐演奏：Practice contributor",
+    "弦乐演奏者：Practice contributor",
+    "弦乐编配：Practice contributor",
+    "吉他演奏：Practice contributor",
+    "吉他演奏者：Practice contributor",
+    "吉他编配：Practice contributor",
+    "二胡演奏：Practice contributor",
+    "二胡演奏者：Practice contributor",
+    "二胡编配：Practice contributor",
+    "管弦乐演奏：Practice contributor",
+    "管弦乐演奏者：Practice contributor",
+    "管弦乐编配：Practice contributor",
+    "Piano performance: Practice contributor",
+    "Piano performed by: Practice contributor",
+    "Piano player: Practice contributor",
+    "Piano programming: Practice contributor",
+    "Strings performance: Practice contributor",
+    "Strings performed by: Practice contributor",
+    "Strings player: Practice contributor",
+    "Strings programming: Practice contributor",
+    "Guitar performance: Practice contributor",
+    "Guitar performed by: Practice contributor",
+    "Guitar player: Practice contributor",
+    "Guitar programming: Practice contributor",
+    "Percussion performance: Practice contributor",
+    "Percussion performed by: Practice contributor",
+    "Percussion player: Practice contributor",
+    "Percussion programming: Practice contributor",
+    "MIDI编写：Practice contributor",
+    "MIDI编程：Practice contributor",
+    "Midi Programming：Practice contributor",
+    "Synth Programming：Practice contributor",
+    "Synthesizer programmer：Practice contributor",
+    "电脑编程：Practice contributor",
+    "電腦編寫：Practice contributor",
+    "鼓编程：Practice contributor",
+    "音序编写：Practice contributor",
+    "Sound Producer：Practice contributor",
+    "Sound Production：Practice contributor",
+    "Music Produce：Practice contributor",
+    "Audio Production：Practice contributor",
+    "聲音製作：Practice contributor",
+    "音乐制作：Practice contributor",
+    "和聲演唱：Practice contributor",
+    "和音演唱：Practice contributor",
+    "背景人声演唱：Practice contributor",
+    "Backing vocal performance：Practice contributor",
+    "Background vocals performed by：Practice contributor"
   ],
   "preserved": [
     "歌曲制作人的梦：一起唱",
@@ -147,7 +202,17 @@
     "/铜管：一起唱",
     "铜管/：一起唱",
     "铜管//弦乐：一起唱",
-    "Vocal recording studio tonight: sing with me"
+    "Vocal recording studio tonight: sing with me",
+    "钢琴演奏着回忆：一起唱",
+    "弦乐演奏之后：慢慢听",
+    "Sound produced by my heart: you",
+    "MIDI编写的梦：一起唱",
+    "MIDI/我的心：一起唱",
+    "Piano performance of love: you",
+    "和声演唱着梦：一起唱",
+    "和声演唱：",
+    "Sound Produce：Example\n一起唱",
+    "和声：一起唱（八三夭）"
   ],
   "creditBlocks": [
     [
@@ -167,6 +232,22 @@
       "混音/母带处理：潘君明",
       "封面设计：米一嗷",
       "联合出品：QQ音乐·新鲜制造×C.Z·梦想成真"
+    ],
+    [
+      "钢琴 / MIDI编写：百田留衣",
+      "Sound Produce：百田留衣",
+      "弦乐演奏：李琪北京室内乐团",
+      "和声演唱：百田留衣 / 可乐 / 阿璞（八三夭）/ 黄士杰"
+    ],
+    [
+      "和声：赫拉Hera",
+      "钢琴 / MIDI编写：百田留衣",
+      "弦乐演奏：李琪北京室内乐团"
+    ],
+    [
+      "Sound Produce：百田留衣",
+      "合唱：一寸光年团队",
+      "弦乐演奏：李琪北京室内乐团"
     ]
   ],
   "orchestralScreenshotCredits": [
@@ -178,5 +259,11 @@
     "混音录音棚:BIG.J Studio",
     "音乐制作出品:中英音乐",
     "音乐发行:智慧大狗/天才联盟"
+  ],
+  "maydayScreenshotCredits": [
+    "钢琴 / MIDI编写：百田留衣",
+    "Sound Produce：百田留衣",
+    "弦乐演奏：李琪北京室内乐团",
+    "和声演唱：百田留衣 / 可乐 / 阿璞（八三夭）/ 黄士杰"
   ]
 }
