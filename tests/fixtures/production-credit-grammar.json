@@ -164,14 +164,11 @@
     "歌曲制作人的梦：一起唱",
     "音频编辑着回忆：一起唱",
     "艺人统筹的夜晚：一起唱",
-    "合唱：一起唱",
     "和声：赫拉Hera说一起唱",
-    "合唱：一寸光年团队一起唱",
     "我说：别哭",
     "凌晨3:30",
     "https://example.com",
     "Unknown: sing with me",
-    "Chorus: sing with me",
     "和声：一起唱",
     "版权在我心里：一起唱",
     "词版权管理方说：一起唱",
@@ -343,18 +340,18 @@
       "credits": []
     },
     {
-      "name": "unmarked edge speech follows the requested permissive policy",
+      "name": "generic chorus cue keeps sung words at an edge",
       "rows": [
         "我说：别哭",
         "一起唱",
         "Chorus: sing with me"
       ],
       "visible": [
-        1
+        1,
+        2
       ],
       "credits": [
-        0,
-        2
+        0
       ]
     },
     {

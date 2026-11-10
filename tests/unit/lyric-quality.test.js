@@ -13,12 +13,13 @@ test('adaptation and publisher credits in the matching Mandarin source are not v
     {text:'Publisher : Example Publishing',timestamp:0.3},{text:'这是演唱的测试文字',timestamp:0.515}];
   assert.deepEqual(cleanLyrics({lines}).lines,[lines[3]]);
 });
-test('musician and source credits are removed without discarding interior chorus labels',()=>{
+test('musician and source credits are removed and interior chorus cues retain only sung bodies',()=>{
   const lines=['Acoustic Guitar：Example Player','Guitar Solo：Example Player','Strings：Example Ensemble',
     'Programming：Example Player','开场','Chorus：歌手甲 / 歌手乙',
     '取材自歌曲《测试曲》(词：词作者 曲：曲作者)',
     'Chorus: sing this line with me','这是演唱的测试文字'].map(text=>({text,timestamp:200}));
-  assert.deepEqual(cleanLyrics({lines}).lines,[lines[4],lines[5],...lines.slice(-2)]);
+  assert.deepEqual(cleanLyrics({lines}).lines,[lines[4],{...lines[5],text:'歌手甲 / 歌手乙'},
+    {...lines[7],text:'sing this line with me'},lines[8]]);
 });
 test('retain real short lyrics and interior colons while clearing invalid vocal timing',()=> {
   const result=cleanLyrics({instrumental:true,lines:[{text:' 作词：Example ',timestamp:0},

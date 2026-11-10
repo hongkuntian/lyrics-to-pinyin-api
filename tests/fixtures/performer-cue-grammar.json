@@ -5,7 +5,7 @@
   {"name":"inline gender turns","rows":["女：第一段","男：第二段","男女：一起唱"],"visible":[[0,"第一段"],[1,"第二段"],[2,"一起唱"]]},
   {"name":"fullwidth and bracketed cues","rows":["【Ｍｉｒａ】： 第一段","（Ｎｏｅｌ）第二段","[Mira] 第三段","(Noel): 第四段"],"visible":[[0,"第一段"],[1,"第二段"],[2,"第三段"],[3,"第四段"]]},
   {"name":"standalone names and intervening bodies","rows":["Mira:","第一段","Noel:","第二段","Mira:","第三段","Noel:","第四段"],"visible":[[1,"第一段"],[3,"第二段"],[5,"第三段"],[7,"第四段"]]},
-  {"name":"one ambiguous gender cue","rows":["开场","男：一起唱","下一句","落幕"],"visible":[[0,"开场"],[1,"男：一起唱"],[2,"下一句"],[3,"落幕"]]},
+  {"name":"single gender cue","rows":["开场","男：一起唱","下一句","落幕"],"visible":[[0,"开场"],[1,"一起唱"],[2,"下一句"],[3,"落幕"]]},
   {"name":"isolated unknown names","rows":["Mira:第一段","Noel:第二段"],"visible":[[0,"Mira:第一段"],[1,"Noel:第二段"]]},
   {"name":"repeated refrains are not independent evidence","rows":["Mira:第一段","Noel:第二段","Mira:第一段","Noel:第二段"],"visible":[[0,"Mira:第一段"],[1,"Noel:第二段"],[2,"Mira:第一段"],[3,"Noel:第二段"]]},
   {"name":"spoken colon phrases","rows":["我说：第一段","你说：第二段","我说：第三段","你说：第四段"],"visible":[[0,"我说：第一段"],[1,"你说：第二段"],[2,"我说：第三段"],[3,"你说：第四段"]]},
@@ -14,5 +14,15 @@
   {"name":"performed body is not stripped twice","rows":["Mira:我说：第一段","Noel:作词：第二段","Mira:男：第三段","Noel:女：第四段"],"visible":[[0,"我说：第一段"],[1,"作词：第二段"],[2,"男：第三段"],[3,"女：第四段"]]},
   {"name":"production roles do not become singers","rows":["Producer:Example","Composer:Example","Producer:Another","Composer:Another","下一句"],"visible":[[4,"下一句"]]},
   {"name":"sparse colon prose is not a document roster","rows":["开场","Mira:第一段","Noel:第二段","一","二","三","四","五","六","Mira:第三段","Noel:第四段","落幕"],"visible":[[0,"开场"],[1,"Mira:第一段"],[2,"Noel:第二段"],[3,"一"],[4,"二"],[5,"三"],[6,"四"],[7,"五"],[8,"六"],[9,"Mira:第三段"],[10,"Noel:第四段"],[11,"落幕"]]},
-  {"name":"one repeated label is insufficient","rows":["Unknown:第一段","Unknown:第二段","Unknown:第三段","Unknown:第四段"],"visible":[[0,"Unknown:第一段"],[1,"Unknown:第二段"],[2,"Unknown:第三段"],[3,"Unknown:第四段"]]}
+  {"name":"one repeated label is insufficient","rows":["Unknown:第一段","Unknown:第二段","Unknown:第三段","Unknown:第四段"],"visible":[[0,"Unknown:第一段"],[1,"Unknown:第二段"],[2,"Unknown:第三段"],[3,"Unknown:第四段"]]},
+  {"name":"screenshot bilingual duet heading and sparse abbreviations","title":"少年","artist":"Michael Wong & Gary Chaw","rows":["少年 - 光良 (Michael Wong)/曹格 (Gary Cao)","光：你又想起某个夏天","热闹海岸线","曹：记忆中的那个少年"],"visible":[[1,"你又想起某个夏天"],[2,"热闹海岸线"],[3,"记忆中的那个少年"]]},
+  {"name":"single Han standalone and combined cues","rows":["光：","你又想起某个夏天","曹：记忆中的那个少年","光/曹：一起唱"],"visible":[[1,"你又想起某个夏天"],[2,"记忆中的那个少年"],[3,"一起唱"]]},
+  {"name":"generic cue without named singer","rows":["合：一起唱","chorus: sing with me","女：慢慢听"],"visible":[[0,"一起唱"],[1,"sing with me"],[2,"慢慢听"]]},
+  {"name":"bare first title with later sung title","title":"少年","rows":["少年","记忆中的那个少年","少年"],"visible":[[1,"记忆中的那个少年"],[2,"少年"]]},
+  {"name":"remove only one opening title","title":"少年","rows":["少年 - 光良/曹格","少年","一起唱"],"visible":[[1,"少年"],[2,"一起唱"]]},
+  {"name":"title after initial credits","title":"少年","rows":["作词：管启源","少年","一起唱"],"visible":[[2,"一起唱"]]},
+  {"name":"production single character labels","rows":["词：管启源","曲：光良","光：你又想起某个夏天"],"visible":[[2,"你又想起某个夏天"]]},
+  {"name":"bare title version mismatch","title":"少年 (Live)","rows":["少年","记忆中的那个少年"],"visible":[[0,"少年"],[1,"记忆中的那个少年"]]},
+  {"name":"matching title with colon contributor header","title":"少年","rows":["少年：光良/曹格","少年","一起唱"],"visible":[[1,"少年"],[2,"一起唱"]]},
+  {"name":"matching singer label is not a title header","title":"光","rows":["光：第一段","下一句"],"visible":[[0,"第一段"],[1,"下一句"]]}
 ]

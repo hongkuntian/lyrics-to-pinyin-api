@@ -13,7 +13,8 @@ test('shared complete-row notice corpus distinguishes observed evidence from syn
   for(const item of corpus.observed){assert.ok(item.provenance);assert.ok(classifyLyricNotice(item.text),item.text);}
   for(const text of corpus.hidden)assert.ok(classifyLyricNotice(text),text);
   for(const text of corpus.preserved)assert.equal(classifyLyricNotice(text),null,text);
-  for(const text of corpus.preserved){
+  // This corpus tests notices; [Chorus] is separately removed as a singer cue.
+  for(const text of corpus.preserved.filter(text=>text!=='[Chorus]')){
     const data={source:'netease',lines:rows([text])};
     const result=cleanLyrics(data);
     assert.deepEqual(result.lines,data.lines,text);
@@ -90,7 +91,7 @@ test('a notice hidden only in canonical rows is repaired before hashing/model in
   assert.equal(hasEmbeddedLyricCredits(response(repaired)),false);
   assert.deepEqual(cleanLyrics(repaired,{artist:'Singer'}),repaired);
 });
-test('recognized wrapped instrumental markers stay non-vocal while section words and sung bodies survive',async()=>{
+test('recognized instrumental and chorus markers stay non-vocal while sung bodies survive',async()=>{
   const {parseLRC}=await import('../../api/utils/lrc.js');
   const markers=['music','instrumental','interlude','intro','outro','间奏','前奏','尾奏','伴奏','纯音乐'];
   for(const word of markers)for(const [open,close] of [['(',')'],['[',']'],['【','】']]){
@@ -104,7 +105,7 @@ test('recognized wrapped instrumental markers stay non-vocal while section words
     assert.deepEqual(sung.lines.map(l=>l.text),[marker]);assert.deepEqual(cleanLyrics(sung,{artist:'Singer'}),sung);
   }
   const words=rows(['[Verse 1]','[Chorus]','(oh yeah)','【一起唱】']);
-  assert.deepEqual(cleanLyrics({lines:words}).lines,words);
+  assert.deepEqual(cleanLyrics({lines:words}).lines,[words[0],...words.slice(2)]);
   assert.equal(cleanLyrics({source:'netease',lines:rows(['[Intro]'])}).instrumental,false);
 });
 

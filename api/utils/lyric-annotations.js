@@ -97,6 +97,16 @@ function namedPerformers(label,aliases) {
   const names=parts.map(part=>aliases.get(labelKey(part)));
   return names.length && names.every(Boolean)?[...new Set(names)]:null;
 }
+function cuePerformers(prefix,aliases) {
+  if(!prefix)return null;
+  if(ambiguousRoles.has(labelKey(prefix.label))&&isCreditBlockContributor(prefix.body))return null;
+  const names=prefix.label.split(/\s*[/／&、]\s*/u).map(part=>{
+    const key=labelKey(part);
+    return aliases.get(key)??genericLabels.get(key)
+      ?? (/^\p{Script=Han}$/u.test(key)&&!isProductionRole(key)?part.trim():null);
+  });
+  return names.length&&names.every(Boolean)?[...new Set(names)]:null;
+}
 function creditRole(text,aliases) {
   if(/[\r\n\v\f\u0085\u2028\u2029]/u.test(text))return null;
   if(sourceCredit.test(text)) return 'source_credit';
@@ -118,10 +128,6 @@ const performanceRoles=new Set(['男声','女声','戏腔']);
 const surnames=new Set('赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华金魏陶姜戚谢邹喻柏水窦章云苏潘葛范彭鲁韦马苗方俞任袁柳史唐费薛雷贺倪汤罗毕郝安常傅齐康伍余黄萧姚邵汪毛戴宋熊纪舒董梁杜阮蓝闵席季麻强贾江颜郭林钟徐邱骆高夏蔡田樊胡凌霍万程陆崔曾洪廖赖温庄叶刘黎白顾龙邓关石卢莫丁谭梅尹段侯单');
 function documentPerformerAliases(lines,options,excluded=new Set()) {
   const aliases=performerAliases(options),prefixes=lines.map((line,index)=>excluded.has(index)?null:labelPrefix(line.text.trim()));
-  const knownKeys=new Set(aliases.keys());
-  const named=prefixes.some(prefix=>prefix&&namedPerformers(prefix.label,aliases));
-  const keys=new Set(prefixes.filter(Boolean).map(prefix=>labelKey(prefix.label)));
-  const genderPair=['男','male'].some(key=>keys.has(key))&&['女','female'].some(key=>keys.has(key));
   const groups=new Map();
   const nameLike=label=>{
     const key=labelKey(label);
@@ -146,9 +152,27 @@ function documentPerformerAliases(lines,options,excluded=new Set()) {
   const transitions=sequence.reduce((count,prefix,index)=>count+(index>0&&labelKey(sequence[index-1].label)!==labelKey(prefix.label)?1:0),0);
   if(roster.size>=2&&sequence.length>=4&&sequence.length*2>=eligible&&transitions>=2)
     for(const key of roster)if(!aliases.has(key))aliases.set(key,groups.get(key).label);
-  if(named||genderPair||[...roster].some(key=>aliases.has(key)&&!knownKeys.has(key)))
-    for(const [key,name] of genericLabels)aliases.set(key,name);
+  for(const [key,name] of genericLabels)aliases.set(key,name);
   return aliases;
+}
+// Consume one opening title/header. Matching the title is enough: provider
+// headings often use localized aliases or a different duet-credit spelling.
+function openingHeadingIndex(lines,options,skipping=new Set(),protectedIndices=new Set()) {
+  if(options.headingAlreadyRemoved||!options.title?.trim())return -1;
+  for(let i=0;i<lines.length;i++) {
+    const text=(lines[i].text??'').trim();
+    if(!text)continue;
+    if(protectedIndices.has(i))return -1;
+    if(labelKey(text)===labelKey(options.title))return i;
+    const parts=[...text.normalize('NFKC').matchAll(/[-‐‑–—−|/／:：]/gu)];
+    if(parts.some(match=>{
+      const left=text.normalize('NFKC').slice(0,match.index),right=text.normalize('NFKC').slice(match.index+1);
+      return labelKey(left)===labelKey(options.title)&&Boolean(labelKey(right))
+        ||options.artist&&labelKey(right)===labelKey(options.title)&&labelKey(left)===labelKey(options.artist);
+    }))return i;
+    if(!skipping.has(i))return -1;
+  }
+  return -1;
 }
 // Short role labels can also introduce sung words. Require a compact personal
 // name and corroboration from the surrounding credits, never a fixed header size.
@@ -196,8 +220,14 @@ export function lyricCreditRoles(lines,options={},protectedIndices=new Set()) {
   // the shared classifier path so cache refresh and generation preflight agree.
   const edgeParts=text=>!/[\r\n\v\f\u0085\u2028\u2029]/u.test(text)&&text.match(/^([^:：]+)[:：](.*)$/u);
   const isEdgeColon=text=>{const parts=edgeParts(text);return Boolean(parts&&parts[1].trim()&&parts[2].trim());};
-  const transparent=(text,i)=>result.has(i)||!text||classifyLyricNotice(text)||isInstrumentalMarker(text)||isMusicNotePlaceholder(text)
-    ||(options.title&&options.artist&&labelKey(text)===labelKey(`${options.title} - ${options.artist}`));
+  const skipped=new Set(lines.flatMap((line,i)=>{
+    const text=(line.text??'').trim();
+    return result.has(i)||classifyLyricNotice(text)||isInstrumentalMarker(text)||isMusicNotePlaceholder(text)
+      ||(!protectedIndices.has(i)&&isEdgeColon(text))?[i]:[];
+  }));
+  const heading=openingHeadingIndex(lines,options,skipped,protectedIndices);
+  if(heading>=0)result.set(heading,'recording_heading');
+  const transparent=(text,i)=>result.has(i)||!text||classifyLyricNotice(text)||isInstrumentalMarker(text)||isMusicNotePlaceholder(text);
   // Do not erase an all-colon dialogue when there is no identifiable lyric body.
   const hasBody=lines.some((line,i)=>{
     const text=(line.text??'').trim();
@@ -219,14 +249,14 @@ export function lyricCreditRoles(lines,options={},protectedIndices=new Set()) {
 // text even when it happens to spell a complete credit or notice.
 function performedCueIndices(lines,aliases,excluded=new Set()) {
   const prefixes=lines.map((line,index)=>excluded.has(index)?null:labelPrefix(line.text.trim()));
-  const named=prefixes.some(prefix=>prefix&&namedPerformers(prefix.label,aliases));
-  return new Set(prefixes.flatMap((prefix,i)=>prefix&&(namedPerformers(prefix.label,aliases)
-    ||(named&&genericLabels.has(labelKey(prefix.label))))?[i]:[]));
+  return new Set(prefixes.flatMap((prefix,i)=>prefix&&!creditRole(lines[i].text.trim(),aliases)
+    &&cuePerformers(prefix,aliases)?[i]:[]));
 }
 export function hasEmbeddedLyricCredits(response,options={}) {
   const lines=(response?.lines??[]).map(line=>({text:line.original??''}));
   const structure=response?.metadata?.lyric_structure;
-  const context={artist:response?.song?.artist?.original??'',title:response?.song?.title?.original??'',...options};
+  const context={artist:response?.song?.artist?.original??'',title:response?.song?.title?.original??'',
+    headingAlreadyRemoved:response?.song_details?.credits?.some(c=>c.role==='Recording'),...options};
   // Public speaker IDs and unchecked prefix flags are not canonical evidence.
   const canonicalValid=validLyricStructure(structure,response?.lines??[]);
   const performedBodies=new Set(canonicalValid?structure.occurrences.flatMap((occurrence,index)=>occurrence.sourcePrefix?[index]:[]):[]);
@@ -271,11 +301,7 @@ export function normalizeLyricAnnotations(data,options={}) {
   const aliases=documentPerformerAliases(input,options,performedBodies);
   const protectedIndices=performedCueIndices(input,aliases,performedBodies);
   if(reusable)previous.occurrences.forEach((o,i)=>{if(o.sourcePrefix)protectedIndices.add(i);});
-  const creditRoles=lyricCreditRoles(input,options,protectedIndices);
-  const hasNamedCue=input.some(line=>{
-    const prefix=labelPrefix(line.text.trim());
-    return prefix && namedPerformers(prefix.label,aliases);
-  });
+  const creditRoles=lyricCreditRoles(input,{...options,headingAlreadyRemoved:reusable&&data.credits?.some(c=>c.role==='Recording')},protectedIndices);
   const annotations=reusable?[...previous.annotations]:[];
   const speakers=reusable?previous.speakers.map(s=>({...s})):[];
   const speakerFor=(label,names)=>{
@@ -293,9 +319,8 @@ export function normalizeLyricAnnotations(data,options={}) {
     const sourceIndex=original?.sourceIndex??i,sourceText=original?.sourceText??line.text;
     const strippedPrefix=Boolean(original?.sourcePrefix);
     const text=/[\r\n\v\f\u0085\u2028\u2029]/u.test(line.text)?line.text:line.text.trim();
-    const heading=options.title && options.artist && labelKey(text)===labelKey(`${options.title} - ${options.artist}`);
     const notice=protectedIndices.has(i)?null:classifyLyricNotice(line.text);
-    const role=protectedIndices.has(i)?null:notice??(heading?'recording_heading':creditRoles.get(i));
+    const role=protectedIndices.has(i)?null:notice??creditRoles.get(i);
     if(!text || role || (!strippedPrefix && (isInstrumentalMarker(text) || isMusicNotePlaceholder(text)))) {
       if(role && !notice) {
         const match=text.match(/^([^:：]+)[:：]\s*(.+)$/u);
@@ -307,15 +332,16 @@ export function normalizeLyricAnnotations(data,options={}) {
       removed.add(sourceIndex);return;
     }
     const prefix=strippedPrefix?null:labelPrefix(text);
-    const names=prefix && (namedPerformers(prefix.label,aliases)
-      ?? (hasNamedCue && genericLabels.has(labelKey(prefix.label))?[genericLabels.get(labelKey(prefix.label))]:null));
+    const names=cuePerformers(prefix,aliases);
     let lyricText=text,sourcePrefix=original?.sourcePrefix??'',startsTurn=original?.startsTurn??false;
     if(names) {
       active=speakerFor(prefix.label,names);pendingTurn=true;startsTurn=true;
       annotations.push({sourceIndex,kind:'performer_cue',speakerID:active,sourceLabel:prefix.label});
       lyricText=prefix.body.trim();sourcePrefix=sourceText.slice(0,sourceText.indexOf(text)+text.length-prefix.body.length+(prefix.body.match(/^\s*/u)?.[0]?.length??0));
       if(!lyricText) return;
-    } else if(original?.speakerID) active=original.speakerID;
+    // A newly resolved cue owns its following rows until another actual turn.
+    // An inherited speaker from an earlier partial pass must not undo it.
+    } else if(original?.speakerID&&!pendingTurn&&(original.startsTurn||active===null)) active=original.speakerID;
     startsTurn=startsTurn||pendingTurn;pendingTurn=false;
     lines.push(revalidatedVocalLine(line,lyricText));
     translationInputs.push(i);

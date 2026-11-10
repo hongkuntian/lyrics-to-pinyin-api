@@ -201,7 +201,7 @@ rows before romanization, source hashing and model input, and detects stale
 embedded metadata in caches and generation preflight. Notices do not become
 contributor credits. Notice-only responses are missing text, not instrumentals.
 Recognized complete wrapped instrumental markers remain a separate rule;
-unknown section labels such as `[Verse 1]` and `[Chorus]` are preserved. LRC
+unknown section labels such as `[Verse 1]` are preserved, while `[Chorus]` is removed as a standalone singer cue. LRC
 parsing consumes only leading valid timestamp syntax and whole recognized
 header rows, preserving unknown brackets and inline bracketed words. Existing
 fraction, repeated-timestamp and invalid-second behavior remains covered.
@@ -272,7 +272,7 @@ sound, music and audio roles compose with production duties. Explicit backing
 vocal performance labels such as `和声演唱` qualify without a name-shape test
 or neighboring credits, including long rosters, stage names and affiliations.
 This deliberately broadens role recognition rather than adding song/name rules.
-In the interior, bare ambiguous chorus cues still need corroboration, and
+In the interior, ambiguous chorus contributor rosters still need corroboration, and
 full-label matching preserves ordinary prose and unknown role components. Verified performed bodies
 remain protected. The shared corpus checks credit blocks at the beginning,
 middle and end, sung neighbors, repeated normalization and unchanged vocal timing.
@@ -300,3 +300,28 @@ fresh normalization, targeted cache refresh and generation preflight; native
 projection also handles offline saved sources without rebinding their IDs,
 word timing or translations. `edgeColonCases` covers both edges, single rows,
 metadata separators, interior speech, performed prefixes and repeated cleanup.
+
+## Singer cues and opening song titles
+
+Singer labels are not displayed lyrics. Generic labels (`男`, `女`, `合`,
+`合唱`, `Chorus`, `Male`, `Female`, `All`) and single-Han abbreviations such as
+`光` and `曹` no longer require repeated turns or a known artist alias. Explicit
+production roles such as `词` and `曲` still classify as credits. Standalone cues
+disappear; inline cues retain the sung body. Corroborated contributor rosters
+keep their existing credit classification. This cue pass precedes the edge-colon
+fallback so a final singer-prefixed lyric cannot be discarded as a credit.
+
+Remove one first nonblank song header, allowing preceding metadata: either the
+matching bare title or the matching title followed by a separator and contributor
+text. Contributor aliases need not match the catalog spelling. Later title
+occurrences remain sung text. A backend `Recording` credit records that the one
+opening header was already removed, preventing a second cleanup or native
+projection from consuming the next sung refrain. Title matching preserves
+recording-version distinctions. Cached raw headings and cues trigger targeted
+source cleanup and hide immediately in native projection.
+
+The shared `performer-cue-grammar.json` corpus includes the reported `少年`
+bilingual duet header and sparse `光`/`曹` cues, bare titles, standalone cues,
+repeated cleanup and unchanged timing. Native Karaoke/Study fixtures use authored
+timestamps, preserve source and word-offset identity, and do not prove alignment
+to the actual recording.

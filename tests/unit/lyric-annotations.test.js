@@ -10,14 +10,32 @@ test('document-local performer cue corpus preserves vocal timing and canonical i
   const fixtures=JSON.parse(await readFile(new URL('../fixtures/performer-cue-grammar.json',import.meta.url),'utf8'));
   for(const fixture of fixtures) {
     const data={source:'netease',lines:rows(fixture.rows)};
-    const result=cleanLyrics(data,{artist:'Other singer'});
+    const context={artist:fixture.artist??'Other singer',title:fixture.title??''};
+    const result=cleanLyrics(data,context);
     assert.deepEqual(result.lines.map(line=>line.text),fixture.visible.map(([,text])=>text),fixture.name);
     assert.deepEqual(result.lines.map(line=>line.timestamp),fixture.visible.map(([index])=>data.lines[index].timestamp),fixture.name);
-    assert.deepEqual(cleanLyrics(result,{artist:'Other singer'}),result,fixture.name);
+    assert.deepEqual(cleanLyrics(result,context),result,fixture.name);
     assert.equal(hasEmbeddedLyricCredits({lines:result.lines.map(line=>({original:line.text})),
-      metadata:{lyric_structure:result.lyricStructure}}),false,fixture.name);
+      song:{title:{original:context.title},artist:{original:context.artist}},
+      song_details:{credits:result.credits},metadata:{lyric_structure:result.lyricStructure}}),false,fixture.name);
     assert.deepEqual(data.lines.map(line=>line.text),fixture.rows);
   }
+});
+
+test('bare opening titles are detected in stale cached responses',()=>{
+  const context={title:'少年',artist:'Michael Wong & Gary Chaw'};
+  const input={lines:rows(['少年','记忆中的那个少年'])};
+  assert.equal(hasEmbeddedLyricCredits({song:{title:{original:context.title},artist:{original:context.artist}},
+    lines:input.lines.map(line=>({original:line.text}))}),true);
+});
+
+test('later artist context resolves turns without retaining an inherited generic singer',()=>{
+  const data={lines:rows(['合：','一起唱','Mira：','第一段','Noel：第二段','第三段'])};
+  const context={artist:'Mira & Noel'};
+  const fresh=cleanLyrics(data,context),partial=cleanLyrics(data);
+  assert.deepEqual(cleanLyrics(partial,context),fresh);
+  assert.deepEqual(fresh.lyricStructure.occurrences.map(o=>o.speakerID),['S1','S2','S3','S3']);
+  assert.deepEqual(cleanLyrics(fresh,context),fresh);
 });
 
 test('assistant production and qualified vocal roles compose without song or contributor exceptions',()=>{
@@ -65,7 +83,7 @@ test('standalone recording codes use full ISRC syntax and remain available in So
 test('new metadata families preserve ordinary prose, unknown labels, brackets and malformed codes',()=>{
   const vocals=['制作助理说：一起唱','制作Anything：一起唱','和声编谱着梦：一起唱',
     '和声编谱Anything：一起唱','友情大合唱的梦：一起唱','Production Assistant to my heart: you',
-    'Harmony Arrangement of love: us','Chorus: sing with me','合唱：一起唱','和声：一起唱',
+    'Harmony Arrangement of love: us','和声：一起唱',
     '[友情大合唱]','(和声编谱)','TWB81975450','TWB8197545020','TW-B81-97-54502 是我的暗号',
     '我的暗号 TWB819754502','123456789012','USABC2X12345','ABCD1234567',
     'ISRC: USABC2612345\n一起唱','USABC2612345\u2028一起唱','制作助理：Example\n一起唱'];
@@ -109,7 +127,7 @@ test('ordinary colon text survives even when surrounded by confirmed credits',()
   const vocals=['我说：别哭','Unknown: 张三、李四','1st Violin sings: stay','弦乐助理在唱：一起唱',
     'Assistant to my heart: you','3rd time: I love you','Guitar hero: sing with me','Strings attached: stay',
     'ISRC：TW-C23-04-007-06 是我的暗号','ISRC: TW-C23-04-007-060','凌晨3:30','https://example.com',
-    'Chorus: sing with me','和声：一起唱'];
+    '和声：一起唱'];
   for(const text of vocals) {
     const data={lines:rows(['开场','编曲：制作人','混音：工程师',text,'录音室：Studio','作曲：作曲家','落幕'])};
     assert.deepEqual(cleanLyrics(data).lines,[data.lines[0],data.lines[3],data.lines[6]]);
@@ -223,11 +241,11 @@ test('inline prefixes preserve the words and source mapping across subsequent cl
 });
 test('unknown and partial identities, colon punctuation and ordinary brackets survive',()=>{
   const data={lines:rows(['我说：','别走','合：一起唱','[oh yeah]','张极Jeremy/陌生人：保留','未知：保留','Chorus: love / hope','落幕'])};
-  assert.deepEqual(cleanLyrics(data,top).lines,data.lines);
+  assert.deepEqual(cleanLyrics(data,top).lines,data.lines.map(line=>({...line,text:line.text.replace(/^(?:合：|Chorus: )/u,'')})));
   const other={lines:rows(['张极Jeremy：','合：','实际歌词'])};
-  assert.deepEqual(cleanLyrics(other,{artist:'Another band'}).lines,other.lines);
+  assert.deepEqual(cleanLyrics(other,{artist:'Another band'}).lines,[other.lines[0],other.lines[2]]);
 });
-test('a generic cue needs a confirmed performer context and does not consume sung chorus words',()=>{
+test('a generic cue preserves sung chorus words',()=>{
   const data={lines:rows(['张极Jeremy：第一句','Chorus: sing this line with me','合：重复的歌词'])};
   assert.deepEqual(cleanLyrics(data,top).lines.map(l=>l.text),['第一句','sing this line with me','重复的歌词']);
 });
@@ -257,7 +275,8 @@ test('a later verified roster can resolve a previously unknown cue inside an act
   const data={lines:rows(['张极：第一句','张泽禹Zack：第二句','落幕'])};
   const first=cleanLyrics(data,{artist:'张极'}),second=cleanLyrics(first,top);
   assert.deepEqual(second.lines.map(l=>l.text),['第一句','第二句','落幕']);
-  assert.deepEqual(second.lyricStructure.occurrences.map(o=>o.speakerID),['S1','S2','S1']);
+  assert.deepEqual(second.lyricStructure.occurrences.map(o=>o.speakerID),['S1','S2','S2']);
+  assert.deepEqual(second,cleanLyrics(data,top));
   assert.deepEqual(cleanLyrics(second,top),second);
 });
 
@@ -318,7 +337,7 @@ test('composed ownership and release roles remove credits without treating colon
   }
   for(const text of fixture.preserved) {
     const data={lines:rows(['开场',...fixture.screenshotCredits,text,...fixture.screenshotCredits,'落幕'])};
-    assert.deepEqual(cleanLyrics(data).lines,[data.lines[0],data.lines[fixture.screenshotCredits.length+1],data.lines.at(-1)],text);
+    assert.deepEqual(cleanLyrics(data).lines,[data.lines[0],{...data.lines[fixture.screenshotCredits.length+1],text:text.replace(/^(?:合唱：|Chorus: )/u,'')},data.lines.at(-1)],text);
   }
   // A production-looking phrase can be performed after a verified singer cue.
   const data={lines:rows(['Eason Chan：词版权管理方：一起唱','Eason Chan：联合出品：慢慢听'])};
@@ -365,7 +384,7 @@ test('colon blocks at document edges use position rather than role or name dicti
     const input={source:'fixture',lines:rows(example.rows)};
     const options={artist:'Eason Chan',title:'Practice'};
     const result=cleanLyrics(input,options);
-    const expected=example.visible.map(i=>example.rows[i].replace(/^Eason Chan：/u,''));
+    const expected=example.visible.map(i=>example.rows[i].replace(/^(?:Eason Chan：|Chorus: )/u,''));
     assert.deepEqual(result.lines.map(line=>line.text),expected,example.name);
     assert.deepEqual(result.lines.map(line=>line.timestamp),example.visible.map(i=>input.lines[i].timestamp),example.name);
     assert.deepEqual(result.credits.filter(c=>c.role!=='Recording').map(c=>c.original),example.credits.map(i=>example.rows[i]),example.name);
