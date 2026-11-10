@@ -119,13 +119,29 @@ test('Thai additions fill words Wiktionary lacks, follow the tone rules and neve
  // A silenced letter split off by the segmenter joins its word without adding sound.
  assert.deepEqual(thaiSegments('แดนซ์').map(s=>[s.lower,s.upper,s.source,s.reading]),[[0,4,'แดนซ์','dɛɛn']]);
  for(const word of Object.keys(supplement))assert.ok(!Object.hasOwn(wiktionary,word),`${word} is already in Wiktionary`);
+ // Informal spellings and a lone-consonant word read by their spelling.
+ assert.deepEqual(read('ณ ตรงนี้'),[['ณ','ná'],['ตรง','dtrong'],['นี้','níi']]);
+ assert.deepEqual(read('อย่างงี้'),[['อย่าง','yàang'],['งี้','ngíi']]);
+ assert.deepEqual(read('เอาหล่ะ'),[['เอา','ao'],['หล่ะ','là']]);
+ // Stretched words read as the plain word and keep their letters; real doubles stay.
+ assert.deepEqual(thaiSegments('มากกกกเลย').map(s=>[s.lower,s.upper,s.source,s.reading]),[[0,6,'มากกกก','mâak'],[6,9,'เลย','ləəi']]);
+ assert.deepEqual(read('ดีจังงง'),[['ดี','dii'],['จังงง','jang']]);
+ assert.deepEqual(read('เธอออ นะะะ รักก อืมม'),[['เธอออ','təə'],['นะะะ','ná'],['รักก','rák'],['อืมม','ʉʉm']]);
+ assert.deepEqual(read('ฉันงง'),[['ฉัน','chǎn'],['งง','ngong']]);
+ assert.deepEqual(read('รอออก'),[['รอ','rɔɔ'],['ออก','ɔ̀ɔk']]);
+ // แ typed as two เ, and ๆ repeated more than once.
+ assert.deepEqual(thaiSegments('เเล้ว').map(s=>[s.lower,s.upper,s.source,s.reading]),[[0,4,'เเล้ว','lɛ́ɛo']]);
+ assert.deepEqual(read('ไม่ๆๆ'),[['ไม่ๆๆ','mâi-mâi-mâi']]);
+ assert.deepEqual(read('เด็ก ๆ'),[['เด็ก ๆ','dèk-dèk']]);
  // Single-syllable tones from consonant class, tone mark and live/dead syllable.
  const mid=new Set('กจดตฎฏบปอ'),high=new Set('ขฃฉฐถผฝศษสห'),sonorant=new Set('งนมยวญณรลฬ');
  const tone=word=>{
   const consonants=[...word].filter(c=>c>='\u0E01'&&c<='\u0E2E');let initial=consonants[0],cls=mid.has(initial)?'mid':high.has(initial)?'high':'low',rest=consonants.slice(1);
   if(initial==='ห'&&sonorant.has(rest[0])&&word.indexOf('ห')+1===word.indexOf(rest[0])){cls='high';rest=rest.slice(1);}
   const finals=rest.filter(c=>c!=='อ'),mark=[...word].find(c=>'\u0E48\u0E49\u0E4A\u0E4B'.includes(c));
-  const short=/[\u0E30\u0E31\u0E36\u0E38\u0E47]/u.test(word)||(/\u0E34/u.test(word)&&!finals.length);
+  // A lone consonant (ณ) carries the unwritten short a.
+  const bare=consonants.length===1&&!/[\u0E30-\u0E3A\u0E40-\u0E47]/u.test(word);
+  const short=bare||/[\u0E30\u0E31\u0E36\u0E38\u0E47]/u.test(word)||(/\u0E34/u.test(word)&&!finals.length);
   const live=finals.length?sonorant.has(finals.at(-1)):!short;
   if(mark==='\u0E48')return cls==='low'?'falling':'low';
   if(mark==='\u0E49')return cls==='low'?'high':'falling';
@@ -135,6 +151,6 @@ test('Thai additions fill words Wiktionary lacks, follow the tone rules and neve
  };
  const marked=reading=>{const d=reading.normalize('NFD');return d.includes('\u0300')?'low':d.includes('\u0302')?'falling':d.includes('\u0301')?'high':d.includes('\u030C')?'rising':'mid';};
  const single=Object.entries(supplement).filter(([,reading])=>!reading.includes('-'));
- assert.ok(single.length>=30);
+ assert.ok(single.length>=100);
  for(const [word,reading] of single)assert.equal(marked(reading),tone(word),`${word} ${reading}`);
 });

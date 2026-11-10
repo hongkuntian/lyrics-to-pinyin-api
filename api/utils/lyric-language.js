@@ -21,17 +21,24 @@ export function romanizedHindi(text,{line=false}={}) {
  const core=words.filter(w=>hindiCore.has(w)),covered=words.filter(w=>hindiCore.has(w)||hindiFunction.has(w)).length;
  return line?core.length>=1&&covered/words.length>=0.25:words.length>=6&&new Set(core).size>=3&&covered/words.length>=0.3;
 }
-// Indonesian and Malay share most of their vocabulary; franc often scores them
-// within its tie margin. Words common in one standard and rare in the other
-// decide; words both use in lyrics (tak, takkan, tiada, bila, boleh, saja,
-// esok, kau) are deliberately left out. Without a decision, Indonesian.
-const indonesianMarkers=new Set('nggak enggak ngga gak bisa aja karena banget sih dong kok lho deh udah gimana bilang kayak gue lo emang jendela besok kapan uang sore cewek cowok'.split(' '));
-const malayMarkers=new Set('awak kerana sahaja faham nak mahu kat tingkap dah ni tu sikit jom pasal duit budak petang korang'.split(' '));
+// Indonesian and Malay share most of their vocabulary, and franc's choice between
+// them follows the topic of the text, not the standard: authored Indonesian and
+// Malay versions of the same lines score the same way. So the detector only
+// says "one of the two"; words common in one standard and rare in the other
+// decide, including the standard spelling pairs (karena/kerana, bahwa/bahawa,
+// pikir/fikir). Words both use in lyrics (tak, takkan, tiada, bila,
+// boleh, saja, esok, kau) are deliberately left out. The app keeps the same
+// lists and follows this label when it has one.
+const indonesianMarkers=new Set('nggak enggak ngga gak bisa aja karena banget sih dong kok lho deh udah gimana bilang kayak gue lo emang jendela besok kapan uang sore cewek cowok mau butuh bikin kangen pacar kalian bahwa coba pikir pikiran senantiasa kabar istri arti'.split(' '));
+const malayMarkers=new Set('awak kerana sahaja faham nak mahu kat tingkap dah ni tu sikit jom pasal duit budak petang korang bahawa cuba fikir fikiran sentiasa khabar isteri erti wang selepas seronok tengok cakap'.split(' '));
+const malayicMarkers=text=>{const words=latinWords(text);return {id:words.filter(w=>indonesianMarkers.has(w)).length,ms:words.filter(w=>malayMarkers.has(w)).length};};
 export function indonesianOrMalay(text) {
- const words=latinWords(text),id=words.filter(w=>indonesianMarkers.has(w)).length,ms=words.filter(w=>malayMarkers.has(w)).length;
+ const {id,ms}=malayicMarkers(text);
  return ms>=2&&ms>id?'ms':id>=2&&id>ms?'id':null;
 }
-function classify(text) {
+// Apple's catalog files some songs under these national genres.
+const malayicCategory=category=>/\bmalaysian pop\b/.test(category)?'ms':/\bindo pop\b/.test(category)?'id':null;
+function classify(text,malayicHint=null) {
  const scripts=scriptsOf(text);
  if(scripts.includes('Jpan'))return {language:'ja',confidence:'script',scripts};
  if(scripts.includes('Kore'))return {language:'ko',confidence:'script',scripts};
@@ -43,23 +50,30 @@ function classify(text) {
  // These remain estimates; short/near-tied passages stay explicitly unknown.
  const margin=[...text].filter(c=>/\p{L}/u.test(c)).length>=300?0.003:0.02;
  // franc also scores casual Indonesian as Madurese, Sundanese or Javanese by a
- // few hundredths. Decisive marker words settle the Malayic cluster when both
- // Indonesian and Malay are close to the top; an exact ind/zlm tie defaults to Indonesian.
- const near=code=>(ranked.find(([c])=>c===code)?.[1]??0)>=score-0.05,malayic=['ind','zlm','mad','sun','jav'].includes(best)&&near('ind')&&near('zlm');
- const marked=malayic?indonesianOrMalay(text):null;
- if(marked)return {language:marked,confidence:'estimated',scripts};
- if(['ind','zlm'].includes(best)&&['ind','zlm'].includes(ranked[1]?.[0])&&score-(ranked[2]?.[1]??0)>=margin)
-  return {language:best==='zlm'&&score-second>=margin?'ms':'id',confidence:'estimated',scripts};
+ // few hundredths; those count as the same cluster when Indonesian and Malay
+ // are both close to the top.
+ const near=code=>(ranked.find(([c])=>c===code)?.[1]??0)>=score-0.05,pair=['ind','zlm'].includes(best);
+ if(pair||(['mad','sun','jav'].includes(best)&&near('ind')&&near('zlm'))) {
+  // In order: two or more marker words, the catalog's national genre, one Malay
+  // word with none Indonesian where the detector also leans Malay.
+  const {id,ms}=malayicMarkers(text);
+  const decided=indonesianOrMalay(text)??malayicHint??(best==='zlm'&&ms===1&&id===0?'ms':null);
+  if(decided)return {language:decided,confidence:'estimated',scripts};
+  // Without evidence for Malay the pair is Indonesian, once it leads every other language.
+  const lead=['ind','zlm'].includes(ranked[1]?.[0])?score-(ranked[2]?.[1]??0):score-second;
+  if(pair)return lead>=margin?{language:'id',confidence:'estimated',scripts}:{language:'und',confidence:'unknown',scripts};
+ }
  if(best==='und'||score-second<margin)return {language:'und',confidence:'unknown',scripts};
  return {language:toTag[best]??best,confidence:'estimated',scripts};
 }
 export function analyzeLyricLanguage(lines,{genres=[],verified=false,providerEvidence,providerSource}={}) {
- const text=lines.join('\n'),overall=classify(text),scripts=[...new Set(lines.flatMap(scriptsOf))];
+ const malayicHint=verified?malayicCategory(genres.join(' ').toLowerCase()):null;
+ const text=lines.join('\n'),overall=classify(text,malayicHint),scripts=[...new Set(lines.flatMap(scriptsOf))];
  // Within a romanized-Hindi song, a short Hindi line keeps the song's label.
  // Within an Indonesian or Malay song, a line classified as either keeps the song's label.
  const rows=lines.map(line=>{
   if(overall.language==='hi-Latn'&&romanizedHindi(line,{line:true}))return {language:'hi-Latn',confidence:'estimated',scripts:scriptsOf(line)};
-  const row=classify(line);
+  const row=classify(line,malayicHint);
   return ['id','ms'].includes(overall.language)&&['id','ms'].includes(row.language)?{...row,language:overall.language}:row;
  });
  const languages=[...new Set(rows.filter(r=>r.language!=='und').map(r=>r.language))];

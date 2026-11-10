@@ -64,7 +64,7 @@ The audit corpus also covers liaison, assimilation, palatalization and ㅎ; it d
 
 ## Thai Paiboon profile
 
-`th-paiboon` (engine `wiktionary-20261108-icu-lyra-2`) reads Thai-script runs (spaces
+`th-paiboon` (engine `wiktionary-20261108-icu-lyra-3`) reads Thai-script runs (spaces
 included, so a spaced ๆ joins its word). `Intl.Segmenter('th')` supplies words; a
 word without a reading is re-read together with its neighbours as the fewest listed
 words that spell it exactly, which repairs ICU splits such as `เพ|ลง`. Readings come
@@ -72,14 +72,27 @@ from `api/data/thai-readings.json`: the first full Paiboon romanization per Wikt
 headword (CC BY-SA 4.0, see THIRD_PARTY_NOTICES.md), excluding bound forms, letter
 names, affixes and bare-consonant abbreviations. Rebuild with
 `node scripts/build-thai-readings.mjs <kaikki Thai.jsonl>`; the source checksum is
-pinned. `api/data/thai-readings-supplement.json` adds common exclamations, particles
-and three loanwords Wiktionary does not list (โอ้ `ôo`, เย้ `yée`, เบบี้ `bee-bîi`),
-written for Lyrica in the same conventions; Wiktionary takes precedence, and a unit
-test checks every single-syllable tone against consonant class, tone mark and
-live/dead syllable. Loanwords are only added when spelling fixes their tones, because
-Wiktionary records actual loan pronunciation (เมาส์ `máo`). A silenced letter the
-segmenter splits off (`แดน|ซ์`) joins its word without adding sound. On a
-subtitle-frequency sample the additions raise word coverage of the 2,000 most
-frequent tokens from 87% to 92%; the rest are mostly foreign names. Any other word
-with no entry is `unresolved`, never guessed; Latin text and digits are `verbatim`.
-Both data files are bundled with the song-library function.
+pinned. `api/data/thai-readings-supplement.json` adds 113 common exclamations,
+particles, informal spellings and a few loanwords Wiktionary does not list (โอ้ `ôo`,
+เย้ `yée`, ณ `ná`, งี้ `ngíi`, หล่ะ `là`, เบบี้ `bee-bîi`), written for Lyrica in the
+same conventions; Wiktionary takes precedence, and a unit test checks every
+single-syllable tone against consonant class, tone mark and live/dead syllable (mai
+tri reads high and mai chattawa rising on any consonant, as informal spellings use
+them). An informal spelling is read as spelled (หล่ะ `là`, not ล่ะ `lâ`). Loanwords are
+only added when spelling fixes their tones, because Wiktionary records actual loan
+pronunciation (เมาส์ `máo`). A silenced letter the segmenter splits off (`แดน|ซ์`)
+joins its word without adding sound.
+
+Stretched spellings read as the plain word and keep their letters in the segment:
+a repeated ะ/า/ำ, three or more of the same consonant (มากกกก `mâak`, ดีจังงง), four
+or more อ, three อ at the end of a run (เธอออ), and a doubled last letter left
+without a reading (รักก, อืมม). Before this the segmenter read the extra letters as
+words (มากกกก as มา + กก + กก). A doubled consonant with its own reading stays a word
+(งง `ngong`), and อ meeting itself across words is kept (รอออก). แ typed as two เ is
+read as แ, and each further ๆ repeats the word once more (ไม่ๆๆ).
+
+On a subtitle-frequency sample, 85% of the 2,000 most frequent Thai tokens have a
+reading (93% weighted by frequency); the rest are almost all transliterated foreign
+names, which stay without a reading because their tones do not follow from the
+spelling. Any other word with no entry is `unresolved`, never guessed; Latin text and
+digits are `verbatim`. Both data files are bundled with the song-library function.

@@ -47,4 +47,22 @@ test('Indonesian and Malay near-ties resolve by marker words, defaulting to Indo
  for(const lines of [indonesianPoetic,indonesianCasual]){const result=analyzeLyricLanguage(lines);assert.equal(result.primary,'id',lines[0]);assert.equal(result.mixed,false);}
  for(const lines of [malayCasual,malayStandard]){const result=analyzeLyricLanguage(lines);assert.equal(result.primary,'ms',lines[0]);assert.equal(result.mixed,false);assert.ok(result.lines.every(l=>['ms','und'].includes(l.language)));}
  assert.equal(analyzeLyricLanguage(['Esta noche caminamos juntos por la ciudad y hablamos de nuestros recuerdos.','Quiero volver a verte cuando salga el sol, porque todavía pienso en ti.']).primary,'es');
+ // The detector's own choice between the two follows the topic, not the standard:
+ // these authored Indonesian lines score as Malay. Without Malay words they stay Indonesian.
+ const indonesianFormal=['Cinta ini tumbuh perlahan di dalam hati','Seperti bunga yang mekar di pagi hari','Setiap detik bersamamu terasa begitu indah','Aku ingin selalu berada di sisimu','Janganlah engkau ragu akan kesetiaanku','Selamanya aku akan menjagamu'];
+ assert.equal(analyzeLyricLanguage(indonesianFormal).primary,'id');
+ // Standard spelling pairs decide formal lyrics either way.
+ assert.equal(analyzeLyricLanguage(['Karena engkau aku masih percaya pada cinta','Aku tahu bahwa hatimu senantiasa di sini','Setelah hujan berhenti kita berjalan lagi','Jangan kau pikir aku akan melupakanmu']).primary,'id');
+ assert.equal(analyzeLyricLanguage(['Kerana engkau aku masih percaya pada cinta','Aku tahu bahawa hatimu sentiasa di sini','Selepas hujan berhenti kita berjalan lagi','Jangan kau fikir aku akan melupakanmu']).primary,'ms');
+ // One Malay word with none Indonesian counts where the detector also leans Malay.
+ const malayFormal=['Cinta ini berputik perlahan di dalam hati','Umpama bunga yang mekar di waktu pagi','Setiap detik bersamamu terasa begitu indah','Aku ingin sentiasa berada di sisimu','Usahlah engkau ragu akan kesetiaanku','Selamanya aku akan menjagamu'];
+ assert.equal(analyzeLyricLanguage(malayFormal).primary,'ms');
+ // A verified catalog genre settles lyrics with no marker words; an unverified one is ignored.
+ const unmarked=['Aku berjalan seorang diri dalam hujan malam ini','Terkenang segala yang pernah kita lalui','Senyumanmu masih terbayang di setiap langkahku','Dan aku berharap masa dapat diundur kembali','Namun kau telah memilih haluan yang berlainan','Meninggalkan aku dengan sejuta kenangan'];
+ assert.equal(analyzeLyricLanguage(unmarked).primary,'id');
+ assert.equal(analyzeLyricLanguage(unmarked,{genres:['Malaysian Pop','Music'],verified:true}).primary,'ms');
+ assert.equal(analyzeLyricLanguage(unmarked,{genres:['Malaysian Pop'],verified:false}).primary,'id');
+ assert.equal(analyzeLyricLanguage(malayFormal,{genres:['Indo Pop'],verified:true}).primary,'id');
+ assert.equal(analyzeLyricLanguage(malayCasual,{genres:['Indo Pop'],verified:true}).primary,'ms','marker words outrank the genre');
+ assert.equal(analyzeLyricLanguage(['Esta noche caminamos juntos por la ciudad y hablamos de nuestros recuerdos.','Quiero volver a verte cuando salga el sol, porque todavía pienso en ti.'],{genres:['Malaysian Pop'],verified:true}).primary,'es');
 });

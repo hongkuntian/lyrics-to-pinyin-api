@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "license": "Original evaluation lyrics authored for Lyra; not commercial song lyrics.",
+  "cases": [
+    {
+      "id": "zh-names",
+      "language": "zh",
+      "title": "小雨来过",
+      "lines": [
+        "小雨笑着说，她还会再来。",
+        "林晓月没有回我的信。",
+        "我在苏州的桥上等到天亮。",
+        "窗外真的下起了小雨。",
+        "小雨没有带伞，也没有回头。",
+        "我不问她去哪里。",
+        "晓月说北京的冬天很长。",
+        "雨停了，小雨还没来。"
+      ],
+      "selection": {
+        "line": 3,
+        "text": "下起了小雨"
+      },
+      "checks": [
+        "小雨 in lines 1, 5 and 8 is a person; Latin-script targets write the name Xiaoyu (Xiao Yu is acceptable), never Little Rain and never in Han characters.",
+        "小雨 in line 4 is the weather (a light rain), not the person.",
+        "林晓月 is written Lin Xiaoyue and 晓月 Xiaoyue; neither is translated as dawn moon.",
+        "苏州 and 北京 are places, written with their usual names in the target (Suzhou; Beijing, Pékin or Pekín).",
+        "Line 6 denies the asking; it does not say the speaker does not know.",
+        "她 marks 小雨 as she; no other gender, lover or death is invented."
+      ]
+    },
+    {
+      "id": "ja-names",
+      "language": "ja",
+      "title": "美雪の傘",
+      "lines": [
+        "美雪は笑って、また来ると言った。",
+        "健太は何も言わなかった。",
+        "京都の駅で、わたしは朝まで待った。",
+        "外は本当に雪が降りはじめた。",
+        "美雪は傘を持たず、振り返らなかった。",
+        "どこへ行くのかは聞かない。"
+      ],
+      "selection": {
+        "line": 3,
+        "text": "降りはじめた"
+      },
+      "checks": [
+        "美雪 is a person; Latin-script targets write Miyuki, and Simplified Chinese keeps the name in Han characters (美雪).",
+        "健太 is written Kenta in Latin-script targets and kept in Han characters in Simplified Chinese.",
+        "京都 is the city: Kyoto in Latin-script targets, 京都 in Simplified Chinese.",
+        "雪 in line 4 is snow falling, not the person.",
+        "Line 1 keeps 美雪 as the one who will come again.",
+        "Line 6 is the speaker not asking; no subject such as no one is substituted."
+      ]
+    },
+    {
+      "id": "ko-names",
+      "language": "ko",
+      "title": "하늘이의 우산",
+      "lines": [
+        "하늘아, 오늘은 가지 마.",
+        "하늘이가 웃으며 또 온다고 했어.",
+        "지민이는 아무 말도 하지 않았어.",
+        "부산의 바다에서 나는 아침까지 기다렸어.",
+        "하늘은 맑은데, 하늘이는 오지 않아.",
+        "어디로 가는지는 묻지 않아."
+      ],
+      "selection": {
+        "line": 4,
+        "text": "하늘이는 오지 않아"
+      },
+      "checks": [
+        "하늘아, 하늘이가 and 하늘이는 all name the same person, written Haneul in every target; never Haneuri, Haneura or Haneul-i.",
+        "지민이는 names Jimin; never Jimini.",
+        "The first 하늘 in line 5 is the sky; the second is the person.",
+        "부산 is the city: Busan in Latin-script targets, 釜山 in Simplified Chinese.",
+        "No gender is invented for Haneul or Jimin: no he or she, il or elle, él or ella, 他 or 她.",
+        "Line 1 asks Haneul not to go today; line 2 keeps Haneul as the one who will come again."
+      ]
+    }
+  ]
+}

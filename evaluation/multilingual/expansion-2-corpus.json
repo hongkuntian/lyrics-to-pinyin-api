@@ -217,14 +217,14 @@
         "Mungkin maksud kau hujan.",
         "Kubawa pulang diammu.",
         "Tiada siapa yang berjanji akan kembali.",
-        "Waktu pagi, aku tak minta kau tinggal.",
-        "Waktu petang, aku minta kau jangan tinggal.",
+        "Waktu pagi, aku tak minta kau tinggal di sini.",
+        "Waktu petang, aku minta kau jangan tinggal di sini.",
         "Suria ketawa dan kata dia akan datang lagi, tapi tak kata bila.",
         "Tingkap itu menunggu; aku mungkin tidak."
       ],
       "selection": {
         "line": 7,
-        "text": "minta kau jangan tinggal"
+        "text": "minta kau jangan tinggal di sini"
       },
       "checks": [
         "Line 1 denies that the speaker opened the window.",

@@ -15,17 +15,44 @@ export function compose(word,dictionary=entries()){
   }
   return best[chars.length]?.join('-')??null;
 }
-/// Thai words with grapheme offsets and Wiktionary Paiboon readings. ๆ repeats
-/// the preceding word, so it joins that word and repeats its reading.
+// Sung and typed Thai stretches a word by repeating a letter (มากกกก, นะะะ, เธอออ)
+// and sometimes types แ as two เ. The word is read as its plain spelling and the
+// extra letters stay inside it. A doubled consonant can be a real spelling
+// (งง, กก) and อ can meet itself across words (รอออก), so those are kept.
+const stretchedVowel=new Set(['ะ','า','ำ','ๅ']),consonant=/^[\u0E01-\u0E2E]$/u,thaiLetter=/^[\u0E01-\u0E3A\u0E40-\u0E4E]/u;
+function plainSpelling(chars){
+  const kept=[],origin=[];
+  for(let i=0;i<chars.length;){
+    let n=1;while(chars[i+n]===chars[i])n++;
+    const c=chars[i],next=chars[i+n];
+    if(c==='เ'&&n===2){kept.push('แ');origin.push(i);i+=2;continue;}
+    const stretched=stretchedVowel.has(c)?n>=2:c==='อ'?n>=4||(n===3&&!(next&&thaiLetter.test(next))):consonant.test(c)&&n>=3;
+    for(let k=0;k<(stretched?1:n);k++){kept.push(c);origin.push(i+k);}
+    i+=n;
+  }
+  origin.push(chars.length);
+  return {text:kept.join(''),origin};
+}
+// A word the list lacks is read from listed words that spell it, then without a
+// doubled last letter (อืมม = อืม).
+function read(word,dictionary){
+  const direct=dictionary[word]??compose(word,dictionary);
+  if(direct)return direct;
+  const chars=graphemes(word);
+  return chars.length>2&&chars.at(-1)===chars.at(-2)?read(chars.slice(0,-1).join(''),dictionary):null;
+}
+const repeated=(reading,times)=>reading&&Array(times+1).fill(reading).join('-');
+/// Thai words with grapheme offsets and Paiboon readings. ๆ repeats the
+/// preceding word, so it joins that word and repeats its reading once per ๆ.
 export function thaiSegments(text){
-  const dictionary=entries(),result=[];let offset=0;
-  for(const part of words.segment(text.normalize('NFC'))){
+  const dictionary=entries(),result=[],original=graphemes(text.normalize('NFC')),{text:spelling,origin}=plainSpelling(original);let offset=0;
+  for(const part of words.segment(spelling)){
     const source=part.segment,length=graphemes(source).length,previous=result.at(-1);
     // A spaced ๆ (เด็ก ๆ) also repeats the word before the space.
     const owner=result.findLastIndex(r=>!/^\s*$/u.test(r.source));
-    if(source==='ๆ'&&result[owner]?.wordLike){
+    if(/^ๆ+$/u.test(source)&&result[owner]?.wordLike){
       const word=result[owner];result.splice(owner+1).forEach(r=>{word.source+=r.source;});
-      word.upper=offset+length;word.source+=source;word.reading=word.reading&&`${word.reading}-${word.reading}`;
+      word.upper=offset+length;word.source+=source;word.times=(word.times??0)+length;word.reading=repeated(word.once??word.reading,word.times);
       offset+=length;continue;
     }
     // A silenced letter split off its word (แดน|ซ์) is part of that word and adds no sound.
@@ -34,11 +61,18 @@ export function thaiSegments(text){
       offset+=length;continue;
     }
     const wordLike=part.isWordLike&&/\p{Script=Thai}/u.test(source)&&/\p{L}/u.test(source);
-    const base=source.replace(/\s*ๆ$/u,''),single=wordLike&&base?(dictionary[base]??compose(base,dictionary)):null;
-    result.push({lower:offset,upper:offset+length,source,wordLike,reading:single&&base!==source?`${single}-${single}`:single});
+    const marks=source.match(/(\s*ๆ)+$/u)?.[0]??'',base=marks?source.slice(0,-marks.length):source,times=[...marks].filter(c=>c==='ๆ').length;
+    const once=wordLike&&base?read(base,dictionary):null;
+    // A doubled last letter left over as its own piece (รัก|ก) stretches the word before it.
+    if(wordLike&&!once&&!marks&&previous?.reading&&previous.upper===offset&&graphemes(source).every(c=>c===graphemes(previous.source).at(-1))){
+      previous.source+=source;previous.upper=offset+length;offset+=length;continue;
+    }
+    result.push({lower:offset,upper:offset+length,source,wordLike,reading:repeated(once,times),once,times});
     offset+=length;
   }
-  return repair(result,dictionary);
+  // Offsets and sources return to the text as written, stretched letters included.
+  return repair(result,dictionary).map(({lower,upper,wordLike,reading})=>
+    ({lower:origin[lower],upper:origin[upper],source:original.slice(origin[lower],origin[upper]).join(''),wordLike,reading:reading??null}));
 }
 // The segmenter can split a listed word (ร้องเพลงช้าๆ → ร้อง|เพ|ลง|ช้าๆ). A word
 // without a reading is re-read together with its neighbours; the fewest listed

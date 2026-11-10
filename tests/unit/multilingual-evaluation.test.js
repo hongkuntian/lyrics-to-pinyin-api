@@ -52,3 +52,13 @@ test('second expansion corpus covers eight sources with exact selections inside 
  await evaluate({apiKey:'fixture',corpus:expansion,translate,explain:async()=>({content:{},actualMicros:1}),log:s=>logs.push(JSON.parse(s)),onlyDirections:expansion.cases.flatMap(c=>['fr','es','zh-Hans'].map(t=>`${c.language}:${t}`))});
  assert.equal(new Set(logs.filter(l=>l.event==='multilingual_evaluation_chunk').map(l=>l.direction)).size,24);
 });
+
+test('names corpus covers Chinese, Japanese and Korean names with exact selections',async()=>{
+ const names=JSON.parse(await readFile(corpusFile('names'),'utf8')),logs=[];
+ assert.deepEqual(names.cases.map(c=>c.language),['zh','ja','ko']);
+ for(const item of names.cases){const doc=documentFor(item),selection=selectionForCase(item,doc);assert.equal([...item.lines[item.selection.line]].slice(selection.lower,selection.upper).join(''),item.selection.text);}
+ const translate=async doc=>({content:{lines:doc.structure.occurrences.map(o=>({sourceID:o.sourceID,lyricText:o.lyricText}))},actualMicros:1});
+ await evaluate({apiKey:'fixture',corpus:names,translate,explain:async()=>({content:{},actualMicros:1}),log:s=>logs.push(JSON.parse(s))});
+ // Chinese has no Chinese target: 3 + 4 + 4 directions.
+ assert.equal(new Set(logs.filter(l=>l.event==='multilingual_evaluation_chunk').map(l=>l.direction)).size,11);
+});

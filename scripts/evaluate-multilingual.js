@@ -81,7 +81,7 @@ export function emitRecord(log,record) {
   const count=Math.ceil(encoded.length/2000);
   for(let index=0;index<count;index++)log(JSON.stringify({event:'multilingual_evaluation_chunk',direction:record.direction,index,count,data:encoded.slice(index*2000,(index+1)*2000)}));
 }
-export const corpora=Object.freeze({beta:'corpus.json',expansion:'expansion-corpus.json','expansion-2':'expansion-2-corpus.json'});
+export const corpora=Object.freeze({beta:'corpus.json',expansion:'expansion-corpus.json','expansion-2':'expansion-2-corpus.json',names:'names-corpus.json'});
 export function corpusFile(name='beta') {
   if(!Object.hasOwn(corpora,name))throw new Error('invalid_evaluation_corpus');
   return new URL(`../evaluation/multilingual/${corpora[name]}`,import.meta.url);

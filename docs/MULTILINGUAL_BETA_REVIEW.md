@@ -197,3 +197,63 @@ translation directions). Malay explanations are held: all four lead with "don't
 leave" for *jangan tinggal* while the accepted translation says "not to stay"; the
 English explanation is still served through `*:en`. The explanation policy stays at
 46 directions.
+
+## Name suffixes, gender, place names, Malay explanations (9 November 2026)
+
+Recipes `song-clause-6-roles-4` (English) and `song-multilingual-6` change three rules:
+
+- A particle or suffix attached to a name is not part of the name: Korean 이 after a
+  consonant-final name (familiar suffix or subject marker) and vocative 아/야, Japanese
+  さん/ちゃん/くん. 하늘이, 하늘이가 and 하늘아 are all Haneul.
+- No invented gender. When the source does not mark a person's gender and the name is
+  not conventionally one gender, the target uses a pronoun without gender (singular
+  they) or a construction that needs none (direct speech, an infinitive, 自己, no
+  pronoun).
+- A place with an established name in the target language uses it (Pékin, Kioto, 釜山);
+  the Latin-letters rule for Simplified Chinese applies to personal names.
+
+`evaluation/multilingual/names-corpus.json` adds three short authored cases: Chinese
+names into English, French and Spanish (小雨 as a person and as light rain, 林晓月, 苏州,
+北京), Japanese kanji names into all four targets (美雪, 健太, 京都) and Korean names with
+attached particles (하늘아, 하늘이가, 하늘이는 next to 하늘 the sky, 지민이는, 부산). The Malay
+case's lines 7 and 8 now say *tinggal di sini*: bare *tinggal* can mean stay or leave,
+which the model itself noted, so the earlier explanation/translation disagreement
+came from the test line.
+
+Final wording, one run of each corpus (66 records, USD 0.154; two earlier draft-wording
+runs of names and the eight-language corpus cost USD 0.200 and agree):
+
+- Names: Xiaoyu, Lin Xiaoyue, Suzhou and Beijing/Pékin/Pekín in every zh direction, with
+  the weather 小雨 translated as light rain; Miyuki, Kenta and Kyoto/Kioto in Latin
+  targets and 美雪, 健太, 京都 kept in Simplified Chinese; Haneul and Jimin without
+  suffixes in every Korean direction of both corpora (previously Haneuri in three),
+  with 하늘 the sky still translated. 부산 is 釜山 in Chinese under the place rule (one
+  draft run without it wrote Busan).
+- Gender: across three runs no gender was invented for Bintang, Suria, Fa, Mai or
+  Haneul in any target. French used direct speech or a noun phrase ("a annoncé son
+  retour"); in 3 of 12 French samples it repeated the name instead ("Bintang a dit que
+  Bintang reviendrait"), which is faithful but stiff. Names that are conventionally
+  one gender (Vera, Stella, Rosa) keep their pronoun.
+- Malay explanations into en, fr, es and zh-Hans all say "not to stay here", matching
+  the translation, in all three runs (12 of 12). Malay explanation into fr, es and
+  zh-Hans is admitted: 49 explanation directions, 46 translation directions.
+- The morning/evening negation contrast and line 10 held in all 44 expansion
+  directions; the beta corpus shows no regression.
+
+Open: in each of two names runs one Korean direction (ko→fr, then ko→en) ended
+`provider_incomplete`; the same directions completed correctly in the other runs. The
+selection (하늘이는 오지 않아, name or sky) is deliberately ambiguous, and the explanation
+request allows 4,096 output tokens including reasoning, so a hard selection can run
+out. That budget is unchanged here; a failed explanation returns an error the app
+can retry.
+
+Language labels: franc's choice between Indonesian and Malay follows the topic, not
+the standard (authored Indonesian and Malay versions of the same lines score the same
+way, and formal Indonesian was labelled Malay). The pair is now labelled `ms` only on
+evidence, in order: two or more marker words outnumbering the other side (the lists
+gain the standard spelling pairs karena/kerana, bahwa/bahawa, pikir/fikir,
+senantiasa/sentiasa and common lyric words such as mau, butuh, kangen), a verified
+catalog genre (Apple files some songs under "Malaysian Pop" or "Indo Pop"), or one
+Malay word with no Indonesian one where franc also leans Malay. Otherwise the pair is
+Indonesian. The app follows this label when it has one.
+
