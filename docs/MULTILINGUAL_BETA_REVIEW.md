@@ -244,8 +244,10 @@ Open: in each of two names runs one Korean direction (ko→fr, then ko→en) end
 `provider_incomplete`; the same directions completed correctly in the other runs. The
 selection (하늘이는 오지 않아, name or sky) is deliberately ambiguous, and the explanation
 request allows 4,096 output tokens including reasoning, so a hard selection can run
-out. That budget is unchanged here; a failed explanation returns an error the app
-can retry.
+out. That budget is unchanged here. Correction: a failed explanation is not retried.
+It is stored as failed under its cache key, and the same selection keeps returning 409
+for every reader; only translations have a retry path. The budget is raised in the
+next section.
 
 Language labels: franc's choice between Indonesian and Malay follows the topic, not
 the standard (authored Indonesian and Malay versions of the same lines score the same
@@ -257,3 +259,38 @@ catalog genre (Apple files some songs under "Malaysian Pop" or "Indo Pop"), or o
 Malay word with no Indonesian one where franc also leans Malay. Otherwise the pair is
 Indonesian. The app follows this label when it has one.
 
+## Word help per line in every explanation language (9 November 2026)
+
+Until now a word tap used two request shapes. English asked for all the words of the
+line at once (`explain_line`, recipe `study-line-1`); French, Spanish and Chinese asked
+for one word at a time (`explain`, recipe `study-text-2`). The earlier explanation
+evaluations in this document used the one-word request in every language, so they did
+not exercise the English path the app uses for word taps.
+
+`explain_line` now accepts every explanation language. A paid line-mode run
+(`LYRA_EVALUATION_MODE=line`, `LYRA_EVALUATION_COMPARE_SINGLES=3`) asked for every
+word of the selected line in all four corpora, 67 directions and 478 words, and for
+the first three words of each non-English direction one at a time for comparison (150
+requests). USD 0.185 in total.
+
+- All 67 line requests completed; every item was grounded in the exact lyric row and
+  written in the requested language (478 of 478 by language identification).
+- Meaning and context agree with the one-word answers and are shorter (about 90
+  characters per field in French and Spanish, 35 to 40 in Chinese). The negation scope
+  of the window lines is stated the same way for every word of a line. The names cases
+  keep the distinction: 小雨 in the rain line is light rain with the name noted, and
+  하늘이는 is Haneul against 하늘은 the sky.
+- One-word answers hedge more ("could suggest a change of stance") and fill the
+  uncertainty field with unstated-subject notes in most items; line answers used it in
+  3 of 359 non-English items.
+- The loss: line help has no grammar field. The one-word answers carried a note such
+  as the contraction behind Portuguese "À" or the parts of 아침에는. English word help
+  has been without it since line help shipped; the whole-line page keeps its grammar
+  section because it still uses `explain`.
+- Cost per word: USD 0.00022 by line against USD 0.00055 one at a time. A reader's
+  allowance counts requests, so a line now costs one attempt instead of one per word.
+  The largest line request used about 5,600 of its 32,768 output tokens.
+
+The one-word request remains for phrase and whole-line selections in every language.
+Its output budget is 8,192 tokens. In this run the hardest single selection (하늘이는
+into Chinese) used about 4,000, the old limit; all 150 completed.

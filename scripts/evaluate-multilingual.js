@@ -4,6 +4,7 @@ import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {generate,requestBody,reservationMicros} from '../api/utils/song-library/translation.js';
 import {generateExplanation,explanationBody} from '../api/utils/song-library/study-explanation.js';
+import {generateLine,lineBody} from '../api/utils/song-library/study-line.js';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 export const targets=['en','fr','es','zh-Hans'];
 export function documentFor(item) {
@@ -76,6 +77,67 @@ export async function evaluate({apiKey,corpus,translate=generate,explain=generat
   if(failed)throw new Error('evaluation_incomplete');
   log(JSON.stringify({event:'multilingual_evaluation_complete',cases:jobs.length}));
 }
+// Word help as the app requests it: every word of one line in a single request.
+export function lineSelectionsForCase(item,doc) {
+  const occurrence=doc.structure.occurrences[item.selection.line],text=occurrence.lyricText;
+  const count=value=>[...new Intl.Segmenter('und',{granularity:'grapheme'}).segment(value)].length;
+  const words=[...new Intl.Segmenter(item.language,{granularity:'word'}).segment(text)].filter(s=>s.isWordLike).slice(0,32);
+  if(!words.length)throw new Error('selection_missing');
+  return words.map(word=>{
+    const lower=count(text.slice(0,word.index)),upper=lower+count(word.segment);
+    return {id:`w${lower}-${upper}`,sourceID:occurrence.sourceID,lower,upper,text:word.segment,textHash:hash(word.segment),studyText:{layer:'original',revisionID:doc.id,occurrenceID:occurrence.sourceID}};
+  });
+}
+// Line mode makes no translation. With compareSingles it also asks for the first
+// words one at a time in the languages that used that request for word help, so
+// the two request shapes can be read side by side.
+export async function evaluateLines({apiKey,corpus,explainLine=generateLine,explain=generateExplanation,log=console.log,onlyDirections=null,compareSingles=0}={}) {
+  if(!apiKey)throw new Error('evaluation_requires_provider_key');
+  if(!Number.isInteger(compareSingles)||compareSingles<0||compareSingles>8)throw new Error('invalid_evaluation_comparison');
+  const jobs=[];
+  for(const item of corpus.cases) {
+    const doc=documentFor(item),selections=lineSelectionsForCase(item,doc);
+    for(const target of targets.filter(t=>t!==(item.language==='zh'?'zh-Hans':item.language))) {
+      const singles=(target==='en'?[]:selections.slice(0,compareSingles)).map(selection=>({selection,request:explanationBody(doc,null,selection,target)}));
+      jobs.push({item,doc,target,selections,singles,lineRequest:lineBody(doc,null,selections,{language:target})});
+    }
+  }
+  if(onlyDirections!==null) {
+    const known=new Set(jobs.map(j=>`${j.item.language}:${j.target}`));
+    if(!Array.isArray(onlyDirections)||!onlyDirections.length||onlyDirections.some(d=>!known.has(d)))throw new Error('invalid_evaluation_directions');
+    jobs.splice(0,jobs.length,...jobs.filter(j=>onlyDirections.includes(`${j.item.language}:${j.target}`)));
+  }
+  const reserve=jobs.reduce((n,j)=>n+reservationMicros(j.lineRequest)+j.singles.reduce((m,s)=>m+reservationMicros(s.request),0),0);
+  if(jobs.length>32||reserve>5_000_000)throw new Error('evaluation_budget_exceeded');
+  log(JSON.stringify({event:'multilingual_evaluation_start',mode:'line',cases:jobs.length,reservedMicros:reserve,corpusHash:hash(JSON.stringify(corpus))}));
+  let index=0,failed=0;
+  const safe=value=>typeof value==='string'&&/^[a-z_]{1,80}$/.test(value)?value:null;
+  async function worker() {
+    while(index<jobs.length) {
+      const {item,doc,target,selections,singles,lineRequest}=jobs[index++],direction=`${item.language}:${target}`;
+      try {
+        const line=await explainLine(doc,null,selections,{apiKey,explanationLanguage:target,generationRequest:lineRequest});
+        const single=[];
+        // One hard word must not hide the rest of the comparison.
+        for(const {selection,request} of singles) {
+          try {
+            const result=await explain(doc,null,selection,{apiKey,explanationLanguage:target,generationRequest:request});
+            single.push({selection:selection.text,explanation:result.content,usageMicros:result.actualMicros??0});
+          } catch(error) { single.push({selection:selection.text,code:safe(error.code)??'evaluation_failed',usageMicros:error.actualMicros??0}); }
+        }
+        emitRecord(log,{event:'multilingual_evaluation_line',case:item.id,direction,source:item.lines,line:doc.structure.occurrences[item.selection.line].lyricText,
+          selections:selections.map(s=>s.text),items:line.content.items,single,lineUsageMicros:line.actualMicros??0,
+          usageMicros:(line.actualMicros??0)+single.reduce((n,s)=>n+s.usageMicros,0),lineResponseID:line.response?.id});
+      } catch(error) {
+        failed++;
+        log(JSON.stringify({event:'multilingual_evaluation_failure',mode:'line',case:item.id,direction,code:safe(error.code)??'evaluation_failed'}));
+      }
+    }
+  }
+  await Promise.all([worker(),worker()]);
+  if(failed)throw new Error('evaluation_incomplete');
+  log(JSON.stringify({event:'multilingual_evaluation_complete',mode:'line',cases:jobs.length}));
+}
 export function emitRecord(log,record) {
   const encoded=Buffer.from(JSON.stringify(record),'utf8').toString('base64');
   const count=Math.ceil(encoded.length/2000);
@@ -88,7 +150,10 @@ export function corpusFile(name='beta') {
 }
 export async function runEvaluation(env=process.env,log=console.log) {
   const corpus=JSON.parse(await readFile(corpusFile(env.LYRA_EVALUATION_CORPUS||'beta'),'utf8'));
-  await evaluate({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections:env.LYRA_EVALUATION_DIRECTIONS?JSON.parse(env.LYRA_EVALUATION_DIRECTIONS):null});
+  const onlyDirections=env.LYRA_EVALUATION_DIRECTIONS?JSON.parse(env.LYRA_EVALUATION_DIRECTIONS):null;
+  if(env.LYRA_EVALUATION_MODE==='line')return evaluateLines({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections,compareSingles:Number(env.LYRA_EVALUATION_COMPARE_SINGLES||0)});
+  if(env.LYRA_EVALUATION_MODE!==undefined&&env.LYRA_EVALUATION_MODE!=='')throw new Error('invalid_evaluation_mode');
+  await evaluate({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections});
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
   if(process.argv[2]!=='--live')throw new Error('explicit_live_flag_required');

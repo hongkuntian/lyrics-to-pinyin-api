@@ -14,7 +14,7 @@ const answer={...content,evidence};
 const provider=(body,text)=>new Response(JSON.stringify({id:'response',model:body.model,service_tier:'default',status:'completed',usage:{input_tokens:100,output_tokens:200},output:[{type:'message',content:[{type:'output_text',text}]}]}));
 test('grounded Study retains whole-song turns, selected layer, model and output budget',()=>{
  const body=explanationBody(doc,translation,selection,'en',{grounded:true});
- assert.equal(body.model,'gpt-6-luna');assert.equal(body.max_output_tokens,4096);assert.match(body.instructions,/fallible aid/);assert.match(body.instructions,/Never silently repair/);
+ assert.equal(body.model,'gpt-6-luna');assert.equal(body.max_output_tokens,8192);assert.match(body.instructions,/fallible aid/);assert.match(body.instructions,/Never silently repair/);
  assert.deepEqual(JSON.parse(body.input[0].content).sourceDocument,doc.structure);
  assert.match(body.instructions,/Write meaning, context, grammar and uncertainty in English/);
  assert.deepEqual(parseGroundedExplanation(JSON.stringify(answer),doc,translation,selection),content);

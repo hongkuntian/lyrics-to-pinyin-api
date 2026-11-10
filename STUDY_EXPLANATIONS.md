@@ -50,7 +50,8 @@ quoted data, and model output has no write authority over accepted translations.
 ## Cached line help (additive contract 1)
 
 `explain_line` accepts `documentID`, `sourceHash`, numeric `contractVersion:1`,
-`explanationLanguage:"en"`, the v2 `studyText`, optional `contextTranslation`, and
+`explanationLanguage` (any target tag; the explanation direction policy admits it as
+it does for `explain`), the v2 `studyText`, optional `contextTranslation`, and
 `manifest:[{id,selection}]`. Each selection uses v2 grapheme ranges/text hashes;
 its ID is `w<lower>-<upper>`. Supply 1–32 nonoverlapping selections in ascending
 order from one occurrence. The client supplies its actual selectable word ranges;
@@ -64,6 +65,14 @@ manifest. Its `items` contain the selection ID, short `meaning`, `context`,
 exact-row evidence is validated per item and removed from the public answer.
 Every item must validate before any content is saved. Grounding is an identity
 check, not a semantic-quality guarantee.
+
+Line help is the word-help request in every explanation language. English keeps its
+original request text and cache key; another language adds one sentence naming the
+language to write in and has its own key, so a line explained in French never answers
+the same line asked in English. `capabilities.lineHelp.languages` lists the targets.
+Phrase and whole-line selections still use `explain`, which reserves 8,192 output
+tokens (4,096 until 9 November 2026; a request queued under the earlier budget runs
+with the budget it reserved).
 
 The new line recipe uses GPT-6 Luna with `high` reasoning. Meanings describe the
 selected part's contribution in its actual construction; they must not force an

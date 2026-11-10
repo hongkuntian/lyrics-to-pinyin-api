@@ -82,4 +82,12 @@ test('persisted supplied model requests cannot smuggle Spotify data into outboun
   await assert.rejects(generateExplanation(doc,null,selection,{apiKey:'fixture',generationRequest:{...study,input:[{role:'user',content:JSON.stringify(studyData)}]},fetchFn:async()=>{calls++;}}),{code:'source_context_unavailable'});
   await assert.rejects(generate({...doc,sourceCapsule:undefined},{apiKey:'fixture',generationRequest:forged,fetchFn:async()=>{calls++;}}),{code:'source_context_unavailable'});
   assert.equal(calls,0);
+  // A request queued under the earlier output budget is still the request the host built;
+  // any other budget is not.
+  assert.equal(study.max_output_tokens,8192);
+  const sent=[],fetchFn=async(url,init)=>{sent.push(JSON.parse(init.body).max_output_tokens);throw Error('stop');};
+  for(const tokens of [8192,4096])await assert.rejects(generateExplanation(doc,null,selection,{apiKey:'fixture',generationRequest:{...study,max_output_tokens:tokens},fetchFn}),e=>e.code!=='source_context_unavailable');
+  assert.deepEqual(sent,[8192,4096]);
+  await assert.rejects(generateExplanation(doc,null,selection,{apiKey:'fixture',generationRequest:{...study,max_output_tokens:32768},fetchFn}),{code:'source_context_unavailable'});
+  assert.equal(sent.length,2);
 });

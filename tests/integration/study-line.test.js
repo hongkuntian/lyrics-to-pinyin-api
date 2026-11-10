@@ -7,6 +7,7 @@ const responseSchema=JSON.parse(await readFile(new URL('../../contracts/song-lib
 import {libraryDB,source} from '../helpers/library-db.js';
 import {createSongLibraryService} from '../../api/song-library.js';
 import {digest} from '../../api/utils/song-library/store.js';
+import {languagePolicy} from '../../api/utils/song-library/languages.js';
 const recording={catalog_id:'123',artist:'Test artist',title:'Original test song',duration:12};
 async function fixture(t,options={}){
  const {db,store}=await libraryDB();t.after(()=>db.close());let calls=0,translations=0;const pending=[];
@@ -60,4 +61,18 @@ test('one line batch consumes one existing member Study allowance, never one per
  await f.call({...f.request,allowGeneration:true});await Promise.all(f.pending);
  assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,79);
  await f.call({...f.request,readOnly:true});assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,79);assert.equal(f.calls(),1);
+});
+test('line help in another explanation language is admitted by direction and cached apart from English',async t=>{
+ const languages=[];
+ const f=await fixture(t,{languagePolicy:languagePolicy({explanation:['*:en','*:fr']}),lineFn:async(doc,translation,selections,options)=>{languages.push(options.explanationLanguage);
+  assert.match(options.generationRequest.instructions,options.explanationLanguage==='fr'?/concise natural French .*Write meaning, context and uncertainty in French/:/concise natural English /);
+  return {content:{items:selections.map(s=>({id:s.id,meaning:'Sens choisi',context:'Cette occurrence.',grammar:'',uncertainty:'',sourceQuote:s.text}))},actualMicros:1000,response:{id:'batch'}};}});
+ const french={...f.request,explanationLanguage:'fr'};
+ assert.equal((await f.call({action:'capabilities'})).body.capabilities.lineHelp.languages.join(),'en,fr,es,zh-Hans,zh-Hant');
+ assert.equal((await f.call({...french,explanationLanguage:'es'})).code,422);assert.equal((await f.call({...french,explanationLanguage:'de'})).code,400);assert.equal(Number((await f.store.budget()).daily),0);
+ assert.equal((await f.call(french)).code,202);await Promise.all(f.pending);
+ const result=await f.call({...french,readOnly:true},'token-b');assert.equal(result.body.batch.explanationLanguage,'fr');assert.equal(result.body.batch.items.length,2);assert.deepEqual(validateSchema(responseSchema,result.body),[]);
+ assert.equal((await f.call({...f.request,readOnly:true})).body.state,'missing');
+ await f.call(f.request);await Promise.all(f.pending);assert.equal((await f.call({...f.request,readOnly:true})).body.batch.explanationLanguage,'en');
+ assert.deepEqual(languages,['fr','en']);assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM study_explanations')).rows[0].n),2);
 });

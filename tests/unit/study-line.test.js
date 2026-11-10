@@ -13,7 +13,21 @@ test('line manifest binding, stable key, lean schema and host-owned quotes',()=>
  const parsed=parseLine(JSON.stringify(output()),doc,null,s);assert.equal(parsed.items[1].sourceQuote,'不');assert.equal(parsed.items[0].grammar,'');assert.equal(LINE_RECIPE,'study-line-1');
 });
 test('tampered manifests fail before generation',()=>{
- for(const patch of [{manifest:[]},{manifest:Array(33).fill(input.manifest[0])},{manifest:[input.manifest[1],input.manifest[0]]},{manifest:[input.manifest[0],input.manifest[0]]},{manifest:[{...input.manifest[0],id:'x'}]},{explanationLanguage:'fr'},{studyText:{...input.studyText,revisionID:'other'}}])assert.throws(()=>lineSelections(doc,{...input,...patch},null));
+ for(const patch of [{manifest:[]},{manifest:Array(33).fill(input.manifest[0])},{manifest:[input.manifest[1],input.manifest[0]]},{manifest:[input.manifest[0],input.manifest[0]]},{manifest:[{...input.manifest[0],id:'x'}]},{explanationLanguage:'de'},{explanationLanguage:'fr-FR'},{explanationLanguage:undefined},{studyText:{...input.studyText,revisionID:'other'}}])assert.throws(()=>lineSelections(doc,{...input,...patch},null));
+});
+test('another explanation language has its own key and request; English is unchanged',()=>{
+ const s=selections(),english=lineBody(doc,null,s);
+ assert.deepEqual(lineSelections(doc,{...input,explanationLanguage:'fr'},null),s);
+ assert.equal(lineKey(doc,null,s,'en'),lineKey(doc,null,s));
+ assert.equal(lineKey(doc,null,s),digest({recipe:LINE_RECIPE,documentID:doc.id,sourceHash:doc.sourceHash,translationID:null,selections:s,language:'en'}));
+ assert.equal(new Set(['en','fr','es','zh-Hans','zh-Hant'].map(l=>lineKey(doc,null,s,l))).size,5);
+ assert.deepEqual(lineBody(doc,null,s,{language:'en'}),english);
+ assert.match(english.instructions,/^Explain each supplied selection in concise natural English for a language learner\./);assert.ok(english.instructions.endsWith('Do not reproduce unrelated lyrics in learner-facing fields.'));
+ for(const [language,name] of [['fr','French'],['es','Spanish'],['zh-Hans','Simplified Chinese']]) {
+  const body=lineBody(doc,null,s,{language});
+  assert.ok(body.instructions.startsWith(`Explain each supplied selection in concise natural ${name} `));assert.ok(body.instructions.includes(`Write meaning, context and uncertainty in ${name}`));
+  assert.deepEqual({...body,instructions:''},{...english,instructions:''});
+ }
 });
 test('whole-batch validation rejects incomplete, duplicate, unknown, ungrounded and extra fields',()=>{
  for(const mutate of [v=>v.items.pop(),v=>v.items[1]=v.items[0],v=>v.items[0].id='other',v=>v.items[0].meaning='',v=>v.items[0].meaning='a'.repeat(401),v=>v.items[0].grammar='invented',v=>v.items[0].evidence[0].sourceQuote='wrong',v=>v.items[0].evidence=[]]){const v=output();mutate(v);assert.throws(()=>parseLine(JSON.stringify(v),doc,null,selections()));}

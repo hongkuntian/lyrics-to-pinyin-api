@@ -17,7 +17,7 @@ import {executeTranslationJob} from './utils/song-library/translation-worker.js'
 import {admitLibraryTranslation} from './utils/membership/store.js';
 import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
 
-import {canonicalTarget,environmentLanguagePolicy,requireDirection,capabilities} from './utils/song-library/languages.js';
+import {TARGETS,canonicalTarget,environmentLanguagePolicy,requireDirection,capabilities} from './utils/song-library/languages.js';
 import {selectionV2,explanationRecipe,selectionFor,explanationBody,explanationKey,generateExplanation} from './utils/song-library/study-explanation.js';
 import {reserveExplanation,claimExplanation,finishExplanation,publicExplanation,existingExplanation} from './utils/song-library/study-store.js';
 
@@ -96,7 +96,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         const doc=await db.saveSelectedDocument(value,user.id);
         return send(200,{state:'ready',document:publicDocument(doc)});
       }
-      if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),translationDelivery:['progressive-v1'],lineHelp:{contractVersion:1,recipe:LINE_RECIPE,maxSelections:32,languages:['en']},pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
+      if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),translationDelivery:['progressive-v1'],lineHelp:{contractVersion:1,recipe:LINE_RECIPE,maxSelections:32,languages:Object.keys(TARGETS)},pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
       if(input.action==='pronunciation') {
         if(typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string'||typeof input.profileID!=='string')throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);
@@ -233,7 +233,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         }
         const selections=batch?lineSelections(doc,input,saved):null;
         const selection=batch?selections[0]:v2?selectionV2(doc,input,saved):selectionFor(doc,input);
-        const key=batch?lineKey(doc,saved,selections):explanationKey(doc,saved,selection,language),recipe=batch?LINE_RECIPE:explanationRecipe(selection,language);
+        const key=batch?lineKey(doc,saved,selections,language):explanationKey(doc,saved,selection,language),recipe=batch?LINE_RECIPE:explanationRecipe(selection,language);
         const serialize=row=>batch?{batch:publicLine(row,doc,saved,selections)}:{explanation:publicExplanation(row)};
         const prior=await existingExplanation(db.db,key);
         if(prior?.state==='ready')return send(200,{state:'ready',...serialize(prior)});
@@ -246,7 +246,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
           if(hasEmbeddedLyricCredits(doc.response)||!await generationCurrent(doc))throw new LibraryError('source_revision_superseded');
           if(doc.selectedSourceCapsule&&!input.allowGeneration)throw new LibraryError('generation_required');
           if(!apiKey)throw new LibraryError('generation_not_configured',503);
-          const body=batch?lineBody(doc,saved,selections):explanationBody(doc,saved,selection,language);
+          const body=batch?lineBody(doc,saved,selections,{language}):explanationBody(doc,saved,selection,language);
           row=(await reserveExplanation(db.db,{key,doc,translation:saved,selection,recipe,userID:user.id,explanationLanguage:language,
             generationRequest:body,amount:reservationMicros(body),allowGeneration:!!input.allowGeneration})).row;
         }

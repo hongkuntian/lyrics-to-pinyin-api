@@ -1219,7 +1219,13 @@
               "const": "study-line-1"
             },
             "explanationLanguage": {
-              "const": "en"
+              "enum": [
+                "en",
+                "fr",
+                "es",
+                "zh-Hans",
+                "zh-Hant"
+              ]
             },
             "studyText": {
               "anyOf": [
