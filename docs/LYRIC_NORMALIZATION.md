@@ -70,6 +70,17 @@ normalization preserves the same mapping and cannot strip a second apparent
 speaker prefix from already-cleaned sung words or reclassify a stripped vocal
 body as a production credit or instrumental marker.
 
+When a classified performer prefix is removed, measured word and syllable cues
+are projected onto the unchanged lyric suffix. Cues wholly inside the label are
+dropped; retained UTF-16 ranges are rebased, including nested syllables. A cue
+spanning the label and sung text keeps its measured interval. Row timestamps,
+line ends, every retained cue interval and provider timing revision stay exact;
+cleanup never interpolates or rescales them. Invalid source cues or grapheme
+boundaries fail closed, and ordinary text edits cannot authorize this projection.
+Incomplete measured responses keep the existing five-minute cache lifetime so
+normal library lookup can recover previously stripped timing without rewriting
+historical documents or changing recording identity.
+
 Song-library documents validate the mapping against their exact response rows.
 Translation receives only vocal occurrences and their performer context, not
 production credit rows. Singer and narrator remain distinct; translations keep

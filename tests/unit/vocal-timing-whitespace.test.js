@@ -30,11 +30,13 @@ test('standalone outer space cues can be removed without changing sung segment i
  assert.equal(validVocalTiming(line,{duration:30}),true);
 });
 
-test('whitespace projection never repairs malformed cues, changes words, strips speaker labels or joins internal gaps',()=>{
+test('whitespace projection never repairs malformed cues, changes words or joins internal gaps',()=>{
  const raw=parse('[1000,2000]  Alpha (1100,400)beta (1600,600)').lines[0];
  for(const text of ['Alpha  beta','Alphabeta','Alpha','Other beta'])assert.equal(revalidatedVocalLine(raw,text).vocalTiming,undefined);
  const speaker=parse('[1000,2000]Mira: Alpha(1100,400)');
- assert.equal(cleanLyrics(speaker,{artist:'Mira',duration:30}).lines[0].vocalTiming,undefined);
+ assert.equal(revalidatedVocalLine(speaker.lines[0],'Alpha').vocalTiming,undefined);
+ assert.deepEqual(cleanLyrics(speaker,{artist:'Mira',duration:30}).lines[0].vocalTiming,
+  {end:3,segments:[{utf16Start:0,utf16Length:5,text:'Alpha',start:1.1,end:1.5}]});
  for(const mutate of [l=>l.vocalTiming.segments[0].text='wrong',l=>l.vocalTiming.segments[0].start=0,l=>l.vocalTiming.segments[1].start=1.2,l=>l.vocalTiming.end=1.2]){
   const invalid=structuredClone(raw);mutate(invalid);
   assert.equal(revalidatedVocalLine(invalid,invalid.text.trim()).vocalTiming,undefined);

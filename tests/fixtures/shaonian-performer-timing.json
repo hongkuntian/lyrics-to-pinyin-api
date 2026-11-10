@@ -1,0 +1,162 @@
+{
+  "source": "qq",
+  "songId": "4932646",
+  "lines": [
+    {
+      "text": "光：你又想起某个夏天",
+      "timestamp": 21.287,
+      "vocalTiming": {
+        "end": 26.708,
+        "segments": [
+          {
+            "utf16Start": 0,
+            "utf16Length": 1,
+            "text": "光",
+            "start": 21.287,
+            "end": 22.065
+          },
+          {
+            "utf16Start": 2,
+            "utf16Length": 1,
+            "text": "你",
+            "start": 22.065,
+            "end": 22.318
+          },
+          {
+            "utf16Start": 3,
+            "utf16Length": 1,
+            "text": "又",
+            "start": 22.318,
+            "end": 22.574
+          },
+          {
+            "utf16Start": 4,
+            "utf16Length": 1,
+            "text": "想",
+            "start": 22.574,
+            "end": 22.888
+          },
+          {
+            "utf16Start": 5,
+            "utf16Length": 1,
+            "text": "起",
+            "start": 22.888,
+            "end": 23.198
+          },
+          {
+            "utf16Start": 6,
+            "utf16Length": 1,
+            "text": "某",
+            "start": 23.198,
+            "end": 23.75
+          },
+          {
+            "utf16Start": 7,
+            "utf16Length": 1,
+            "text": "个",
+            "start": 23.75,
+            "end": 24.278
+          },
+          {
+            "utf16Start": 8,
+            "utf16Length": 1,
+            "text": "夏",
+            "start": 24.278,
+            "end": 25.171
+          },
+          {
+            "utf16Start": 9,
+            "utf16Length": 1,
+            "text": "天",
+            "start": 25.171,
+            "end": 25.726
+          }
+        ]
+      }
+    },
+    {
+      "text": "曹：记忆中的那个少年",
+      "timestamp": 29.751,
+      "vocalTiming": {
+        "end": 36.095,
+        "segments": [
+          {
+            "utf16Start": 0,
+            "utf16Length": 1,
+            "text": "曹",
+            "start": 29.751,
+            "end": 31.409
+          },
+          {
+            "utf16Start": 1,
+            "utf16Length": 1,
+            "text": "：",
+            "start": 31.409,
+            "end": 31.475
+          },
+          {
+            "utf16Start": 2,
+            "utf16Length": 1,
+            "text": "记",
+            "start": 31.475,
+            "end": 31.677
+          },
+          {
+            "utf16Start": 3,
+            "utf16Length": 1,
+            "text": "忆",
+            "start": 31.677,
+            "end": 31.963
+          },
+          {
+            "utf16Start": 4,
+            "utf16Length": 1,
+            "text": "中",
+            "start": 31.963,
+            "end": 32.227
+          },
+          {
+            "utf16Start": 5,
+            "utf16Length": 1,
+            "text": "的",
+            "start": 32.227,
+            "end": 32.555
+          },
+          {
+            "utf16Start": 6,
+            "utf16Length": 1,
+            "text": "那",
+            "start": 32.555,
+            "end": 33.423
+          },
+          {
+            "utf16Start": 7,
+            "utf16Length": 1,
+            "text": "个",
+            "start": 33.423,
+            "end": 33.694
+          },
+          {
+            "utf16Start": 8,
+            "utf16Length": 1,
+            "text": "少",
+            "start": 33.694,
+            "end": 34.719
+          },
+          {
+            "utf16Start": 9,
+            "utf16Length": 1,
+            "text": "年",
+            "start": 34.719,
+            "end": 35.454
+          }
+        ]
+      }
+    }
+  ],
+  "timingSource": {
+    "source": "qq:4932646:qrc",
+    "revision": "b1b5888e0cc3730d0fb1661f1348e4b1776c11a471021dc4041904694bc2332d"
+  },
+  "durationResolution": 1
+}

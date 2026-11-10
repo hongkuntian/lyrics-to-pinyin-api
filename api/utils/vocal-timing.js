@@ -27,6 +27,23 @@ export function validVocalTiming(line,{duration=MAX_LYRIC_SECONDS,durationResolu
    ||!boundaries.has(s.utf16Start)||!boundaries.has(s.utf16Start+s.utf16Length)
    ||text.slice(s.utf16Start,s.utf16Start+s.utf16Length)!==s.text
    ||!Number.isFinite(s.start)||!Number.isFinite(s.end)||s.start<previousTime||s.end<=s.start||s.end>t.end)return false;
+  if(s.syllables!==undefined) {
+   if(!Array.isArray(s.syllables)||s.syllables.length>256)return false;
+   if(s.syllables.length) {
+    let childRange=s.utf16Start,childTime=s.start;
+    for(const child of s.syllables) {
+     if(child?.syllables!==undefined||child?.utf16Start!==childRange
+      ||!Number.isSafeInteger(child.utf16Length)||child.utf16Length<=0
+      ||!boundaries.has(child.utf16Start)||!boundaries.has(child.utf16Start+child.utf16Length)
+      ||child.utf16Start+child.utf16Length>s.utf16Start+s.utf16Length
+      ||text.slice(child.utf16Start,child.utf16Start+child.utf16Length)!==child.text
+      ||!Number.isFinite(child.start)||!Number.isFinite(child.end)
+      ||child.start<childTime||child.end<=child.start||child.end>s.end)return false;
+     childRange+=child.utf16Length;childTime=child.end;
+    }
+    if(childRange!==s.utf16Start+s.utf16Length)return false;
+   }
+  }
   previousTime=s.end;previousRange=s.utf16Start+s.utf16Length;
  }
  return true;
@@ -35,17 +52,23 @@ export function revalidatedVocalLine(line,text=line.text,options={}) {
  const {vocalTiming,...rest}=line;
  if(!validVocalTiming(line,options))return {...rest,text};
  if(text===line.text)return {...rest,text,vocalTiming};
- // Outer whitespace is display cleanup, not a different sung token. Preserve
- // every source interval while projecting its exact UTF16 range onto the
- // trimmed text. No other text edit (including a speaker prefix) grants cues.
- if(typeof text!=='string'||!text||text!==line.text.trim())return {...rest,text};
- const offset=line.text.length-line.text.trimStart().length,end=offset+text.length;
+ // Only the annotation classifier can authorize removing a performer prefix.
+ // Retain the exact measured intervals (including a token spanning the label)
+ // and project ranges onto the unchanged lyric suffix. No interpolation or
+ // arbitrary substring/replacement matching can create timing authority.
+ const prefix=options.removedPerformerPrefix??'';
+ if(typeof prefix!=='string'||!line.text.startsWith(prefix))return {...rest,text};
+ const suffix=line.text.slice(prefix.length);
+ if(typeof text!=='string'||!text||text!==suffix.trim())return {...rest,text};
+ const offset=prefix.length+suffix.length-suffix.trimStart().length,end=offset+text.length;
  const boundaries=new Set([...segmenter.segment(line.text)].map(s=>s.index).concat(line.text.length));
  if(!boundaries.has(offset)||!boundaries.has(end))return {...rest,text};
- const segments=vocalTiming.segments.flatMap(segment=>{
+ const project=segments=>segments.flatMap(segment=>{
   const start=Math.max(offset,segment.utf16Start),stop=Math.min(end,segment.utf16Start+segment.utf16Length);
-  return start<stop?[{...segment,utf16Start:start-offset,utf16Length:stop-start,text:line.text.slice(start,stop)}]:[];
+  return start<stop?[{...segment,utf16Start:start-offset,utf16Length:stop-start,text:line.text.slice(start,stop),
+   ...(segment.syllables?{syllables:project(segment.syllables)}:{})}]:[];
  });
+ const segments=project(vocalTiming.segments);
  const projected={...rest,text,vocalTiming:{...vocalTiming,segments}};
  return validVocalTiming(projected,options)?projected:{...rest,text};
 }

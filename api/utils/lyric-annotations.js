@@ -333,17 +333,18 @@ export function normalizeLyricAnnotations(data,options={}) {
     }
     const prefix=strippedPrefix?null:labelPrefix(text);
     const names=cuePerformers(prefix,aliases);
-    let lyricText=text,sourcePrefix=original?.sourcePrefix??'',startsTurn=original?.startsTurn??false;
+    let lyricText=text,sourcePrefix=original?.sourcePrefix??'',startsTurn=original?.startsTurn??false,removedPerformerPrefix;
     if(names) {
       active=speakerFor(prefix.label,names);pendingTurn=true;startsTurn=true;
       annotations.push({sourceIndex,kind:'performer_cue',speakerID:active,sourceLabel:prefix.label});
       lyricText=prefix.body.trim();sourcePrefix=sourceText.slice(0,sourceText.indexOf(text)+text.length-prefix.body.length+(prefix.body.match(/^\s*/u)?.[0]?.length??0));
       if(!lyricText) return;
+      removedPerformerPrefix=line.text.slice(0,line.text.indexOf(text)+prefix.prefix.length);
     // A newly resolved cue owns its following rows until another actual turn.
     // An inherited speaker from an earlier partial pass must not undo it.
     } else if(original?.speakerID&&!pendingTurn&&(original.startsTurn||active===null)) active=original.speakerID;
     startsTurn=startsTurn||pendingTurn;pendingTurn=false;
-    lines.push(revalidatedVocalLine(line,lyricText));
+    lines.push(revalidatedVocalLine(line,lyricText,{removedPerformerPrefix}));
     translationInputs.push(i);
     occurrences.push({sourceID:`L${String(lines.length).padStart(4,'0')}`,sourceIndex,sourceText,
       lyricText,sourcePrefix,speakerID:active,startsTurn});
