@@ -54,6 +54,13 @@ test('selected pronunciation resolves the existing registry after its module ini
   assert.doesNotThrow(()=>validateSelectedDocument(doc));
 });
 
+test('selected sources reject unknown edge credits behind a recording heading before pronunciation',async()=>{
+  const source={...candidate,lines:[{text:`${candidate.title} - ${candidate.artist}`},
+    {text:'Unlisted session role: Guest crew'},{text:'ordinary sung words'}]};
+  await assert.rejects(makeSelectedDocument(source,{...request(),expectedTextHash:selectedTextHash(source.lines)},
+    {analyzeLanguageFn:()=>{throw new Error('pronunciation must not start');}}),/selected_source_changed/);
+});
+
 test('selected cue proof is canonical, exact-word bound, immutable and survives wire projection',async()=>{
   const {cleanLyrics}=await import('../../api/utils/lyric-quality.js');
   const {hasEmbeddedLyricCredits}=await import('../../api/utils/lyric-annotations.js');

@@ -5,7 +5,7 @@
   {"name":"inline gender turns","rows":["女：第一段","男：第二段","男女：一起唱"],"visible":[[0,"第一段"],[1,"第二段"],[2,"一起唱"]]},
   {"name":"fullwidth and bracketed cues","rows":["【Ｍｉｒａ】： 第一段","（Ｎｏｅｌ）第二段","[Mira] 第三段","(Noel): 第四段"],"visible":[[0,"第一段"],[1,"第二段"],[2,"第三段"],[3,"第四段"]]},
   {"name":"standalone names and intervening bodies","rows":["Mira:","第一段","Noel:","第二段","Mira:","第三段","Noel:","第四段"],"visible":[[1,"第一段"],[3,"第二段"],[5,"第三段"],[7,"第四段"]]},
-  {"name":"one ambiguous gender cue","rows":["男：一起唱","下一句"],"visible":[[0,"男：一起唱"],[1,"下一句"]]},
+  {"name":"one ambiguous gender cue","rows":["开场","男：一起唱","下一句","落幕"],"visible":[[0,"开场"],[1,"男：一起唱"],[2,"下一句"],[3,"落幕"]]},
   {"name":"isolated unknown names","rows":["Mira:第一段","Noel:第二段"],"visible":[[0,"Mira:第一段"],[1,"Noel:第二段"]]},
   {"name":"repeated refrains are not independent evidence","rows":["Mira:第一段","Noel:第二段","Mira:第一段","Noel:第二段"],"visible":[[0,"Mira:第一段"],[1,"Noel:第二段"],[2,"Mira:第一段"],[3,"Noel:第二段"]]},
   {"name":"spoken colon phrases","rows":["我说：第一段","你说：第二段","我说：第三段","你说：第四段"],"visible":[[0,"我说：第一段"],[1,"你说：第二段"],[2,"我说：第三段"],[3,"你说：第四段"]]},
@@ -13,6 +13,6 @@
   {"name":"numbers times and URLs","rows":["12:30","https://example.test","12:45","https://another.test"],"visible":[[0,"12:30"],[1,"https://example.test"],[2,"12:45"],[3,"https://another.test"]]},
   {"name":"performed body is not stripped twice","rows":["Mira:我说：第一段","Noel:作词：第二段","Mira:男：第三段","Noel:女：第四段"],"visible":[[0,"我说：第一段"],[1,"作词：第二段"],[2,"男：第三段"],[3,"女：第四段"]]},
   {"name":"production roles do not become singers","rows":["Producer:Example","Composer:Example","Producer:Another","Composer:Another","下一句"],"visible":[[4,"下一句"]]},
-  {"name":"sparse colon prose is not a document roster","rows":["Mira:第一段","Noel:第二段","一","二","三","四","五","六","Mira:第三段","Noel:第四段"],"visible":[[0,"Mira:第一段"],[1,"Noel:第二段"],[2,"一"],[3,"二"],[4,"三"],[5,"四"],[6,"五"],[7,"六"],[8,"Mira:第三段"],[9,"Noel:第四段"]]},
+  {"name":"sparse colon prose is not a document roster","rows":["开场","Mira:第一段","Noel:第二段","一","二","三","四","五","六","Mira:第三段","Noel:第四段","落幕"],"visible":[[0,"开场"],[1,"Mira:第一段"],[2,"Noel:第二段"],[3,"一"],[4,"二"],[5,"三"],[6,"四"],[7,"五"],[8,"六"],[9,"Mira:第三段"],[10,"Noel:第四段"],[11,"落幕"]]},
   {"name":"one repeated label is insufficient","rows":["Unknown:第一段","Unknown:第二段","Unknown:第三段","Unknown:第四段"],"visible":[[0,"Unknown:第一段"],[1,"Unknown:第二段"],[2,"Unknown:第三段"],[3,"Unknown:第四段"]]}
 ]

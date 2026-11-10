@@ -70,8 +70,8 @@ test('new metadata families preserve ordinary prose, unknown labels, brackets an
     '我的暗号 TWB819754502','123456789012','USABC2X12345','ABCD1234567',
     'ISRC: USABC2612345\n一起唱','USABC2612345\u2028一起唱','制作助理：Example\n一起唱'];
   for(const text of vocals) {
-    const data={lines:rows(['制作助理：Example',text,'和声编谱：Example'])};
-    assert.deepEqual(cleanLyrics(data).lines,[data.lines[1]],text);
+    const data={lines:rows(['开场','制作助理：Example',text,'和声编谱：Example','落幕'])};
+    assert.deepEqual(cleanLyrics(data).lines,[data.lines[0],data.lines[2],data.lines[4]],text);
     assert.equal(hasEmbeddedLyricCredits({lines:[{original:text}]}),false,text);
   }
 });
@@ -111,8 +111,8 @@ test('ordinary colon text survives even when surrounded by confirmed credits',()
     'ISRC：TW-C23-04-007-06 是我的暗号','ISRC: TW-C23-04-007-060','凌晨3:30','https://example.com',
     'Chorus: sing with me','和声：一起唱'];
   for(const text of vocals) {
-    const data={lines:rows(['编曲：制作人','混音：工程师',text,'录音室：Studio','作曲：作曲家'])};
-    assert.deepEqual(cleanLyrics(data).lines,[data.lines[2]]);
+    const data={lines:rows(['开场','编曲：制作人','混音：工程师',text,'录音室：Studio','作曲：作曲家','落幕'])};
+    assert.deepEqual(cleanLyrics(data).lines,[data.lines[0],data.lines[3],data.lines[6]]);
   }
 });
 test('repairing a previously normalized source remaps provider translations by visible occurrence',()=>{
@@ -152,7 +152,7 @@ test('corroborated performance credits leave every source array at header, middl
 test('unconfirmed voice names, sung cues and separated roles remain performed content',()=>{
   for(const texts of [['男声：一起唱','戏腔：一起唱','和声：一起唱'],['男声：单色凌','一起唱','戏腔：单色凌'],
     ['男声：单色凌','女声：曾婕'],['戏腔：单色凌'],['和声：曾婕']]) {
-    const data={lines:rows(texts)};assert.deepEqual(cleanLyrics(data).lines,data.lines);
+    const data={lines:rows(['开场',...texts,'落幕'])};assert.deepEqual(cleanLyrics(data).lines,data.lines);
     assert.equal(hasEmbeddedLyricCredits({lines:data.lines.map(l=>({original:l.text}))}),false);
   }
   const data={lines:rows(['张极Jeremy：男声：单色凌','张泽禹Zack：戏腔：单色凌'])};
@@ -166,7 +166,7 @@ test('server production roles cover the native credit families without admitting
     '混音&母带处理工作室：Example','词/曲OP：Example','词/曲SP：Example','母带管理：Example','艺人经纪：Example',
     '出品方：Example','第二小提琴：Example','音乐统筹：Example','PGM：Example','OP：Example','SP：Example',
     '编曲 MUSIC ARRANGEMENT：Example','和声 BACKGROUND VOCALS：Example','笛 DIZI：Example'];
-  const data={source:'netease',lines:rows(['一起唱',...credits,'慢慢听','出品监制着梦：一起唱','PGM is my name: hello'])};
+  const data={source:'netease',lines:rows(['一起唱',...credits,'慢慢听','出品监制着梦：一起唱','PGM is my name: hello','落幕'])};
   const result=cleanLyrics(data);
   assert.equal(result.credits.length,credits.length);
   assert.deepEqual(result.lines,[data.lines[0],...data.lines.slice(credits.length+1)]);
@@ -176,7 +176,7 @@ test('server production roles cover the native credit families without admitting
 });
 
 test('exact recording headings and rights notices leave performed speech and timing intact',()=>{
-  const data={source:'netease',lines:rows(['一起唱 (Live) - 练习歌手','本作品声明，著作权归权利人所有，权利保留','我说：一起唱','一起唱'])};
+  const data={source:'netease',lines:rows(['一起唱 (Live) - 练习歌手','本作品声明，著作权归权利人所有，权利保留','开场','我说：一起唱','一起唱'])};
   const result=cleanLyrics(data,{title:'一起唱 (Live)',artist:'练习歌手'});
   assert.deepEqual(result.lines,data.lines.slice(2));assert.deepEqual(result.lyricStructure.sourceRows,data.lines.slice(2));
   assert.deepEqual(result.credits.map(c=>c.role),['Recording']);
@@ -196,7 +196,7 @@ test('TOP source formatting removes all 18 credits and 12 cues while retaining 3
 test('bilingual role grammar consumes the complete label without changing sung text',()=>{
   const data={lines:rows(['編曲 Arrangement：Example','Recording Engineer（录音师）：Example',
     '混音/母带处理工作室Mixing/Mastering Studio：Example','人声编辑Vocal Editing：Example',
-    '统筹：Example','出品人：Example','编曲Anything：保留','我说：别走','凌晨3:30','(oh yeah)'])};
+    '统筹：Example','出品人：Example','开场','编曲Anything：保留','我说：别走','凌晨3:30','(oh yeah)'])};
   const result=cleanLyrics(data);
   assert.deepEqual(result.lines,data.lines.slice(6));
   assert.equal(result.credits.length,6);
@@ -222,7 +222,7 @@ test('inline prefixes preserve the words and source mapping across subsequent cl
   assert.deepEqual(cleanLyrics(result,top),result);
 });
 test('unknown and partial identities, colon punctuation and ordinary brackets survive',()=>{
-  const data={lines:rows(['我说：','别走','合：一起唱','[oh yeah]','张极Jeremy/陌生人：保留','未知：保留','Chorus: love / hope'])};
+  const data={lines:rows(['我说：','别走','合：一起唱','[oh yeah]','张极Jeremy/陌生人：保留','未知：保留','Chorus: love / hope','落幕'])};
   assert.deepEqual(cleanLyrics(data,top).lines,data.lines);
   const other={lines:rows(['张极Jeremy：','合：','实际歌词'])};
   assert.deepEqual(cleanLyrics(other,{artist:'Another band'}).lines,other.lines);
@@ -254,17 +254,17 @@ test('a stripped vocal body cannot become a credit or instrumental marker on ano
   assert.deepEqual(second,first);assert.equal(second.instrumental,false);
 });
 test('a later verified roster can resolve a previously unknown cue inside an active turn',()=>{
-  const data={lines:rows(['张极：第一句','张泽禹Zack：第二句'])};
+  const data={lines:rows(['张极：第一句','张泽禹Zack：第二句','落幕'])};
   const first=cleanLyrics(data,{artist:'张极'}),second=cleanLyrics(first,top);
-  assert.deepEqual(second.lines.map(l=>l.text),['第一句','第二句']);
-  assert.deepEqual(second.lyricStructure.occurrences.map(o=>o.speakerID),['S1','S2']);
+  assert.deepEqual(second.lines.map(l=>l.text),['第一句','第二句','落幕']);
+  assert.deepEqual(second.lyricStructure.occurrences.map(o=>o.speakerID),['S1','S2','S1']);
   assert.deepEqual(cleanLyrics(second,top),second);
 });
 
 test('instrument and team credits are separate from every source array; performed speech survives',()=>{
   const credits=['原唱：歌手','Program：Example','键盘：张三','打击乐：李四','和声：张三 李四','长笛：王五',
     '萨克斯：赵六','小号：张三','长号：李四','二胡：王五','戏腔念白：歌手','制作团队：工作室','出品团队：工作室'];
-  const data={source:'netease',lines:rows([...credits,'我说：谢谢大家','一起唱'])};
+  const data={source:'netease',lines:rows([...credits,'开场','我说：谢谢大家','一起唱'])};
   const result=cleanLyrics(data);
   assert.equal(result.credits.length,credits.length);
   assert.deepEqual(result.lines,data.lines.slice(credits.length));
@@ -317,8 +317,8 @@ test('composed ownership and release roles remove credits without treating colon
       metadata:{lyric_structure:performed.lyricStructure}}),false);
   }
   for(const text of fixture.preserved) {
-    const data={lines:rows([...fixture.screenshotCredits,text,...fixture.screenshotCredits])};
-    assert.deepEqual(cleanLyrics(data).lines,[data.lines[fixture.screenshotCredits.length]],text);
+    const data={lines:rows(['开场',...fixture.screenshotCredits,text,...fixture.screenshotCredits,'落幕'])};
+    assert.deepEqual(cleanLyrics(data).lines,[data.lines[0],data.lines[fixture.screenshotCredits.length+1],data.lines.at(-1)],text);
   }
   // A production-looking phrase can be performed after a verified singer cue.
   const data={lines:rows(['Eason Chan：词版权管理方：一起唱','Eason Chan：联合出品：慢慢听'])};
@@ -339,8 +339,8 @@ test('combined engineering and artwork roles corroborate a backing-vocal roster 
       assert.deepEqual(cleanLyrics(result),result);
       assert.equal(hasEmbeddedLyricCredits({lines:data.lines.map(l=>({original:l.text}))}),true);
     }
-    const sung={lines:rows(['和声：一起唱',...credits,'我说：慢慢听'])};
-    assert.deepEqual(cleanLyrics(sung).lines,[sung.lines[0],sung.lines.at(-1)]);
+    const sung={lines:rows(['开场','和声：一起唱',...credits,'我说：慢慢听','落幕'])};
+    assert.deepEqual(cleanLyrics(sung).lines,[sung.lines[0],sung.lines[1],...sung.lines.slice(-2)]);
   }
 });
 
@@ -349,11 +349,28 @@ test('mixed-script backing names and choir teams need an uninterrupted confirmed
   for(const texts of [vocalCredits,['音频编辑:蔡志成',...vocalCredits],
     [...vocalCredits,'艺人统筹:YY音乐@云云、君君'],
     ['音频编辑:蔡志成',...vocalCredits,'一起唱','艺人统筹:YY音乐@云云、君君']]) {
-    const data={lines:rows(texts)};
-    assert.deepEqual(cleanLyrics(data).lines,data.lines.filter(line=>vocalCredits.includes(line.text)||line.text==='一起唱'));
+    const data={lines:rows(['开场',...texts,'落幕'])};
+    assert.deepEqual(cleanLyrics(data).lines,data.lines.filter(line=>vocalCredits.includes(line.text)||['开场','一起唱','落幕'].includes(line.text)));
   }
   const data={lines:rows(['小阿七：和声:赫拉Hera','小阿七：合唱:一寸光年团队'])};
   const result=cleanLyrics(data,{artist:'小阿七'});
   assert.deepEqual(result.lines.map(line=>line.text),vocalCredits);
   assert.deepEqual(cleanLyrics(result,{artist:'小阿七'}),result);
+});
+
+
+test('colon blocks at document edges use position rather than role or name dictionaries',async()=>{
+  const fixture=JSON.parse(await readFile(new URL('../fixtures/production-credit-grammar.json',import.meta.url)));
+  for(const example of fixture.edgeColonCases){
+    const input={source:'fixture',lines:rows(example.rows)};
+    const options={artist:'Eason Chan',title:'Practice'};
+    const result=cleanLyrics(input,options);
+    const expected=example.visible.map(i=>example.rows[i].replace(/^Eason Chan：/u,''));
+    assert.deepEqual(result.lines.map(line=>line.text),expected,example.name);
+    assert.deepEqual(result.lines.map(line=>line.timestamp),example.visible.map(i=>input.lines[i].timestamp),example.name);
+    assert.deepEqual(result.credits.filter(c=>c.role!=='Recording').map(c=>c.original),example.credits.map(i=>example.rows[i]),example.name);
+    assert.deepEqual(cleanLyrics(result,options),result,example.name);
+    assert.equal(hasEmbeddedLyricCredits({song:{artist:{original:'Eason Chan'},title:{original:'Practice'}},lines:input.lines.map(l=>({original:l.text}))}),example.credits.length>0||example.rows.some(x=>x.startsWith('Eason Chan：')),example.name);
+    assert.deepEqual(input.lines.map(line=>line.text),example.rows,example.name);
+  }
 });

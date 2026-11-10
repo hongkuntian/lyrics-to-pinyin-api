@@ -191,6 +191,27 @@ export function lyricCreditRoles(lines,options={},protectedIndices=new Set()) {
       if(candidates.has(index))result.set(index,'production_credit');
     blockStart=blockEnd;
   }
+  // A colon row at a document edge is enough evidence of a credit, even for
+  // unknown roles and names. Ordinary vocals bound the two runs. Keep this on
+  // the shared classifier path so cache refresh and generation preflight agree.
+  const edgeParts=text=>!/[\r\n\v\f\u0085\u2028\u2029]/u.test(text)&&text.match(/^([^:：]+)[:：](.*)$/u);
+  const isEdgeColon=text=>{const parts=edgeParts(text);return Boolean(parts&&parts[1].trim()&&parts[2].trim());};
+  const transparent=(text,i)=>result.has(i)||!text||classifyLyricNotice(text)||isInstrumentalMarker(text)||isMusicNotePlaceholder(text)
+    ||(options.title&&options.artist&&labelKey(text)===labelKey(`${options.title} - ${options.artist}`));
+  // Do not erase an all-colon dialogue when there is no identifiable lyric body.
+  const hasBody=lines.some((line,i)=>{
+    const text=(line.text??'').trim();
+    return text&&(protectedIndices.has(i)||(!transparent(text,i)&&!isEdgeColon(text)));
+  });
+  for(const direction of hasBody?[1,-1]:[]) {
+    for(let i=direction===1?0:lines.length-1;i>=0&&i<lines.length;i+=direction) {
+      if(protectedIndices.has(i))break;
+      const text=(lines[i].text??'').trim();
+      if(transparent(text,i))continue;
+      if(!isEdgeColon(text))break;
+      result.set(i,'production_credit');
+    }
+  }
   return result;
 }
 
@@ -205,7 +226,7 @@ function performedCueIndices(lines,aliases,excluded=new Set()) {
 export function hasEmbeddedLyricCredits(response,options={}) {
   const lines=(response?.lines??[]).map(line=>({text:line.original??''}));
   const structure=response?.metadata?.lyric_structure;
-  const context={artist:response?.song?.artist?.original??'',...options};
+  const context={artist:response?.song?.artist?.original??'',title:response?.song?.title?.original??'',...options};
   // Public speaker IDs and unchecked prefix flags are not canonical evidence.
   const canonicalValid=validLyricStructure(structure,response?.lines??[]);
   const performedBodies=new Set(canonicalValid?structure.occurrences.flatMap((occurrence,index)=>occurrence.sourcePrefix?[index]:[]):[]);

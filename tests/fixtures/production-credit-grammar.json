@@ -265,5 +265,181 @@
     "Sound Produce：百田留衣",
     "弦乐演奏：李琪北京室内乐团",
     "和声演唱：百田留衣 / 可乐 / 阿璞（八三夭）/ 黄士杰"
+  ],
+  "edgeColonCases": [
+    {
+      "name": "unknown head and footer roles need no known anchor",
+      "rows": [
+        "现场协作：陌生团队",
+        "Unlisted Role: A / B (Group)",
+        "一起唱",
+        "我说：慢慢听",
+        "再次唱",
+        "Extra Credits：Somebody"
+      ],
+      "visible": [
+        2,
+        3,
+        4
+      ],
+      "credits": [
+        0,
+        1,
+        5
+      ]
+    },
+    {
+      "name": "single colon rows at each edge",
+      "rows": [
+        "未知标签：任何内容",
+        "一起唱",
+        "Another unknown: anything"
+      ],
+      "visible": [
+        1
+      ],
+      "credits": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "known metadata and blanks do not interrupt edge blocks",
+      "rows": [
+        "",
+        "作曲：Example",
+        "未知标签：团队",
+        "Practice - Eason Chan",
+        "一起唱",
+        "(outro)",
+        "另一标签：团队",
+        ""
+      ],
+      "visible": [
+        4
+      ],
+      "credits": [
+        1,
+        2,
+        6
+      ]
+    },
+    {
+      "name": "interior colon prose stays",
+      "rows": [
+        "一起唱",
+        "Unknown: stay",
+        "凌晨3:30",
+        "https://example.com",
+        "慢慢听"
+      ],
+      "visible": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "credits": []
+    },
+    {
+      "name": "unmarked edge speech follows the requested permissive policy",
+      "rows": [
+        "我说：别哭",
+        "一起唱",
+        "Chorus: sing with me"
+      ],
+      "visible": [
+        1
+      ],
+      "credits": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "verified singer cues remain sung at the edges",
+      "rows": [
+        "Eason Chan：Unknown: sung words",
+        "一起唱",
+        "Eason Chan：和声演唱：慢慢听"
+      ],
+      "visible": [
+        0,
+        1,
+        2
+      ],
+      "credits": []
+    },
+    {
+      "name": "all-colon dialogue has no identifiable lyric body",
+      "rows": [
+        "Unknown: A",
+        "Another：B"
+      ],
+      "visible": [
+        0,
+        1
+      ],
+      "credits": []
+    },
+    {
+      "name": "multiline rows and incomplete colon rows remain boundaries",
+      "rows": [
+        "Unknown: A\n一起唱",
+        "Unknown: interior",
+        "Role:",
+        ": Singer"
+      ],
+      "visible": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "credits": []
+    },
+    {
+      "name": "colon footer follows ordinary title-like vocal",
+      "rows": [
+        "一起唱",
+        "慢慢听",
+        "Unlisted: Group"
+      ],
+      "visible": [
+        0,
+        1
+      ],
+      "credits": [
+        2
+      ]
+    },
+    {
+      "name": "native cache and UI fixture",
+      "rows": [
+        "现场协作：无名团队",
+        "Additional session notes: Practice crew",
+        "一起唱",
+        "慢慢听",
+        "Vocal support crew: A / B (Group)",
+        "后期协力：练习团队"
+      ],
+      "visible": [
+        2,
+        3
+      ],
+      "credits": [
+        0,
+        1,
+        4,
+        5
+      ]
+    }
+  ],
+  "edgeHeuristicCredits": [
+    "现场协作：无名团队",
+    "Additional session notes: Practice crew",
+    "Vocal support crew: A / B (Group)",
+    "后期协力：练习团队"
   ]
 }

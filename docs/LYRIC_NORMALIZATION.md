@@ -2,7 +2,7 @@
 
 The shared `cleanLyrics` path uses `lyric-annotations-3` to separate recognized
 production credits and performer cues from sung text before romanization. It
-does not delete arbitrary colon-containing lines, deduplicate refrains, rewrite
+does not delete arbitrary interior colon-containing lines, deduplicate refrains, rewrite
 words, or move a cue's timestamp onto a vocal line.
 
 Production roles have explicit Chinese and English aliases. Rights and release
@@ -10,13 +10,13 @@ roles also use a complete-label grammar: recording/composition scope lists,
 copyright duties and entities, and joint/exclusive production, publishing or
 distribution activities compose without adding individual compound labels.
 For example, `词 + 版权 + 管理 + 方` and `(录音作品 + 及 + MV) + 版权`
-are credits. Any unconsumed sentence text keeps a colon row readable. The same
+are credits. In the interior, unconsumed sentence text keeps a colon row readable. The same
 grammar and fixture corpus run in native display cleanup, including offline
 saved sources. Credits remain in Song details; their extraction never shifts a
 retained vocal timestamp or reassigns a saved occurrence ID.
 
-A bilingual label must consume the whole label and refer to one role. Unknown suffixes and
-ambiguous chorus text remain readable. Performer labels can use names from
+Interior production labels must consume the whole label and refer to one role.
+Unknown suffixes and ambiguous interior chorus text remain readable. Performer labels can use names from
 verified artist metadata, explicitly supplied performer identities, or the
 reviewed artist roster in `api/data/lyric-performers.json`. The roster is scoped
 to the group, not one song. Complete combined labels require every member to
@@ -27,8 +27,8 @@ labels at least twice. Each unknown alias needs two distinct sung bodies or a
 standalone marker; repeating the same refrain is not independent evidence.
 Han labels use the existing compact personal-name grammar; other labels require
 a capitalized single-token name shape. Combined labels cannot bootstrap
-inference and every component must qualify independently. Isolated, sparse,
-multiline and non-name-shaped colon/bracket text stays readable.
+inference and every component must qualify independently. These checks identify performer cues, independently of the more permissive
+edge-credit heuristic described below.
 
 Generic chorus/gender cues require a confirmed named-performer cue or paired
 male/female cues in the same document. This includes standalone `男：` / `女：`
@@ -41,20 +41,20 @@ selection-version bump or background translation regeneration is required.
 
 Production labels can list multiple complete roles with `/`, `&`, `+`, `、`,
 `及` or English `and`. Every component must independently be an unambiguous
-production role; an unknown or spoken component preserves the entire row.
+production role; in the interior, an unknown or spoken component preserves the entire row.
 Engineering duties compose recording/mixing/mastering with processing or
 production terms. Artwork roles compose cover/visual/poster/packaging/video
 subjects with design, illustration, coordination, editing and production duties.
 This recognizes `混音/母带处理` and `封面设计` without song-specific rules.
-A single backing-singer name still requires corroborating production rows;
-`和声：一起唱` remains sung text even beside a credit block.
+In the interior, a single backing-singer name still requires corroborating
+production rows; `和声：一起唱` remains sung text even beside a credit block.
 
 Instrument and engineering roles also accept bounded production modifiers:
 numbered sections such as `1st Violin` and `3rd Violins`, principal/lead/solo
 instruments, assistants, recording engineers, technicians and contractors.
 Chinese instrument roles compose with production duties such as `弦乐 助理`
 and `弦乐录音助理`. The complete label must match this grammar; an unknown
-colon label, a name-like body or proximity to credits alone is insufficient.
+interior colon label, a name-like body or proximity to credits alone is insufficient.
 `C.Bass` is accepted as a contrabass label. An anchored ISRC row retains the
 12-character code even when the provider splits its final five digits with
 extra hyphens, as in `ISRC：TW-C23-04-007-06`. Credit extraction never edits
@@ -121,11 +121,11 @@ Production credits live only in `song_details.credits`, persisted separately in 
 
 ## Corroborated performance credits
 
-Compact Chinese personal names following 男声, 女声, or 戏腔 require corroboration: verified performer metadata, two adjacent distinct roles naming the same person, or two neighboring confirmed credit rows. A single backing-vocal name can also qualify at either edge of that block. Traditional labels normalize only for comparison. Unconfirmed names, sung chorus phrases, and already separated performer-cue bodies remain performed text. Extracted credits stay in Song details; source rows, romanization and new model input contain only the retained vocals, with unchanged timestamps and repeated words.
+In the interior, compact Chinese personal names following 男声, 女声, or 戏腔 require corroboration: verified performer metadata, two adjacent distinct roles naming the same person, or two neighboring confirmed credit rows. A single backing-vocal name can also qualify at either edge of that block. Traditional labels normalize only for comparison. Unconfirmed interior names and sung chorus phrases remain performed text. Canonically separated performer-cue bodies remain protected at every position. Extracted credits stay in Song details; source rows, romanization and new model input contain only the retained vocals, with unchanged timestamps and repeated words.
 
 The reported 倔強 / Mayday and 从前说 / 小阿七 screenshots add complete
 song-producer, audio-editor and artist-coordinator aliases. Mixed Han/Latin
-backing-vocal names and named choir teams qualify only inside an uninterrupted
+interior backing-vocal names and named choir teams qualify only inside an uninterrupted
 credit block with at least two confirmed production rows. `合唱` remains ambiguous;
 a single anchor or an intervening sung row cannot corroborate those candidates.
 The coordinator's visually wrapped contributor remains one source credit.
@@ -142,8 +142,8 @@ choir, 和声/和音/合声/伴唱/背景人声/合唱) plus an arranging task, 
 guest modifier plus a vocal role. This recognizes forms such as 制作助理,
 和声编谱 and 友情大合唱 across contributors and recordings. Traditional script,
 spacing and equivalent bilingual assistant labels are compared without rewriting
-retained words. Bare chorus/backing-vocal cues retain their existing corroboration
-requirements; unknown suffixes and arbitrary colon prose remain lyrics.
+retained words. Interior chorus/backing-vocal cues retain their existing corroboration
+requirements; unknown interior suffixes and colon prose remain lyrics.
 
 A complete standalone ISRC also qualifies without an `ISRC` prefix. Recognition
 uses the [IFPI code structure](https://isrc.ifpi.org/images/downloads/ISRC_Handbook.pdf):
@@ -173,7 +173,8 @@ balanced outer `[]` or `【】` pair is admitted; malformed, mixed or nested squ
 wrappers preserve the row. Round parentheses remain meaningful inside the legal
 use-action clause. Arbitrary bracketed words, background vocals in parentheses,
 unknown English/Japanese/Korean notices, quotations and sung copyright prose
-remain readable. No row-position, timestamp or first-N heuristic is used.
+remain readable under the notice classifier. Notice recognition uses no
+row-position, timestamp or first-N heuristic; edge colon credits are separate.
 
 The Chinese rights grammar consumes a formal rights holder, missing permission
 or authorization, a prohibition and a bounded list of explicit use actions. The
@@ -245,8 +246,8 @@ distribution labels in the corpus's `orchestralScreenshotCredits`; its exact
 provider item and recording duration were not established. Other variants are
 authored regressions. Rules match complete normalized roles, including compounds
 whose every atom is recognized, rather than contributor/title blacklists or
-arbitrary colon rows. Ambiguous vocal labels and verified performed bodies retain
-their existing protection.
+arbitrary interior colon rows. Ambiguous interior vocal labels retain their
+existing protection; verified performed bodies remain protected everywhere.
 
 Fresh sources extract these credits into existing `song_details.credits` before
 pronunciation and translation context. Current-revision contaminated stored
@@ -271,11 +272,31 @@ sound, music and audio roles compose with production duties. Explicit backing
 vocal performance labels such as `和声演唱` qualify without a name-shape test
 or neighboring credits, including long rosters, stage names and affiliations.
 This deliberately broadens role recognition rather than adding song/name rules.
-Bare ambiguous chorus cues still need corroboration, and full-label matching
-preserves ordinary prose and unknown role components. Verified performed bodies
+In the interior, bare ambiguous chorus cues still need corroboration, and
+full-label matching preserves ordinary prose and unknown role components. Verified performed bodies
 remain protected. The shared corpus checks credit blocks at the beginning,
 middle and end, sung neighbors, repeated normalization and unchanged vocal timing.
 
 Both fresh backend cleanup and native cached/saved projection execute this
 policy. The existing targeted refresh handles newly detected credits; immutable
 source IDs and saved translation bindings are preserved, without a bulk reset.
+
+## Colon blocks at the lyric edges
+
+At the user's request, the head and tail of a document use a more permissive
+heuristic: scan inward through consecutive single-line `label: body` or
+`label：body` rows with nonempty text on both sides. Neither the label nor the
+contributor needs dictionary recognition. Blank separators, recognized credits,
+notices, headings and instrumental markers do not stop the scan. An ordinary
+lyric row or verified performer cue stops it. Existing performed-body evidence
+continues to protect source text. A document consisting only of unknown colon
+rows has no identifiable lyric body, so this fallback does not erase it.
+
+This intentionally accepts that an unmarked sung colon row at an edge can be
+classified as metadata. Interior colon rows still use the role-specific rules.
+No first-N count, timing cutoff, contributor-name test or known-credit neighbor
+is required. Extracted rows remain in Song details. The same classifier drives
+fresh normalization, targeted cache refresh and generation preflight; native
+projection also handles offline saved sources without rebinding their IDs,
+word timing or translations. `edgeColonCases` covers both edges, single rows,
+metadata separators, interior speech, performed prefixes and repeated cleanup.

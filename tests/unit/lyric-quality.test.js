@@ -13,18 +13,18 @@ test('adaptation and publisher credits in the matching Mandarin source are not v
     {text:'Publisher : Example Publishing',timestamp:0.3},{text:'这是演唱的测试文字',timestamp:0.515}];
   assert.deepEqual(cleanLyrics({lines}).lines,[lines[3]]);
 });
-test('musician and source credits are removed without discarding a sung chorus label',()=>{
+test('musician and source credits are removed without discarding interior chorus labels',()=>{
   const lines=['Acoustic Guitar：Example Player','Guitar Solo：Example Player','Strings：Example Ensemble',
-    'Programming：Example Player','Chorus：歌手甲 / 歌手乙',
+    'Programming：Example Player','开场','Chorus：歌手甲 / 歌手乙',
     '取材自歌曲《测试曲》(词：词作者 曲：曲作者)',
     'Chorus: sing this line with me','这是演唱的测试文字'].map(text=>({text,timestamp:200}));
-  assert.deepEqual(cleanLyrics({lines}).lines,[lines[4],...lines.slice(-2)]);
+  assert.deepEqual(cleanLyrics({lines}).lines,[lines[4],lines[5],...lines.slice(-2)]);
 });
-test('retain real short lyrics and colons while clearing invalid vocal timing',()=> {
+test('retain real short lyrics and interior colons while clearing invalid vocal timing',()=> {
   const result=cleanLyrics({instrumental:true,lines:[{text:' 作词：Example ',timestamp:0},
-    {text:'我说：你好',timestamp:28},{text:'啊',timestamp:500},{text:'come home',timestamp:-1}]},{duration:241});
+    {text:'开场',timestamp:10},{text:'我说：你好',timestamp:28},{text:'啊',timestamp:500},{text:'come home',timestamp:-1}]},{duration:241});
   assert.equal(result.instrumental,false);
-  assert.deepEqual(result.lines,[{text:'我说：你好',timestamp:28},{text:'啊',timestamp:null},{text:'come home',timestamp:null}]);
+  assert.deepEqual(result.lines,[{text:'开场',timestamp:10},{text:'我说：你好',timestamp:28},{text:'啊',timestamp:null},{text:'come home',timestamp:null}]);
 });
 
 test('NetEase fixed instrumental marker is explicit evidence only without remaining vocals',()=>{

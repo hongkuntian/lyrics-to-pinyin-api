@@ -60,7 +60,8 @@ export async function makeSelectedDocument(candidate,request,{analyzeLanguageFn=
   const canonical=candidate.lyricStructure;
   const originals=candidate.lines.map(l=>({original:l.text}));
   if(canonical&&!validLyricStructure(canonical,originals))throw new LibraryError('invalid_source_structure',502);
-  if(hasEmbeddedLyricCredits({lines:originals,metadata:{lyric_structure:canonical}}))
+  if(hasEmbeddedLyricCredits({lines:originals,metadata:{lyric_structure:canonical}},
+    {title:candidate.title,artist:candidate.artist}))
     throw new LibraryError('selected_source_changed');
   const details=analyzeLanguageFn(candidate.lines.map(l=>l.text));
   // Processors use pronunciation aids, which in turn validate library context.
