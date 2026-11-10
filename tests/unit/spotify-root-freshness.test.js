@@ -13,7 +13,8 @@ import {recording} from '../helpers/spotify.js';
 const time=1_800_000_000_000;
 const sample=(position,start,{playing=true,rtt=100}={})=>({status:200,body:playback(position,playing),requestStartedAt:start,responseReceivedAt:start+rtt});
 test('confirmation lease starts before request; progress interpolation starts after receipt',()=>{
- const observation=observePlayback(sample(19500,time,{rtt:900}),null,1),document=documentFor();
+ // 19.0 s stays on the first line with the cue head start; adding the 0.9 s RTT would not.
+ const observation=observePlayback(sample(19000,time,{rtt:900}),null,1),document=documentFor();
  assert.equal(observation.confirmedAt,time);
  const consumer={generation:1,sequence:0,recipe};
  const state=renderState({observation,document,consumer,now:time+900});

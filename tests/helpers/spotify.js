@@ -9,9 +9,9 @@ import {makeDocument} from '../../api/utils/song-library/document.js';
 import {publicDocument} from '../../api/utils/song-library/public-content.js';
 export const user={id:'owner',keyID:'a'.repeat(43)+'=',credentialDigest:'digest',bundleID:'com.hongkuntian.Lyra',environment:'development'};
 export const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Fixture',artists:['Artist'],album:'Album',duration_ms:240000}};
-export function documentFor(r=recording){
+export function documentFor(r=recording,lines=[{original:'Fixture original',romanized:'Fixture reading',timestamp:0},{original:'Next original',romanized:'Next reading',timestamp:20}]){
  const selection='fixture-selection';
- const response={song:{id:42,title:{original:'Independent title'},artist:{original:'Independent artist'},language:'zh',romanization_system:'pinyin',duration:240},quality:{synced:true,partial:false,instrumental:false},metadata:{source:'LRCAPI',selection_revision:selection},lines:[{original:'Fixture original',romanized:'Fixture reading',timestamp:0},{original:'Next original',romanized:'Next reading',timestamp:20}]};
+ const response={song:{id:42,title:{original:'Independent title'},artist:{original:'Independent artist'},language:'zh',romanization_system:'pinyin',duration:240},quality:{synced:true,partial:false,instrumental:false},metadata:{source:'LRCAPI',selection_revision:selection},lines};
  response.recordingBinding=spotifyBinding(r,sourceCapsule(response),selection,response);
  return publicDocument(makeDocument(r,response,selection),r);
 }

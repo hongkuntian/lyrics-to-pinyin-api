@@ -2,7 +2,10 @@ import {randomUUID,randomBytes} from 'node:crypto';
 import {LibraryError} from '../song-library/store.js';
 import {sha,vaultContext} from './vault.js';
 import {observePlayback,requestFingerprint} from './observation.js';
-import {renderState,immutablePush,validateDocument,validateRecipe} from './render.js';
+import {renderState,immutablePush,nextChangeAt,validateDocument,validateRecipe} from './render.js';
+// How long after a poll its own invocation keeps publishing cue changes. The next
+// poll normally lands within two to three seconds and takes over.
+const followHorizon=4000;
 const fail=(code,status=409)=>{throw new LibraryError(code,status);};
 const active=c=>Object.values(c.consumers??{}).filter(x=>x.status!=='ended');
 const idFor=(c,kind,n)=>`${c.id}:${c.epoch}:${kind}:${n}`;
@@ -18,7 +21,7 @@ export function closeConnection(c,reason,now,put,status='disconnected'){
  c.epoch=randomUUID();c.status=status;c.reason=reason;c.refresh=null;c.access=null;c.stage=null;c.refreshLease=null;c.pollLease=null;c.document=null;c.observation=null;c.closedAt=now;
 }
 export class SpotifyService {
- constructor({store,config,provider,enqueue,send,acquire,admit,eligible=admit,resolveRecipe=async()=>({}),now=Date.now,crash=async()=>{}}){const apnsEnvironment=config.apnsEnvironment===undefined?'production':config.apnsEnvironment;if(!['production','development'].includes(apnsEnvironment))fail('spotify_not_configured',503);Object.assign(this,{store,config:{...config,apnsEnvironment},provider,enqueue,send,acquire,admit,eligible,resolveRecipe,now,crash});}
+ constructor({store,config,provider,enqueue,send,acquire,admit,eligible=admit,resolveRecipe=async()=>({}),now=Date.now,crash=async()=>{},sleep=null,defer=work=>work}){const apnsEnvironment=config.apnsEnvironment===undefined?'production':config.apnsEnvironment;if(!['production','development'].includes(apnsEnvironment))fail('spotify_not_configured',503);Object.assign(this,{store,config:{...config,apnsEnvironment},provider,enqueue,send,acquire,admit,eligible,resolveRecipe,now,crash,sleep,defer});}
  deploymentMatches(c){return Boolean(c)&&c.environment===this.config.environment&&c.clientID===this.config.clientID;}
  contextMatches(c){return this.deploymentMatches(c)&&c.apnsEnvironment===this.config.apnsEnvironment;}
  async invalidatePushContext(c){
@@ -216,7 +219,7 @@ export class SpotifyService {
   if((await this.store.pending(id)).length)throw new LibraryError('spotify_outbox_unresolved',503);
  }
  async tick(message){
-  const id=message.connectionID;let c=await this.store.read(id);if(!c)return;
+  const id=message.connectionID,started=this.now();let c=await this.store.read(id),follow=null;if(!c)return;
   if(!this.deploymentMatches(c))fail('spotify_environment_mismatch',503);
   if(message.kind==='cleanup'){await this.cleanup(message);await this.drain(id);return;}
   c=await this.ensureContext(c);
@@ -261,26 +264,101 @@ export class SpotifyService {
     if(current.inactiveSince!=null&&this.now()-current.inactiveSince>=120000)for(const s of active(current))endConsumer(current,s,'inactive',this.now(),put);
     if(observation.recording&&!current.document&&!current.acquisition){current.acquisition={requestHash:observation.requestHash,attempt:0};put('acquire',idFor(current,'acquire',`${observation.requestHash}:0`),{requestHash:observation.requestHash,recording:observation.recording,attempt:0},this.now());}
    }else current.lastError=error?.code??'spotify_unavailable';
+   // Only a new successful observation is followed, by the invocation that committed
+   // it, and only while that invocation can still finish a send inside its limit.
+   const until=this.sleep&&sample&&current.observation.playing?Math.min(this.now()+followHorizon,started+8000):null;
    for(const s of active(current)){
-    const state=renderState({observation:current.observation,document:current.document,consumer:s,now:this.now()});
+    const trace={},state=renderState({observation:current.observation,document:current.document,consumer:s,now:this.now(),trace});
+    if(trace.position!==undefined)s.shown={occurrence:current.observation.playbackOccurrence,position:trace.position};
     if(!current.document&&current.lyricPhase&&current.observation?.confirmedAt!=null&&this.now()-current.observation.confirmedAt<8000){state.phase=current.lyricPhase;state.statusReason=current.lyricReason;}
     s.snapshot={state,confirmedAtMS:current.observation?.confirmedAt??0,expiresAtMS:(current.observation?.confirmedAt??0)+8000};
-    const semantic=sha(JSON.stringify({...state,occurrence:current.observation?.playbackOccurrence??'',sequence:0,observedAt:0,confirmedAt:0,validUntil:0,progress:0}));
-    if(semantic===s.semantic&&this.now()-(s.lastPublicationAt??0)<4000)continue;
+    const semantic=this.semantic(state,current.observation);
+    if(semantic===s.semantic&&!this.keepAliveDue(current,s,until))continue;
     if(Math.floor(this.now()/1000)<=s.lastTimestamp)continue;
     const publication=immutablePush({state,consumer:s,now:this.now()});
     publication.requestHash=current.observation?.requestHash??null;publication.playbackOccurrence=current.observation?.playbackOccurrence??null;
     const significant=previousObservation?.requestHash!==current.observation?.requestHash||previousObservation?.playbackOccurrence!==current.observation?.playbackOccurrence||previousObservation?.playing!==current.observation?.playing;
     if(significant)publication.priority=10;
     if(semantic===s.semantic)publication.priority=5;
-    s.semantic=semantic;s.sequence=publication.sequence;s.lastTimestamp=publication.timestamp;s.lastPublicationAt=this.now();
+    s.semantic=semantic;s.sequence=publication.sequence;s.lastTimestamp=publication.timestamp;s.lastPublicationAt=this.now();s.lastExpiresAt=publication.expiresAt;
     const publicationID=idFor(current,'publication',`${s.sessionID}:${s.sequence}`);s.pendingPublication=publicationID;
     put('publication',publicationID,{sessionID:s.sessionID,recipeRevision:s.recipeRevision,...publication},this.now());
     if(s.widgetToken&&this.now()-(s.lastWidgetAt??0)>=30000&&s.widgetSemantic!==semantic){s.lastWidgetAt=this.now();s.widgetSemantic=semantic;put('widget',idFor(current,'widget',`${s.sessionID}:${s.sequence}`),{sessionID:s.sessionID,tokenVersion:s.widgetTokenVersion},this.now());}
    }
    if(active(current).length){current.tickOrdinal++;current.nextDue=Math.max(this.now(),claim.priorDue+2000,error?.notBefore??0);current.notBefore=error?.notBefore??0;put('tick',idFor(current,'tick',current.tickOrdinal),{ordinal:current.tickOrdinal},current.nextDue);}
+   if(until!==null&&active(current).length)follow={epoch:current.epoch,pollOrdinal:current.observation.pollOrdinal,at:this.nextChange(current),until};
   });
   await this.crash('tickCommitted');await this.drain(id);
+  // The poll is complete and acknowledged on its usual schedule; following runs after it.
+  if(follow)await this.defer(this.follow(id,follow));
+ }
+ semantic(state,o){return sha(JSON.stringify({...state,occurrence:o?.playbackOccurrence??'',sequence:0,observedAt:0,confirmedAt:0,validUntil:0,progress:0}));}
+ nextChange(c){let next=null;for(const s of active(c)){const at=nextChangeAt({observation:c.observation,document:c.document,consumer:s,now:this.now()});if(at!==null&&(next===null||at<next))next=at;}return next;}
+ // A keep-alive renews the eight-second deadline. A cue published between polls
+ // carries the deadline of an older confirmation, so it is renewed sooner. None
+ // is sent when the next cue will be published in time to do the same.
+ keepAliveDue(c,s,until){
+  const now=this.now(),expires=s.lastExpiresAt??(s.lastPublicationAt??0)+7500;
+  if(now-(s.lastPublicationAt??0)<4000&&expires-now>3500)return false;
+  if(until===null)return true;
+  const at=nextChangeAt({observation:c.observation,document:c.document,consumer:s,now});
+  return at===null||at>until||at>expires-1500;
+ }
+ // Publishes each line at its own start between two polls: the poll interval no
+ // longer decides when a line appears. The observation's confirmation time and
+ // deadline are kept, so this never extends a lease. A newer poll takes over.
+ async follow(id,own){
+  for(let step=0;step<8&&own.at!==null&&own.at<=own.until;step++){
+   const wait=own.at-this.now();if(wait>0)await this.sleep(wait);
+   const staged=[];let next=null;
+   await this.store.mutate(id,(current,put)=>{
+    const o=current.observation,now=this.now();
+    if(current.epoch!==own.epoch||current.status!=='connected'||o?.pollOrdinal!==own.pollOrdinal||!o.playing)return;
+    for(const s of active(current)){
+     const trace={},state=renderState({observation:o,document:current.document,consumer:s,now,trace}),semantic=this.semantic(state,o);
+     let at=nextChangeAt({observation:o,document:current.document,consumer:s,now});
+     if(state.phase==='lyrics'&&semantic!==s.semantic&&!(s.sendLease?.until>now)){
+      // One publication per real second, never a manufactured timestamp.
+      if(Math.floor(now/1000)<=s.lastTimestamp)at=(s.lastTimestamp+1)*1000;
+      else{
+       const publication=immutablePush({state,consumer:s,now});
+       publication.requestHash=o.requestHash??null;publication.playbackOccurrence=o.playbackOccurrence??null;
+       s.shown={occurrence:o.playbackOccurrence,position:trace.position};s.snapshot={state,confirmedAtMS:o.confirmedAt,expiresAtMS:o.confirmedAt+8000};
+       s.semantic=semantic;s.sequence=publication.sequence;s.lastTimestamp=publication.timestamp;s.lastPublicationAt=now;s.lastExpiresAt=publication.expiresAt;
+       const publicationID=idFor(current,'publication',`${s.sessionID}:${s.sequence}`),lease=randomUUID(),data={sessionID:s.sessionID,recipeRevision:s.recipeRevision,cue:true,...publication};
+       s.pendingPublication=publicationID;s.sendLease={id:lease,until:now+10000,outboxID:publicationID};
+       // Persisted before send, as a record only: it is sent here, under the lease
+       // taken in this same transaction, so no other drain can meet it mid-send.
+       put('publication',publicationID,data,now,'cancelled');staged.push({sessionID:s.sessionID,publicationID,lease,data});
+      }
+     }
+     if(at!==null&&(next===null||at<next))next=at;
+    }
+   });
+   for(const item of staged)await this.sendCue(id,item);
+   // Anything that met this send lease is published now instead of at its retry.
+   if(staged.length)await this.drain(id);
+   own.at=next;
+  }
+ }
+ async sendCue(id,{sessionID,publicationID,lease,data}){
+  const c=await this.store.read(id),s=c?.consumers[sessionID];let outcome='superseded',sent=false;
+  // An unsent line is forgotten as shown, so the next poll publishes it, unless a newer publication already replaced it.
+  const release=retry=>this.store.mutate(id,current=>{const latest=current.consumers[sessionID];if(latest?.sendLease?.id!==lease)return;latest.sendLease=null;if(retry&&(latest.pendingPublication??publicationID)===publicationID)latest.semantic=null;});
+  try{
+   if(!s||s.status==='ended'||s.sendLease?.id!==lease||s.pendingPublication!==publicationID||s.tokenVersion!==data.tokenVersion||s.recipeRevision!==data.recipeRevision||this.now()>=data.expiresAt){await release(true);return;}
+   if(!await this.store.ownerValid(c)){outcome='ownerRevoked';await release();await this.stopAll(id,'ownerRevoked');return;}
+   try{await this.admit(c,{activityID:s.activityID,state:{recordingID:c.observation?.recording?.item_id??s.previewRecordingID??''}});}
+   catch(error){outcome=error.code??'entitlementRemoved';await release();await this.stopOne(id,sessionID,outcome);return;}
+   try{await this.send({bundleID:c.bundleID,environment:c.apnsEnvironment,token:this.open(c,s.token,'activity:'+sessionID),payload:data.payload,priority:data.priority,pushType:'liveactivity'});sent=true;}
+   catch(error){
+    outcome=error.code??'push_unavailable';
+    if(error.code!=='push_token_invalid'){await release(true);return;}
+    await this.store.mutate(id,(current,put)=>{const latest=current.consumers[sessionID];if(latest.sendLease?.id===lease)latest.sendLease=null;if(latest.tokenVersion===data.tokenVersion)endConsumer(current,latest,'tokenInvalid',this.now(),put);});
+    return;
+   }
+   await release();
+  }finally{await this.store.settle(publicationID,sent?'published':'cancelled',sent?'accepted':outcome);}
  }
  async publish(c,row){
   const s=c.consumers[row.data.sessionID],p=row.data;

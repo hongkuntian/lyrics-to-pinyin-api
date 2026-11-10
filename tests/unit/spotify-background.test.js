@@ -91,3 +91,63 @@ test('payload sizing never truncates a performed grapheme or exceeds either 4KB 
  const state=renderState({observation:{confirmedAt:time,recording,phase:'loading',deviceName:'声'.repeat(200)},consumer,now:time});state.original='a'+'\u0301'.repeat(3000);state.phase='lyrics';
  const publication=immutablePush({state,consumer,now:time});assert.equal(publication.payload.aps['content-state'].original,'');assert.equal(publication.payload.aps['content-state'].statusReason,'lyricSegmentTooLarge');assert(Buffer.byteLength(JSON.stringify(publication.payload))<=4096);assert(Buffer.byteLength(JSON.stringify(state.observedDeviceName))<=256);
 });
+import {nextChangeAt,leadSeconds,holdSeconds} from '../../api/utils/spotify/render.js';
+const cueConsumer={sessionID:'session',generation:1,sequence:0,recipe};
+const heard=(positionMS,playing=false)=>({confirmedAt:time,responseReceivedAt:time,recording,requestHash:requestFingerprint(recording),positionMS,playing,phase:'loading',playbackOccurrence:'one'});
+test('each cue is chosen a fixed head start early, never earlier, and its lease is the observation\'s own',()=>{
+ const doc=documentFor(),early=20000-leadSeconds*1000;
+ assert(leadSeconds>0&&leadSeconds<1);
+ assert.equal(renderState({observation:heard(early-2),document:doc,consumer:cueConsumer,now:time}).original,'Fixture original');
+ const state=renderState({observation:heard(early+2),document:doc,consumer:cueConsumer,now:time});
+ assert.equal(state.original,'Next original');assert(state.progress<.001);
+ assert.equal(Math.round(state.validUntil-state.confirmedAt),8);assert.equal(state.confirmedAt,time/1000-978307200);
+ // The head start moves with a validated timing correction instead of replacing it.
+ const correction={recordingKey:doc.recordingKey,sourceHash:doc.sourceHash,timingRevision:doc.timingRevision,correctionRevision:'explicit-1',offsetSeconds:2};
+ const corrected={...cueConsumer,recipe:{...recipe,timingCorrection:correction},validatedCorrection:true};
+ assert.equal(renderState({observation:heard(early+1998),document:doc,consumer:corrected,now:time}).original,'Fixture original');
+ assert.equal(renderState({observation:heard(early+2002),document:doc,consumer:corrected,now:time}).original,'Next original');
+});
+test('a sample slightly behind the cue already shown holds it; a real seek or another occurrence does not',()=>{
+ const doc=documentFor(),shown={occurrence:'one',position:20.01},held={...cueConsumer,shown};
+ const behind=ms=>heard(20010-leadSeconds*1000-ms);
+ assert.equal(renderState({observation:behind(300),document:doc,consumer:cueConsumer,now:time}).original,'Fixture original');
+ assert.equal(renderState({observation:behind(300),document:doc,consumer:held,now:time}).original,'Next original');
+ assert.equal(renderState({observation:behind(holdSeconds*1000+50),document:doc,consumer:held,now:time}).original,'Fixture original');
+ assert.equal(renderState({observation:{...behind(300),playbackOccurrence:'two'},document:doc,consumer:held,now:time}).original,'Fixture original');
+ // Holding never moves a later position back.
+ const trace={};renderState({observation:heard(30000),document:doc,consumer:held,now:time,trace});assert.equal(trace.position,30+leadSeconds);
+});
+test('the next line or page change is predicted only while playing, inside the lease, and renders exactly then',()=>{
+ const doc=documentFor(),playing=heard(18000,true),due=nextChangeAt({observation:playing,document:doc,consumer:cueConsumer,now:time});
+ assert(Math.abs(due-(time+2000-leadSeconds*1000))<=2);
+ assert.equal(renderState({observation:playing,document:doc,consumer:cueConsumer,now:due}).original,'Next original');
+ assert.equal(renderState({observation:playing,document:doc,consumer:cueConsumer,now:due-3}).original,'Fixture original');
+ // Asked again later, the same moment is returned; once past, nothing remains.
+ assert.equal(nextChangeAt({observation:playing,document:doc,consumer:cueConsumer,now:time+500}),due);
+ assert.equal(nextChangeAt({observation:playing,document:doc,consumer:cueConsumer,now:due}),null);
+ for(const observation of [heard(18000,false),{...playing,confirmedAt:null},heard(10000,true),heard(30000,true)])assert.equal(nextChangeAt({observation,document:doc,consumer:cueConsumer,now:time}),null);
+ assert.equal(nextChangeAt({observation:playing,document:null,consumer:cueConsumer,now:time}),null);
+ assert.equal(nextChangeAt({observation:playing,document:doc,consumer:cueConsumer,now:time+8000}),null);
+ const untimed=documentFor();untimed.response.quality.synced=false;assert.equal(nextChangeAt({observation:playing,document:untimed,consumer:cueConsumer,now:time}),null);
+ // A held position skips the cue already shown and still times the following one from the sample.
+ const three=documentFor(recording,[{original:'One',romanized:'',timestamp:0},{original:'Two',romanized:'',timestamp:20},{original:'Three',romanized:'',timestamp:23}]);
+ const after=nextChangeAt({observation:heard(19000,true),document:three,consumer:{...cueConsumer,shown:{occurrence:'one',position:20.01}},now:time});
+ assert(Math.abs(after-(time+4000-leadSeconds*1000))<=2);
+ // An overlong row pages across its own interval; each page change is a change.
+ const long=documentFor(recording,[{original:'a'.repeat(1500),romanized:'',timestamp:0},{original:'Next original',romanized:'',timestamp:21}]);
+ const first=renderState({observation:heard(6000,true),document:long,consumer:cueConsumer,now:time});assert.equal(first.parts,3);assert.equal(first.part,0);
+ const page=nextChangeAt({observation:heard(6000,true),document:long,consumer:cueConsumer,now:time});
+ assert(Math.abs(page-(time+1000-leadSeconds*1000))<=2);
+ assert.equal(renderState({observation:heard(6000,true),document:long,consumer:cueConsumer,now:page}).part,1);
+});
+import {createSpotifyRuntime} from '../../api/utils/spotify/runtime.js';
+test('the deployed runtime follows cues after the poll and contains a failure there to one log line',async t=>{
+ const runtime=createSpotifyRuntime({store:{db:{}},config:{},provider:{},enqueue:async()=>{},send:async()=>{},acquire:async()=>{},admit:async()=>{}});
+ const started=Date.now();await runtime.sleep(20);assert(Date.now()-started>=15);
+ const logged=[];t.mock.method(console,'error',(...args)=>logged.push(args));
+ assert.equal(runtime.defer(Promise.reject(Object.assign(new Error('secret detail'),{code:'spotify_publisher_busy'}))),undefined);
+ await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(logged,[['spotify_cue_follow_failed','spotify_publisher_busy']]);
+ // Tests and other embedders keep the plain, awaited behaviour unless they opt in.
+ const {SpotifyService}=await import('../../api/utils/spotify/service.js'),plain=new SpotifyService({config:{}});
+ assert.equal(plain.sleep,null);const work=Promise.resolve(1);assert.equal(plain.defer(work),work);
+});

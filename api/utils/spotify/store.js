@@ -35,13 +35,16 @@ export class SpotifyStore {
  });}
  async mutate(id,fn){return this.db.transaction(async db=>{
   const row=(await db.query('SELECT data FROM spotify_connections WHERE id=$1 FOR UPDATE',[id])).rows[0];if(!row)throw new LibraryError('spotify_connection_not_found',404);
-  const c=row.data,rows=[];const result=await fn(c,(kind,key,data,due)=>rows.push({kind,id:key,data,due}));
+  // A row put with a state other than 'pending' is a record only: no drain acts on it.
+  const c=row.data,rows=[];const result=await fn(c,(kind,key,data,due,state='pending')=>rows.push({kind,id:key,data,due,state}));
   await db.query('UPDATE spotify_connections SET data=$2,updated_at=now() WHERE id=$1',[id,JSON.stringify(c)]);
-  for(const o of rows)await db.query(`INSERT INTO spotify_outbox(id,connection_id,epoch,kind,due_at_ms,data,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO NOTHING`,[o.id,id,c.epoch,o.kind,o.due,JSON.stringify(o.data),new Date(o.due+86400000)]);
+  for(const o of rows)await db.query(`INSERT INTO spotify_outbox(id,connection_id,epoch,kind,due_at_ms,data,expires_at,state) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(id) DO NOTHING`,[o.id,id,c.epoch,o.kind,o.due,JSON.stringify(o.data),new Date(o.due+86400000),o.state]);
   return result;
  });}
  async pending(id){return (await this.db.query("SELECT id,kind,epoch,due_at_ms AS due,data FROM spotify_outbox WHERE connection_id=$1 AND state='pending' ORDER BY due_at_ms,id",[id])).rows.map(r=>({...r,due:Number(r.due)}));}
  async receipt(id,receipt,state='published'){await this.db.query("UPDATE spotify_outbox SET state=$2,receipt=$3 WHERE id=$1 AND state='pending'",[id,state,receipt??null]);}
+ // Closes a record persisted as unsent before its own direct send.
+ async settle(id,state,receipt){await this.db.query("UPDATE spotify_outbox SET state=$2,receipt=$3 WHERE id=$1 AND state='cancelled' AND receipt IS NULL",[id,state,receipt]);}
  async outbox(id){return (await this.db.query('SELECT * FROM spotify_outbox WHERE id=$1',[id])).rows[0]??null;}
  async ownerValid(c){const row=(await this.db.query(`SELECT k.bundle_id,k.environment,k.audience FROM app_attest_keys k JOIN library_users u ON u.id=k.user_id JOIN library_tokens t ON t.user_id=u.id WHERE u.id=$1 AND k.key_id=$2 AND t.digest=$3 AND NOT k.revoked AND NOT u.disabled AND NOT t.revoked AND (t.expires_at IS NULL OR t.expires_at>clock_timestamp())`,[c.ownerID,c.keyID,c.credentialDigest])).rows[0];return Boolean(row&&row.bundle_id===c.bundleID&&row.environment===c.ownerEnvironment&&(!this.policy||row.environment===this.policy.environment&&row.audience===this.policy.audience&&this.policy.bundles.includes(row.bundle_id)));}
  async capability(digest){return (await this.db.query('SELECT connection_id AS "connectionID",session_id AS "sessionID",expires_at_ms AS "expiresAtMS" FROM spotify_snapshot_capabilities WHERE digest=$1',[digest])).rows[0]??null;}

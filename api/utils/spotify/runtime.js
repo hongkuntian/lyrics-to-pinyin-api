@@ -1,3 +1,4 @@
+import {waitUntil} from '@vercel/functions';
 import {authPolicy} from '../app-auth/store.js';
 import {publicTranslation} from '../song-library/public-content.js';
 import {createSongLibraryService} from '../../song-library.js';
@@ -21,6 +22,11 @@ export function createSpotifyRuntime({env=process.env,store=new SpotifyStore(),.
  const config=overrides.config??spotifyConfiguration(env);if(!overrides.config)store.policy=authPolicy(env);const library=new SongLibraryStore(store.db);
  const send=createAPNsSender({env,send:request=>sendAPNs(request)});
  return new SpotifyService({store,config,provider:createSpotifyProvider({clientID:config.clientID}),enqueue,send,
+  // The tick invocation stays alive after its queue message is acknowledged, to
+  // publish cue changes that fall before the next poll. A failure there costs one
+  // early line, which the next poll publishes; it never fails the acknowledged poll.
+  sleep:ms=>new Promise(resolve=>setTimeout(resolve,ms)),
+  defer:work=>{waitUntil(work.catch(error=>console.error('spotify_cue_follow_failed',error?.code??'error')));},
   acquire:createAcquirer(createSongLibraryService({store:library})),eligible:(c,input)=>checkSpotifyEligibility(store.db,c.ownerID,input),admit:(c,input)=>admitMemberRelay(store.db,c.ownerID,input),
   resolveRecipe:async(c,recipe,doc)=>{
    const result={validatedAid:null,validatedTranslation:null,validatedCorrection:false};if(!doc)return result;

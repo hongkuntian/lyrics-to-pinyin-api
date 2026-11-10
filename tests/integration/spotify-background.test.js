@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {fixture,user,recipe,recording,playback} from '../helpers/spotify.js';
+import {fixture,user,recipe,recording,playback,documentFor} from '../helpers/spotify.js';
+import {leadSeconds} from '../../api/utils/spotify/render.js';
 import {LibraryError} from '../../api/utils/song-library/store.js';
 import {revokeSpotifyInTransaction,flushSpotifyCleanup} from '../../api/utils/spotify/revocation.js';
 const crash=()=>{throw Object.assign(new Error('crash'),{code:'simulated_crash'});};
@@ -137,4 +138,112 @@ test('preview/production and configured Client ID cannot use or mutate each othe
   f.restart({config});await assert.rejects(f.service.access(user,credential),{code:'spotify_environment_mismatch'});await assert.rejects(f.service.tick(f.next()),{code:'spotify_environment_mismatch'});
  }
  assert.equal(f.polls,polls);assert.deepEqual(await f.store.read(credential.connectionID),before);
+});
+// Cue changes between polls. The fake sleep advances the fake clock, so each test
+// reads the exact moment a publication was decided.
+const lead=leadSeconds*1000,line=request=>request.payload.aps['content-state'].original;
+async function following(t,{lines,phase=400}={}){
+ const f=await fixture(t,{overrides:lines?{acquire:async r=>({status:200,document:documentFor(r,lines)})}:{}}),{credential}=await f.enroll(),armed=await f.arm(credential);
+ await f.service.tick(f.next());await f.service.acquireMessage(f.next('acquire'));
+ const slept=[];f.restart({sleep:async ms=>{slept.push(ms);f.advance(ms);}});
+ // Each poll reports `at` milliseconds into the song. `phase` places polls inside their wall second.
+ const poll=async(at,{advance=2000,playing=true}={})=>{f.advance(advance);f.provider.playback=async()=>({status:200,body:playback(at,playing),requestStartedAt:f.now-10,responseReceivedAt:f.now});const from=f.sends.length,started=f.now;await f.service.tick(f.next());return {started,sent:f.sends.slice(from)};};
+ f.advance(phase);
+ return {f,credential,armed,slept,poll,consumer:async()=>(await f.store.read(credential.connectionID)).consumers[armed.session.sessionID],cues:async()=>(await f.db.query("SELECT state,receipt,data FROM spotify_outbox WHERE kind='publication' AND data->>'cue'='true' ORDER BY due_at_ms")).rows};
+}
+test('a line between polls is published at its own start less the head start, inside the poll\'s lease, once',async t=>{
+ const {f,credential,poll,slept,consumer,cues}=await following(t),send=f.options.send;let met=0;
+ // Mid-send, another invocation's drain finds nothing of this line to collide with.
+ f.restart({send:async request=>{if(line(request)==='Next original'){assert.deepEqual(await f.store.pending(credential.connectionID),[]);await f.service.drain(credential.connectionID);met++;}return send(request);}});
+ const first=await poll(18500);assert.equal(met,1);
+ assert.deepEqual(first.sent.map(line),['Fixture original','Next original']);
+ const [atPoll,atCue]=first.sent;
+ assert(Math.abs(f.now-first.started-(1500-lead))<=2);assert.equal(slept.length,1);
+ assert.equal(atCue.payload.aps.timestamp,Math.floor(f.now/1000));assert(atCue.payload.aps.timestamp>atPoll.payload.aps.timestamp);
+ // Same confirmation and deadline as the poll it extrapolates: the lease is never extended.
+ assert.equal(atCue.payload.aps['stale-date'],atPoll.payload.aps['stale-date']);assert.equal(atCue.payload.aps['content-state'].confirmedAt,atPoll.payload.aps['content-state'].confirmedAt);
+ assert.equal(atCue.payload.aps['content-state'].sequence,atPoll.payload.aps['content-state'].sequence+1);assert.equal(atCue.priority,10);assert.equal(atCue.pushType,'liveactivity');
+ const rows=await cues();assert.equal(rows.length,1);assert.equal(rows[0].state,'published');assert.equal(rows[0].receipt,'accepted');assert.deepEqual(rows[0].data.payload,atCue.payload);
+ const s=await consumer();assert.equal(s.sendLease,null);assert.equal(s.snapshot.state.original,'Next original');
+ assert.equal((await f.store.pending(credential.connectionID)).length,0);
+ // The next poll agrees with what is shown and publishes nothing.
+ assert.deepEqual((await poll(20500,{advance:2000-(f.now-first.started)})).sent,[]);
+});
+test('a newer poll takes over a pending line and a slightly earlier estimate never steps the card back',async t=>{
+ const {f,credential,armed,poll}=await following(t);let inner=false,woke=0;
+ // A hint makes the server poll at once, as the app does when it notices a change.
+ const wake=async at=>{const from=f.sends.length;f.provider.playback=async()=>({status:200,body:playback(at),requestStartedAt:f.now-10,responseReceivedAt:f.now});await f.service.live(user,{...credential,sessionID:armed.session.sessionID},'live.hint');woke++;await f.service.tick(f.next('wake'));return f.sends.slice(from);};
+ // While the first poll's timer waits, Spotify reports 0.3 s less than that poll implied.
+ f.restart({sleep:async ms=>{if(inner){f.advance(ms);return;}inner=true;f.advance(400);await wake(18600);}});
+ const first=await poll(18500);assert.equal(woke,1);
+ assert.deepEqual(first.sent.map(line),['Fixture original','Next original']);
+ // Published once, by the newer observation, on its own timeline: 18.6 s at +400 ms.
+ assert(Math.abs(f.now-first.started-(400+1400-lead))<=2);
+ // A sample 0.3 s behind the line already shown holds it; nothing steps back.
+ f.advance(300);assert.deepEqual(await wake(19050),[]);
+ // A real seek back is followed.
+ f.advance(300);assert.deepEqual((await wake(5000)).map(line),['Fixture original']);
+});
+test('a line due in the second of the previous publication waits for the next real second',async t=>{
+ const {f,poll}=await following(t,{phase:0}),first=await poll(18500);
+ assert.deepEqual(first.sent.map(line),['Fixture original','Next original']);
+ assert.equal(Math.floor((first.started+1500-lead)/1000),first.sent[0].payload.aps.timestamp);
+ assert.equal(f.now,(first.sent[0].payload.aps.timestamp+1)*1000);assert.equal(first.sent[1].payload.aps.timestamp,first.sent[0].payload.aps.timestamp+1);
+});
+test('paused playback, a line beyond the follow window and a service without a timer publish only at polls',async t=>{
+ const {f,poll,slept}=await following(t);
+ assert.deepEqual((await poll(19000,{playing:false})).sent.map(line),['Fixture original']);
+ assert.deepEqual((await poll(14000)).sent.map(line),['Fixture original']);assert.deepEqual(slept,[]);
+ f.restart({sleep:null});assert.deepEqual((await poll(19000)).sent,[]);assert.deepEqual((await poll(20500)).sent.map(line),['Next original']);
+});
+test('a failed line send is recorded, frees the publisher and is published again by the next poll',async t=>{
+ const {f,poll,consumer,cues}=await following(t),send=f.options.send;let failed=false;
+ f.restart({send:async request=>{if(line(request)==='Next original'&&!failed){failed=true;throw new LibraryError('push_unavailable',503);}return send(request);}});
+ const first=await poll(18500);assert(failed);assert.deepEqual(first.sent.map(line),['Fixture original']);
+ const rows=await cues();assert.equal(rows[0].state,'cancelled');assert.equal(rows[0].receipt,'push_unavailable');assert.equal((await consumer()).sendLease,null);
+ assert.deepEqual((await poll(20500,{advance:2000-(f.now-first.started)})).sent.map(line),['Next original']);
+});
+test('entitlement removed before a line ends the activity instead of publishing it',async t=>{
+ const {f,poll,consumer}=await following(t);let removed=false;
+ f.restart({admit:async(c,input)=>{if(removed)throw new LibraryError('membership_required',403);},eligible:async()=>{},sleep:async ms=>{f.advance(ms);removed=true;}});
+ const first=await poll(18500);assert.deepEqual(first.sent.map(line),['Fixture original']);
+ const s=await consumer();assert.equal(s.status,'ended');assert.equal(s.sendLease,null);assert(f.next('cleanup'));
+});
+test('a token replaced while a line waits is not sent to; the next poll publishes the line to the new token',async t=>{
+ const {f,credential,armed,poll,cues}=await following(t),session={...credential,sessionID:armed.session.sessionID,activityID:armed.session.activityID};
+ // The app registers a rotated token just after the line is staged for the old one.
+ const read=f.store.read.bind(f.store);let rotate=true;
+ f.store.read=async id=>{if(rotate&&(await read(id)).consumers[session.sessionID].sendLease){rotate=false;await f.store.mutate(id,current=>{const s=current.consumers[session.sessionID];s.token=f.service.seal(current,'cd'.repeat(32),'activity:'+s.sessionID);s.tokenVersion=2;s.pendingPublication=null;});}return read(id);};
+ const first=await poll(18500);assert.equal(rotate,false);assert.deepEqual(first.sent.map(line),['Fixture original']);
+ assert.equal((await cues())[0].receipt,'superseded');
+ const next=await poll(20500,{advance:2000-(f.now-first.started)});assert.deepEqual(next.sent.map(request=>[line(request),request.token]),[['Next original','cd'.repeat(32)]]);
+});
+test('an invalid token met by a line ends that activity through the ordinary terminal path',async t=>{
+ const {f,poll,consumer,cues}=await following(t),send=f.options.send;
+ f.restart({send:async request=>{if(line(request)==='Next original')throw new LibraryError('push_token_invalid',410);return send(request);}});
+ await poll(18500);const s=await consumer();assert.equal(s.status,'ended');assert.equal(s.reason,'tokenInvalid');assert.equal(s.sendLease,null);assert(f.next('cleanup'));assert.equal((await cues())[0].receipt,'push_token_invalid');
+});
+test('the poll is acknowledged before its lines are followed, and following is handed to the platform to keep alive',async t=>{
+ const {f,poll}=await following(t);let handed,release;const waiting=new Promise(resolve=>release=resolve);
+ f.restart({defer:work=>{handed=work;},sleep:async ms=>{await waiting;f.advance(ms);}});
+ const first=await poll(18500);assert.deepEqual(first.sent.map(line),['Fixture original']);assert.equal(f.now,first.started);assert(handed);
+ release();await handed;assert.deepEqual(f.sends.slice(-1).map(line),['Next original']);assert(Math.abs(f.now-first.started-(1500-lead))<=2);
+});
+test('a line published late in a lease is renewed before that lease ends, not four seconds later',async t=>{
+ const {f,poll}=await following(t),first=await poll(16500);
+ // The line is published 2.85 s into an eight-second lease.
+ assert.deepEqual(first.sent.map(line),['Fixture original','Next original']);assert(Math.abs(f.now-first.started-(3500-lead))<=2);
+ assert.deepEqual((await poll(20000,{advance:150})).sent,[]);
+ const renewal=await poll(22000);assert.deepEqual(renewal.sent.map(line),['Next original']);assert.equal(renewal.sent[0].priority,5);
+ assert(renewal.sent[0].payload.aps['stale-date']>first.sent[1].payload.aps['stale-date']);assert(renewal.started-f.now<=0&&renewal.started-(first.started+3500-lead)<4000);
+});
+for(const [name,third,expected] of [['no keep-alive is spent when the next line will renew the card in time',25.5,[['Third original',10]]],['a keep-alive is still sent when the next line would come too late for the deadline',27,[['Next original',5],['Third original',10]]]])test(name,async t=>{
+ const {f,poll}=await following(t,{lines:[{original:'Fixture original',romanized:'',timestamp:0},{original:'Next original',romanized:'',timestamp:20},{original:'Third original',romanized:'',timestamp:third}]}),first=await poll(18500),origin=first.started,timer=f.options.sleep;
+ assert.deepEqual(first.sent.map(line),['Fixture original','Next original']);
+ assert.deepEqual((await poll(20500,{advance:origin+2000-f.now})).sent,[]);
+ // This poll's own timer is cut short by the next poll, as when polls arrive on time.
+ f.restart({sleep:null});assert.deepEqual((await poll(22500)).sent,[]);f.restart({sleep:timer});
+ // Four seconds have passed since the last publication, 1.99 s before its deadline.
+ const due=await poll(24500);assert.deepEqual(due.sent.map(request=>[line(request),request.priority]),expected);
+ assert(Math.abs(f.now-due.started-((third-24.5)*1000-lead))<=2);
 });
