@@ -81,3 +81,16 @@ test('line mode asks for every word of the selected line once per target, with a
  await assert.rejects(()=>evaluateLines({corpus:expansion}),/provider_key/);await assert.rejects(()=>evaluateLines({apiKey:'fixture',corpus:expansion,compareSingles:9}),/comparison/);
  await assert.rejects(()=>runEvaluation({OPENAI_API_KEY:'fixture',LYRA_EVALUATION_MODE:'other'}),/invalid_evaluation_mode/);
 });
+
+test('named targets review Traditional Chinese, including Chinese songs, without changing the default run',async()=>{
+ const translate=async doc=>({content:{lines:doc.structure.occurrences.map(o=>({sourceID:o.sourceID,lyricText:o.lyricText}))},actualMicros:1});
+ const run=async(options)=>{const logs=[],explained=[];await evaluate({apiKey:'fixture',corpus,translate,explain:async(doc,translation,selection,o)=>{explained.push([translation?.target??null,o.explanationLanguage]);return {content:{},actualMicros:1};},log:s=>logs.push(JSON.parse(s)),...options});
+  return {directions:[...new Set(logs.filter(l=>l.event==='multilingual_evaluation_chunk').map(l=>l.direction))].sort(),explained};};
+ const base=await run({});assert.equal(base.directions.length,12);assert.ok(base.directions.every(d=>!d.endsWith(':zh-Hant')&&d!=='zh:zh-Hans'));
+ const named=await run({onlyTargets:['zh-Hant']});assert.deepEqual(named.directions,['en:zh-Hant','es:zh-Hant','fr:zh-Hant','zh:zh-Hant']);
+ // The translated word is explained in every offered language, not only the one under review.
+ assert.deepEqual(named.explained.filter(e=>e[0]==='zh-Hant').map(e=>e[1]).sort(),['en','es','fr','zh-Hans','zh-Hant']);
+ const lines=[];await evaluateLines({apiKey:'fixture',corpus,onlyTargets:['zh-Hant'],explainLine:async(doc,t,selections,o)=>{lines.push(o.explanationLanguage);return {content:{items:[]},actualMicros:1};},log:()=>{}});
+ assert.deepEqual(lines,['zh-Hant','zh-Hant','zh-Hant','zh-Hant']);
+ for(const onlyTargets of [[],['de'],['zh-Hant','zh-Hant'],'zh-Hant'])await assert.rejects(()=>evaluate({apiKey:'fixture',corpus,translate,onlyTargets}),/invalid_evaluation_targets/);
+});

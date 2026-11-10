@@ -8,6 +8,9 @@ export const TARGETS=Object.freeze({
   'zh-Hans':{name:'Simplified Chinese',unclear:'[原文不明]'},
   'zh-Hant':{name:'Traditional Chinese',unclear:'[原文不明]'}
 });
+// A Chinese lyric or translation in the other script pulls an explanation into that script.
+// Traditional Chinese states its script; no other target's request text changes.
+export const explanationScript=target=>target==='zh-Hant'?' Write in Traditional Chinese characters throughout, including when the lyrics or a translation are in Simplified Chinese; only an exact quotation of the lyric keeps the characters it is written in.':'';
 const aliases={'en-US':'en','en-GB':'en','en-CA':'en','en-AU':'en',
   'fr-FR':'fr','fr-CA':'fr','es-ES':'es','es-MX':'es',
   'zh-CN':'zh-Hans','zh-SG':'zh-Hans','zh-TW':'zh-Hant','zh-HK':'zh-Hant'};

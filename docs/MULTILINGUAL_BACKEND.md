@@ -179,6 +179,12 @@ output languages. Two workers share a conservative three-dollar reservation ceil
 cache or language policy is written. The output is evidence for bilingual review;
 successful JSON never marks a language direction approved.
 
+`LYRA_EVALUATION_TARGETS` (a JSON array) names the output languages to run instead of
+the default four; Traditional Chinese (`zh-Hant`) runs only when named. With named
+targets a Chinese song is also translated into and explained in the Chinese target,
+the pairs the policy admits for bilingual lyrics and same-language word help.
+`LYRA_EVALUATION_MODE=line` asks for word help by line instead.
+
 When the key is available only inside Vercel, use an **unpromoted** deployment with
 `vercel --prod --skip-domain --build-env LYRA_MULTILINGUAL_EVALUATE_ON_BUILD=1`.
 The explicit build flag runs this same corpus once per build container, after the

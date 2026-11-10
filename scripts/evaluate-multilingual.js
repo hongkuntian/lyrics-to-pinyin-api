@@ -7,6 +7,18 @@ import {generateExplanation,explanationBody} from '../api/utils/song-library/stu
 import {generateLine,lineBody} from '../api/utils/song-library/study-line.js';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 export const targets=['en','fr','es','zh-Hans'];
+const defaultTargets=targets,knownTargets=[...targets,'zh-Hant'];
+// A song is not translated into its own language; either Chinese script counts as Chinese.
+const sameLanguage=(source,target)=>source==='zh'?target.startsWith('zh-'):source===target;
+// Chinese songs are admitted into Chinese targets (zh:zh-Hans) for bilingual lyrics and for word
+// help in the reader's script. Those pairs are reviewed only when targets are named, so the
+// default run keeps its directions.
+const offered=(source,target,named)=>named!==null&&source==='zh'||!sameLanguage(source,target);
+function requestedTargets(value) {
+  if(value===null)return targets;
+  if(!Array.isArray(value)||!value.length||new Set(value).size!==value.length||value.some(t=>!knownTargets.includes(t)))throw new Error('invalid_evaluation_targets');
+  return value;
+}
 export function documentFor(item) {
   const occurrences=item.lines.map((text,index)=>({sourceID:`L${String(index+1).padStart(4,'0')}`,sourceText:text,lyricText:text,speakerID:null,startsTurn:false,sourcePrefix:''}));
   return {id:hash(item.id),sourceHash:hash(item.lines.join('\n')),response:{song:{title:{original:item.title},artist:{original:'Lyrica evaluation corpus'},language:item.language}},structure:{version:'source-speakers-1',speakers:[],occurrences}};
@@ -18,12 +30,13 @@ export function selectionForCase(item,doc) {
   const count=text=>[...new Intl.Segmenter('und',{granularity:'grapheme'}).segment(text)].length;
   return {sourceID:occurrence.sourceID,lower:count(before),upper:count(before)+count(item.selection.text),text:item.selection.text,textHash:hash(item.selection.text),studyText:{layer:'original',revisionID:doc.id,occurrenceID:occurrence.sourceID}};
 }
-export async function evaluate({apiKey,corpus,translate=generate,explain=generateExplanation,log=console.log,onlyDirections=null}={}) {
+export async function evaluate({apiKey,corpus,translate=generate,explain=generateExplanation,log=console.log,onlyDirections=null,onlyTargets=null}={}) {
   if(!apiKey)throw new Error('evaluation_requires_provider_key');
+  const targets=requestedTargets(onlyTargets);
   const jobs=[];
   for(const item of corpus.cases) {
     const doc=documentFor(item),selection=selectionForCase(item,doc);
-    for(const target of targets.filter(t=>t!==(item.language==='zh'?'zh-Hans':item.language))) {
+    for(const target of targets.filter(t=>offered(item.language,t,onlyTargets))) {
       const translationRequest=requestBody(doc,target),studyRequest=explanationBody(doc,null,selection,target);
       jobs.push({item,doc,target,selection,translationRequest,studyRequest});
     }
@@ -36,7 +49,7 @@ export async function evaluate({apiKey,corpus,translate=generate,explain=generat
   if(onlyDirections!==null)jobs.splice(0,jobs.length,...allJobs.filter(j=>onlyDirections.includes(`${j.item.language}:${j.target}`)));
   const reserve=jobs.reduce((n,j)=>n+reservationMicros(j.translationRequest)+reservationMicros(j.studyRequest),2_400_000);
   // At most eight sources × four targets; reservations stay within USD 5 per run.
-  if(allJobs.length!==corpus.cases.length*targets.length-corpus.cases.filter(c=>targets.includes(c.language==='zh'?'zh-Hans':c.language)).length||allJobs.length>32||reserve>5_000_000)throw new Error('evaluation_budget_exceeded');
+  if(allJobs.length!==corpus.cases.reduce((n,c)=>n+targets.filter(t=>offered(c.language,t,onlyTargets)).length,0)||allJobs.length>32||reserve>5_000_000)throw new Error('evaluation_budget_exceeded');
   log(JSON.stringify({event:'multilingual_evaluation_start',cases:jobs.length,reservedMicros:reserve,corpusHash:hash(JSON.stringify(corpus))}));
   let index=0,failed=0;
   async function worker() {
@@ -56,7 +69,8 @@ export async function evaluate({apiKey,corpus,translate=generate,explain=generat
           const accepted={id:hash(`${item.id}:${target}`),target,lines:translated.content.lines};
           const translatedSelection={sourceID:line.sourceID,lower,upper,text:word.segment,textHash:hash(word.segment),studyText:{layer:'translation',revisionID:accepted.id,occurrenceID:line.sourceID,target}};
           translatedStudy=[];
-          for(const language of targets) {
+          // A translated word is explained in every offered language, not only the one under review.
+          for(const language of [...new Set([...defaultTargets,...targets])]) {
           const request=explanationBody(doc,accepted,translatedSelection,language);
           if(reservationMicros(request)>200_000)throw new Error('translated_study_budget_exceeded');
           const result=await explain(doc,accepted,translatedSelection,{apiKey,explanationLanguage:language,generationRequest:request});
@@ -91,13 +105,14 @@ export function lineSelectionsForCase(item,doc) {
 // Line mode makes no translation. With compareSingles it also asks for the first
 // words one at a time in the languages that used that request for word help, so
 // the two request shapes can be read side by side.
-export async function evaluateLines({apiKey,corpus,explainLine=generateLine,explain=generateExplanation,log=console.log,onlyDirections=null,compareSingles=0}={}) {
+export async function evaluateLines({apiKey,corpus,explainLine=generateLine,explain=generateExplanation,log=console.log,onlyDirections=null,onlyTargets=null,compareSingles=0}={}) {
   if(!apiKey)throw new Error('evaluation_requires_provider_key');
+  const targets=requestedTargets(onlyTargets);
   if(!Number.isInteger(compareSingles)||compareSingles<0||compareSingles>8)throw new Error('invalid_evaluation_comparison');
   const jobs=[];
   for(const item of corpus.cases) {
     const doc=documentFor(item),selections=lineSelectionsForCase(item,doc);
-    for(const target of targets.filter(t=>t!==(item.language==='zh'?'zh-Hans':item.language))) {
+    for(const target of targets.filter(t=>offered(item.language,t,onlyTargets))) {
       const singles=(target==='en'?[]:selections.slice(0,compareSingles)).map(selection=>({selection,request:explanationBody(doc,null,selection,target)}));
       jobs.push({item,doc,target,selections,singles,lineRequest:lineBody(doc,null,selections,{language:target})});
     }
@@ -151,9 +166,11 @@ export function corpusFile(name='beta') {
 export async function runEvaluation(env=process.env,log=console.log) {
   const corpus=JSON.parse(await readFile(corpusFile(env.LYRA_EVALUATION_CORPUS||'beta'),'utf8'));
   const onlyDirections=env.LYRA_EVALUATION_DIRECTIONS?JSON.parse(env.LYRA_EVALUATION_DIRECTIONS):null;
-  if(env.LYRA_EVALUATION_MODE==='line')return evaluateLines({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections,compareSingles:Number(env.LYRA_EVALUATION_COMPARE_SINGLES||0)});
+  // Targets outside the default four (Traditional Chinese) are evaluated only when named.
+  const onlyTargets=env.LYRA_EVALUATION_TARGETS?JSON.parse(env.LYRA_EVALUATION_TARGETS):null;
+  if(env.LYRA_EVALUATION_MODE==='line')return evaluateLines({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections,onlyTargets,compareSingles:Number(env.LYRA_EVALUATION_COMPARE_SINGLES||0)});
   if(env.LYRA_EVALUATION_MODE!==undefined&&env.LYRA_EVALUATION_MODE!=='')throw new Error('invalid_evaluation_mode');
-  await evaluate({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections});
+  await evaluate({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections,onlyTargets});
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
   if(process.argv[2]!=='--live')throw new Error('explicit_live_flag_required');

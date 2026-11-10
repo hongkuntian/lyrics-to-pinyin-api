@@ -4,8 +4,8 @@ The beta offers English, French, Spanish and Simplified Chinese as independent
 translation and explanation choices. The admission lists are versioned in
 `evaluation/multilingual/beta-policy.json`; deployment requires applying both lists
 explicitly. The existing `*:en` admission remains. Other output targets have no
-wildcard admission. Traditional Chinese output and non-English automatic correction
-remain outside this release.
+wildcard admission. Non-English automatic correction remains outside this release.
+Traditional Chinese output was added on 9 November 2026 (last section).
 
 ## Evidence and fixes
 
@@ -294,3 +294,38 @@ requests). USD 0.185 in total.
 The one-word request remains for phrase and whole-line selections in every language.
 Its output budget is 8,192 tokens. In this run the hardest single selection (하늘이는
 into Chinese) used about 4,000, the old limit; all 150 completed.
+
+## Traditional Chinese output (9 November 2026)
+
+Traditional Chinese (`zh-Hant`, also zh-TW and zh-HK) was a known target that no
+direction admitted, because the first beta did not review it. It is generated directly
+by the model. It is not converted from the Simplified result: several Simplified
+characters have more than one Traditional form (发 is 發 or 髮), and Study selections
+bind to the stored text.
+
+Four paid rounds (`LYRA_EVALUATION_TARGETS=["zh-Hant"]`, USD 0.163 in total) covered
+translation, phrase explanation, word help by line and translated-word explanation from
+all 15 sources that are admitted into Simplified Chinese. Script was checked by
+machine: a Traditional answer may contain no character that has a distinct Traditional
+form, quoted lyric words excepted.
+
+- First round, 16 directions: no Simplified character in any translation or
+  explanation, and the morning/evening negation lines hold. It exposed one defect: the
+  name rule named "Simplified Chinese" only, so Traditional had no rule and one name
+  came back three ways (Luz, 露絲, 露斯). The rule now applies to Traditional Chinese
+  under its own name; in the rerun all 14 non-Chinese names stay in Latin letters, as
+  they do in Simplified, and Chinese names keep their characters (林曉月, 蘇州).
+- A Simplified-script lyric explained in Traditional came back in Simplified in 1 of 2
+  phrase explanations. Explanation requests for Traditional Chinese now state the
+  script. After that: 6 of 6 phrase explanations and 2 of 2 line requests for Chinese
+  songs are clean, and so are all other Traditional outputs of the final round.
+- A Chinese song translated into Traditional Chinese (admitted for bilingual lyrics,
+  as `zh:zh-Hans` is) is a faithful script change with names kept, 6 of 6.
+- Not admitted: a Traditional translation explained in Simplified Chinese
+  (`zh-Hant:zh-Hans`). Both samples came back in Traditional or mixed script. The same
+  pull probably affects the existing `zh:zh-Hans` explanations when a song's lyrics
+  are in Traditional script; no corpus case covers it, and the Simplified request text
+  is unchanged here.
+
+Admitted: 61 translation and 68 explanation directions. Every other target's request
+text is byte-identical, so no recipe changes and no saved content is invalidated.

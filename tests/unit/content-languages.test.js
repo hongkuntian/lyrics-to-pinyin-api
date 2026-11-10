@@ -5,6 +5,8 @@ import {requestBody,translationRecipe,LEGACY_RECIPE} from '../../api/utils/song-
 import {selectionV2,explanationBody,explanationKey,explanationRecipe} from '../../api/utils/song-library/study-explanation.js';
 import {digest} from '../../api/utils/song-library/store.js';
 import {source} from '../helpers/library-db.js';
+import {readFile} from 'node:fs/promises';
+import {lineBody,lineSelections} from '../../api/utils/song-library/study-line.js';
 
 test('target matching is explicit and preserves script distinctions',()=>{
  for(const [input,expected] of [['EN-us','en'],['fr-CA','fr'],['zh-cn','zh-Hans'],['zh-Hant','zh-Hant'],['zh-TW','zh-Hant']])assert.equal(canonicalTarget(input),expected);
@@ -85,4 +87,25 @@ test('new explanation languages use precise grammar rules without changing relea
  assert.equal(explanationRecipe({},'en'),'study-occurrence-2');
  assert.match(explanationBody(source,null,selection,'zh-Hans').instructions,/invariant pronoun/);
  assert.doesNotMatch(explanationBody(source,null,selection,'en').instructions,/invariant pronoun/);
+});
+
+test('Traditional Chinese states its script and name rule; other targets keep their request text',()=>{
+ const doc={id:'d',sourceHash:'h',response:{song:{language:'zh',title:'Test',artist:'Test'}},structure:{version:'source-speakers-1',speakers:[],occurrences:[{sourceID:'L0001',sourceText:'我不走',lyricText:'我不走',speakerID:null,startsTurn:false,sourcePrefix:''}]}};
+ const hans=requestBody(doc,'zh-Hans').instructions,hant=requestBody(doc,'zh-Hant').instructions;
+ assert.ok(hans.includes('in Simplified Chinese, keep a name written in Han characters'));assert.ok(hant.includes('in Traditional Chinese, keep a name written in Han characters'));
+ assert.equal(hans.replaceAll('Simplified','Traditional'),hant);
+ for(const target of ['fr','es'])assert.ok(requestBody(doc,target).instructions.includes('in Simplified Chinese, keep a name'));
+ const selection=selectionV2(doc,{studyText:{layer:'original',revisionID:'d',occurrenceID:'L0001'},selection:{offsetUnit:'grapheme',ranges:[{lower:1,upper:2}],textHash:digest('不')}},null);
+ const script=/Write in Traditional Chinese characters throughout, including when the lyrics or a translation are in Simplified Chinese/;
+ const selections=lineSelections(doc,{contractVersion:1,explanationLanguage:'zh-Hant',studyText:{layer:'original',revisionID:'d',occurrenceID:'L0001'},manifest:[{id:'w1-2',selection:{offsetUnit:'grapheme',ranges:[{lower:1,upper:2}],textHash:digest('不')}}]},null);
+ assert.match(explanationBody(doc,null,selection,'zh-Hant').instructions,script);assert.match(lineBody(doc,null,selections,{language:'zh-Hant'}).instructions,script);
+ for(const language of ['en','fr','es','zh-Hans']){assert.doesNotMatch(explanationBody(doc,null,selection,language).instructions,script);assert.doesNotMatch(lineBody(doc,null,selections,{language}).instructions,script);}
+});
+test('the admission file offers Traditional Chinese wherever Simplified is, except explaining it in Simplified',async()=>{
+ const file=JSON.parse(await readFile(new URL('../../evaluation/multilingual/beta-policy.json',import.meta.url),'utf8')),policy=languagePolicy(file);
+ for(const kind of ['translation','explanation'])for(const pair of file[kind].filter(p=>p.endsWith(':zh-Hans')&&!p.startsWith('zh-Han')))requireDirection(policy,kind,pair.split(':')[0],'zh-Hant');
+ for(const [source,target] of [['zh-Hant','zh-Hant'],['zh-Hans','zh-Hant'],['zh-Hant','fr'],['zh-Hant','es'],['zh-Hant','en']])requireDirection(policy,'explanation',source,target);
+ // One reviewed sample of a Traditional translation explained in Simplified came back in mixed, then Traditional, script.
+ assert.throws(()=>requireDirection(policy,'explanation','zh-Hant','zh-Hans'),{code:'unsupported_direction'});
+ assert.equal(file.translation.length,61);assert.equal(file.explanation.length,68);
 });
