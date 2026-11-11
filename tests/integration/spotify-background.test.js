@@ -142,8 +142,8 @@ test('preview/production and configured Client ID cannot use or mutate each othe
 // Cue changes between polls. The fake sleep advances the fake clock, so each test
 // reads the exact moment a publication was decided.
 const lead=leadSeconds*1000,line=request=>request.payload.aps['content-state'].original;
-async function following(t,{lines,phase=400}={}){
- const f=await fixture(t,{overrides:lines?{acquire:async r=>({status:200,document:documentFor(r,lines)})}:{}}),{credential}=await f.enroll(),armed=await f.arm(credential);
+async function following(t,{lines,phase=400,arm={}}={}){
+ const f=await fixture(t,{overrides:lines?{acquire:async r=>({status:200,document:documentFor(r,lines)})}:{}}),{credential}=await f.enroll(),armed=await f.arm(credential,arm);
  await f.service.tick(f.next());await f.service.acquireMessage(f.next('acquire'));
  const slept=[];f.restart({sleep:async ms=>{slept.push(ms);f.advance(ms);}});
  // Each poll reports `at` milliseconds into the song. `phase` places polls inside their wall second.
@@ -234,16 +234,31 @@ test('a line published late in a lease is renewed before that lease ends, not fo
  // The line is published 2.85 s into an eight-second lease.
  assert.deepEqual(first.sent.map(line),['Fixture original','Next original']);assert(Math.abs(f.now-first.started-(3500-lead))<=2);
  assert.deepEqual((await poll(20000,{advance:150})).sent,[]);
- const renewal=await poll(22000);assert.deepEqual(renewal.sent.map(line),['Next original']);assert.equal(renewal.sent[0].priority,5);
+ const renewal=await poll(22000);assert.deepEqual(renewal.sent.map(line),['Next original']);assert.equal(renewal.sent[0].priority,10);
  assert(renewal.sent[0].payload.aps['stale-date']>first.sent[1].payload.aps['stale-date']);assert(renewal.started-f.now<=0&&renewal.started-(first.started+3500-lead)<4000);
 });
-for(const [name,third,expected] of [['no keep-alive is spent when the next line will renew the card in time',25.5,[['Third original',10]]],['a keep-alive is still sent when the next line would come too late for the deadline',27,[['Next original',5],['Third original',10]]]])test(name,async t=>{
- const {f,poll}=await following(t,{lines:[{original:'Fixture original',romanized:'',timestamp:0},{original:'Next original',romanized:'',timestamp:20},{original:'Third original',romanized:'',timestamp:third}]}),first=await poll(18500),origin=first.started,timer=f.options.sleep;
+for(const [name,third,expected] of [['no keep-alive is spent when the next line will renew the card in time',25.5,[['Third original',10]]],['a keep-alive is still sent when the next line would come too late for the deadline',27,[['Next original',10],['Third original',10]]]])test(name,async t=>{
+ // This phase puts the deadline on a whole second, where the card and the lease agree.
+ const {f,poll}=await following(t,{phase:910,lines:[{original:'Fixture original',romanized:'',timestamp:0},{original:'Next original',romanized:'',timestamp:20},{original:'Third original',romanized:'',timestamp:third}]}),first=await poll(18500),origin=first.started,timer=f.options.sleep;
  assert.deepEqual(first.sent.map(line),['Fixture original','Next original']);
  assert.deepEqual((await poll(20500,{advance:origin+2000-f.now})).sent,[]);
  // This poll's own timer is cut short by the next poll, as when polls arrive on time.
  f.restart({sleep:null});assert.deepEqual((await poll(22500)).sent,[]);f.restart({sleep:timer});
- // Four seconds have passed since the last publication, 1.99 s before its deadline.
+ // The last publication is five seconds old, 1.99 s before its deadline.
  const due=await poll(24500);assert.deepEqual(due.sent.map(request=>[line(request),request.priority]),expected);
  assert(Math.abs(f.now-due.started-((third-24.5)*1000-lead))<=2);
+});
+test('a keep-alive counts the deadline as the card does: on the whole second its stale date names',async t=>{
+ // The lease ends 7.99 s after this poll, but its stale date is that time rounded down, 0.89 s sooner.
+ const {f,poll}=await following(t,{phase:800}),first=await poll(18500),stale=first.sent[1].payload.aps['stale-date']*1000;
+ assert.deepEqual(first.sent.map(line),['Fixture original','Next original']);assert.equal(first.started+7990-stale,890);
+ assert.deepEqual((await poll(20500,{advance:first.started+2000-f.now})).sent,[]);
+ // 3.1 s remain on the card, 3.99 s on the lease: waiting for the next poll would leave 1.1 s.
+ const renewal=await poll(22500);assert.equal(stale-renewal.started,3100);
+ assert.deepEqual(renewal.sent.map(request=>[line(request),request.priority]),[['Next original',10]]);assert(renewal.sent[0].payload.aps['stale-date']*1000>stale);
+});
+test('with frequent updates off a keep-alive stays at the priority of the line changes around it',async t=>{
+ const {poll}=await following(t,{arm:{frequentPushesEnabled:false}}),first=await poll(18500);
+ assert.deepEqual(first.sent.map(request=>[line(request),request.priority]),[['Fixture original',5],['Next original',5]]);
+ assert.deepEqual((await poll(20500)).sent,[]);assert.deepEqual((await poll(22500)).sent.map(request=>[line(request),request.priority]),[['Next original',5]]);
 });

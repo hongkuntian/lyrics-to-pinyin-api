@@ -39,7 +39,8 @@ test('relay serializes accepted updates, ignores older sequences, and retains no
     time+=1000;
     await relay.update('reader-a',validatePush(pushBody(1,time),time));assert.equal(sent.length,1);
     const next=pushBody(2,time);next.reason='heartbeat';await relay.update('reader-a',validatePush(next,time));
-    assert.equal(sent[1].priority,5);assert.equal(sent[1].payload.aps.timestamp,time/1000);
+    // A keep-alive is sent at the priority of a cue change; at priority 5 some never arrived.
+    assert.equal(sent[1].priority,10);assert.equal(sent[1].payload.aps.timestamp,time/1000);
     const row=(await db.query('SELECT * FROM live_lyrics_push_receipts')).rows[0];
     assert.equal(row.sequence,2);assert.equal(JSON.stringify(row).includes(pushBody().token),false);
     assert.equal(JSON.stringify(row).includes(pushBody().state.original),false);

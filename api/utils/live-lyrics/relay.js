@@ -54,7 +54,11 @@ export class LiveLyricsPushRelay {
       if(this.now()/1000-input.observed>=8)throw new LibraryError('push_observation_expired',409);
       const payload={aps:{timestamp,event:'update','content-state':input.state,'stale-date':Math.floor(input.observed+8)}};
       if(Buffer.byteLength(JSON.stringify(payload))>4096)throw new LibraryError('invalid_request',400);
-      await this.send({bundleID:input.bundleID,environment:input.environment,token:input.token,payload,priority:input.reason==='heartbeat'?5:10});
+      // Keep-alives go at the same priority as cue changes. At priority 5 with no
+      // expiry Apple held some back to save power and they were lost: 7 of 18 on an
+      // iPhone on 10 November 2026, six in a row. The app sends one only when no cue
+      // change will renew the card in time.
+      await this.send({bundleID:input.bundleID,environment:input.environment,token:input.token,payload,priority:10});
       await db.query(`UPDATE live_lyrics_push_receipts SET sequence=$2,push_timestamp=$3,token_digest=$4,expires_at=now()+interval '30 minutes' WHERE activity_id=$1`,
         [input.activityID,input.state.sequence,timestamp,input.tokenDigest]);
       return {state:'accepted',sequence:input.state.sequence,timestamp};

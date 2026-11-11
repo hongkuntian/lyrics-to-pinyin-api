@@ -278,8 +278,9 @@ export class SpotifyService {
     const publication=immutablePush({state,consumer:s,now:this.now()});
     publication.requestHash=current.observation?.requestHash??null;publication.playbackOccurrence=current.observation?.playbackOccurrence??null;
     const significant=previousObservation?.requestHash!==current.observation?.requestHash||previousObservation?.playbackOccurrence!==current.observation?.playbackOccurrence||previousObservation?.playing!==current.observation?.playing;
+    // A keep-alive goes at the priority of a cue change. At priority 5 some were
+    // held back by Apple and lost, and the card then asked to be reopened.
     if(significant)publication.priority=10;
-    if(semantic===s.semantic)publication.priority=5;
     s.semantic=semantic;s.sequence=publication.sequence;s.lastTimestamp=publication.timestamp;s.lastPublicationAt=this.now();s.lastExpiresAt=publication.expiresAt;
     const publicationID=idFor(current,'publication',`${s.sessionID}:${s.sequence}`);s.pendingPublication=publicationID;
     put('publication',publicationID,{sessionID:s.sessionID,recipeRevision:s.recipeRevision,...publication},this.now());
@@ -298,7 +299,8 @@ export class SpotifyService {
  // carries the deadline of an older confirmation, so it is renewed sooner. None
  // is sent when the next cue will be published in time to do the same.
  keepAliveDue(c,s,until){
-  const now=this.now(),expires=s.lastExpiresAt??(s.lastPublicationAt??0)+7500;
+  // The card goes stale on a whole second: `stale-date` is the deadline rounded down.
+  const now=this.now(),expires=Math.floor((s.lastExpiresAt??(s.lastPublicationAt??0)+7500)/1000)*1000;
   if(now-(s.lastPublicationAt??0)<4000&&expires-now>3500)return false;
   if(until===null)return true;
   const at=nextChangeAt({observation:c.observation,document:c.document,consumer:s,now});
