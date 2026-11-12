@@ -15,6 +15,41 @@ are unchanged; artist, duration, version and ambiguity gates still apply.
 The `soundtrack-brackets-1` acquisition capability invalidates old selection
 caches without changing the public response contract or selection revision.
 
+Title/annotation parsing is shared by search, legacy recording names and Spotify
+recording names in `api/utils/recording-title.js`. The parser retains the raw
+label, normalized label, search and recording projections, extracted guests,
+recognized descriptions, applied rules and malformed-annotation status. Search
+and recording projections remain distinct; the quoted dash-theme suffix is
+enabled only where the existing admission policy permits it. Provider-owned
+title evidence, structured contributor multiplicity and version/duration gates
+remain separate from presentation parsing.
+
+`explainRecordingMatch(candidate, request)` uses the same evaluation as
+`recordingScore` and returns an internal versioned policy, acceptance, score,
+first rejection reason and parsing/equivalence rules. Rules describe the
+transformations considered; they are not recording or timing authority. A
+`findRecording` rejection retains its existing public error reason and attaches
+bounded `matchDiagnostics`: the total candidate count and at most eight source
+IDs with their explanations. Existing lookup logs include this structure; raw
+titles, artist labels and lyrics are not included. Ambiguity diagnostics sample
+the actual tied candidates rather than unrelated rejected results. Both lookup
+paths carry request IDs; the default console serializes complete JSON so nested
+candidate explanations do not collapse to `[Object]`. The public API, scores and
+selection/cache policy revisions are unchanged by this refactor.
+
+Run the explicit local parity check:
+
+```sh
+node scripts/check-recording-match-parity.mjs --baseline <40-character-SHA> --out <report.json>
+```
+
+It compares the baseline matcher's existing exports with the current matcher
+over deterministic presentation, material-change, threshold,
+credit and ambiguity cases. This explicit local check reads the baseline matcher
+from Git and uses the current unchanged dependencies; the hermetic test suite
+does not depend on Git history. It compares results, scores, selected candidate
+data and existing error codes/reasons, not the newly added diagnostics.
+
 NetEase tries 30 results, then a bounded 100-result fallback when no usable verified recording was found. Up to three tied candidates can hydrate their lyrics for comparison. LRCLIB tries its exact metadata lookup, then script-aware searches and a distinctive movement suffix when applicable. Both providers still validate the complete returned recording.
 
 Metadata equivalence requires a numeric catalog ID, the same nonempty normalized album, and duration within 0.5 seconds. It handles a reversed two-word solo artist name, an explicitly known artist prefixed to a title, a single ASCII-letter typo in a long Latin title (preserving all other diacritics and numbers), or a narrow Chinese stage-name form. It does not discard featured performers or recording versions. Responses preserve the provider's original labels and carry a proof bound to the original request.

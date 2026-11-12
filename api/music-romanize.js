@@ -34,6 +34,7 @@ import {providerLanguageSource,PROVIDER_LANGUAGE_EVIDENCE_VERSION} from './utils
 import {chooseMeasuredLyricCandidate as chooseLyricCandidate,timingQuality,needsTimingDiscovery,lyricResponseLifetimeMs as responseLifetimeMs,VOCAL_SELECTION_CAPABILITY} from './utils/lyric-selection.js';
 import {isLatinScriptFallback} from './utils/lyric-script.js';
 import {isRejectedRecordingLyrics} from './utils/rejected-lyrics.js';
+import {logLookup} from './utils/lookup-diagnostics.js';
 export const RESPONSE_VERSION='2.5.0';
 export const config={supportsResponseStreaming:true};
 export const SELECTION_REVISION=LYRIC_SELECTION_REVISION;
@@ -121,9 +122,9 @@ export function createMusicRomanizeService(dependencies={}) {
         let scope=req.lyricDelivery;
         const deadline=Math.min(Date.now()+16000,scope?.deadlineAtMS??Infinity);
         let publishCandidate=async()=>{};
-        const diagnose=(provider,reason)=>logger.info?.('lyrics_lookup',{requestID,provider,reason});
+        const diagnose=(provider,reason,match)=>logLookup(logger,'lyrics_lookup',{requestID,provider,reason,...(match?{match}:{})});
         const recordFailure=(api,error)=>{
-          if(error.code==='recording_mismatch'){mismatch=true;diagnose(api.name,error.reason??'recording_mismatch');}
+          if(error.code==='recording_mismatch'){mismatch=true;diagnose(api.name,error.reason??'recording_mismatch',error.matchDiagnostics);}
           else if(error.code==='provider_timeout'||error.name==='AbortError'){timedOut=true;diagnose(api.name,'provider_timeout');}
           else{unavailable=true;logger.error('Lyrics provider failed',api.name,error.message);}
         };
@@ -181,7 +182,7 @@ export function createMusicRomanizeService(dependencies={}) {
                     // publication still rechecks the best candidate and signal.
                     scope?.own(publishCandidate(hintCandidate).catch(()=>{}));
                   }
-                }catch(error){diagnose(api.name,error.reason??'source_hint_rejected');}signal.throwIfAborted();}
+                }catch(error){diagnose(api.name,error.reason??'source_hint_rejected',error.matchDiagnostics);}signal.throwIfAborted();}
                 const discovered=probe?await probe.promise:null;if(discovered?.error)throw discovered.error;
                 const song=probe?discovered.song:await measure(`${label}_search`,()=>api.searchSong(target.artist,target.title,{album:target.album,duration:target.duration,catalog_id:target.catalog_id||catalog_id,...(typeof target.explicit==='boolean'?{explicit:target.explicit}:{}),...(target.artist_entities?.length?{artist_entities:target.artist_entities}:{}),signal}));
                 if(!song){diagnose(api.name,'not_found');return hintCandidate;}

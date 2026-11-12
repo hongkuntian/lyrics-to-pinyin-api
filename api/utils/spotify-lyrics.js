@@ -1,4 +1,5 @@
 import {withLyricsDelivery} from './lyrics-delivery.js';
+import {logLookup} from './lookup-diagnostics.js';
 import {NETEASE_ACQUISITION_CACHE_CAPABILITY} from './netease-yrc.js';
 import {attachVocalTiming,stripVocalTiming,omitOversizedLanguageEvidence} from './vocal-timing.js';
 import {createVerifiedContextCache} from './verified-lyric-context.js';
@@ -143,12 +144,12 @@ export function createSpotifyLyricsService(dependencies={}) {
                   // cannot consume the source's remaining discovery budget.
                   req.lyricDelivery?.own(publishCandidate(hintCandidate).catch(()=>{}));
                 }
-              }catch(error){logger.info?.('spotify_lyrics_lookup',{provider:independentProvider(api.name),reason:error.reason??'source_hint_rejected'});}signal.throwIfAborted();}
+              }catch(error){logLookup(logger,'spotify_lyrics_lookup',{requestID,provider:independentProvider(api.name),reason:error.reason??'source_hint_rejected',...(error.matchDiagnostics?{match:error.matchDiagnostics}:{})});}signal.throwIfAborted();}
               return chooseLyricCandidate(hintCandidate,await validateSource(await measure(`${label}_search`,()=>api.searchSong(artist,title,{...context,signal,...(independentProvider(api.name)==='netease'?{onVerifiedArtistCredits}:{})}))));
             },Math.max(1,Math.min(providerTimeoutMs,deadline-Date.now())),parentSignal);
           }catch(error){
             if(parentSignal?.aborted)return null;
-            logger.info?.('spotify_lyrics_lookup',{provider:independentProvider(api.name),reason:error.reason??error.code??'provider_unavailable'});
+            logLookup(logger,'spotify_lyrics_lookup',{requestID,provider:independentProvider(api.name),reason:error.reason??error.code??'provider_unavailable',...(error.matchDiagnostics?{match:error.matchDiagnostics}:{})});
             if(error.code==='recording_mismatch')mismatch=error.reason;
             else if(error.code==='provider_timeout'||error.name==='AbortError')timedOut=true;
             else {unavailable=true;logger.info?.('spotify_lyrics_provider_failure',{provider:independentProvider(api.name)});}
