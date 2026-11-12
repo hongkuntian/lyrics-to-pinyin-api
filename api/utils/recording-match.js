@@ -36,7 +36,13 @@ export class RecordingMismatchError extends Error {
   constructor(reason='recording_mismatch') { super('No unambiguous matching recording found'); this.code='recording_mismatch'; this.reason=reason; }
 }
 const unwrappedAlbum=value=>value.replace(/^Optional\("(.*)"\)$/, '$1');
-export const stripTitleDescription=value=>value.normalize('NFKC').replace(/\s*\((?:from\s+[^()]+|(?:love\s+)?theme\s+(?:song\s+)?from\s+[^()]+|[^()]*(?:主题曲|主題曲|插曲|片尾曲|片頭曲|片头曲|主题歌|主題歌)[^()]*|抖音[热熱]歌)\)/gi,description=>/\b(live|remaster(?:ed)?|instrumental|karaoke|acapella|cover|remix|demo)\b|现场|現場|演唱会|演唱會|重制|重製|伴奏|翻唱/i.test(description) ? description : '').trim();
+const titleAnnotation=/\s*(?:\([^()[\]\r\n]*\)|\[[^()[\]\r\n]*\])/gu;
+const titleDescription=/^(?:from\s+.+|(?:love\s+)?theme\s+(?:song\s+)?from\s+.+|.*(?:主题曲|主題曲|插曲|片尾曲|片頭曲|片头曲|主题歌|主題歌).*|抖音[热熱]歌)$/iu;
+export function stripTitleDescription(value) {
+  const title=value.normalize('NFKC');
+  if(/[()[\]]/u.test(title.replace(titleAnnotation,'')))return title.trim();
+  return title.replace(titleAnnotation,description=>titleDescription.test(description.trim().slice(1,-1))&&!sensitiveCredit.test(description)?'':description).trim();
+}
 export const stripThemeDescriptionSuffix=value=>value.normalize('NFKC').replace(/\s+[-–—]\s+(?:電視劇|电视剧|電影|电影|動畫|动画)[「《][^「」《》\n]+[」》](?:主題曲|主题曲|片尾曲|片頭曲|片头曲|插曲|主題歌|主题歌)\s*$/u,
  description=>sensitiveCredit.test(description)?description:'').trim();
 const japaneseThemeDescription=/\s*\(([^()\r\n]*[\p{Script=Hiragana}\p{Script=Katakana}][^()\r\n]*)\)$/u;

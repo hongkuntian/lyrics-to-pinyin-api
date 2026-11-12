@@ -65,6 +65,18 @@ function context(rows=[candidate()],lyrics={},extra={}) {
 }
 const search=ctx=>new QQMusicAPI().searchSong(ctx.artist,ctx.title,ctx);
 
+test('QQ soundtrack square brackets recover the unchanged measured sheet through search and fresh source IDs',async()=>{
+ const row=candidate(),plain=context([row],{}, {fastRows:[row]});
+ const expected=(await search(plain)).lyricsData;
+ for(const suffix of ['[From "Example Film"]','[電影《虛構電影》主題曲]'])for(const mode of ['search','id']) {
+  const ctx=context([row],{}, {fastRows:[row],title:`Synthetic ${suffix}`,album:`Example ${suffix} - Single`});
+  const lyrics=mode==='id'?(await new QQMusicAPI().getRecording('123',ctx)).lyrics:(await search(ctx)).lyricsData;
+  assert.deepEqual(lyrics.lines,expected.lines);
+  assert.deepEqual(lyrics.timingSource,expected.timingSource);
+  assert.equal(lyrics.timingSource.source,'qq:123:qrc');
+ }
+});
+
 test('QQ captures source language from the existing detail/QRC batch without extra requests or changed word cues',async()=>{
  const plain=candidate(),declared=candidate('123',{language:3,languageInfo:{title:'歌曲语种',content:[{id:5,value:'日语'}]}});
  for(const mode of ['search','id']){

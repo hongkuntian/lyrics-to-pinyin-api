@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {recordingScore,findRecording,searchTitle} from '../../api/utils/recording-match.js';
+import {recordingScore,findRecording,searchTitle,stripTitleDescription} from '../../api/utils/recording-match.js';
 const request={title:'说好不哭',artist:'Jay Chou & Ashin Chen',album:'说好不哭 - Single',duration:222.333};
 test('collaborator separators and ordering represent the same full credit',()=>{
  for(const artist of ['Jay Chou feat. Ashin Chen','Jay Chou, Ashin Chen','Ashin Chen / Jay Chou'])
@@ -36,6 +36,36 @@ test('soundtrack descriptions are not recording versions',()=>{
  assert.ok(recordingScore({...english,title:'A Little Happiness (From "Our Times")'},english)>=0);
  for(const suffix of ['Live','Remastered','Instrumental','Acapella','Cover','主題曲 Live','From Our Times - Remastered']) assert.equal(recordingScore({...english,title:`A Little Happiness (${suffix})`},english),-1);
  assert.equal(recordingScore({...base,title:'小幸運 (電影《我的少女時代》主題曲)',duration:300},base),-1);
+});
+test('paired soundtrack brackets preserve recording admission in both Chinese scripts and provider paths',()=>{
+ const source={id:'239333669',title:'我和我的祖国',artist:'王菲',album:'我和我的祖国',duration:188};
+ for(const suffix of ['[电影《我和我的祖国》同名主题曲]','[電影《我和我的祖國》同名主題曲]','［電影《我和我的祖國》同名主題曲］']) {
+  const target={...source,title:`我和我的祖国 ${suffix}`,album:`我和我的祖国 ${suffix} - Single`,duration:188.612};
+  assert.equal(searchTitle(target.title),source.title);
+  for(const request of [target,{...target,recordingProvider:'spotify',creditedArtistNames:['王菲']}]) {
+   assert.equal(findRecording([source],request).id,source.id);
+   for(const changed of [{artist:'Another Singer'},{artist:'王菲 & Guest'},{duration:195},{title:'我和我的祖国 (Live)'},{title:'我和我的祖国 (伴奏)'},{title:'我和我的祖国 (Remix)'}])
+    assert.equal(recordingScore({...source,...changed},request),-1,JSON.stringify(changed));
+  }
+ }
+ for(const suffix of ['[From "Example Film"]','[Theme Song From Example Film]','[Love Theme From Example Film]','[抖音熱歌]'])
+  assert.equal(searchTitle(`Song ${suffix}`),'Song');
+});
+test('soundtrack annotations retain guest and rendition qualifiers rather than weakening recording identity',()=>{
+ const source={title:'Song',artist:'Singer',album:'Example',duration:188};
+ for(const label of ['Live','Remastered','Instrumental','Karaoke','Acapella','Cover','Remix','Demo','Acoustic','Radio Edit','Version','Mix','feat. Guest','with Guest','合唱','翻唱','現場','伴奏']) {
+  for(const [open,close] of [['(',')'],['[',']']]) {
+   const title=`Song ${open}From Example Film - ${label}${close}`;
+   assert.equal(stripTitleDescription(title),title,label);
+   assert.equal(recordingScore({...source,title},source),-1,label);
+  }
+ }
+});
+test('unknown, nested and malformed soundtrack annotations remain part of the title',()=>{
+ for(const suffix of ['[Unknown Subtitle]','[From Example Film)','(From Example Film]','[[From Example Film]]','([From Example Film])','[From (Example Film)]','[From Example Film','From Example Film]','[From Example\nFilm]']) {
+  const title=`Song ${suffix}`;
+  assert.equal(stripTitleDescription(title),title,suffix);
+ }
 });
 test('Douyin title descriptions match in both Chinese scripts without weakening recording identity',()=>{
  const song={id:553755659,title:'可不可以',artist:'张紫豪',album:'可不可以',duration:240.889};

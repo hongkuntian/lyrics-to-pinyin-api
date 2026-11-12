@@ -10,6 +10,26 @@
   ],
   "cases": [
     {
+      "caseID": "apple-1482174811-soundtrack-brackets",
+      "platform": "apple",
+      "metadataURL": "https://itunes.apple.com/lookup?id=1482174811&country=ca",
+      "metadataEvidence": "Public same-ID Apple lookup on 2026-11-11 matches the reported screenshot title and artwork; the device playback ID was not captured. QQ 239333669 independently supplies 19 rows and 153 measured QRC segments. No acoustic verification.",
+      "request": {
+        "catalog_id": "1482174811",
+        "storefront": "ca",
+        "artist": "Faye Wong",
+        "title": "我和我的祖国 [电影《我和我的祖国》同名主题曲]",
+        "album": "我和我的祖国 [电影《我和我的祖国》同名主题曲] - Single",
+        "duration": 188.612
+      },
+      "availabilityEvidence": {
+        "fromCaseID": "apple-1482174811-soundtrack-brackets",
+        "observedAt": "2026-11-11",
+        "source": {"provider": "QQMusicAPI", "itemID": "239333669", "timing": "qq:239333669:qrc"},
+        "metadataOnly": true
+      }
+    },
+    {
       "caseID": "chart-gb-1-apple",
       "platform": "apple",
       "country": "gb",

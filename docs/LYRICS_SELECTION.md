@@ -4,6 +4,17 @@ The additive API 2.3.0 field `metadata.selection_revision` is `lyrics-selection-
 
 ## Identity and discovery
 
+Known soundtrack descriptions accept paired parentheses or square brackets,
+including their full-width equivalents. For example, Apple catalog `1482174811`
+labels 我和我的祖国 with `[电影《我和我的祖国》同名主题曲]`; the bracket style
+must not prevent its same-ID 王菲 localization from discovering QQ `239333669`.
+Only recognized informational descriptions are removed for matching/search.
+Guest credits, rendition/version qualifiers, unknown annotations, nested or
+unbalanced brackets remain material. Provider labels, lyrics and measured cues
+are unchanged; artist, duration, version and ambiguity gates still apply.
+The `soundtrack-brackets-1` acquisition capability invalidates old selection
+caches without changing the public response contract or selection revision.
+
 NetEase tries 30 results, then a bounded 100-result fallback when no usable verified recording was found. Up to three tied candidates can hydrate their lyrics for comparison. LRCLIB tries its exact metadata lookup, then script-aware searches and a distinctive movement suffix when applicable. Both providers still validate the complete returned recording.
 
 Metadata equivalence requires a numeric catalog ID, the same nonempty normalized album, and duration within 0.5 seconds. It handles a reversed two-word solo artist name, an explicitly known artist prefixed to a title, a single ASCII-letter typo in a long Latin title (preserving all other diacritics and numbers), or a narrow Chinese stage-name form. It does not discard featured performers or recording versions. Responses preserve the provider's original labels and carry a proof bound to the original request.
