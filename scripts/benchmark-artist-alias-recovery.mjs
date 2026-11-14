@@ -26,7 +26,7 @@ export async function evaluateRecovery({roots,runs=3,delayMS=20,cases=recoveryCo
       const f=fixtureAPI(m.NeteaseAPI,row,{delayMS});
       const resolveArtistIdentitiesFn=row.recording.metadata.artist_ids
         ?createArtistIdentityResolver({fetchFn:identityCatalog(row.recording,row.songs[0],row.profiles).fetchFn}):undefined;
-      const service=m.createService({redis:null,getAvailableAPIsFn:()=>[f.api],resolveArtistIdentitiesFn,logger:{info(){},error(){}}});
+      const service=m.createService({redis:null,getAvailableAPIsFn:()=>[f.api],resolveArtistIdentitiesFn,resolveArtistDiscoveryFn:async()=>null,logger:{info(){},error(){}}});
       return async(req,res)=>{await service(req,res);latest.set(m.id,{calls:counts(f.calls),queries:f.calls.filter(c=>c.path==='/search').map(c=>c.query)});};
     }}));
     await runCatalogBenchmark({corpus:{version:1,cases:[{caseID:row.caseID,platform:'spotify',request:{recording:row.recording}}],limitations:[]},

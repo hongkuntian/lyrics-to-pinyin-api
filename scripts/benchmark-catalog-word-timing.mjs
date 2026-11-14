@@ -15,15 +15,16 @@ export function diagnosticProviders(getAvailable,provider){
 
 export function summarizeResponse(response,request) {
  const timing=response?.metadata?.lyric_timing,song=response?.song;
- let bound=validTimingProvenance(timing)&&timing.source.split(':')[1]===String(song?.id);
+ let bound=validTimingProvenance(timing)&&timing.source.split(':')[1]===String(song?.id),recordingVerified=false;
  if(request.recording){
-  try{verifySpotifyBinding(response.recordingBinding,request.recording,sourceCapsule(response),response.metadata.selection_revision,response);}
+  try{verifySpotifyBinding(response.recordingBinding,request.recording,sourceCapsule(response),response.metadata.selection_revision,response);recordingVerified=true;}
   catch{bound=false;}
   bound=bound&&timing?.provider==='spotify'&&timing.recordingID===request.recording.item_id;
  }else bound=bound&&timing?.provider==='appleMusic'&&timing.recordingID===request.catalog_id;
  const lines=Array.isArray(response?.lines)?response.lines:[];
  const coverage=vocalCoverage(lines.map(l=>({...l,text:l.original})),{duration:song?.duration??7200,durationResolution:timing?.durationResolution??0,provenance:bound});
  return {readable:lines.length>0||response?.quality?.instrumental===true,lineTimed:response?.quality?.synced===true,
+  recordingVerified,synchronizationEligible:recordingVerified&&response.recordingBinding?.synchronizationEligible===true,
   scriptFit:lyricScriptFit({...response,target:request.recording?.metadata??request}),
   completeMeasured:coverage.complete,coverage,rows:lines.length,cues:bound?lines.reduce((n,l)=>n+(l.vocalTiming?.segments?.length??0),0):0,
   source:{provider:response?.metadata?.source??null,itemID:song?.id==null?null:String(song.id),timing:bound?timing.source:null},
@@ -75,6 +76,18 @@ export function coverageGate(report,corpus,minimum){
  return {passed:rate>=minimum,minimum,rate,complete:candidate.completeMeasured,attempts:expected};
 }
 
+// Line-only sources have their own denominator; they cannot inflate measured
+// word coverage. Every scheduled attempt must retain the exact Spotify binding.
+export function lineTimingGate(report,corpus,minimum) {
+ const expected=corpus.cases.length*report.runs,rows=report.results?.filter(r=>r.mode==='candidate');
+ if(!Number.isFinite(minimum)||minimum<0||minimum>1||!expected||!rows||rows.length!==expected
+  ||corpus.cases.some(c=>!c.lineTimingEvidence||!c.request.recording)
+  ||rows.some(r=>!corpus.cases.some(c=>c.caseID===r.caseID))
+  ||new Set(rows.map(r=>r.caseID+':'+r.run)).size!==expected)throw new Error('invalid_line_timing_gate');
+ const complete=rows.filter(r=>r.status===200&&r.summary?.recordingVerified&&r.summary?.synchronizationEligible&&r.summary?.lineTimed).length;
+ return {kind:'source-bound-line-timing',passed:complete/expected>=minimum,minimum,rate:complete/expected,complete,attempts:expected};
+}
+
 export function selectCatalogCases(corpus,ids) {
  if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length||ids.some(id=>!corpus.cases.some(row=>row.caseID===id)))
   throw new Error('invalid_case_selection');
@@ -83,8 +96,9 @@ export function selectCatalogCases(corpus,ids) {
 }
 
 async function main(){
- const {values}=parseArgs({options:{corpus:{type:'string',default:'docs/research/measured-discovery-corpus.json'},'baseline-root':{type:'string'},out:{type:'string'},runs:{type:'string',default:'1'},concurrency:{type:'string',default:'1'},'minimum-available-rate':{type:'string'},'case-ids':{type:'string'},'only-provider':{type:'string'}}});
- if(values['only-provider']&&values['minimum-available-rate']!==undefined)throw new Error('diagnostic_is_not_combined_coverage_acceptance');
+ const {values}=parseArgs({options:{corpus:{type:'string',default:'docs/research/measured-discovery-corpus.json'},'baseline-root':{type:'string'},out:{type:'string'},runs:{type:'string',default:'1'},concurrency:{type:'string',default:'1'},'minimum-available-rate':{type:'string'},'minimum-line-timed-rate':{type:'string'},'case-ids':{type:'string'},'only-provider':{type:'string'}}});
+ if(values['only-provider']&&(values['minimum-available-rate']!==undefined||values['minimum-line-timed-rate']!==undefined))throw new Error('diagnostic_is_not_combined_coverage_acceptance');
+ if(values['minimum-available-rate']!==undefined&&values['minimum-line-timed-rate']!==undefined)throw new Error('ambiguous_coverage_gate');
  const original=JSON.parse(await readFile(values.corpus,'utf8')),corpus=values['case-ids']?selectCatalogCases(original,values['case-ids'].split(',')):original,modes=[];
  const roots=[...(values['baseline-root']?[['baseline',resolve(values['baseline-root'])]]:[]),['candidate',fileURLToPath(new URL('..',import.meta.url))]];
  for(const [id,root] of roots){
@@ -99,6 +113,7 @@ async function main(){
   report.limitations.push('Isolated provider discovery uses ordinary admission and provider deadlines, but bypasses the combined source schedule. A positive establishes admitted source availability, not combined pipeline or phone success.');
  }
  if(values['minimum-available-rate']!==undefined)report.acceptance=coverageGate(report,corpus,Number(values['minimum-available-rate']));
+ if(values['minimum-line-timed-rate']!==undefined)report.acceptance=lineTimingGate(report,corpus,Number(values['minimum-line-timed-rate']));
  if(values.out)await writeFile(values.out,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({aggregate:report.aggregate,observedAvailable:report.observedAvailableCaseIDs.length,acceptance:report.acceptance}));
  if(report.acceptance&&!report.acceptance.passed)process.exitCode=1;

@@ -1,5 +1,63 @@
 # Automatic artist identity enrichment
 
+## Discovery before a provider candidate exists
+
+`artist-discovery.js` fills the bootstrap gap when an international artist name
+finds no plausible native provider candidate. An untimed/line-only candidate
+starts optional identity discovery alongside the remaining provider searches.
+The existing Wikidata snapshots are reused first. Otherwise the resolver follows
+the exact Spotify artist URL to a unique active MusicBrainz artist, verifies its
+reciprocal URL ID, and follows its unique Wikidata link only when that entity's
+nondeprecated MusicBrainz claim points back to the same artist. Conflicting
+Spotify claims, search-hint aliases, ambiguous links and malformed names abstain.
+The requested artist spelling must occur in the verified names. No person-name
+search or maintained artist-name mapping is involved.
+
+When an ISRC is available, an optional Apple catalog lookup can also discover
+localized names. It requires the original title/album, duration within 0.5 s,
+version/rating agreement and consistent complete Apple artist-ID sets across
+localizations of the same song ID. Multiple contributors need a unique exact
+name assignment; a sole contributor is anchored by the matching recording.
+Apple only supplies search metadata. The Spotify request, independent lyric
+source and immutable document identity remain unchanged.
+
+One bounded native-name continuation searches all eligible providers. Verified
+MusicBrainz/Wikidata snapshots retain the entity's current NetEase artist-ID and
+QQ singer-MID claims. QQ and NetEase can use those claims only through their
+existing fresh provider-ID/profile admission rules, including exact QQ MID
+echoes; a verified name without the provider evidence is insufficient. LRCLIB
+can use the verified aliases only with matching album, duration within 0.5 s,
+complete uniquely assigned contributors and all ordinary recording gates.
+Its alias evidence binds the complete request and raw source metadata through
+cache, acquisition and save/reopen. Recovered exact lookups still collect the
+search candidates before choosing, so a conflicting duplicate sheet abstains.
+Unknown title suffixes, covers and anniversary recordings are not normalized
+away. Provider timestamps are preserved; this does not generate word cues.
+
+MusicBrainz discovery has a 4 s ceiling inside the unchanged 16 s request
+deadline. All MusicBrainz requests share a process gate and, when Redis is
+configured, a shared NX lease at 1050 ms intervals. A busy 503 permits one
+rate-gated retry per read within that ceiling. Shared-gate failure abstains.
+Positive artist snapshots last one day; confirmed missing graph links last
+five minutes. Transport failures/cancellation do not become negative cache
+entries. Snapshot fingerprints and acquisition-order writes preserve identity
+and prevent an older refresh from replacing newer evidence. Apple recording
+localizations have a bounded one-day memory cache.
+
+The exact 愛你 Spotify recording is covered by hermetic discovery, wrong-source,
+ambiguity, cache and real library save/reopen regressions. The daily live workflow
+also checks `docs/research/artist-discovery-corpus.json` with the separate
+`--minimum-line-timed-rate 1` gate. Its 24 line-timed LRCLIB rows are never counted
+as source-positive measured-word coverage. Acoustic alignment is not established
+by metadata admission or these checks.
+
+Source contracts: [MusicBrainz API](https://musicbrainz.org/doc/MusicBrainz_API),
+[aliases](https://musicbrainz.org/doc/Aliases),
+[Apple ISRC lookup](https://developer.apple.com/documentation/applemusicapi/get-multiple-catalog-songs-by-isrc),
+[Apple localization](https://developer.apple.com/documentation/applemusicapi/storefronts-and-localization).
+
+## Provider identity admission
+
 Each Spotify acquisition shares one identity snapshot across provider lookups,
 including explicit refresh. NetEase starts that bounded lookup when a plausible
 recording has different contributor labels, in parallel with its artist-profile

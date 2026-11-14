@@ -60,6 +60,13 @@ jobs:
           --case-ids spotify-6dMFbxf7TdjTy4KxnZJl7w,spotify-5bcbAT32LJS87hklgOxUqM
           --runs 1 --concurrency 1 --minimum-available-rate 1
           --out spotify-recovery-coverage.json
+      - name: Require bound line timing for verified artist discovery
+        if: always()
+        run: >-
+          node scripts/benchmark-catalog-word-timing.mjs
+          --corpus docs/research/artist-discovery-corpus.json
+          --runs 1 --concurrency 1 --minimum-line-timed-rate 1
+          --out artist-discovery-coverage.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -68,4 +75,5 @@ jobs:
             measured-timing-coverage.json
             empty-duplicate-coverage.json
             spotify-recovery-coverage.json
+            artist-discovery-coverage.json
           if-no-files-found: error

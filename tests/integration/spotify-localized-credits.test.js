@@ -32,9 +32,10 @@ function fixture({song=raw,songs=[song],performerProfiles=profiles,changeProfile
     if(u.pathname==='/lyric')return new Response(JSON.stringify({code:200,lrc:{lyric:lyricForID(u.searchParams.get('id'))}}));
     return new Response(JSON.stringify({code:200,result:{songs}}));
   };
-  const api=new NeteaseAPI(),search=api.searchSong.bind(api),lyrics=api.getLyrics.bind(api);
+  const api=new NeteaseAPI(),search=api.searchSong.bind(api),lyrics=api.getLyrics.bind(api),getRecording=api.getRecording.bind(api);
   api.searchSong=(a,t,c)=>search(a,t,{...c,fetchFn});
   api.getLyrics=(id,c)=>lyrics(id,{...c,fetchFn});
+  api.getRecording=(id,c)=>getRecording(id,{...c,fetchFn});
   return {api,calls,fetchFn};
 }
 
@@ -96,7 +97,7 @@ test('automatic artist aliases require fresh profile corroboration without weake
 test('the reported Spotify duet keeps NetEase measured timing through acquisition, save and reopen',async t=>{
   const {db,store}=await libraryDB();t.after(()=>db.close());
   const {api}=qianLiFixture();
-  const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}},
+  const service=createMusicRomanizeService({resolveArtistDiscoveryFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}},
     resolveArtistIdentitiesFn:resolverFor(qianLiRecording,qianLiSong,qianLiProfiles),
     resolveCatalogAliasesFn:()=>assert.fail('Spotify must not use Apple aliases')});
   const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(service),
@@ -154,7 +155,7 @@ test('a provider-ID-bound Latin artist alias permits its unaccented catalog spel
 
 test('localized Spotify acquisition remains independent through fallback, durable document and wire binding',async()=>{
   const {api}=fixture();
-  const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}},
+  const service=createMusicRomanizeService({resolveArtistDiscoveryFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}},
     resolveCatalogAliasesFn:()=>assert.fail('No Apple catalog lookup'),lookupReviewedRecordingFn:()=>assert.fail('No Apple reviewed recording')});
   const res=createMockRes();await service(createMockReq({body:{recording}}),res);
   assert.equal(res.statusCode,200);
@@ -184,7 +185,7 @@ test('ambiguous NetEase timing can discover native artist names but only LRCLIB 
     return search(artist,title,{...context,fetchFn:async url=>new Response(JSON.stringify(
       new URL(url).pathname==='/api/get'?lrcRecord:[lrcRecord]))});
   };
-  const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[netease,lrc],hedgeDelayMs:0,logger:{info(){},error(){}},
+  const service=createMusicRomanizeService({resolveArtistDiscoveryFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[netease,lrc],hedgeDelayMs:0,logger:{info(){},error(){}},
     resolveCatalogAliasesFn:()=>assert.fail('No Apple catalog lookup')});
   const res=createMockRes();await service(createMockReq({body:{recording}}),res);
   assert.equal(res.statusCode,200);
@@ -204,7 +205,7 @@ test('ambiguous NetEase timing can discover native artist names but only LRCLIB 
 test('authenticated library route stores and reopens localized Spotify lyrics under the original request',async t=>{
   const {db,store}=await libraryDB();t.after(()=>db.close());
   const {api}=fixture();
-  const acquisition=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}}});
+  const acquisition=createMusicRomanizeService({resolveArtistDiscoveryFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}}});
   const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(acquisition),
     authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
   const call=async(body)=>{
@@ -271,7 +272,7 @@ for(const [label,recording,song,profiles] of [
  });
  test(`${label}: measured cues survive actual library acquisition and reopen`,async t=>{
   const {db,store}=await libraryDB();t.after(()=>db.close());const {api}=identityFixture();
-  const acquisition=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],resolveArtistIdentitiesFn:resolverFor(recording,song,profiles),logger:{info(){},error(){}}});
+  const acquisition=createMusicRomanizeService({resolveArtistDiscoveryFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[api],resolveArtistIdentitiesFn:resolverFor(recording,song,profiles),logger:{info(){},error(){}}});
   const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(acquisition),
    authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
   const call=async body=>{const req=createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res=createMockRes();await handler(req,res);return res;};
@@ -290,7 +291,7 @@ test('cached external aliases cannot authorize another catalog artist ID or a na
  let lookups=0;const resolve=resolverFor(zhangRecording,zhangSong,zhangProfile);
  const fallback=new LRCAPI();fallback.searchSong=async(artist,title,c)=>({id:900,artist,title,album:c.album,duration:c.duration,source:'lrclib',creditedArtistNames:c.creditedArtistNames});
  fallback.getLyrics=async()=>({source:'lrclib',songId:900,lines:[{text:'一起听',timestamp:12},{text:'慢慢唱',timestamp:18}]});
- const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api,fallback],resolveArtistIdentitiesFn:async(...args)=>{lookups++;return resolve(...args);},logger:{info(){},error(){}}});
+ const service=createMusicRomanizeService({resolveArtistDiscoveryFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[api,fallback],resolveArtistIdentitiesFn:async(...args)=>{lookups++;return resolve(...args);},logger:{info(){},error(){}}});
  const call=async recording=>{const res=createMockRes();await service(createMockReq({body:{recording,options:{lyric_sources_version:2}}}),res);assert.equal(res.statusCode,200);return res.body;};
  const first=await call(zhangRecording);assert.ok(first.lines.every(l=>l.vocalTiming));assert.ok(lookups>0);
  const different={...zhangRecording,metadata:{...zhangRecording.metadata,artist_ids:['6noxsCszBEEK04kCehugOp']}};
@@ -305,7 +306,7 @@ test('an unavailable identity resolver preserves readable fallback and cannot do
  const {api}=fixture({song:zhangSong,performerProfiles:zhangProfile,lyricPayload:qianLiLyrics}),resolve=resolverFor(zhangRecording,zhangSong,zhangProfile);
  const fallback=new LRCAPI();fallback.searchSong=async(artist,title,c)=>({id:900,artist,title,album:c.album,duration:c.duration,source:'lrclib',creditedArtistNames:c.creditedArtistNames});
  fallback.getLyrics=async()=>({source:'lrclib',songId:900,lines:[{text:'一起听',timestamp:12},{text:'慢慢唱',timestamp:18}]});
- const acquisition=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api,fallback],resolveArtistIdentitiesFn:async(...args)=>available?resolve(...args):[],logger:{info(){},error(){}}});
+ const acquisition=createMusicRomanizeService({resolveArtistDiscoveryFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[api,fallback],resolveArtistIdentitiesFn:async(...args)=>available?resolve(...args):[],logger:{info(){},error(){}}});
  const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(acquisition),authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
  const call=async()=>{const res=createMockRes();await handler(createMockReq({body:{action:'lyrics',recording:zhangRecording,refresh:true},headers:{authorization:'Bearer lyra_s_fixture'}}),res);assert.equal(res.statusCode,200);return res.body.document;};
  const first=await call();assert.ok(first.response.lines.every(l=>l.vocalTiming));available=false;

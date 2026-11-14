@@ -271,7 +271,7 @@ export function findLyricsRecording(songs, request) {
 
 // Opt-in adapter for Spotify: complete catalog names are indivisible credits.
 // The search-only joined string is never used as the request credit identity.
-function creditSegmentations(value,knownNames) {
+export function creditSegmentations(value,knownNames) {
   if(typeof value!=='string'||!value.trim())return [];
   const text=value.normalize('NFKC').trim(),known=new Set(knownNames.map(normalizeRecordingText));
   const separators=[...text.matchAll(creditSeparator)].map(m=>({left:m.index,right:m.index+m[0].length}));

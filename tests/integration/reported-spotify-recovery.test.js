@@ -33,7 +33,7 @@ function fixture(row,{source=row.source,profileDelay=0,lyricDelay=0,searchDelay=
  return {api,calls,signals};
 }
 function service(api,options={}) {
- return createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],resolveArtistIdentitiesFn:async()=>[],
+ return createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],resolveArtistIdentitiesFn:async()=>[],resolveArtistDiscoveryFn:async()=>null,
   resolveCatalogAliasesFn:()=>assert.fail('Spotify cannot borrow Apple catalog aliases'),
   lookupReviewedRecordingFn:()=>assert.fail('Spotify cannot borrow Apple reviewed admission'),
   logger:{info(){},error(){}},...options});

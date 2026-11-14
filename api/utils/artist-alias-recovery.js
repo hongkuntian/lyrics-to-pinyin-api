@@ -1,6 +1,7 @@
 import {normalizeRecordingText,normalizedAlbum,sameRecordingVersions,recordingScore} from './recording-match.js';
 import {validArtistIdentity} from './artist-identities.js';
 import {SPOTIFY_REVIEWED_SOURCE_CAPABILITY,recoveredReviewedSpotifyNames} from './spotify-reviewed-source.js';
+import {ARTIST_DISCOVERY_CAPABILITY,recoveredDiscoveryNames,validDiscoveryIdentity} from './artist-discovery.js';
 
 export const ARTIST_ALIAS_RECOVERY_POLICY='artist-alias-recovery-1';
 export const ARTIST_ID_ALIAS_POLICY='artist-id-alias-recovery-1';
@@ -89,6 +90,7 @@ export function buildArtistAliasEvidence(song,performers,request,profiles) {
 export function recoveredArtistNames(song,request) {
   try {
     const e=song.artistAliasEvidence;
+    if(e?.policy===ARTIST_DISCOVERY_CAPABILITY)return recoveredDiscoveryNames(song,request);
     if(e?.policy===SPOTIFY_REVIEWED_SOURCE_CAPABILITY)return recoveredReviewedSpotifyNames(song,request);
     if(e?.policy===ARTIST_ID_ALIAS_POLICY&&song.source==='netease'||e?.policy===QQ_ARTIST_ID_ALIAS_POLICY&&song.source==='qq')return recoveredIdentityNames(song,request);
     if(!eligible(song,request)||e?.version!==1||e.policy!==ARTIST_ALIAS_RECOVERY_POLICY
@@ -119,10 +121,10 @@ function identityEligible(song,request) {
     &&recordingScore({...song,artistAliasEvidence:undefined,creditedArtistNames:request.creditedArtistNames},request)>=0;
 }
 function identitySupports(identity,performer,requested,requestedID,provider) {
-  if(!validArtistIdentity(identity)||identity.spotifyArtistID!==requestedID)return false;
+  if(!(validArtistIdentity(identity)||validDiscoveryIdentity(identity))||identity.spotifyArtistID!==requestedID)return false;
   const names=new Set(identity.names.map(normalizeRecordingText));
   if(!names.has(normalizeRecordingText(requested))||!names.has(normalizeRecordingText(performer.name)))return false;
-  if(provider==='qq')return identity.version===2&&identity.qqSingerMIDs.includes(performer.mid);
+  if(provider==='qq')return (identity.version===2||identity.authority==='musicbrainz')&&identity.qqSingerMIDs.includes(performer.mid);
   if(identity.neteaseArtistIDs.length)return identity.neteaseArtistIDs.includes(performer.id);
   // Some entities lack a NetEase ID. Require two distinct fresh provider
   // profile names, including its canonical name; a shared homonym is insufficient.

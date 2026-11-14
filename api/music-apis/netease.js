@@ -103,7 +103,7 @@ export class NeteaseAPI extends BaseMusicAPI {
     };
     for(const limit of [30,100]) {
       const recoveryTitle=limit===100&&recoverySearchTitle(request)&&![...records.values()].some(({song})=>plausibleMetadata(song));
-      const query=recoveryTitle?searchTitle(title):`${artist} ${searchTitle(title)}`;
+      const query=recoveryTitle?searchTitle(title):`${context.artistSearchNames?.join(' & ')??artist} ${searchTitle(title)}`;
       const data=await fetchJSON(`${this.baseURL}/search?limit=${limit}&keywords=${encodeURIComponent(simplifyRecordingScript(query))}`,context);
       if(data.code!==200) throw new Error('NetEase search unavailable');
       for(const raw of data.result?.songs || []) if(!records.has(raw.id)) {

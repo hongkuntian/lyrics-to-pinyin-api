@@ -8,6 +8,7 @@ import {isRejectedLyrics,isRejectedRecordingLyrics} from '../utils/rejected-lyri
 import {simplifyRecordingScript} from '../utils/recording-script.js';
 import {isLatinScriptFallback} from '../utils/lyric-script.js';
 import {needsCompletenessDiscovery,qualifyLyricCompleteness} from '../utils/lyric-completeness.js';
+import {buildArtistDiscoveryEvidence} from '../utils/artist-discovery.js';
 export class LRCAPI extends BaseMusicAPI {
   constructor({rejectLyrics=isRejectedLyrics,rejectRecordingLyrics=isRejectedRecordingLyrics}={}) { super('LRCAPI',['zh','yue','en','ja','ko','ru']); this.baseURL='https://lrclib.net/api'; this.rejectLyrics=rejectLyrics; this.rejectRecordingLyrics=rejectRecordingLyrics; this.languageAgnosticDiscovery=true; }
   // Search accepts Unicode metadata independently of reading-aid coverage.
@@ -15,6 +16,7 @@ export class LRCAPI extends BaseMusicAPI {
   supportsLanguage(language) { return typeof language==='string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(language); }
   async searchSong(artist,title,context={}) {
     const request={artist,title,...context}, records=new Map();
+    const queryArtist=context.artistSearchNames?.join(' & ')??artist;
     const isFallback=song=>isLatinScriptFallback({target:request,song,lyrics:song?.lyricsData});
     const candidate=song=>({target:request,song,lyrics:song?.lyricsData});
     const needsDiscovery=song=>isFallback(song)||needsCompletenessDiscovery(candidate(song));
@@ -32,8 +34,10 @@ export class LRCAPI extends BaseMusicAPI {
     };
     // Exact lookup uses the full recording signature. A 404 is an ordinary
     // discovery miss; returned metadata still goes through recording validation.
-    if(context.album?.trim() && Number.isFinite(context.duration) && context.duration>0) {
-      const params={artist_name:artist,track_name:title,album_name:context.album,duration:String(context.duration)};
+    // Recovered aliases require the search candidate set. A single /get sheet
+    // cannot resolve duplicate timelines when the artist-bound search is down.
+    if(!context.artistDiscovery && context.album?.trim() && Number.isFinite(context.duration) && context.duration>0) {
+      const params={artist_name:queryArtist,track_name:title,album_name:context.album,duration:String(context.duration)};
       try { add(await fetchJSON(`${this.baseURL}/get?${new URLSearchParams(params)}`,context)); }
       catch(error) { if(error.status===429) throw error;if(error.status!==404) failure=error; }
       const exact=attempt();
@@ -43,7 +47,7 @@ export class LRCAPI extends BaseMusicAPI {
       const data=await fetchJSON(`${this.baseURL}/search?${new URLSearchParams(params)}`,context);
       for(const song of data) add(song);
     };
-    try { await search({artist_name:artist,track_name:title}); } catch(error) { if(error.status===429) {const fallback=attempt();if(fallback)return fallback;throw error;}failure=error; }
+    try { await search({artist_name:queryArtist,track_name:title}); } catch(error) { if(error.status===429) {const fallback=attempt();if(fallback)return fallback;throw error;}failure=error; }
     const direct=attempt();if(direct&&!needsDiscovery(direct)) return direct;
     // LRCLIB's literal title query can hide the same Japanese theme under a
     // full-series OP description. One artist-bound query broadens discovery;
@@ -81,6 +85,7 @@ export class LRCAPI extends BaseMusicAPI {
       const artist=candidate.artist.normalize('NFKC').replace(/\s+\+\s+/gu,' & ');
       if(artist!==candidate.artist&&sameRecordingNames({...candidate,artist},request))candidate.artist=artist;
     }
+    if(request.artistDiscovery){const evidence=buildArtistDiscoveryEvidence(candidate,request,request.artistDiscovery);if(evidence)candidate.artistAliasEvidence=evidence;}
     return candidate;
   }
   async getRecording(id,context={}) {

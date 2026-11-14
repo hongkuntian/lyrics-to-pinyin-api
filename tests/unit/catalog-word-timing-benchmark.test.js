@@ -1,11 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runCatalogBenchmark,coverageGate,selectCatalogCases,diagnosticProviders,summarizeResponse} from '../../scripts/benchmark-catalog-word-timing.mjs';
+import {runCatalogBenchmark,coverageGate,lineTimingGate,selectCatalogCases,diagnosticProviders,summarizeResponse} from '../../scripts/benchmark-catalog-word-timing.mjs';
 const sentinel='Invented lyric sentinel';
 const request={catalog_id:'123',artist:'Synthetic',title:'Synthetic',duration:30};
 const response={song:{id:42,duration:30},quality:{synced:true},metadata:{source:'NeteaseAPI',lyric_timing:{version:1,provider:'appleMusic',recordingID:'123',source:'netease:42:yrc',revision:'a'.repeat(64)}},
  lines:[{original:sentinel,timestamp:1,vocalTiming:{end:2,segments:[{text:sentinel,utf16Start:0,utf16Length:sentinel.length,start:1,end:2}]}}]};
 const mode=(id,body,status=200)=>({id,createService:()=>async(_,res)=>res.status(status).json(body)});
+test('line timing gate requires every exact bound attempt without claiming measured words',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const corpus=JSON.parse(await readFile(new URL('../../docs/research/artist-discovery-corpus.json',import.meta.url),'utf8'));
+ assert.equal(corpus.cases[0].request.recording.item_id,'0n7Ij8XEDfYYFRgBQjNjnf');assert.equal(corpus.cases[0].availabilityEvidence,undefined);
+ const row={mode:'candidate',caseID:corpus.cases[0].caseID,run:1,status:200,summary:{lineTimed:true,recordingVerified:true,synchronizationEligible:true,cues:0}};
+ const report={runs:1,results:[row]};assert.equal(lineTimingGate(report,corpus,1).passed,true);
+ for(const change of [{status:504},{summary:{...row.summary,recordingVerified:false}},{summary:{...row.summary,synchronizationEligible:false}}])
+  assert.equal(lineTimingGate({...report,results:[{...row,...change}]},corpus,1).passed,false);
+ assert.throws(()=>lineTimingGate({...report,results:[]},corpus,1),/invalid_line_timing_gate/);
+ const workflow=await readFile(new URL('../../.github/workflows/measured-timing-coverage.yml',import.meta.url),'utf8');assert.match(workflow,/--minimum-line-timed-rate 1/);
+});
 test('benchmark distinguishes script fallback without retaining lyric bodies',()=>{
  const target={...request,title:'紅日'};
  assert.equal(summarizeResponse(response,target).scriptFit,-1);

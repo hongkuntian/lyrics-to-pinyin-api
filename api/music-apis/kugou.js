@@ -186,7 +186,7 @@ export class KugouAPI extends BaseMusicAPI {
     cancelled(context.signal);
     if(!Number.isFinite(context.duration) || context.duration<=0) return null;
     const request={...context,artist,title};
-    const data=await requestJSON('/search',{ver:1,man:'yes',client:'pc',keyword:simplifyRecordingScript(`${artist} - ${searchTitle(title)}`),duration:Math.round(context.duration*1000)},context);
+    const data=await requestJSON('/search',{ver:1,man:'yes',client:'pc',keyword:simplifyRecordingScript(`${context.artistSearchNames?.join(' & ')??artist} - ${searchTitle(title)}`),duration:Math.round(context.duration*1000)},context);
     if(!Array.isArray(data.candidates) || data.candidates.length>100) throw providerError();
     if(!data.candidates.length) return null;
     const records=new Map();

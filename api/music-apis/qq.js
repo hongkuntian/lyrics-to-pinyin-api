@@ -365,12 +365,13 @@ export class QQMusicAPI extends BaseMusicAPI {
  async searchSong(artist,title,context={}) {
   cancelled(context.signal);if(!scalar(artist,2048)||!scalar(title,1000)||!Number.isFinite(context.duration)||context.duration<=0||context.duration>7200)return null;
   const request={...context,artist,title},records=new Map(),responses=new Map(),failures=new Map(),state={unresolved:false,excluded:new Set()};
+  const queryArtist=context.artistSearchNames?.join(' & ')??artist;
   try {
-   await fastDiscover(`${title} ${artist}`,request,context,records,responses,state);
+   await fastDiscover(`${title} ${queryArtist}`,request,context,records,responses,state);
    await recoverArtistIdentities(records,request,context,state);
    if(!state.unresolved){const selected=await selectRecording(records,request,context,responses,failures,{measured:true});if(selected)return selected;}
   }catch(error){if(error.name==='AbortError'||context.signal?.aborted)throw error;}
-  cancelled(context.signal);const songs=await discover(`${artist} ${searchTitle(title)}`,context);
+  cancelled(context.signal);const songs=await discover(`${queryArtist} ${searchTitle(title)}`,context);
   for(const song of songs) {
    if(state.excluded.has(song.id))continue;
    const known=records.get(song.id);

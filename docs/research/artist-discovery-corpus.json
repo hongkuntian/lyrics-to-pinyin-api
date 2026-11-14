@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "limitations": [
+    "Exact Spotify recording supplied by the user. This cohort qualifies source-bound line timing only; no word-timing or acoustic claim."
+  ],
+  "cases": [
+    {
+      "caseID": "spotify-0n7Ij8XEDfYYFRgBQjNjnf",
+      "platform": "spotify",
+      "metadataEvidence": "Exact user-supplied Spotify ID confirmed; fresh Spotify catalog lookup 2026-11-14. Album Kimberley首張同名專輯, solo artist Kimberley Chen, duration 207840 ms.",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "0n7Ij8XEDfYYFRgBQjNjnf",
+          "metadata": {
+            "origin": "spotify",
+            "title": "愛你",
+            "artists": [
+              "Kimberley Chen"
+            ],
+            "artist_ids": [
+              "1dVbVQZjRGDjQmHD8oiS8k"
+            ],
+            "album": "Kimberley首張同名專輯",
+            "duration_ms": 207840
+          }
+        }
+      },
+      "lineTimingEvidence": {
+        "checkedAt": "2026-11-14",
+        "source": {
+          "provider": "lrclib",
+          "itemID": "9994728"
+        },
+        "timedRows": 24,
+        "wordCues": 0,
+        "identity": "Exact Spotify artist URL to MusicBrainz artist, reciprocally linked Wikidata labels; same album and duration."
+      }
+    }
+  ]
+}
