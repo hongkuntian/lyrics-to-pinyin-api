@@ -1,5 +1,6 @@
 import {normalizeRecordingText,normalizedAlbum,sameRecordingVersions,recordingScore} from './recording-match.js';
 import {validArtistIdentity} from './artist-identities.js';
+import {SPOTIFY_REVIEWED_SOURCE_CAPABILITY,recoveredReviewedSpotifyNames} from './spotify-reviewed-source.js';
 
 export const ARTIST_ALIAS_RECOVERY_POLICY='artist-alias-recovery-1';
 export const ARTIST_ID_ALIAS_POLICY='artist-id-alias-recovery-1';
@@ -88,6 +89,7 @@ export function buildArtistAliasEvidence(song,performers,request,profiles) {
 export function recoveredArtistNames(song,request) {
   try {
     const e=song.artistAliasEvidence;
+    if(e?.policy===SPOTIFY_REVIEWED_SOURCE_CAPABILITY)return recoveredReviewedSpotifyNames(song,request);
     if(e?.policy===ARTIST_ID_ALIAS_POLICY&&song.source==='netease'||e?.policy===QQ_ARTIST_ID_ALIAS_POLICY&&song.source==='qq')return recoveredIdentityNames(song,request);
     if(!eligible(song,request)||e?.version!==1||e.policy!==ARTIST_ALIAS_RECOVERY_POLICY
       ||!same(e.source,sourceSignature(song))||!same(e.request,requestSignature(request))||!validPerformers(e.performers,song))return null;

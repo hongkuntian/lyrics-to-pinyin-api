@@ -135,6 +135,27 @@ Automatic lookup includes a bounded Kugou fallback with exact full title/credits
 
 Reviewed cross-catalog discoveries are metadata-only registry entries. Every request revalidates its complete accepted Apple catalog signature and the exact NetEase recording ID, album ID/name, paired contributor IDs/names, duration, and noncontradictory lyric headers. Changed sources fail closed. This recovers the Tomorrow Will Be Better ensemble and Eason Chan Arcane recording without broadening ordinary performer matching.
 
+Spotify has a separate metadata-only registry in
+`api/data/spotify-reviewed-sources.json`. A recovery requires the exact Spotify
+track ID, complete ordered contributor names, supplied contributor IDs, title,
+album and near-identical duration, plus fresh independent source ID, album ID,
+paired performer IDs/names and recording metadata. Versions, ISRC and explicit
+conflicts still reject. This is no permission to equate arbitrary ensembles
+with Various Artists, and no Apple admission, transcription or timing is copied.
+The bound evidence and provider album ID survive cache and durable-document
+validation; source hints still fetch and revalidate their current source.
+Spotify `5bcbAT32LJS87hklgOxUqM` uses NetEase `5276925`, whose original ensemble
+is credited to 群星. The provider's own fresh YRC supplies measured cues.
+
+Both reported Spotify recordings (`6dMFbxf7TdjTy4KxnZJl7w` and
+`5bcbAT32LJS87hklgOxUqM`) are retained in the hermetic acquisition/save/reopen
+tests and both maintained live discovery cohorts. The duet also exercises slow
+metadata followed by a valid timed download, with a competing plain source.
+The daily live workflow separately requires 100% measured coverage for these
+two reports, so the broader cohort's 99% threshold cannot hide either miss.
+These checks establish source admission and structural cue coverage, not
+acoustic alignment or physical-device adoption.
+
 A separately reviewed official description can provide partial untimed words when no complete source is available. Exact catalog, official channel/video identity and paragraph hash must still validate live. `quality.partial` labels this state; clients must disclose missing repeats/timing and exclude it from complete lyric counts. Complete plain or timed words supersede partial words; instrumental candidates cannot erase verified vocals.
 
 An unusually early final vocal cue opens bounded completeness discovery; it does not prove that a song is incomplete. Discovery requires a known duration, at least 80% timed vocal rows, at least 60 normalized text characters, a final cue before 60% of the recording and at least 45 seconds remaining. Instrumental tails and genuinely short vocals therefore remain readable when no corroborating source exists.

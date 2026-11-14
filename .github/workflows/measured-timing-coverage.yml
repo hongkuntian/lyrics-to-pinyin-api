@@ -52,6 +52,14 @@ jobs:
           --case-ids apple-1455596862-empty-duplicate
           --runs 1 --concurrency 1 --minimum-available-rate 1
           --out empty-duplicate-coverage.json
+      - name: Require complete timing for both reported Spotify regressions
+        if: always()
+        run: >-
+          node scripts/benchmark-catalog-word-timing.mjs
+          --corpus docs/research/source-positive-word-timing-corpus.json
+          --case-ids spotify-6dMFbxf7TdjTy4KxnZJl7w,spotify-5bcbAT32LJS87hklgOxUqM
+          --runs 1 --concurrency 1 --minimum-available-rate 1
+          --out spotify-recovery-coverage.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -59,4 +67,5 @@ jobs:
           path: |
             measured-timing-coverage.json
             empty-duplicate-coverage.json
+            spotify-recovery-coverage.json
           if-no-files-found: error

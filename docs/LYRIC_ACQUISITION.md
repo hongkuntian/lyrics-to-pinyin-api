@@ -26,6 +26,19 @@ responses unchanged. The backend now reuses verified discovery context, overlaps
 one bounded discovery with catalog work, and shares eligible source work within
 one function process. No generation, credentials or authentication rules change.
 
+## Spotify source budgets
+
+Spotify discovery and lyric download each have a bounded six-second stage,
+inside the unchanged sixteen-second acquisition deadline. Recording admission
+must succeed before the download stage begins. A slow search or contributor
+profile therefore cannot consume a verified source's entire download allowance.
+The existing source-hint sub-budgets still belong to discovery. A provider keeps
+one lookup slot across both stages; there are still at most two active providers,
+no extra retry or target, and cancellation stops both stages. The fixed measured
+timing opportunity covers both stages and never exceeds the request deadline.
+Lookup failures identify the `discovery` or `lyrics` stage without lyric content
+or raw metadata.
+
 ## Durable discovery context
 
 `lyrics:verified-context:v1:*` stores a bounded six-hour memory/Redis context.

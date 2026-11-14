@@ -69,6 +69,24 @@ test('both live cohorts retain the exact source-positive empty-duplicate report 
  }
 });
 
+test('both live cohorts retain the two reported Spotify regressions with exact frozen requests',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const fixture=JSON.parse(await readFile(new URL('../fixtures/reported-spotify-recovery.json',import.meta.url),'utf8'));
+ for(const file of ['measured-discovery-corpus.json','source-positive-word-timing-corpus.json']) {
+  const corpus=JSON.parse(await readFile(new URL('../../docs/research/'+file,import.meta.url),'utf8'));
+  for(const reported of [fixture.duet,fixture.ensemble]) {
+   const rows=corpus.cases.filter(c=>c.request.recording?.item_id===reported.recording.item_id);
+   assert.equal(rows.length,1);assert.deepEqual(rows[0].request.recording,reported.recording);
+   assert.equal(rows[0].availabilityEvidence.source.itemID,String(reported.source.id));
+   assert.equal(rows[0].request.source_hint,undefined);
+  }
+ }
+ const workflow=await readFile(new URL('../../.github/workflows/measured-timing-coverage.yml',import.meta.url),'utf8');
+ const step=workflow.split('- name: Require complete timing for both reported Spotify regressions')[1]?.split('- uses:')[0];
+ assert.ok(step);assert.ok(step.includes('--case-ids '+[fixture.duet,fixture.ensemble].map(row=>'spotify-'+row.recording.item_id).join(',')));
+ assert.match(step,/--minimum-available-rate 1(?:\s|$)/u);
+});
+
 test('frozen availability evidence retains a failed counterpart in the coverage denominator',async()=>{
  const corpus={version:1,limitations:[],cases:[{caseID:'eligible-miss',platform:'apple',request,availabilityEvidence:{fromCaseID:'prior-source-positive'}}]};
  const report=await runCatalogBenchmark({corpus,modes:[mode('candidate',{},504)]});

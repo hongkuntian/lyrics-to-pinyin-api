@@ -10,6 +10,7 @@ import {neteaseTitleEvidence,neteaseDescriptiveTitleMatches} from '../utils/nete
 import {simplifyRecordingScript} from '../utils/recording-script.js';
 import {isNeteaseMetadataRow} from '../utils/netease-metadata.js';
 import {buildArtistAliasEvidence,buildArtistIdentityEvidence,recoveredArtistNames,recoverySearchTitle} from '../utils/artist-alias-recovery.js';
+import {reviewedSpotifySourceID,bindReviewedSpotifySource,SPOTIFY_REVIEWED_SOURCE_CAPABILITY} from '../utils/spotify-reviewed-source.js';
 const performerIDs=raw=>Array.isArray(raw?.artists)&&raw.artists.length>0&&raw.artists.length<=3
  &&raw.artists.every(p=>/^[1-9]\d{0,19}$/.test(String(p.id)))
  ?JSON.stringify(raw.artists.map(p=>String(p.id)).sort()):null;
@@ -39,6 +40,8 @@ export class NeteaseAPI extends BaseMusicAPI {
   async searchSong(artist,title,context={}) {
     context.signal?.throwIfAborted();
     const request={artist,title,...context},records=new Map(),profiles=new Map(),hydrated=new Set();
+    const reviewedID=reviewedSpotifySourceID(request);
+    if(reviewedID)return (await this.getRecording(reviewedID,request)).song;
     const plausibleMetadata=song=>(recordingNames(song).title===recordingNames(request).title
       ||context.recordingProvider==='spotify'&&neteaseDescriptiveTitleMatches(song,request,normalizeRecordingText))
       &&Number.isFinite(song.duration)&&Number.isFinite(request.duration)
@@ -223,12 +226,14 @@ export class NeteaseAPI extends BaseMusicAPI {
     if(!Array.isArray(performers)||!performers.length||performers.some(p=>!p||!/^\d{1,20}$/.test(String(p.id))||typeof p.name!=='string'||!p.name.trim())
       ||typeof raw.name!=='string'||!raw.name.trim()||!Number.isFinite(raw.dt)||raw.dt<=0)
       throw Object.assign(new Error('Invalid NetEase source metadata'),{code:'recording_mismatch'});
-    const song=withTitleEvidence({id:raw.id,title:raw.name,artist:performers.map(p=>p.name).join(' & '),album:raw.al?.name,duration:raw.dt/1000,source:'netease',...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),
+    let song=withTitleEvidence({id:raw.id,title:raw.name,artist:performers.map(p=>p.name).join(' & '),album:raw.al?.name,duration:raw.dt/1000,source:'netease',...(typeof raw.explicit==='boolean'?{explicit:raw.explicit}:{}),
       ...(context.recordingProvider==='spotify'?{creditedArtistNames:performers.map(p=>p.name),creditedArtistIDs:performers.map(p=>String(p.id)),...(raw.isrc?{isrc:raw.isrc}:{})}:{})},raw,'alia',context);
+    song=bindReviewedSpotifySource(song,raw,context);
     if(recordingScore(song,context)<0)await this.resolveArtistAliases(song,performers,context,context);
     findRecording([song],context);
     context.signal?.throwIfAborted();
     const lyrics=await this.getLyrics(id,{...context,song});
+    song.lyricsData=lyrics;
     return {song,lyrics};
   }
   async namesForArtist(id,context) {
@@ -250,6 +255,13 @@ export class NeteaseAPI extends BaseMusicAPI {
     if(context.song?.lyricsData) return context.song.lyricsData;
     const decode=data=>{
       if(data?.code!==200)return {valid:false,lyrics:null};
+      if(context.song?.artistAliasEvidence?.policy===SPOTIFY_REVIEWED_SOURCE_CAPABILITY) {
+        for(const raw of [data.yrc?.lyric,data.lrc?.lyric].filter(value=>typeof value==='string'))
+          for(const tag of raw.matchAll(/^\s*\[(ar|ti):([^\]\r\n]*)\]\s*$/gim)) {
+            const value=tag[2].trim(),expected=tag[1].toLowerCase()==='ti'?context.song.title:context.song.artist;
+            if(value&&normalizeRecordingText(value)!==normalizeRecordingText(expected))throw new RecordingMismatchError('lyric_header_conflict');
+          }
+      }
       const yrc=parseYRC(data.yrc?.lyric,{songId:id,...(Number.isFinite(context.song?.duration)?{duration:context.song.duration}:{})});
       if(yrc)return {valid:true,lyrics:yrc};
       const lrc=typeof data.lrc?.lyric==='string'?data.lrc.lyric:null;
@@ -270,7 +282,7 @@ export class NeteaseAPI extends BaseMusicAPI {
     }catch(error){
       // At most one legacy fallback, sharing the original caller's signal and
       // provider deadline. Cancellation never starts another network operation.
-      if(context.signal?.aborted||error.name==='AbortError'||error.code==='provider_timeout')throw error;
+      if(context.signal?.aborted||error.name==='AbortError'||error.code==='provider_timeout'||error.code==='recording_mismatch')throw error;
       data=await fetchJSON(`${this.baseURL}/lyric?id=${encodeURIComponent(id)}`,context);
       result=decode(data);
     }

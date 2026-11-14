@@ -13,6 +13,116 @@
   ],
   "cases": [
     {
+      "caseID": "spotify-6dMFbxf7TdjTy4KxnZJl7w",
+      "platform": "spotify",
+      "catalogURL": "https://open.spotify.com/track/6dMFbxf7TdjTy4KxnZJl7w",
+      "metadataEvidence": "Exact reported Spotify catalog metadata captured 2026-11-14 UTC. Fresh NetEase metadata and measured YRC verified against the same duration; no acoustic or installed-app verification.",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "6dMFbxf7TdjTy4KxnZJl7w",
+          "metadata": {
+            "origin": "spotify",
+            "title": "梁山伯與茱麗葉",
+            "artists": [
+              "卓文萱",
+              "Gary Chaw"
+            ],
+            "artist_ids": [
+              "5XHBjJm3bCgQCjpnInCxfT",
+              "1mfzcypCggFwpCJ1gmi8BK"
+            ],
+            "album": "習慣",
+            "duration_ms": 232896
+          }
+        }
+      },
+      "availabilityEvidence": {
+        "fromCaseID": "spotify-6dMFbxf7TdjTy4KxnZJl7w",
+        "observedAt": "2026-11-14",
+        "source": {
+          "provider": "NeteaseAPI",
+          "itemID": "327736",
+          "timing": "netease:327736:yrc"
+        },
+        "measuredCues": 455,
+        "metadataOnly": true
+      }
+    },
+    {
+      "caseID": "spotify-5bcbAT32LJS87hklgOxUqM",
+      "platform": "spotify",
+      "catalogURL": "https://open.spotify.com/track/5bcbAT32LJS87hklgOxUqM",
+      "metadataEvidence": "Exact reported Spotify catalog metadata captured 2026-11-14 UTC. Fresh NetEase metadata and measured YRC verified against the same duration; no acoustic or installed-app verification.",
+      "request": {
+        "recording": {
+          "version": 2,
+          "provider": "spotify",
+          "item_id": "5bcbAT32LJS87hklgOxUqM",
+          "metadata": {
+            "origin": "spotify",
+            "title": "明天會更好",
+            "artists": [
+              "Tsai Chin",
+              "余天",
+              "Julie Sue",
+              "潘越雲",
+              "Jenny Tseng",
+              "李建復",
+              "林慧萍",
+              "Wang Zhi Lei",
+              "Tracy Huang",
+              "Hong Ronghong",
+              "Sarah Chen",
+              "金智娟",
+              "王夢麟",
+              "李佩菁",
+              "Fei Yu-ching",
+              "Chyi Yu",
+              "鄭怡",
+              "Jody Chiang",
+              "Diana Yang"
+            ],
+            "artist_ids": [
+              "0hXEo26JJ0u5lD763cTvRW",
+              "3gQWDP6vxNhpyRfeOI7qV4",
+              "0B2g2ZF6jP0WkaZb33iPhX",
+              "1WsPqhf56l3IglxXHiCUAp",
+              "6U7CvLXWSS3t3a9iwY52oA",
+              "5FrM2NnaSCUs7aO6OtxYip",
+              "5ATA3evVBAprwGeePIh72S",
+              "2yzqQnqgW2vrgYOzAX5LWJ",
+              "2P0OwKbtNXwKNEVLh4enPA",
+              "21GU61itsJIOXs64dkcwzZ",
+              "19tf1og71pOYoYOdqyozs2",
+              "0Oe6kKSGCaG2gzHpF0fxWJ",
+              "388Qv4wXUnoVfxwOyGBgAE",
+              "45JVMzMI8ak7YSbdzCXuwo",
+              "6aSJ9LaNaHOKiPchLDYGYl",
+              "5E94Yc9O9D4N3oTr4SzJLx",
+              "0XhauxEnCMq0tv24DjX5Gp",
+              "3jPL2UtbCi2DuvuK2dolR6",
+              "2akngaSc3QswOEJUentus9"
+            ],
+            "album": "明天會更好",
+            "duration_ms": 320720
+          }
+        }
+      },
+      "availabilityEvidence": {
+        "fromCaseID": "spotify-5bcbAT32LJS87hklgOxUqM",
+        "observedAt": "2026-11-14",
+        "source": {
+          "provider": "NeteaseAPI",
+          "itemID": "5276925",
+          "timing": "netease:5276925:yrc"
+        },
+        "measuredCues": 408,
+        "metadataOnly": true
+      }
+    },
+    {
       "caseID": "apple-1482174811-soundtrack-brackets",
       "platform": "apple",
       "metadataURL": "https://itunes.apple.com/lookup?id=1482174811&country=ca",
