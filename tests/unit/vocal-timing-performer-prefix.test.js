@@ -11,6 +11,28 @@ const parse=body=>parseQRC(`<QrcInfos><LyricInfo LyricCount="1"><Lyric_1 LyricTy
 const shaonian=JSON.parse(readFileSync(new URL('../fixtures/shaonian-performer-timing.json',import.meta.url)));
 const options={title:'少年',artist:'光良/曹格',duration:253};
 
+test('sparse verse-start aliases keep every measured sung interval and canonical turn',()=>{
+ const corpus=JSON.parse(readFileSync(new URL('../fixtures/performer-cue-grammar.json',import.meta.url)));
+ const fixture=corpus.find(f=>f.name==='sparse alternating verse-start names from screenshot shape');
+ const input={source:'qq',lines:fixture.rows.map((text,i)=>{
+  const body=fixture.visible[i][1],prefixLength=text.length-body.length,start=i*4;
+  return {text,timestamp:start,vocalTiming:{end:start+3,segments:[
+   ...(prefixLength?[{text:text.slice(0,prefixLength),utf16Start:0,utf16Length:prefixLength,start,end:start+0.5}]:[]),
+   {text:body,utf16Start:prefixLength,utf16Length:body.length,start:start+1,end:start+3}]}};
+ })};
+ const snapshot=structuredClone(input),cleaned=cleanLyrics(input,{artist:'Unlisted duo',duration:48});
+ assert.deepEqual(cleaned.lines.map(l=>l.text),fixture.visible.map(([,text])=>text));
+ cleaned.lines.forEach((line,i)=>{
+  assert.ok(validVocalTiming(line,{duration:48}));
+  assert.equal(line.timestamp,input.lines[i].timestamp);
+  assert.deepEqual(line.vocalTiming,{end:input.lines[i].vocalTiming.end,
+   segments:[{...input.lines[i].vocalTiming.segments.at(-1),utf16Start:0}]});
+ });
+ assert.deepEqual(cleaned.lyricStructure.occurrences.filter(o=>o.startsTurn).map(o=>o.sourceIndex),[0,3,6,9]);
+ assert.deepEqual(cleanLyrics(cleaned,{artist:'Unlisted duo',duration:48}),cleaned);
+ assert.deepEqual(input,snapshot);
+});
+
 test('Shaonian removes both singer labels while preserving every sung word interval',()=>{
  const before=structuredClone(shaonian),cleaned=cleanLyrics(shaonian,options);
  assert.deepEqual(cleaned.lines.map(l=>l.text),['你又想起某个夏天','记忆中的那个少年']);

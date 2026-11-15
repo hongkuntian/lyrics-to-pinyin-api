@@ -67,14 +67,18 @@ test('old server cache is replaced and the clean document has a distinct source 
 });
 
 test('document-local duet cues refresh stale sources without rewriting historical documents',async()=>{
+  const corpus=JSON.parse(await readFile(new URL('../fixtures/performer-cue-grammar.json',import.meta.url),'utf8'));
+  const sparse=corpus.find(f=>f.name==='sparse alternating verse-start names from screenshot shape');
   for(const texts of [
     ['汪:第一段','Yumi:第二段','汪:第三段','Yumi:第四段','汪/Yumi：一起唱'],
-    ['男：','第一段','女：','第二段','合：一起唱']
+    ['男：','第一段','女：','第二段','合：一起唱'],
+    sparse.rows
   ]) {
     const input={source:'netease',lines:texts.map((text,index)=>({text,timestamp:index*4}))};
     const fresh=await response({input});
-    assert.ok(fresh.lines.every(line=>!/^汪[:/]|^Yumi:|^[男女合]：/u.test(line.original)));
-    assert.deepEqual(fresh.lines.map(line=>line.timestamp),texts.length===5&&texts[0]==='男：'?[4,12,16]:[0,4,8,12,16]);
+    assert.ok(fresh.lines.every(line=>!/^汪[:/]|^Yumi:|^Miko：|^[男女合]：/u.test(line.original)));
+    assert.deepEqual(fresh.lines.map(line=>line.timestamp),texts[0]==='男：'?[4,12,16]:texts.map((_,i)=>i*4));
+    if(texts===sparse.rows)assert.deepEqual(fresh.lines.map(line=>line.original),sparse.visible.map(([,text])=>text));
     const old=structuredClone(fresh);
     old.metadata.timestamp=new Date().toISOString();
     old.lines=texts.map((original,index)=>({original,romanized:original,timestamp:index*4}));

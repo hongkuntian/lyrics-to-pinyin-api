@@ -24,5 +24,10 @@
   {"name":"production single character labels","rows":["词：管启源","曲：光良","光：你又想起某个夏天"],"visible":[[2,"你又想起某个夏天"]]},
   {"name":"bare title version mismatch","title":"少年 (Live)","rows":["少年","记忆中的那个少年"],"visible":[[0,"少年"],[1,"记忆中的那个少年"]]},
   {"name":"matching title with colon contributor header","title":"少年","rows":["少年：光良/曹格","少年","一起唱"],"visible":[[1,"少年"],[2,"一起唱"]]},
-  {"name":"matching singer label is not a title header","title":"光","rows":["光：第一段","下一句"],"visible":[[0,"第一段"],[1,"下一句"]]}
+  {"name":"matching singer label is not a title header","title":"光","rows":["光：第一段","下一句"],"visible":[[0,"第一段"],[1,"下一句"]]},
+  {"name":"sparse alternating verse-start names from screenshot shape","artist":"Practice duo","rows":["Yumi:一起唱","慢慢听","今天唱","Miko：明天听","轻轻唱","静静听","Yumi:再一起唱","再慢慢听","再今天唱","Miko：再明天听","再轻轻唱","再静静听"],"visible":[[0,"一起唱"],[1,"慢慢听"],[2,"今天唱"],[3,"明天听"],[4,"轻轻唱"],[5,"静静听"],[6,"再一起唱"],[7,"再慢慢听"],[8,"再今天唱"],[9,"再明天听"],[10,"再轻轻唱"],[11,"再静静听"]]},
+  {"name":"sparse bracketed verse starts with final inline turn","rows":["[Mira] First verse","Keep singing","(Noel) Second verse","Keep listening","[Mira] Third verse","Carry on","(Noel) Last verse"],"visible":[[0,"First verse"],[1,"Keep singing"],[2,"Second verse"],[3,"Keep listening"],[4,"Third verse"],[5,"Carry on"],[6,"Last verse"]]},
+  {"name":"one continued alias does not prove a sparse roster","rows":["开场","Mira:第一段","Noel:第二段","一","二","三","Mira:第三段","Noel:第四段","四","五","六","落幕"],"visible":[[0,"开场"],[1,"Mira:第一段"],[2,"Noel:第二段"],[3,"一"],[4,"二"],[5,"三"],[6,"Mira:第三段"],[7,"Noel:第四段"],[8,"四"],[9,"五"],[10,"六"],[11,"落幕"]]},
+  {"name":"repeated sparse refrains are not independent turns","rows":["开场","Mira:第一段","一","二","Noel:第二段","三","四","Mira:第一段","五","六","Noel:第二段","七","落幕"],"visible":[[0,"开场"],[1,"Mira:第一段"],[2,"一"],[3,"二"],[4,"Noel:第二段"],[5,"三"],[6,"四"],[7,"Mira:第一段"],[8,"五"],[9,"六"],[10,"Noel:第二段"],[11,"七"],[12,"落幕"]]},
+  {"name":"sparse spoken phrases stay sung","rows":["开场","我说：第一段","一","二","你说：第二段","三","四","我说：第三段","五","六","你说：第四段","七","落幕"],"visible":[[0,"开场"],[1,"我说：第一段"],[2,"一"],[3,"二"],[4,"你说：第二段"],[5,"三"],[6,"四"],[7,"我说：第三段"],[8,"五"],[9,"六"],[10,"你说：第四段"],[11,"七"],[12,"落幕"]]}
 ]

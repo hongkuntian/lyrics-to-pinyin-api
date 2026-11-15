@@ -146,12 +146,20 @@ function documentPerformerAliases(lines,options,excluded=new Set()) {
   const roster=new Set([...groups].filter(([key,group])=>aliases.has(key)
     ||group.count>=2&&(group.bodies.size>=2||group.standalone)).map(([key])=>key));
   const sequence=prefixes.filter(prefix=>prefix&&roster.has(labelKey(prefix.label)));
-  const eligible=lines.filter((line,index)=>!excluded.has(index)&&line.text.trim()
+  const eligible=new Set(lines.flatMap((line,index)=>!excluded.has(index)&&line.text.trim()
     &&!isProductionRole(labelKey(prefixes[index]?.label??''))&&!classifyLyricNotice(line.text)
-    &&!isInstrumentalMarker(line.text)&&!isMusicNotePlaceholder(line.text)).length;
+    &&!isInstrumentalMarker(line.text)&&!isMusicNotePlaceholder(line.text)?[index]:[]));
   const transitions=sequence.reduce((count,prefix,index)=>count+(index>0&&labelKey(sequence[index-1].label)!==labelKey(prefix.label)?1:0),0);
-  if(roster.size>=2&&sequence.length>=4&&sequence.length*2>=eligible&&transitions>=2)
-    for(const key of roster)if(!aliases.has(key))aliases.set(key,groups.get(key).label);
+  // Sparse verse-start cues can corroborate each other through unlabelled
+  // vocal continuations. Adjacent colon prose and metadata are not continuations.
+  const continuedTurns=prefixes.flatMap((prefix,index)=>prefix&&roster.has(labelKey(prefix.label))
+    &&!prefixes[index+1]&&eligible.has(index+1)&&!/[\r\n\v\f\u0085\u2028\u2029]/u.test(lines[index+1].text)
+    ?[labelKey(prefix.label)]:[]);
+  const continuedTransitions=continuedTurns.reduce((count,key,index)=>count+(index>0&&continuedTurns[index-1]!==key?1:0),0);
+  if(roster.size>=2&&sequence.length>=4&&transitions>=2) {
+    const inferred=sequence.length*2>=eligible.size?roster:continuedTransitions>=2?new Set(continuedTurns):new Set();
+    for(const key of inferred)if(!aliases.has(key))aliases.set(key,groups.get(key).label);
+  }
   for(const [key,name] of genericLabels)aliases.set(key,name);
   return aliases;
 }

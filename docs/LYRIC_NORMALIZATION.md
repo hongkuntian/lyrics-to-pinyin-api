@@ -22,8 +22,16 @@ reviewed artist roster in `api/data/lyric-performers.json`. The roster is scoped
 to the group, not one song. Complete combined labels require every member to
 match. Unknown aliases can also be inferred within one document, never added
 to a global artist roster: at least two compact name-shaped labels must recur,
-cover at least half of eligible nonempty rows (at least four rows), and switch
-labels at least twice. Each unknown alias needs two distinct sung bodies or a
+appear on at least four rows, and switch labels at least twice. They must either
+cover at least half of eligible nonempty rows or supply two switches between
+continued turns: a cue immediately followed by an unlabelled vocal row. In the
+sparse case, only aliases present in those continued turns qualify. Metadata,
+multiline rows and adjacent colon rows cannot supply continuation evidence.
+This covers the sparse `Yumi:` / `Miko:` verse labels reported in a 我知道 / BY2
+screenshot without a group/name exception. The shared corpus uses authored
+words and timestamps in the observed layout; provider identity and the installed
+app build were not established by the screenshot.
+Each unknown alias needs two distinct sung bodies or a
 standalone marker; repeating the same refrain is not independent evidence.
 Han labels use the existing compact personal-name grammar; other labels require
 a capitalized single-token name shape. Combined labels cannot bootstrap
