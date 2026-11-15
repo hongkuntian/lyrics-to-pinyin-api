@@ -11,6 +11,10 @@
     {
       "text": "【本作品声明，著作权权利保留。未经著作权人书面许可，不得以任何方式（包括翻唱、翻录等）使用。本作品禁止生成式人工智能训练使用。】",
       "provenance": "Primary NetEase lyric endpoint https://music.163.com/api/song/lyric?id=3425563499&lv=-1&kv=-1&tv=-1 ; rights row at 4.99 seconds fetched 2026-10-22, reported by research child at 19:24:29 UTC. Full raw provider payload not retained; only this printed rights row. No song lyrics."
+    },
+    {
+      "text": "(版权所有，未经许可请勿使用)",
+      "provenance": "User screenshot identifies 冬眠 / 司南 and shows this complete opening rights notice. Raw provider item, recording duration and installed app build are unverified; variants below are synthetic."
     }
   ],
   "hidden": [
@@ -33,7 +37,13 @@
     "银河计划×星斗推",
     "銀河計劃 Ｘ 星斗推",
     "［银河计划ｘ星斗推］",
-    "【 銀河計劃 × 星斗推 】"
+    "【 銀河計劃 × 星斗推 】",
+    "(版权所有，未经许可请勿使用)",
+    "（版权所有,未经许可请勿使用）",
+    "版权所有，未经许可请勿使用",
+    "【版權所有，未經許可請勿使用】",
+    " ( 版權所有，未經書面授權，禁止使用。 ) ",
+    "版权所有，未获许可不得使用！"
   ],
   "preserved": [
     "本作品声明，著作权是我写的歌，权利保留在你的心里",
@@ -109,6 +119,16 @@
     "未经著作权人许可\f不得使用",
     "未经著作权人许可不得使用",
     "[123 reasons]",
-    "[123]"
+    "[123]",
+    "版权所有，未经许可请勿使用我的心",
+    "(版权所有，未经许可请勿使用)今晚我唱给你听",
+    "我说：版权所有，未经许可请勿使用",
+    "(版权所有，未经许可请勿使用",
+    "版权所有，未经许可请勿使用)",
+    "(版权所有，未经许可请勿使用）\n",
+    "版权所有是我唱的歌",
+    "未经你的许可请勿使用",
+    "版权所有，未经许可请勿离开",
+    "((版权所有，未经许可请勿使用))"
   ]
 }

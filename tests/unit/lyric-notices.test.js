@@ -9,7 +9,7 @@ const rows=texts=>texts.map((text,i)=>({text,timestamp:i*4+1}));
 const response=data=>({lines:data.lines.map(l=>({original:l.text})),metadata:{lyric_structure:data.lyricStructure}});
 
 test('shared complete-row notice corpus distinguishes observed evidence from synthetic adversaries',()=>{
-  assert.equal(corpus.observed.length,3);
+  assert.equal(corpus.observed.length,4);
   for(const item of corpus.observed){assert.ok(item.provenance);assert.ok(classifyLyricNotice(item.text),item.text);}
   for(const text of corpus.hidden)assert.ok(classifyLyricNotice(text),text);
   for(const text of corpus.preserved)assert.equal(classifyLyricNotice(text),null,text);

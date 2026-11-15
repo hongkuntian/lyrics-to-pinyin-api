@@ -187,6 +187,14 @@ receive this backend cleanup.
 notice policy, mirrored byte-for-byte into the app. Both runtimes compare whole
 rows after NFKC, Traditional-to-Simplified conversion, lowercase and whitespace
 removal. Comparison never rewrites retained lyrics or removes punctuation.
+The short ownership/use prohibition reported in the 冬眠 / 司南 screenshot,
+`(版权所有，未经许可请勿使用)`, also qualifies as a complete notice. Its grammar
+allows bare text or one balanced pair of round parentheses, including script
+and width variants. It does not remove arbitrary parenthesized lyrics, malformed
+wrappers, quoted text, sung suffixes or multiline rows. The source provider item
+and installed app build remain unverified; the mirrored corpus retains the
+observed row separately from synthetic variants and preservation cases.
+
 Rows containing CR, LF, VT, FF, NEL, LS or PS are not notices. At most one
 balanced outer `[]` or `【】` pair is admitted; malformed, mixed or nested square
 wrappers preserve the row. Round parentheses remain meaningful inside the legal
