@@ -95,6 +95,19 @@ test('account deletion requires matching fresh Apple proof, revokes devices and 
   const result=await login(f,(await session(f,returning)).user);assert.equal(result.userID,signed.user.id);
   assert.equal((await members.snapshot(result.userID)).libraryTranslations.used,1);
 });
+test('deletion of a retained identity revokes the freshly verified active client rather than a stale stored authorization',async t=>{
+  const f=await fixture(t),g=await guest(f),result=await login(f,(await session(f,g)).user);
+  const active=await session(f,{...g,token:result.credential},2);
+  await f.db.query("UPDATE account_identities SET apple_client_id='com.example.RetiredApp',refresh_token_encrypted='retained-ciphertext' WHERE user_id=$1",[active.user.id]);
+  f.apple.authenticate=async()=>({subjectHash:digest('subject'),refreshTokenEncrypted:'freshly-verified-ciphertext'});
+  const revoked=[];f.apple.revoke=async identity=>{revoked.push(identity);};
+  const {challenge}=await f.accounts.challenge({purpose:'delete',bundleID},active.user);
+  assert.deepEqual(await f.accounts.delete(active.user,{bundleID,challenge,identityToken:'fresh-identity',authorizationCode:'fresh-code'},await authentication(f,active.user)),{deleted:true});
+  assert.equal(revoked.length,1);assert.equal(revoked[0].apple_client_id,bundleID);assert.equal(revoked[0].refresh_token_encrypted,'freshly-verified-ciphertext');assert.equal(revoked[0].subject_hash,digest('subject'));
+  const retained=(await f.db.query('SELECT * FROM account_identities WHERE user_id=$1',[active.user.id])).rows[0];
+  assert.equal(retained.apple_client_id,null);assert.equal(retained.refresh_token_encrypted,null);assert.ok(retained.deleted_at);
+});
+
 test('public account HTTP rejects anonymous identity operations, surplus fields and malformed attestations',async t=>{
   const f=await fixture(t),handler=createAccountHandler({store:f.accounts,authStore:f.auth});
   for(const [body,status] of [[{action:'signOut'},401],[{action:'challenge',purpose:'apple',bundleID},401],

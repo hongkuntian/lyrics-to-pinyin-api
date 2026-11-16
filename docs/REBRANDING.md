@@ -46,6 +46,16 @@ and store the new passwords privately. Preserve account-encryption, Spotify vaul
 OAuth and signing key values when renaming their configuration keys; changing
 those keys can invalidate stored encrypted data or external registrations.
 
+The account refresh-token AAD remains the original subject hash. Spotify vault
+AAD remains bound to the persisted owner/key/connection/epoch/client,
+environments and purpose; retain those values and the keyring when reopening
+old ciphertext. A new app's APNs topic cannot replace the topic of an existing
+ActivityKit token. Finish any necessary terminal cleanup with its original
+stored topic before retiring that deployed sender; the canonical sender accepts
+only current release and Debug bundle IDs. Historical Apple revocation is
+independent of active app admission, as described in
+[the membership identity contract](memberships.md#identity-and-credentials).
+
 ## Coordinated deployment
 
 1. With the old worker still deployed, stop new review admission and reconcile all

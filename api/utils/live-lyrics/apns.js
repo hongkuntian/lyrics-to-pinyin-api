@@ -2,7 +2,7 @@ import {createPrivateKey,sign} from 'node:crypto';
 import {connect} from 'node:http2';
 import {LibraryError} from '../song-library/store.js';
 
-const BUNDLES=new Set(['com.hongkuntian.musicromanization','com.hongkuntian.Lyrica']);
+const BUNDLES=new Set(['com.hongkuntian.Lyrica.Debug','com.hongkuntian.Lyrica']);
 const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
 export function providerToken({teamID,keyID,privateKey},now=Date.now()) {
   const key=createPrivateKey(privateKey.replace(/\\n/g,'\n'));

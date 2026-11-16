@@ -25,7 +25,7 @@ test('push validation preserves default Swift Codable dates and rejects stale or
   assert.throws(()=>validatePush(valid,pushTime+8000),{code:'push_observation_expired'});
 });
 test('HTTP/2 delivery chooses the correct environment, topic, priority and zero expiry',async()=>{
-  for(const environment of ['development','production']) for(const bundleID of ['com.hongkuntian.musicromanization','com.hongkuntian.Lyrica']) {
+  for(const environment of ['development','production']) for(const bundleID of ['com.hongkuntian.Lyrica.Debug','com.hongkuntian.Lyrica']) {
     let host,headers,body,closed=false;
     const stream=new EventEmitter();stream.setEncoding=()=>{};stream.close=()=>{};
     stream.end=value=>{body=JSON.parse(value);queueMicrotask(()=>{stream.emit('response',{':status':200});stream.emit('end');});};
@@ -37,7 +37,7 @@ test('HTTP/2 delivery chooses the correct environment, topic, priority and zero 
     assert.equal(headers['apns-push-type'],'liveactivity');assert.equal(headers['apns-priority'],'5');assert.equal(headers['apns-expiration'],'0');
     assert.deepEqual(body,input.payload);assert.equal(closed,true);
   }
-  for(const bundleID of [undefined,'com.unrelated.app','com.hongkuntian.Lyrica\r\ninjected']) {
+  for(const bundleID of [undefined,'com.unrelated.app','com.hongkuntian.musicromanization','com.hongkuntian.Lyrica\r\ninjected']) {
     assert.throws(()=>sendAPNs({bundleID},()=>{throw Error('unexpected transport');}),{code:'app_access_revoked'});
   }
 });

@@ -33,18 +33,23 @@ export function openToken(value,key,subjectHash) {
 
 export class AppleIdentityService {
   constructor({env=process.env,fetchFn=fetch,now=Date.now}={}){this.env=env;this.fetch=fetchFn;this.now=now;this.cached=null;}
-  configuration(bundleID) {
+  #signingConfiguration() {
     const env=this.env,key=Buffer.from(env.LYRICA_ACCOUNT_ENCRYPTION_KEY??'','base64');
     if(!/^[A-Z0-9]{10}$/.test(env.LYRICA_APP_ID_PREFIX??'')||!/^[A-Z0-9]{10}$/.test(env.LYRICA_SIGN_IN_APPLE_KEY_ID??'')||
-      !env.LYRICA_SIGN_IN_APPLE_PRIVATE_KEY||key.length!==32||!(env.LYRICA_APP_BUNDLE_IDS??'').split(',').includes(bundleID))
+      !env.LYRICA_SIGN_IN_APPLE_PRIVATE_KEY||key.length!==32)
       throw new LibraryError('apple_sign_in_unavailable',503);
     return {key,team:env.LYRICA_APP_ID_PREFIX,keyID:env.LYRICA_SIGN_IN_APPLE_KEY_ID,privateKey:env.LYRICA_SIGN_IN_APPLE_PRIVATE_KEY};
   }
-  clientSecret(bundleID) {
-    const config=this.configuration(bundleID),now=Math.floor(this.now()/1000);
+  configuration(bundleID) {
+    if(typeof bundleID!=='string'||!bundleID||!(this.env.LYRICA_APP_BUNDLE_IDS??'').split(',').includes(bundleID))throw new LibraryError('apple_sign_in_unavailable',503);
+    return this.#signingConfiguration();
+  }
+  #clientSecret(bundleID,config) {
+    const now=Math.floor(this.now()/1000);
     const message=encode({alg:'ES256',kid:config.keyID})+'.'+encode({iss:config.team,iat:now,exp:now+300,aud:'https://appleid.apple.com',sub:bundleID});
     return message+'.'+sign('sha256',Buffer.from(message),{key:config.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64url');
   }
+  clientSecret(bundleID) { return this.#clientSecret(bundleID,this.configuration(bundleID)); }
   async json(url,options) {
     const response=await this.fetch(url,{...options,redirect:'error',signal:AbortSignal.timeout(10000)});
     const text=await response.text();if(text.length>32768)throw new LibraryError('apple_sign_in_unavailable',503);
@@ -69,10 +74,20 @@ export class AppleIdentityService {
     return {...identity,refreshTokenEncrypted:sealToken(result.refresh_token,config.key,identity.subjectHash)};
   }
   async revoke(identity) {
-    const config=this.configuration(identity.apple_client_id);
-    if(!identity.refresh_token_encrypted)throw new LibraryError('account_deletion_unavailable',503);
+    // This server-owned tuple comes from persisted identity data or a freshly
+    // verified Apple exchange, never request-supplied revocation parameters.
+    // Revocation must name the original authorizing client even after that app
+    // leaves active admission. Successful authenticated decryption is required
+    // before signing or sending anything; no old client is admitted for login.
+    const clientID=identity?.apple_client_id,subjectHash=identity?.subject_hash,encrypted=identity?.refresh_token_encrypted;
+    if(typeof clientID!=='string'||clientID.length>255||!/^[A-Za-z0-9][A-Za-z0-9.-]{0,254}$/.test(clientID)||
+      typeof subjectHash!=='string'||!/^[a-f0-9]{64}$/.test(subjectHash)||
+      typeof encrypted!=='string'||!encrypted||encrypted.length>65536)throw new LibraryError('account_deletion_unavailable',503);
+    const config=this.#signingConfiguration();
+    let token;try{token=openToken(encrypted,config.key,subjectHash);}catch{throw new LibraryError('account_deletion_unavailable',503);}
+    if(!token)throw new LibraryError('account_deletion_unavailable',503);
     await this.json('https://appleid.apple.com/auth/revoke',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:new URLSearchParams({client_id:identity.apple_client_id,client_secret:this.clientSecret(identity.apple_client_id),
-        token:openToken(identity.refresh_token_encrypted,config.key,identity.subject_hash),token_type_hint:'refresh_token'}).toString()});
+      body:new URLSearchParams({client_id:clientID,client_secret:this.#clientSecret(clientID,config),
+        token,token_type_hint:'refresh_token'}).toString()});
   }
 }

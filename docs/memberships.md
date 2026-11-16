@@ -4,6 +4,23 @@ Migration `025-memberships.sql` adds account, purchase, allowance, preview, and 
 
 ## Identity and credentials
 
+The active app allowlist governs authentication and new authorization exchanges.
+Historical Apple token revocation is a separate server operation: it accepts a
+server-owned persisted identity tuple only after authenticated decryption with
+the retained account key and exact subject hash. It does not admit that client
+for app authentication or expose a raw-token revocation HTTP endpoint.
+
+Apple's [revocation endpoint](https://developer.apple.com/documentation/signinwithapplerestapi/revoke-tokens)
+requires the original authorizing `client_id`; the client-secret JWT must use the
+same identifier as its subject. Keep the historical App ID authorized by the
+configured Sign in with Apple key's primary-app grouping. A separately retained
+historical key can instead serve an explicit operator revocation context; there
+is no automatic signing-key fallback in the app service. [Apple associates each signing key with a primary App ID](https://developer.apple.com/help/account/capabilities/create-a-sign-in-with-apple-private-key).
+Do not rewrite persisted client IDs, subject hashes or encrypted tokens to fit
+current admission. Normal account deletion obtains fresh matching Apple proof
+and revokes that fresh active-client authorization before its SQL scrub.
+
+
 `POST /api/account` supports `challenge`, `guest`, `apple`, `signOut`, and `delete`. Anonymous enrollment requires a real Apple App Attest attestation and a server nonce bound to the key, bundle, and purpose. Native Sign in with Apple requires an authenticated App Attest session, a fresh server nonce, Apple JWT verification, and a matching authorization-code exchange. It creates a stable account token for StoreKit. The service requests no name or email.
 
 The account service uses `LYRICA_ACCOUNT_DATABASE_URL`, a separate least-privilege login. Generation and relay credentials cannot create identities or issue account credentials. Apple refresh tokens are encrypted with the 32-byte `LYRICA_ACCOUNT_ENCRYPTION_KEY` and used for authorization revocation on deletion. Keep this key and the account DB password in private operator storage and Vercel secrets; do not commit them.
@@ -39,7 +56,7 @@ Public reads never authorize new provider work. Translation `allowGeneration=tru
 
 Live Lyrics needs an active membership or a claimed preview (otherwise `membership_required`). A preview is once per Apple account, bound to one activity and recording, and ends at 10 minutes or 200 admitted relay requests. Defaults cap new previews at 100/day. The operational relay ceiling is 1,000,000 requests/month across public users; failures still count admitted infrastructure work. These are bounded operational safeguards, not advertised paid-user minute quotas. Beta access preserves its existing policy.
 
-The relay derives its APNs topic from the session's App Attest bundle identity. Both `com.hongkuntian.Lyrica` and the existing `com.hongkuntian.musicromanization` development bundle use their own Live Activity topic; request bodies cannot override it. The APNs environment still follows the signed app's provisioning environment.
+The relay derives its APNs topic from the session's App Attest bundle identity. Both `com.hongkuntian.Lyrica` and the existing `com.hongkuntian.Lyrica.Debug` development bundle use their own Live Activity topic; request bodies cannot override it. The APNs environment still follows the signed app's provisioning environment.
 
 ## Operator setup
 

@@ -88,7 +88,7 @@ test('endpoint requires authenticated app sessions and returns actionable retry 
 test('relay chooses its APNs topic from the attested session and rejects body overrides',async()=>{
   const {db}=await libraryDB();let time=pushTime;
   try {
-    for(const bundleID of ['com.hongkuntian.musicromanization','com.hongkuntian.Lyrica']) {
+    for(const bundleID of ['com.hongkuntian.Lyrica.Debug','com.hongkuntian.Lyrica']) {
       const sent=[];
       const handler=createLiveLyricsHandler({authStore:{db,authenticate:async()=>({id:'reader-a',bundleID})},
         relay:new LiveLyricsPushRelay(db,{send:async input=>sent.push(input),now:()=>time}),now:()=>time});
