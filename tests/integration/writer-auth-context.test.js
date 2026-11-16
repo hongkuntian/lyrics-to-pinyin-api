@@ -20,8 +20,8 @@ const sibling=Buffer.alloc(32,2).toString('base64'),foreign=Buffer.alloc(32,3).t
 let db,adapter,auth,source,bearer,trace,intercept;
 before(async()=>{
  db=new PGlite();
- assert.equal(migrationNames.length,30);
- assert.equal(migrationNames.at(-1),'036-account-data-privacy.sql');
+ assert.equal(migrationNames.length,31);
+ assert.equal(migrationNames.at(-1),'037-lyrica-namespace.sql');
  assert.ok(migrationNames.every(migrationName=>!/^0(?:29|3[01345])-/.test(migrationName)));
  for(const name of migrationNames)await db.exec(await readFile(new URL('../../db/'+name,import.meta.url),'utf8'));
  adapter={query:(...a)=>db.query(...a),transaction:fn=>db.transaction(fn)};

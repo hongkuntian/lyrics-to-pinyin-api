@@ -14,6 +14,8 @@ migrationNames.push('028-selected-lyrics-learning.sql');
 migrationNames.push('032-auth-token-row-locks.sql');
 // Retained account-data deletion rights without creating optional feature schema.
 migrationNames.push('036-account-data-privacy.sql');
+// One hard prerelease namespace cutover; no aliases or data rewrites.
+migrationNames.push('037-lyrica-namespace.sql');
 export async function migrateLibrary(database,{expectedPending}={}) {
   return database.transaction(async db=> {
     await db.query("SET LOCAL lock_timeout='5s'");

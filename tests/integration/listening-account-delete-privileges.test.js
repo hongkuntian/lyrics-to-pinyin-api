@@ -5,8 +5,15 @@ import {createHash,randomUUID} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
 import {AccountStore} from '../../api/utils/membership/accounts.js';
 import {AppAuthStore} from '../../api/utils/app-auth/store.js';
-import {migrateLibrary,migrationNames} from '../../scripts/library-migrations.js';
-import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.js';
+import {migrateLibrary as migrateRegistered,migrationNames as registeredMigrationNames} from '../../scripts/library-migrations.js';
+// Historical 036 qualification never applies the later namespace cutover.
+const migrationNames=registeredMigrationNames.filter(name=>name!=='037-lyrica-namespace.sql');
+async function migrateLibrary(database,options) {
+ const saved=[...registeredMigrationNames];registeredMigrationNames.splice(0,registeredMigrationNames.length,...migrationNames);
+ try{return await migrateRegistered(database,options);}
+ finally{registeredMigrationNames.splice(0,registeredMigrationNames.length,...saved);}
+}
+import {replayMembershipRoleGrants} from '../helpers/historical-role-grants.js';
 
 async function make(t,{roles=true}={}){
  const db=new PGlite();t.after(()=>db.close());
@@ -43,7 +50,7 @@ async function make(t,{roles=true}={}){
 }
 
 const correction='036-account-data-privacy.sql';
-const account='lyrica_account_v1',runtime='lyrica_runtime_v1';
+const account='lyra_account_v1',runtime='lyra_runtime_v1';
 const policy={audience:'delete-privilege-test',environment:'development',prefix:'ABCDEFGHIJ',bundles:['test.lyrica']};
 const bundleID=policy.bundles[0];
 const sha=value=>createHash('sha256').update(value).digest('hex');
@@ -274,7 +281,7 @@ async function runCases(caseTest,make){
   const neutral=(await sqlFile(correction)).match(/^DO \$account_data_privacy\$\n([\s\S]*?)\nEND \$account_data_privacy\$;/m);
   assert.ok(historical);assert.ok(neutral);
   assert.equal(neutral[1],historical[1].replace('    -- Do not RETURN from an embedded replay: 034 must still withhold metadata.\n',''));
-  const replay=await readFile(new URL('../../scripts/membership-role-grants.js',import.meta.url),'utf8');
+  const replay=await readFile(new URL('../helpers/historical-role-grants.js',import.meta.url),'utf8');
   assert.doesNotMatch(replay,/03[45]-|sessions_install_metadata_privileges/);
  });
  await caseTest('fresh no-Sessions schema stays absent through migration, late replay, and account deletion',async t=>{

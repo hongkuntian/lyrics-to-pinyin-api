@@ -64,7 +64,7 @@ owner database configuration. It uses a read-only transaction and exports at mos
 
 ```sh
 node scripts/audit-content-quality.mjs \
-  --database-config-file ~/.config/lyra/credentials/backend-admin/migration.json \
+  --database-config-file ~/.config/lyrica/credentials/backend-admin/migration.json \
   --output /private/evidence/production-snapshot.json
 ```
 
@@ -77,8 +77,8 @@ unpromoted build route:
 
 ```sh
 vercel --prod --skip-domain --logs \
-  --build-env LYRA_CONTENT_QUALITY_EVALUATE_ON_BUILD=1 \
-  --build-env LYRA_CONTENT_QUALITY_PLAN_HASH=<reviewed-plan-hash>
+  --build-env LYRICA_CONTENT_QUALITY_EVALUATE_ON_BUILD=1 \
+  --build-env LYRICA_CONTENT_QUALITY_PLAN_HASH=<reviewed-plan-hash>
 ```
 
 The build hook runs once per build container under an exclusive `/tmp` lock.

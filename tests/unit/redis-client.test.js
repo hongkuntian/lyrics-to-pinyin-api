@@ -15,3 +15,12 @@ test('all cache commands use replacement credentials and fresh bounded signals',
  assert.equal(new Set(seen.map(x=>x.signal)).size,4);
  assert.equal(createRedisFromEnv({}),null);
 });
+
+// The prerelease cutover intentionally drops unbranded Redis aliases.
+test('cache configuration requires the complete canonical pair and never mixes aliases',()=>{
+ class Client { constructor(){assert.fail('unconfigured client');} }
+ const aliases={LYRICS_KV_REST_API_URL:'https://retired.test',LYRICS_KV_REST_API_TOKEN:'retired'};
+ assert.equal(createRedisFromEnv(aliases,Client),null);
+ assert.equal(createRedisFromEnv({...aliases,LYRICA_CACHE_KV_REST_API_URL:'https://current.test'},Client),null);
+ assert.equal(createRedisFromEnv({...aliases,LYRICA_CACHE_KV_REST_API_TOKEN:'current'},Client),null);
+});

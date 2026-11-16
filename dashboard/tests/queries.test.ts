@@ -1,27 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { migrateLibrary } from "../../scripts/library-migrations.js";
 import { PGlite } from "@electric-sql/pglite";
 import { DashboardQueries, type Database } from "../src/lib/queries";
 const id = "a".repeat(64),
   job = "00000000-0000-4000-8000-000000000001";
 async function setup() {
   const db = new PGlite();
-  await db.exec(
-    await readFile(
-      new URL("../../db/001-song-library.sql", import.meta.url),
-      "utf8",
-    ),
-  );
-  await db.exec(
-    await readFile(
-      new URL("../../db/002-dashboard-views.sql", import.meta.url),
-      "utf8",
-    ),
-  );
-  for (const name of ["003-correction-foundation.sql", "004-correction-dashboard.sql", "005-correction-batches.sql", "006-batch-dashboard.sql", "007-correction-publication.sql", "008-publication-dashboard.sql", "009-study-explanations.sql", "010-dashboard-controls.sql", "011-operational-alerts.sql"]) {
-    await db.exec(await readFile(new URL(`../../db/${name}`, import.meta.url), "utf8"));
-  }
+  await migrateLibrary({transaction: (fn: (db: {query: (sql: string, values?: unknown[]) => Promise<unknown>}) => Promise<unknown>) =>
+    db.transaction(tx => fn({query: (sql, values) => values ? tx.query(sql, values) : tx.exec(sql)}))});
   await db.query("INSERT INTO library_users(id) VALUES('fixture-user')");
   await db.query(
     "UPDATE library_settings SET enabled=true,daily_micros=1000000,monthly_micros=5000000",
@@ -43,7 +30,7 @@ async function setup() {
       { sourceID: "L0002", lyricText: "回家", sourceText: "回家" },
     ],
   };
-  await db.query("INSERT INTO lyric_documents VALUES($1,$2,$3,$4,$5,$6)", [
+  await db.query("INSERT INTO lyric_documents(id,recording_key,source_hash,selection_revision,response,structure) VALUES($1,$2,$3,$4,$5,$6)", [
     id,
     "recording",
     "hash",

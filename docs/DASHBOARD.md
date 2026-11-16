@@ -55,14 +55,13 @@ Configure the API project's Ignored Build Step as `node scripts/ignore-vercel-bu
 
 ## Owner controls
 
-The current canonical production origin is
-`https://lyrica-dashboard.vercel.app`. The existing
-`https://lyrica-dashboard.vercel.app` URL forwards there with HTTP 307 and
-preserves paths and query strings. Both exact callback URLs are registered on
-the same **Lyrica Owner Dashboard** OAuth client. Production
-`LYRICA_DASHBOARD_ORIGIN` uses the canonical origin; credentials, access and
-Vercel Authentication protection remain unchanged. See the coordinated
-[rebrand configuration](REBRANDING.md).
+The canonical production origin is `https://lyrica-dashboard.vercel.app`.
+Production `LYRICA_DASHBOARD_ORIGIN` and the exact owner `/auth/callback`
+registration select that origin. Keep the **Lyrica Owner Dashboard** OAuth
+client's team restriction and scopes, plus Vercel Authentication protection.
+The namespace deployment must retire previous aliases only after canonical
+owner sign-in/sign-out and denial checks pass. See the coordinated
+[namespace contract](REBRANDING.md).
 
 1. Create a [Sign in with Vercel app](https://vercel.com/docs/sign-in-with-vercel/manage-from-dashboard) on the dashboard's team. Register the exact production origin plus `/auth/callback`, enable `client_secret_post`, generate a client secret, and allow only `openid`. Restrict sign-in to the owning team. No Vercel resource access, email/profile scopes or refresh tokens are needed.
 2. Resolve the owner's stable Vercel user ID from authenticated `/v2/user`. Set `LYRICA_DASHBOARD_OWNER_SUBJECT` to that ID; never infer it from a submitted form, email address or deployment-viewer header.

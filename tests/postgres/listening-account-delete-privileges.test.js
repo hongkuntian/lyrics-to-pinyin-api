@@ -29,7 +29,7 @@ async function preflight(){
 }
 
 const correction='036-account-data-privacy.sql';
-const account='lyrica_account_v1',runtime='lyrica_runtime_v1';
+const account='lyra_account_v1',runtime='lyra_runtime_v1';
 const policy={audience:'delete-privilege-test',environment:'development',prefix:'ABCDEFGHIJ',bundles:['test.lyrica']};
 const bundleID=policy.bundles[0];
 const sha=value=>createHash('sha256').update(value).digest('hex');
@@ -260,7 +260,7 @@ async function runCases(caseTest,make){
   const neutral=(await sqlFile(correction)).match(/^DO \$account_data_privacy\$\n([\s\S]*?)\nEND \$account_data_privacy\$;/m);
   assert.ok(historical);assert.ok(neutral);
   assert.equal(neutral[1],historical[1].replace('    -- Do not RETURN from an embedded replay: 034 must still withhold metadata.\n',''));
-  const replay=await readFile(new URL('../../scripts/membership-role-grants.js',import.meta.url),'utf8');
+  const replay=await readFile(new URL('../helpers/historical-role-grants.js',import.meta.url),'utf8');
   assert.doesNotMatch(replay,/03[45]-|sessions_install_metadata_privileges/);
  });
  await caseTest('fresh no-Sessions schema stays absent through migration, late replay, and account deletion',async t=>{
@@ -494,8 +494,14 @@ test('manual PostgreSQL restricted account-delete privilege matrix',{timeout:900
  const {default:pg}=await import('pg');
  ({AccountStore}=await import('../../api/utils/membership/accounts.js'));
  ({AppAuthStore}=await import('../../api/utils/app-auth/store.js'));
- ({migrateLibrary,migrationNames}=await import('../../scripts/library-migrations.js'));
- ({replayMembershipRoleGrants}=await import('../../scripts/membership-role-grants.js'));
+ const registered=await import('../../scripts/library-migrations.js');
+ migrationNames=registered.migrationNames.filter(name=>name!=='037-lyrica-namespace.sql');
+ migrateLibrary=async(database,options)=>{
+  const saved=[...registered.migrationNames];registered.migrationNames.splice(0,registered.migrationNames.length,...migrationNames);
+  try{return await registered.migrateLibrary(database,options);}
+  finally{registered.migrationNames.splice(0,registered.migrationNames.length,...saved);}
+ };
+ ({replayMembershipRoleGrants}=await import('../helpers/historical-role-grants.js'));
  const tag='lyrica-account-delete:'+randomUUID().replaceAll('-',''),roles=[account,runtime],ownedRoles=[],databases=new Set(),errors=[];
  const config={host:marker.socketDirectory,port:marker.port,user:marker.user,password:'',ssl:false,
   connectionTimeoutMillis:3000,statement_timeout:8000,lock_timeout:3000,idle_in_transaction_session_timeout:15000,options:'-c timezone=UTC',application_name:tag};

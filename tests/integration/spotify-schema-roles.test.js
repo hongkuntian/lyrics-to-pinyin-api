@@ -1,3 +1,4 @@
+import {currentRoleSQL} from '../../scripts/namespace-history.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -6,7 +7,7 @@ import {PGlite} from '@electric-sql/pglite';
 test('Spotify migration grants runtime data access and narrow account cleanup without schema authority',async t=>{
  const db=new PGlite();t.after(()=>db.close());
  await db.exec('CREATE ROLE lyrica_runtime_v1; CREATE ROLE lyrica_account_v1;');
- await db.exec(await readFile(new URL('../../db/027-spotify-background.sql',import.meta.url),'utf8'));
+ await db.exec(currentRoleSQL(await readFile(new URL('../../db/027-spotify-background.sql',import.meta.url),'utf8')));
  for(const role of ['lyrica_runtime_v1','lyrica_account_v1']){
   for(const table of ['spotify_connections','spotify_outbox','spotify_snapshot_capabilities']){
    for(const action of ['SELECT','INSERT','UPDATE','DELETE']){

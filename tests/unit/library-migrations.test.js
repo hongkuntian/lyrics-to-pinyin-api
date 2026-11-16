@@ -8,10 +8,10 @@ const migrations=await Promise.all(migrationNames.map(async name=>{
  const sql=await readFile(new URL('../../db/'+name,import.meta.url),'utf8');
  return {name,sql,sha256:createHash('sha256').update(sql).digest('hex')};
 }));
-const privacy=migrations.at(-1);
-const reviewed=[{name:privacy.name,sha256:privacy.sha256}];
+const checkpoint=migrations.at(-1);
+const reviewed=[{name:checkpoint.name,sha256:checkpoint.sha256}];
 
-function fixture({missing=[privacy.name],changed}={}){
+function fixture({missing=[checkpoint.name],changed}={}){
  const receipts=new Map(migrations.filter(({name})=>!missing.includes(name)).map(({name,sha256})=>[name,sha256]));
  if(changed)receipts.set(changed,'changed');
  const events=[];
@@ -33,9 +33,9 @@ function fixture({missing=[privacy.name],changed}={}){
 
 test('bounded migration applies only the exact reviewed pending name and digest under the runner lock',async()=>{
  const state=fixture();
- assert.deepEqual(await migrateLibrary(state.database,{expectedPending:reviewed}),[privacy.name]);
- assert.equal(state.receipts.get(privacy.name),privacy.sha256);
- const executed=state.events.filter(event=>event.includes('$account_data_privacy$'));
+ assert.deepEqual(await migrateLibrary(state.database,{expectedPending:reviewed}),[checkpoint.name]);
+ assert.equal(state.receipts.get(checkpoint.name),checkpoint.sha256);
+ const executed=state.events.filter(event=>event.includes('$lyrica_namespace$'));
  assert.equal(executed.length,1);
  assert.ok(state.events.indexOf('SELECT pg_advisory_xact_lock(71309,1)')<state.events.indexOf(executed[0]));
  assert.equal(state.events.at(-1),'COMMIT');
@@ -51,13 +51,13 @@ for(const [label,expectedPending] of [
 ])test('bounded migration rejects '+label+' plan before applying SQL or receipts',async()=>{
  const state=fixture();
  await assert.rejects(migrateLibrary(state.database,{expectedPending}),{code:'migration_plan_changed'});
- assert.equal(state.receipts.has(privacy.name),false);
- assert.equal(state.events.some(event=>event.includes('$account_data_privacy$')),false);
+ assert.equal(state.receipts.has(checkpoint.name),false);
+ assert.equal(state.events.some(event=>event.includes('$lyrica_namespace$')),false);
  assert.equal(state.events.at(-1),'ROLLBACK');
 });
 
 test('bounded migration rejects another missing active migration even when the final one is reviewed',async()=>{
- const state=fixture({missing:[migrationNames[0],privacy.name]});
+ const state=fixture({missing:[migrationNames[0],checkpoint.name]});
  await assert.rejects(migrateLibrary(state.database,{expectedPending:reviewed}),{code:'migration_plan_changed'});
  assert.equal(state.events.some(event=>event.startsWith('INSERT INTO library_schema_migrations')),false);
 });
@@ -65,7 +65,7 @@ test('bounded migration rejects another missing active migration even when the f
 test('bounded migration checks every existing active receipt before applying the reviewed change',async()=>{
  const state=fixture({changed:migrationNames[0]});
  await assert.rejects(migrateLibrary(state.database,{expectedPending:reviewed}),{code:'migration_changed'});
- assert.equal(state.receipts.has(privacy.name),false);
+ assert.equal(state.receipts.has(checkpoint.name),false);
 });
 
 test('bounded migration requires a new empty plan for an already applied review',async()=>{
@@ -76,6 +76,6 @@ test('bounded migration requires a new empty plan for an already applied review'
 
 test('ordinary migration retains unrestricted pending application and idempotency',async()=>{
  const state=fixture();
- assert.deepEqual(await migrateLibrary(state.database),[privacy.name]);
+ assert.deepEqual(await migrateLibrary(state.database),[checkpoint.name]);
  assert.deepEqual(await migrateLibrary(state.database),[]);
 });

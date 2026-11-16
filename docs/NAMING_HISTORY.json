@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "historicalMigrationBase": "edebb23115adaeca647c1b856dc0fa5c5fa32c14",
+  "exceptions": [
+    {
+      "path": "db/001-song-library.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "f1386620cf96a317ccb76f03593f74d5b2fe21150bd7ec8a6858dac853c42fd3"
+    },
+    {
+      "path": "db/002-dashboard-views.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "221eba47bf1bf05a90e6d49e6cd64a944c66fca0a13c9bc6318c5be487f1c2a3"
+    },
+    {
+      "path": "db/003-correction-foundation.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "ef52d21ef6d6a8c1221c139ff6dbae8c075515637f2ee596534a81891266630e"
+    },
+    {
+      "path": "db/004-correction-dashboard.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "7f78506bc39f5fa437eeeda4322b2fa7d9bf584d6230c5400a63cb3638c2894b"
+    },
+    {
+      "path": "db/005-correction-batches.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "e751730197e1109b0ec2593faf5dc378baf00578d55633a9a77704362c78a507"
+    },
+    {
+      "path": "db/006-batch-dashboard.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "f49c6bfde322027a3b2a6fc41bf227b52d0a0db22954cd840ffde09a164e6835"
+    },
+    {
+      "path": "db/007-correction-publication.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "eb9263e4b5d52f266a02a79f0ff06f613fabf270cf5f1230078aa148948a77ed"
+    },
+    {
+      "path": "db/008-publication-dashboard.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "1755dea90d0338d7aacec039901f6707e43d1fb028936b6ec20f1bd4d412b1b7"
+    },
+    {
+      "path": "db/009-study-explanations.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "2d3326a97246ad0ee2015a2843c57d076b70392c4bc9f94d4afd7cd11150a0ef"
+    },
+    {
+      "path": "db/010-dashboard-controls.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "5cdee6aaebb5290221efda316745775817056fed897c156066ffa3b39f142eab"
+    },
+    {
+      "path": "db/011-operational-alerts.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "8238d5e613ad5f05999ef9b651d05597e6ef772e6a494bc2b3676d61a64cfa6b"
+    },
+    {
+      "path": "db/012-multilingual-content.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "3b4438417159e06e85c2c114e0b4c8acc5f8be537e100dc7f15b1fb1b51d307f"
+    },
+    {
+      "path": "db/013-pronunciation-aids.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "10433ac0a88a54e50ebf834ad21dbab01088ee24c8cd3a2dc5778afdc1581e0b"
+    },
+    {
+      "path": "db/014-lyric-source-refresh.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "0fd218163ca0b755ad979d25ae2ff526230969e9d7e2bb873cae6dd91a0da554"
+    },
+    {
+      "path": "db/015-gpt6-luna.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "f69cdb06e342c3d069da02be420e573d5e2cc88b91be6be7c8f5adfa8248fb9a"
+    },
+    {
+      "path": "db/016-personal-unlimited-access.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "1256ad7d4854a4999483db51c9c8ca1f39c999cfa1a7e99a754e0850b32b5499"
+    },
+    {
+      "path": "db/017-translation-reuse.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "5f86f6bbc71b3ceccafccfaf6cdbcb2c4306a815c953bc65bfe6b5b8f85641fe"
+    },
+    {
+      "path": "db/018-translation-attempts.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "ce3c685c31ae85b4f4c6bbf12b7fa1ae6605b3d57ff6158a8e9a527a6f0da590"
+    },
+    {
+      "path": "db/019-translation-reuse-dashboard.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "7fb48cd33d9f307c7f1b01d1d20723d3ed9f6aa10c6f6422c34381f22a75e430"
+    },
+    {
+      "path": "db/020-catalog-recording-bindings.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "c12946ca4fe6b8da6e7df1ea51b80ab33869d46fc8ca78d763513304236c4de1"
+    },
+    {
+      "path": "db/021-app-auth.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "8f553ef1224c91537d37ebf73d9de759aa11967a3f5cff2a27e22ea318751071"
+    },
+    {
+      "path": "db/022-live-lyrics-push.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "279f34f35934607b4e7d40eb9d29c6f1821fa3b488abfd1910896d0e0ecbb2aa"
+    },
+    {
+      "path": "db/023-live-lyrics-runtime.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "c1b2bf6f4381d111cbb63b48073e52961f661e01799f43d75769de3248a90fb2"
+    },
+    {
+      "path": "db/024-live-lyrics-cleanup.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "a7e09318d6e9611e1884d874d250e89b5a8c10b98a19cb1c0667d8c4e98de8f4"
+    },
+    {
+      "path": "db/025-memberships.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "4dd6728c74dbb855e063dd8aa80590c02b0da653cfa0df36900933013c31e780"
+    },
+    {
+      "path": "db/026-spotify-recordings.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "021f00794aff62b6f1d33206790f83891dd6ea259f27dde685834beecd864256"
+    },
+    {
+      "path": "db/027-spotify-background.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "75bf8f52f2dad2fac88fb8af8d2af11e773fc1324e84a7577e92bdd8cf14aae5"
+    },
+    {
+      "path": "db/028-selected-lyrics-learning.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "010de0b73bf215dcd53d51b55f69a4e2943483d7aa948a574bbf1318d9f44966"
+    },
+    {
+      "path": "db/029-listening-sessions.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "fe9adc6d732edbc9175ed4a2823f6e84821f760099bcf72957da6a8a7a09afc8"
+    },
+    {
+      "path": "db/030-listening-v2-schema.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "4cd413d4fe3d38ab62695ec8898e9532326e85e8d60c9a5f358dc9b911f5e0c6"
+    },
+    {
+      "path": "db/031-listening-v2-lifecycle-support.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "111032345679f02d00fb0df0d85ba8d11d48fc836159fffe316908007912e9ec"
+    },
+    {
+      "path": "db/032-auth-token-row-locks.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "c19650a29438ebeea186203d954fee8e144a65ca6d42ad91bc38c18f1f7e5df6"
+    },
+    {
+      "path": "db/033-listening-v2-lifecycle-composition.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "71b57b21ae4555d3d76da9b9936342238926fa8059117e68aa41a40a7e628678"
+    },
+    {
+      "path": "db/034-listening-v2-output-terminal-support.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "4d32025362129d89242c5060febe957c6ad726acd01b855a1dc173a04532d6f4"
+    },
+    {
+      "path": "db/035-listening-account-delete-privileges.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "42e19db3834ecfc7009f536d45ef6d659ae8138ac21da977e443cb9407a7b453"
+    },
+    {
+      "path": "db/036-account-data-privacy.sql",
+      "reason": "Immutable applied or retired SQL migration history; never edit or replay retired feature migrations.",
+      "sha256": "dc5e6ea2b16906fa54c59e4ca0b8ae88d04770170440e299cc2a2d93170cbe78"
+    },
+    {
+      "path": "evaluation/content-quality/receipts.json",
+      "reason": "Measured historical research receipt retains its original evidence path and provenance.",
+      "sha256": "926d17fefddd8a0365f06c46ea31464c4b8061751620c15d33182ff1598da652"
+    },
+    {
+      "path": "db/037-lyrica-namespace.sql",
+      "reason": "Explicit one-time namespace cutover must identify the exact prior schemas and roles."
+    },
+    {
+      "path": "scripts/namespace-history.js",
+      "reason": "Fixed grant adapter reads immutable applied migration names; no runtime identity aliases."
+    },
+    {
+      "path": "tests/integration/lyrica-namespace.test.js",
+      "reason": "Forward-cutover fixture proves preservation and rejection from actual previous identities."
+    },
+    {
+      "path": "tests/integration/auth-token-lock-roles.test.js",
+      "reason": "Historical 032 SQL privilege qualification retains its exact original role namespace."
+    },
+    {
+      "path": "tests/integration/listening-account-delete-privileges.test.js",
+      "reason": "Historical 036 SQL privilege qualification retains its exact original role namespace."
+    },
+    {
+      "path": "tests/postgres/auth-token-lock-roles.test.js",
+      "reason": "PostgreSQL historical 032 SQL privilege qualification uses the original role namespace."
+    },
+    {
+      "path": "tests/postgres/listening-account-delete-privileges.test.js",
+      "reason": "PostgreSQL historical 036 SQL privilege qualification uses the original role namespace."
+    },
+    {
+      "path": "tests/unit/naming-contract.test.js",
+      "reason": "The naming guard must spell the prior token that it rejects in current source."
+    }
+  ]
+}

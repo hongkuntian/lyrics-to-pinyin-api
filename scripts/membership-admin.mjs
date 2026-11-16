@@ -26,17 +26,17 @@ try {
   await client.connect();
   if(command==='provision') {
     if(!values['account-config-file'])throw new Error('account_config_file_required');
-    if((await client.query("SELECT 1 FROM pg_roles WHERE rolname='lyrica_account_v1'")).rowCount)throw new Error('account_role_exists_use_retained_credentials');
     const output=resolve(values['account-config-file']),password=randomBytes(36).toString('base64url');
     const url=new URL(config.LYRICA_LIBRARY_DATABASE_URL);url.username='lyrica_account_v1';url.password=password;
     await mkdir(dirname(output),{recursive:true,mode:0o700});
-    await writeFile(output,JSON.stringify({LYRICA_ACCOUNT_DATABASE_URL:url.toString(),LYRICA_ACCOUNT_ENCRYPTION_KEY:randomBytes(32).toString('base64')})+'\n',{mode:0o600,flag:'wx'});
     await client.query('BEGIN');
     try {
+      await migrateLibrary({transaction:fn=>fn(client)});
+      if((await client.query("SELECT 1 FROM pg_roles WHERE rolname='lyrica_account_v1'")).rowCount)throw new Error('account_role_exists_use_retained_credentials');
+      await writeFile(output,JSON.stringify({LYRICA_ACCOUNT_DATABASE_URL:url.toString(),LYRICA_ACCOUNT_ENCRYPTION_KEY:randomBytes(32).toString('base64')})+'\n',{mode:0o600,flag:'wx'});
       await client.query(`CREATE ROLE lyrica_account_v1 LOGIN PASSWORD ${client.escapeLiteral(password)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS CONNECTION LIMIT 8`);
       await client.query("ALTER ROLE lyrica_account_v1 SET statement_timeout='10s'");
       await client.query("ALTER ROLE lyrica_account_v1 SET idle_in_transaction_session_timeout='10s'");
-      await migrateLibrary({transaction:fn=>fn(client)});
       // Also grant if a previous migration ran before this login existed.
       await replayMembershipRoleGrants(client);
       await client.query('COMMIT');

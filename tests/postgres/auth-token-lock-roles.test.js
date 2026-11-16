@@ -7,7 +7,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
-const migration='032-auth-token-row-locks.sql',runtime='lyrica_runtime_v1',account='lyrica_account_v1';
+const migration='032-auth-token-row-locks.sql',runtime='lyra_runtime_v1',account='lyra_account_v1';
 const runID=randomUUID().replaceAll('-',''),provenance=`lyrica-auth-token-lock:${runID}`;
 const names=name=>`lyrica-token-${runID.slice(0,12)}-${name}`;
 const sha=value=>createHash('sha256').update(value).digest('hex');
@@ -98,7 +98,7 @@ const sourcePins={
 const refreshPinPaths=["api/utils/app-auth/admin.js","api/utils/app-auth/store.js","api/utils/app-auth/auth-context.js","api/utils/app-auth/errors.js","api/utils/membership/accounts.js","api/utils/membership/account-data-privacy.js","api/utils/song-library/store.js","api/utils/spotify/service.js","scripts/library-migrations.js","scripts/membership-role-grants.js","db/036-account-data-privacy.sql"];
 const gitRoot=fileURLToPath(new URL('../../',import.meta.url));
 const git=(...args)=>execFileSync('git',args,{cwd:gitRoot,encoding:'utf8',stdio:['ignore','pipe','pipe'],env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}}).trim();
-const correction='036-account-data-privacy.sql';
+const correction='036-account-data-privacy.sql',namespace='037-lyrica-namespace.sql';
 const aclMetadataSHA256='7ee564f93b162fc2b75d6ed791622414c2e44449ff776cc61705644b433e1972';
 const existingTokenFields=['digest','user_id','revoked','created_at','expires_at'];
 const observed={
@@ -159,11 +159,11 @@ async function connect(){
  ({createCurrentAuthContext}=await import('../../api/utils/app-auth/auth-context.js'));
  const registered=await import('../../scripts/library-migrations.js');migrationNames=registered.migrationNames;
  migrateLibrary=async database=>{
-  const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>n!==correction));
+  const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>n!==correction&&n!==namespace));
   try{return await registered.migrateLibrary(database);}
   finally{migrationNames.splice(0,migrationNames.length,...saved);}
  };
- ({replayMembershipRoleGrants}=await import('../../scripts/membership-role-grants.js'));
+ ({replayMembershipRoleGrants}=await import('../helpers/historical-role-grants.js'));
  config={host:marker.socketDirectory,port:marker.port,user:marker.user,password:'',ssl:false,
   connectionTimeoutMillis:3000,statement_timeout:8000,lock_timeout:3000,idle_in_transaction_session_timeout:15000,
   options:'-c timezone=UTC',application_name:names('owner')};
@@ -330,7 +330,7 @@ async function usingDatabase(fn){
 async function baseline(h){
  const saved=[...migrationNames],publicNames=saved.filter(name=>Number(name.slice(0,3))<=28);
  assert.deepEqual(publicNames.map(name=>Number(name.slice(0,3))),Array.from({length:28},(_,i)=>i+1));
- assert.deepEqual(saved,[...publicNames,migration,correction],'exact current registry; original harness selects only through 032');
+ assert.deepEqual(saved,[...publicNames,migration,correction,namespace],'exact current registry; original harness selects only through 032');
  migrationNames.splice(0,migrationNames.length,...publicNames);
  try{assert.deepEqual(await migrateLibrary(h.db('baseline')),publicNames);}
  finally{migrationNames.splice(0,migrationNames.length,...saved);}
