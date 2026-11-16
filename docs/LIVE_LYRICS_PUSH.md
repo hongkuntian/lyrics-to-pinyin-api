@@ -16,6 +16,13 @@ Verify sustained physical-phone playback in unlocked Notification Center without
 
 ## Spotify line timing
 
+Credential enrollment and renewal validate the Accounts grant and its returned
+scopes without probing Web playback. A Web playback 403 ends active Live Lyrics
+consumers through their durable cleanup path, while preserving the connection,
+epoch and refresh ownership for native playback. Invalid grants and missing
+required grant scopes still require authorization. Foreground native lyric
+loading does not establish server playback permission.
+
 The Spotify publisher (`api/utils/spotify`) polls playback every two seconds. Until 10 November 2026 a line was published when the next poll noticed it, which put it on the card 1.67 seconds after it started (0.47–2.31, measured on an iPhone). Most of that was the wait for the poll; a publication itself reached the card in 0.48 seconds (0.33–0.84).
 
 - **Head start.** `renderState` selects each cue `leadSeconds` (0.65 s) early: the measured time from decision to drawn card, plus a short reading head start. Only cue selection moves. `confirmedAt` and the eight-second deadline are the observation's own.

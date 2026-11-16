@@ -95,13 +95,12 @@ export class SpotifyService {
     if(!accepted)return this.store.read(id);
     await this.crash('refreshStaged');
    }
-   // Only the refreshed token and actual returned scope constitute evidence.
-   const probe=await this.provider.playback(this.open(work.c,stage.access,'access'));
-   if(![200,204].includes(probe.status))fail('spotify_scope_required',403);
+   // Accounts validates the grant and returned scopes. Web playback access is a
+   // separate capability; its denial must not strand native credential custody.
    await this.store.mutate(id,c=>{if(!matches(c))return;Object.assign(c,{access:stage.access,refresh:stage.refresh,expiresAtMS:stage.expiresAtMS,scope:stage.scope,credentialVersion:c.credentialVersion+1,status:'connected',stage:null,refreshLease:null,refreshAttempt:null});});
   }catch(error){
    if(error.code==='simulated_crash')throw error;
-   await this.store.mutate(id,(c,put)=>{if(!matches(c))return;c.refreshLease=null;if(['spotify_invalid_grant','spotify_scope_required','spotify_access_denied'].includes(error.code))closeConnection(c,error.code,this.now(),put,'reconnectRequired');else c.reason='refreshUncertain';});
+   await this.store.mutate(id,(c,put)=>{if(!matches(c))return;c.refreshLease=null;if(['spotify_invalid_grant','spotify_scope_required'].includes(error.code))closeConnection(c,error.code,this.now(),put,'reconnectRequired');else c.reason='refreshUncertain';});
    await this.drain(id);throw new LibraryError(error.code??'spotify_refresh_uncertain',error.status??503);
   }
   return this.store.read(id);
@@ -255,7 +254,12 @@ export class SpotifyService {
    if(current.epoch!==claim.epoch||current.tickOrdinal!==claim.ordinal)return;
    if(current.pollLease?.id!==lease||current.pollLease.until<=this.now())throw new LibraryError('spotify_poll_lease_expired',503);
    current.pollLease=null;const previousObservation=current.observation;
-   if(error&&['spotify_invalid_grant','spotify_access_denied','spotify_unauthorized','spotify_reconnect_required'].includes(error.code)){closeConnection(current,error.code,this.now(),put,'reconnectRequired');return;}
+   if(error?.code==='spotify_access_denied'){
+    current.lastError=error.code;
+    for(const s of active(current))endConsumer(current,s,error.code,this.now(),put);
+    return;
+   }
+   if(error&&['spotify_invalid_grant','spotify_unauthorized','spotify_reconnect_required'].includes(error.code)){closeConnection(current,error.code,this.now(),put,'reconnectRequired');return;}
    if(sample){
     const observation=observePlayback(sample,current.observation,claim.ordinal+1),changed=current.observation?.requestHash!==observation.requestHash;
     current.observation=observation;

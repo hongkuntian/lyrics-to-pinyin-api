@@ -6,6 +6,37 @@ import {leadSeconds} from '../../api/utils/spotify/render.js';
 import {LibraryError} from '../../api/utils/song-library/store.js';
 import {revokeSpotifyInTransaction,flushSpotifyCleanup} from '../../api/utils/spotify/revocation.js';
 const crash=()=>{throw Object.assign(new Error('crash'),{code:'simulated_crash'});};
+test('credential enrollment and renewal require Accounts validation without a Web playback probe',async t=>{
+ const f=await fixture(t);let reads=0;
+ f.provider.playback=async()=>{reads++;throw new LibraryError('spotify_access_denied',403);};
+ const reply=await f.enroll();assert.equal(reply.status,'connected');assert.equal(reads,0);
+ f.advance(3600000);const renewed=await f.service.access(user,reply.credential);
+ assert.equal(renewed.status,'connected');assert.equal(renewed.credential.credentialVersion,2);
+ assert.equal(renewed.credential.connectionEpoch,reply.credential.connectionEpoch);
+ assert.equal(f.refreshes,2);assert.equal(reads,0);
+});
+test('Web playback denial ends live consumers but preserves native credentials and grant custody',async t=>{
+ const f=await fixture(t),{credential}=await f.enroll(),armed=await f.arm(credential);
+ await f.service.tick(f.next());const before=await f.store.read(credential.connectionID),predecessor=f.next();
+ f.provider.playback=async()=>{throw new LibraryError('spotify_access_denied',403);};
+ f.advance(2000);await f.service.tick(predecessor);
+ const after=await f.store.read(credential.connectionID);
+ assert.equal(after.status,'connected');assert.equal(after.epoch,before.epoch);
+ assert.deepEqual(after.refresh,before.refresh);assert.deepEqual(after.access,before.access);
+ assert.deepEqual(after.observation,before.observation);assert.equal(after.pollLease,null);
+ assert.equal(after.consumers[armed.session.sessionID].status,'ended');
+ assert.equal(after.consumers[armed.session.sessionID].reason,'spotify_access_denied');
+ assert.equal(f.next(),predecessor);assert(f.next('cleanup'));
+ await assert.rejects(f.service.snapshot(armed.snapshotCapability.token,{action:'snapshot.read'}),e=>e.status===410);
+ assert.equal((await f.service.access(user,credential)).status,'connected');
+ await f.service.tick(f.next('cleanup'));assert.equal(f.sends.at(-1).payload.aps.event,'end');
+});
+for(const code of ['spotify_invalid_grant','spotify_scope_required'])test(`${code} still rejects credential enrollment`,async t=>{
+ const f=await fixture(t),enrollmentID=randomUUID();
+ f.provider.refresh=async()=>{throw new LibraryError(code,code==='spotify_invalid_grant'?401:403);};
+ await assert.rejects(f.service.enrollment(user,{enrollmentID,refreshToken:'fixture-refresh'}),{code});
+ assert.equal((await f.service.status(user,{enrollmentID})).status,'reconnectRequired');assert.equal(f.polls,0);
+});
 test('durable arm bootstrap must be accepted before ACK; same UUID retries and no phantom executor',async t=>{
  const f=await fixture(t),{credential}=await f.enroll();let once=true;
  f.restart({crash:async point=>{if(point==='armCommitted'&&once){once=false;crash();}}});
@@ -37,7 +68,7 @@ for(const boundary of ['tickCommitted','queueAccepted','queueReceipt'])test(`dup
  const after=await f.store.read(credential.connectionID);assert.equal(after.tickOrdinal,1);
  f.restart({crash:async()=>{}});await f.service.tick(predecessor);
  assert(f.next('acquire'));assert.equal(f.next().ordinal,1);assert.equal((await f.store.pending(credential.connectionID)).length,0);
- assert.equal(f.polls,2); // one enrollment probe + exactly one tick
+ assert.equal(f.polls,1); // exactly one tick; credential enrollment does not poll
 });
 test('unresolved acquisition send prevents predecessor ACK; 202 always commits a future executor',async t=>{
  const f=await fixture(t),{credential}=await f.enroll();await f.arm(credential);const tick=f.next(),enqueue=f.options.enqueue;
@@ -88,7 +119,7 @@ test('unknown APNs outcome reuses immutable bytes and timestamp; superseded reci
  const f=await fixture(t),{credential}=await f.enroll(),armed=await f.arm(credential);let once=true;const accepted=[];
  f.restart({send:async request=>{accepted.push(structuredClone(request));if(once){once=false;throw new LibraryError('push_unavailable',503);}}});
  const predecessor=f.next();await assert.rejects(f.service.tick(predecessor),{code:'push_unavailable'});f.advance(1000);await f.restart().tick(predecessor);
- assert.deepEqual(accepted[1].payload,accepted[0].payload);assert.equal(f.polls,2);
+ assert.deepEqual(accepted[1].payload,accepted[0].payload);assert.equal(f.polls,1);
  await f.service.live(user,{...credential,sessionID:armed.session.sessionID,recipe:{...recipe,alignment:'centered'}},'live.preferences');
  assert.equal((await f.store.read(credential.connectionID)).consumers[armed.session.sessionID].recipeRevision,2);
 });
@@ -144,6 +175,8 @@ test('preview/production and configured Client ID cannot use or mutate each othe
 const lead=leadSeconds*1000,line=request=>request.payload.aps['content-state'].original;
 async function following(t,{lines,phase=400,arm={}}={}){
  const f=await fixture(t,{overrides:lines?{acquire:async r=>({status:200,document:documentFor(r,lines)})}:{}}),{credential}=await f.enroll(),armed=await f.arm(credential,arm);
+ // Seed a fixed observation; credential operations do not advance the player.
+ f.provider.playback=async()=>({status:200,body:playback(14000),requestStartedAt:f.now-10,responseReceivedAt:f.now});
  await f.service.tick(f.next());await f.service.acquireMessage(f.next('acquire'));
  const slept=[];f.restart({sleep:async ms=>{slept.push(ms);f.advance(ms);}});
  // Each poll reports `at` milliseconds into the song. `phase` places polls inside their wall second.
