@@ -72,8 +72,8 @@ Mandarin or Cantonese. `metadata.timing_quality` separates usable timestamp
 coverage from listening-reviewed alignment. `lyrics_resolution` logs contain
 method, territory count, language and quality, without keys, tokens or lyric text.
 
-Set `LYRA_CATALOG_EQUIVALENTS_ENABLED=0` to disable cross-ID recovery, or
-`LYRA_CATALOG_RESOLUTION_ENABLED=0` to disable catalog discovery. No lyric words
+Set `LYRICA_CATALOG_EQUIVALENTS_ENABLED=0` to disable cross-ID recovery, or
+`LYRICA_CATALOG_RESOLUTION_ENABLED=0` to disable catalog discovery. No lyric words
 or timing are synthesized. Missing provider coverage, ambiguous versions and
 uncertain short-language samples remain explicit limits.
 

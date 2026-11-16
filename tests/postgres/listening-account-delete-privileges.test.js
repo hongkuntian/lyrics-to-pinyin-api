@@ -12,13 +12,13 @@ const root=fileURLToPath(new URL('../../',import.meta.url));
 const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8',stdio:['ignore','pipe','pipe'],env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}}).trim();
 let AccountStore,AppAuthStore,migrateLibrary,migrationNames,replayMembershipRoleGrants;
 async function preflight(){
- const expected=process.env.LYRA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT;
+ const expected=process.env.LYRICA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT;
  assert.match(expected??'',/^[a-f0-9]{40}$/);assert.equal(git('rev-parse','HEAD'),expected);
  git('merge-base','--is-ancestor','5b12df46048a212a56b8b0cc146a80492f49481f',expected);
  assert.equal(git('status','--porcelain=v1','--untracked-files=normal','--','.',':(exclude)node_modules'),'');
  // Exact approved clean Git object pins ALL maintained bytes.
  assert.deepEqual(Object.keys(process.env).filter(k=>/^PG/.test(k)),[]);
- const path=process.env.LYRA_TEST_POSTGRES_MANIFEST,uid=process.getuid();assert.ok(isAbsolute(path??''));
+ const path=process.env.LYRICA_TEST_POSTGRES_MANIFEST,uid=process.getuid();assert.ok(isAbsolute(path??''));
  const fd=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);let marker;
  try{const s=await fd.stat();assert.ok(s.isFile());assert.equal(s.uid,uid);assert.equal(s.mode&0o777,0o600);assert.equal(s.nlink,1);assert.ok(s.size>0&&s.size<=16384);marker=JSON.parse(await fd.readFile('utf8'));}finally{await fd.close();}
  assert.equal(marker.purpose,'lyrica-auth-local-qualification');assert.equal(marker.ownerUID,uid);assert.equal(marker.active,true);assert.equal(marker.TCPListening,false);assert.equal(marker.sourceCommit,expected);
@@ -29,7 +29,7 @@ async function preflight(){
 }
 
 const correction='036-account-data-privacy.sql';
-const account='lyra_account_v1',runtime='lyra_runtime_v1';
+const account='lyrica_account_v1',runtime='lyrica_runtime_v1';
 const policy={audience:'delete-privilege-test',environment:'development',prefix:'ABCDEFGHIJ',bundles:['test.lyrica']};
 const bundleID=policy.bundles[0];
 const sha=value=>createHash('sha256').update(value).digest('hex');
@@ -129,7 +129,7 @@ async function image(h){
 }
 async function seed(h,{retained=true,rate='matching'}={}){
  const id='delete-target',other='delete-other',keys=[1,2,3].map(n=>Buffer.alloc(32,n).toString('base64'));
- const credentials=['target-c1','target-c2','other-c'].map(sha),bearers=['lyra_s_target_exact','lyra_s_target_sibling','lyra_s_other'];
+ const credentials=['target-c1','target-c2','other-c'].map(sha),bearers=['lyrica_s_target_exact','lyrica_s_target_sibling','lyrica_s_other'];
  const rooms=[1,2,3,4].map(n=>'00000000-0000-0000-0000-'+String(n).padStart(12,'0'));
  const appToken='11111111-1111-1111-1111-111111111111',grant='22222222-2222-2222-2222-222222222222';
  await h.query("INSERT INTO public.library_users(id,access_kind) VALUES($1,'apple'),($2,'apple')",[id,other]);

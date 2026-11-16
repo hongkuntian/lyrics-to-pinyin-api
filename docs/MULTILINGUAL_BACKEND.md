@@ -15,7 +15,7 @@ The checksum-based migration runner applies it once. Rollback the code if needed
 leave the additive columns in place.
 
 When the owner credential exists only in Vercel, deploy with
-`vercel --prod --skip-domain --build-env LYRA_LIBRARY_MIGRATE_ON_BUILD=1`.
+`vercel --prod --skip-domain --build-env LYRICA_LIBRARY_MIGRATE_ON_BUILD=1`.
 The `vercel-build` hook uses the production credential inside the build environment,
 applies the same checksummed migration runner, and logs only migration names.
 Multiple function builds coalesce through its transaction advisory lock. Normal
@@ -31,8 +31,8 @@ Both generation policies default to `["*:en"]` when no policy is configured.
 The initial multilingual beta explicitly applies `evaluation/multilingual/beta-policy.json`. Configuration must be an explicit JSON array of canonical
 `source:target` pairs. An empty array disables new work of that kind:
 
-- `LYRA_TRANSLATION_DIRECTIONS`, e.g. `["*:en","zh:fr","en:zh-Hans"]`
-- `LYRA_EXPLANATION_DIRECTIONS`, e.g. `["*:en","zh:fr","zh-Hans:fr"]`
+- `LYRICA_TRANSLATION_DIRECTIONS`, e.g. `["*:en","zh:fr","en:zh-Hans"]`
+- `LYRICA_EXPLANATION_DIRECTIONS`, e.g. `["*:en","zh:fr","zh-Hans:fr"]`
 
 Use exact
 source tags from the document (or the studied translation target); there is no
@@ -179,14 +179,14 @@ output languages. Two workers share a conservative three-dollar reservation ceil
 cache or language policy is written. The output is evidence for bilingual review;
 successful JSON never marks a language direction approved.
 
-`LYRA_EVALUATION_TARGETS` (a JSON array) names the output languages to run instead of
+`LYRICA_EVALUATION_TARGETS` (a JSON array) names the output languages to run instead of
 the default four; Traditional Chinese (`zh-Hant`) runs only when named. With named
 targets a Chinese song is also translated into and explained in the Chinese target,
 the pairs the policy admits for bilingual lyrics and same-language word help.
-`LYRA_EVALUATION_MODE=line` asks for word help by line instead.
+`LYRICA_EVALUATION_MODE=line` asks for word help by line instead.
 
 When the key is available only inside Vercel, use an **unpromoted** deployment with
-`vercel --prod --skip-domain --build-env LYRA_MULTILINGUAL_EVALUATE_ON_BUILD=1`.
+`vercel --prod --skip-domain --build-env LYRICA_MULTILINGUAL_EVALUATE_ON_BUILD=1`.
 The explicit build flag runs this same corpus once per build container, after the
 schema check. The flag is not a persistent project setting. Evaluation failure
 fails that build. Inspect its build logs for base64 `multilingual_evaluation_chunk` records,

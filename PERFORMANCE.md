@@ -4,9 +4,9 @@ Requests retain the existing 2.2.0 response contract and recording validation. T
 
 Responses use a bounded, 24-hour in-process cache (128 entries, 256 KB per entry), a shared Redis cache and same-key inflight sharing. Keys retain full recording metadata, requested language/source, catalog/storefront and stable pronunciation options. Verified catalog aliases are cached against the exact original request. Errors are not cached.
 
-Redis reads/writes have 300 ms budgets, no automatic SDK retries and a 60-second circuit breaker after failures/timeouts. Cache writes use Vercel `waitUntil` and do not delay responses. The new `LYRA_CACHE_KV_REST_API_URL` / `LYRA_CACHE_KV_REST_API_TOKEN` variables take precedence over legacy `LYRICS_KV_*` configuration. Never commit their values.
+Redis reads/writes have 300 ms budgets, no automatic SDK retries and a 60-second circuit breaker after failures/timeouts. Cache writes use Vercel `waitUntil` and do not delay responses. The new `LYRICA_CACHE_KV_REST_API_URL` / `LYRICA_CACHE_KV_REST_API_TOKEN` variables take precedence over legacy `LYRICS_KV_*` configuration. Never commit their values.
 
-On 6 September 2026, both legacy resources were reported as uninstalled and their endpoints failed DNS. A replacement `lyra-lyrics-cache` was connected to production and preview in `iad1`, using the free plan with automatic upgrades disabled. Live local-handler verification against that shared cache returned a 748 ms provider miss followed by a 115 ms Redis hit from a fresh handler with zero provider calls. This is a small local measurement, not a production percentile.
+On 6 September 2026, both legacy resources were reported as uninstalled and their endpoints failed DNS. A replacement `lyrica-lyrics-cache` was connected to production and preview in `iad1`, using the free plan with automatic upgrades disabled. Live local-handler verification against that shared cache returned a 748 ms provider miss followed by a 115 ms Redis hit from a fresh handler with zero provider calls. This is a small local measurement, not a production percentile.
 
 Response headers:
 

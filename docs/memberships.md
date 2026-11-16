@@ -6,7 +6,7 @@ Migration `025-memberships.sql` adds account, purchase, allowance, preview, and 
 
 `POST /api/account` supports `challenge`, `guest`, `apple`, `signOut`, and `delete`. Anonymous enrollment requires a real Apple App Attest attestation and a server nonce bound to the key, bundle, and purpose. Native Sign in with Apple requires an authenticated App Attest session, a fresh server nonce, Apple JWT verification, and a matching authorization-code exchange. It creates a stable account token for StoreKit. The service requests no name or email.
 
-The account service uses `LYRA_ACCOUNT_DATABASE_URL`, a separate least-privilege login. Generation and relay credentials cannot create identities or issue account credentials. Apple refresh tokens are encrypted with the 32-byte `LYRA_ACCOUNT_ENCRYPTION_KEY` and used for authorization revocation on deletion. Keep this key and the account DB password in private operator storage and Vercel secrets; do not commit them.
+The account service uses `LYRICA_ACCOUNT_DATABASE_URL`, a separate least-privilege login. Generation and relay credentials cannot create identities or issue account credentials. Apple refresh tokens are encrypted with the 32-byte `LYRICA_ACCOUNT_ENCRYPTION_KEY` and used for authorization revocation on deletion. Keep this key and the account DB password in private operator storage and Vercel secrets; do not commit them.
 
 Deleting an account requires fresh Apple confirmation, revokes online access, and anonymizes correction details. A minimal pseudonymous purchase and allowance ledger remains so opened free translations stay consistent and later refunds can be processed. Local saved songs are outside this service. Deletion does not cancel an Apple subscription.
 
@@ -16,18 +16,18 @@ There is one membership tier (decided 7 Nov 2026). Its two products share the "L
 
 | Product ID | Service | US base price |
 | --- | --- | --- |
-| `com.hongkuntian.Lyra.pro.monthly` | Membership monthly | $4.99 |
-| `com.hongkuntian.Lyra.pro.annual` | Membership annual | $39.99 |
+| `com.hongkuntian.Lyrica.pro.monthly` | Membership monthly | $4.99 |
+| `com.hongkuntian.Lyrica.pro.annual` | Membership annual | $39.99 |
 
 Other storefronts use Apple's converted prices, except manual prices at roughly 40–55% of the local Apple Music individual plan in Japan, South Korea, Taiwan, Malaysia, Thailand, Indonesia, Vietnam, the Philippines, India, Brazil, Mexico, Türkiye and mainland China. Apple never re-converts subscription prices, so review them about every six months. Native prices come from StoreKit. `POST /api/membership` accepts actions `status`, `transaction` (Apple `signedTransaction`), and `preview` (`activityID`, `recordingID`). The versioned response is defined in `contracts/membership.schema.json`.
 
 The official Apple App Store Server Library verifies certificate chains, signed transactions, bundle ID, environment, and app Apple ID before writing an entitlement. Ownership is bound to the account's StoreKit `appAccountToken`. Old restores cannot replace a newer revocation. `POST /api/store-notifications` verifies V2 notifications and their nested transaction independently; notification IDs deduplicate delivery, including refunds received after account deletion. Configure both production and sandbox notification URLs to this endpoint.
 
-Required verification settings: `LYRA_STORE_BUNDLE_ID`, `LYRA_STORE_APP_APPLE_ID`; set `LYRA_STORE_ALLOW_SANDBOX=true` for Apple-signed sandbox/TestFlight transactions. Unsigned Xcode StoreKit fixtures are never accepted by the deployed verifier. Family sharing and multiseat purchases are unsupported by the account-bound model and must remain disabled. Transactions without this account's `appAccountToken` are rejected; a restore must never silently assign an unbound purchase to the current account.
+Required verification settings: `LYRICA_STORE_BUNDLE_ID`, `LYRICA_STORE_APP_APPLE_ID`; set `LYRICA_STORE_ALLOW_SANDBOX=true` for Apple-signed sandbox/TestFlight transactions. Unsigned Xcode StoreKit fixtures are never accepted by the deployed verifier. Family sharing and multiseat purchases are unsupported by the account-bound model and must remain disabled. Transactions without this account's `appAccountToken` are rejected; a restore must never silently assign an unbound purchase to the current account.
 
 Disable Streamlined Purchasing before offering purchases outside the app. App Store Connect requires a **latest approved binary** with the required StoreKit purchase-intent support before it allows that setting to be turned off. An implementation or development build alone does not satisfy Apple's prerequisite. Until approval, leave promoted purchases, win-back offers, and contingent pricing unconfigured; the app completes purchases after Lyrica sign-in with the account token. See [Apple's Streamlined Purchasing requirements](https://developer.apple.com/help/app-store-connect/manage-subscriptions/manage-streamlined-purchasing).
 
-Sign-in settings: `LYRA_APP_ID_PREFIX`, `LYRA_APP_BUNDLE_IDS`, `LYRA_SIGN_IN_APPLE_KEY_ID`, `LYRA_SIGN_IN_APPLE_PRIVATE_KEY`, and `LYRA_ACCOUNT_ENCRYPTION_KEY`. The signing key must be scoped to the app's primary Sign in with Apple identifier and any deliberately grouped development identifier.
+Sign-in settings: `LYRICA_APP_ID_PREFIX`, `LYRICA_APP_BUNDLE_IDS`, `LYRICA_SIGN_IN_APPLE_KEY_ID`, `LYRICA_SIGN_IN_APPLE_PRIVATE_KEY`, and `LYRICA_ACCOUNT_ENCRYPTION_KEY`. The signing key must be scoped to the app's primary Sign in with Apple identifier and any deliberately grouped development identifier.
 
 ## Usage policy
 
@@ -39,7 +39,7 @@ Public reads never authorize new provider work. Translation `allowGeneration=tru
 
 Live Lyrics needs an active membership or a claimed preview (otherwise `membership_required`). A preview is once per Apple account, bound to one activity and recording, and ends at 10 minutes or 200 admitted relay requests. Defaults cap new previews at 100/day. The operational relay ceiling is 1,000,000 requests/month across public users; failures still count admitted infrastructure work. These are bounded operational safeguards, not advertised paid-user minute quotas. Beta access preserves its existing policy.
 
-The relay derives its APNs topic from the session's App Attest bundle identity. Both `com.hongkuntian.Lyra` and the existing `com.hongkuntian.musicromanization` development bundle use their own Live Activity topic; request bodies cannot override it. The APNs environment still follows the signed app's provisioning environment.
+The relay derives its APNs topic from the session's App Attest bundle identity. Both `com.hongkuntian.Lyrica` and the existing `com.hongkuntian.musicromanization` development bundle use their own Live Activity topic; request bodies cannot override it. The APNs environment still follows the signed app's provisioning environment.
 
 ## Operator setup
 
@@ -57,7 +57,7 @@ Provisioning refuses to overwrite an existing account role or private output fil
 
 Shared listening is retired. Historical SQL 029/030/031/033/034/035 remains unchanged but outside active registration and replay. The active manifest is 001–028, 032 and neutral `036-account-data-privacy.sql`. Existing historical receipts are preserved; no schema is dropped or data wiped.
 
-036 preserves the exact catalog-checked optional V1 repair previously defined in035: conditionally grant only `SELECT(user_id)` on `public.listening_rate_windows` to an existing `lyra_account_v1`. Account deletion already needs that predicate-column read right to execute its DELETE. All four optional V1 relations absent is valid; partial presence, wrong catalogs or drift refuse with23514. The repair creates no role/schema, performs no data rewrite and grants no broader table/column visibility, GRANT OPTION or runtime/PUBLIC permission. Its statement-local catalog lookup guard restores search_path on success and rolls back on failure.
+036 preserves the exact catalog-checked optional V1 repair previously defined in035: conditionally grant only `SELECT(user_id)` on `public.listening_rate_windows` to an existing `lyrica_account_v1`. Account deletion already needs that predicate-column read right to execute its DELETE. All four optional V1 relations absent is valid; partial presence, wrong catalogs or drift refuse with23514. The repair creates no role/schema, performs no data rewrite and grants no broader table/column visibility, GRANT OPTION or runtime/PUBLIC permission. Its statement-local catalog lookup guard restores search_path on success and rolls back on failure.
 
 The actual migration transaction includes the grant and036 receipt atomically. Late-role provisioning replays the unchanged025/028/032 privilege bodies and036 in one atomic DO; it never replays034. This narrow repair does not supply missing historical027/029 account grants or prove complete late-role deletion. Tests must distinguish historical roles-before-migrations from independently established late-role prerequisites; never widen fixture grants to conceal that difference.
 

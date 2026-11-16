@@ -19,13 +19,13 @@ export function createAccountHandler({store,authStore,logger=console}={}) {
         (body.action==='guest'||(body.action==='challenge'&&body.purpose==='guest'))&&
           (typeof body.keyID!=='string'||!/^[A-Za-z0-9+/]{43}=$/.test(body.keyID)||!base64(body.keyID))||
         (['guest','apple','delete'].includes(body.action)&&!nonce(body.challenge))||
-        (body.action==='guest'&&(!base64(body.attestation)||body.attestation.length>28000||!/^lyra_g_[A-Za-z0-9_-]{43}$/.test(body.credential??'')))||
+        (body.action==='guest'&&(!base64(body.attestation)||body.attestation.length>28000||!/^lyrica_g_[A-Za-z0-9_-]{43}$/.test(body.credential??'')))||
         (['apple','delete'].includes(body.action)&&(typeof body.identityToken!=='string'||body.identityToken.length>16000||
           typeof body.authorizationCode!=='string'||!body.authorizationCode||body.authorizationCode.length>4096)))throw new LibraryError('invalid_request',400);
       const accounts=store??new AccountStore(accountDatabase());
       const authenticated=body.action!=='guest'&&!(body.action==='challenge'&&body.purpose==='guest');
       let user,authentication;
-      if(authenticated){const token=bearer(req);if(!token?.startsWith('lyra_s_'))throw new LibraryError('unauthorized',401);
+      if(authenticated){const token=bearer(req);if(!token?.startsWith('lyrica_s_'))throw new LibraryError('unauthorized',401);
         const auth=authStore??new AppAuthStore(accounts.db);user=await auth.authenticate(token);await auth.limit(user.id);
         // Keep the exact bearer private; account DTOs and challenge/guest policy stay V1.
         if(['apple','delete','signOut'].includes(body.action))authentication=await accounts.prepareWriterAuthentication(token);}

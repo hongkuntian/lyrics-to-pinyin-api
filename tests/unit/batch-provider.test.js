@@ -9,7 +9,7 @@ test('provider uses only fixed OpenAI paths, unique metadata, 24h completion and
   await assert.rejects(provider.submit(local),{code:'provider_unavailable'});assert.equal(calls.length,1);
   assert.equal(calls[0].url,'https://api.openai.com/v1/batches');
   const body=JSON.parse(calls[0].opts.body);assert.equal(body.completion_window,'24h');
-  assert.equal(body.metadata.lyra_batch_id,local.id);assert.equal(body.metadata.request_hash,'hash');
+  assert.equal(body.metadata.lyrica_batch_id,local.id);assert.equal(body.metadata.request_hash,'hash');
   await assert.rejects(async()=>provider.file('https://untrusted.example/'),{code:'invalid_provider_id'});
   assert.equal(calls.length,1);
 });

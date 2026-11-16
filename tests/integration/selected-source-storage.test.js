@@ -243,9 +243,9 @@ test('account deletion removes only that account selected links and cannot recov
 });
 
 test('account runtime can remove selected links under its restricted role',async t=>{
-  const {db,store,doc}=await fixture(t);await db.query('CREATE ROLE lyra_account_v1');
+  const {db,store,doc}=await fixture(t);await db.query('CREATE ROLE lyrica_account_v1');
   await db.exec(await readFile(new URL('../../db/028-selected-lyrics-learning.sql',import.meta.url),'utf8'));
-  await db.query('SET ROLE lyra_account_v1');
+  await db.query('SET ROLE lyrica_account_v1');
   await db.query("DELETE FROM selected_source_access WHERE user_id='reader-a'");
   await db.query('RESET ROLE');await assert.rejects(store.assertDocumentAccess('reader-a',doc),unavailable);
 });

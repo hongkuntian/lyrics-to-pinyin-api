@@ -21,7 +21,7 @@ export function buildFailureCode(error) {
 }
 
 export async function verifyBuildSchema({env=process.env,open=database,migrate=migrateLibrary,migrateSources=migrateSourceContent,repairTranslations=repairTranslationReuse,log=console.log}={}) {
-  const requested=env.LYRA_LIBRARY_MIGRATE_ON_BUILD==='1';
+  const requested=env.LYRICA_LIBRARY_MIGRATE_ON_BUILD==='1';
   const production=env.VERCEL==='1'&&env.VERCEL_ENV==='production';
   if(requested&&!production)throw new Error('migration_requires_production_build');
   if(!production)return;
@@ -45,15 +45,15 @@ export async function verifyBuildSchema({env=process.env,open=database,migrate=m
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
   // The packaging wrapper discards a preflight's stdout and reports only
   // stderr of a failed step, so an evaluation-only build logs records there.
-  const evaluationOnly=process.env.LYRA_EVALUATION_ONLY_BUILD==='1',log=evaluationOnly?console.error:console.log;
+  const evaluationOnly=process.env.LYRICA_EVALUATION_ONLY_BUILD==='1',log=evaluationOnly?console.error:console.log;
   try {
     await verifyBuildSchema({log});
     await evaluateContentInBuild();
-    if(process.env.LYRA_MULTILINGUAL_EVALUATE_ON_BUILD==='1') {
+    if(process.env.LYRICA_MULTILINGUAL_EVALUATE_ON_BUILD==='1') {
       if(process.env.VERCEL!=='1'||process.env.VERCEL_ENV!=='production')throw new Error('evaluation_requires_production_build');
       // Vercel's legacy multi-function builder can invoke this hook repeatedly.
       // One build container evaluates once; other invocations leave it alone.
-      const claim=await open('/tmp/lyra-multilingual-evaluation.lock','wx').catch(error=>{if(error.code!=='EEXIST')throw error;});
+      const claim=await open('/tmp/lyrica-multilingual-evaluation.lock','wx').catch(error=>{if(error.code!=='EEXIST')throw error;});
       if(claim){await claim.close();await runEvaluation(process.env,log);}
     }
     if(evaluationOnly) {

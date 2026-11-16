@@ -164,12 +164,12 @@ export function corpusFile(name='beta') {
   return new URL(`../evaluation/multilingual/${corpora[name]}`,import.meta.url);
 }
 export async function runEvaluation(env=process.env,log=console.log) {
-  const corpus=JSON.parse(await readFile(corpusFile(env.LYRA_EVALUATION_CORPUS||'beta'),'utf8'));
-  const onlyDirections=env.LYRA_EVALUATION_DIRECTIONS?JSON.parse(env.LYRA_EVALUATION_DIRECTIONS):null;
+  const corpus=JSON.parse(await readFile(corpusFile(env.LYRICA_EVALUATION_CORPUS||'beta'),'utf8'));
+  const onlyDirections=env.LYRICA_EVALUATION_DIRECTIONS?JSON.parse(env.LYRICA_EVALUATION_DIRECTIONS):null;
   // Targets outside the default four (Traditional Chinese) are evaluated only when named.
-  const onlyTargets=env.LYRA_EVALUATION_TARGETS?JSON.parse(env.LYRA_EVALUATION_TARGETS):null;
-  if(env.LYRA_EVALUATION_MODE==='line')return evaluateLines({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections,onlyTargets,compareSingles:Number(env.LYRA_EVALUATION_COMPARE_SINGLES||0)});
-  if(env.LYRA_EVALUATION_MODE!==undefined&&env.LYRA_EVALUATION_MODE!=='')throw new Error('invalid_evaluation_mode');
+  const onlyTargets=env.LYRICA_EVALUATION_TARGETS?JSON.parse(env.LYRICA_EVALUATION_TARGETS):null;
+  if(env.LYRICA_EVALUATION_MODE==='line')return evaluateLines({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections,onlyTargets,compareSingles:Number(env.LYRICA_EVALUATION_COMPARE_SINGLES||0)});
+  if(env.LYRICA_EVALUATION_MODE!==undefined&&env.LYRICA_EVALUATION_MODE!=='')throw new Error('invalid_evaluation_mode');
   await evaluate({apiKey:env.OPENAI_API_KEY,corpus,log,onlyDirections,onlyTargets});
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {

@@ -28,9 +28,9 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Local development and preview deployments default to synthetic fixtures. `LYRA_DASHBOARD_MODE=empty` or `error` exercises alternate states. Production never falls back to fixtures. Backend tests remain `npm test` from the repository root; CI runs both suites and desktop/mobile browser checks.
+Local development and preview deployments default to synthetic fixtures. `LYRICA_DASHBOARD_MODE=empty` or `error` exercises alternate states. Production never falls back to fixtures. Backend tests remain `npm test` from the repository root; CI runs both suites and desktop/mobile browser checks.
 
-For local control verification, run the built server on `127.0.0.1:4331` with `LYRA_DASHBOARD_FIXTURE_CONTROLS=1`. The sample unlock button creates an isolated, expiring in-memory session. It cannot run in any Vercel environment, including previews. Browser tests exercise signed-out denial, a second tab with stale controls, sign-out, exact restoration and mobile layout. Database tests exercise real SQL permissions, audit, idempotency and source/head fencing; fixture browser tests do not establish a live OIDC login.
+For local control verification, run the built server on `127.0.0.1:4331` with `LYRICA_DASHBOARD_FIXTURE_CONTROLS=1`. The sample unlock button creates an isolated, expiring in-memory session. It cannot run in any Vercel environment, including previews. Browser tests exercise signed-out denial, a second tab with stale controls, sign-out, exact restoration and mobile layout. Database tests exercise real SQL permissions, audit, idempotency and source/head fencing; fixture browser tests do not establish a live OIDC login.
 
 ## Data and cost semantics
 
@@ -42,9 +42,9 @@ The shared ledger's integer `accounted_micros` is authoritative for budget headr
 
 1. Create a separate Vercel Next.js project, root `dashboard`, Node 24, region aligned with Neon. Configure **Vercel Authentication → All Deployments** before providing database credentials. Standard Protection does not protect production domains.
 2. Verify intended team/project membership, grants, bypasses and exceptions. Check that unauthenticated production, deployment and branch URLs redirect to Vercel login or deny access, including data-bearing RSC requests. Vercel's deployment permissions establish viewing access; owner writes additionally require the application session below.
-3. Apply the song library migrations with `node --env-file=<private-owner-env> scripts/song-library-admin.js migrate`. With the backend database owner credential available only to the local operator process, run `node --env-file=<private-owner-env> scripts/dashboard-access.mjs <private-reader-env>`. The script creates `lyra_dashboard_reader` and saves credentials with mode 0600. It refuses to replace an existing role or credential file. Keep that file outside version control. If provisioning fails after writing it, inspect actual role state before trying again.
+3. Apply the song library migrations with `node --env-file=<private-owner-env> scripts/song-library-admin.js migrate`. With the backend database owner credential available only to the local operator process, run `node --env-file=<private-owner-env> scripts/dashboard-access.mjs <private-reader-env>`. The script creates `lyrica_dashboard_reader` and saves credentials with mode 0600. It refuses to replace an existing role or credential file. Keep that file outside version control. If provisioning fails after writing it, inspect actual role state before trying again.
 4. Verify the reader can SELECT views but cannot SELECT base tokens/provider payloads or UPDATE any records. The login defaults to read-only with a statement timeout; production code enforces read-only transactions too.
-5. Add production-scoped `LYRA_DASHBOARD_DATABASE_URL` (sensitive), `LYRA_DASHBOARD_MODE=production` and `LYRA_DASHBOARD_PROTECTION=vercel-all`. The protection value is an operator acknowledgement, not an authentication mechanism. No OpenAI key or backend database owner credential belongs in this project. Preview deployments must not receive production credentials.
+5. Add production-scoped `LYRICA_DASHBOARD_DATABASE_URL` (sensitive), `LYRICA_DASHBOARD_MODE=production` and `LYRICA_DASHBOARD_PROTECTION=vercel-all`. The protection value is an operator acknowledgement, not an authentication mechanism. No OpenAI key or backend database owner credential belongs in this project. Preview deployments must not receive production credentials.
 6. Deploy and verify the authenticated site, ledger reconciliation, escaped report context, and signed-out denial. No iOS release is needed.
 
 For CLI deployments launched from the repository root, link that checkout to the dashboard project and pass `--local-config dashboard/vercel.json`. A checkout used for dashboard delivery must not retain the API project's `.vercel/project.json`.
@@ -57,17 +57,17 @@ Configure the API project's Ignored Build Step as `node scripts/ignore-vercel-bu
 
 The current canonical production origin is
 `https://lyrica-dashboard.vercel.app`. The existing
-`https://lyra-dashboard-roan.vercel.app` URL forwards there with HTTP 307 and
+`https://lyrica-dashboard.vercel.app` URL forwards there with HTTP 307 and
 preserves paths and query strings. Both exact callback URLs are registered on
 the same **Lyrica Owner Dashboard** OAuth client. Production
-`LYRA_DASHBOARD_ORIGIN` uses the canonical origin; credentials, access and
+`LYRICA_DASHBOARD_ORIGIN` uses the canonical origin; credentials, access and
 Vercel Authentication protection remain unchanged. See the coordinated
 [rebrand configuration](REBRANDING.md).
 
 1. Create a [Sign in with Vercel app](https://vercel.com/docs/sign-in-with-vercel/manage-from-dashboard) on the dashboard's team. Register the exact production origin plus `/auth/callback`, enable `client_secret_post`, generate a client secret, and allow only `openid`. Restrict sign-in to the owning team. No Vercel resource access, email/profile scopes or refresh tokens are needed.
-2. Resolve the owner's stable Vercel user ID from authenticated `/v2/user`. Set `LYRA_DASHBOARD_OWNER_SUBJECT` to that ID; never infer it from a submitted form, email address or deployment-viewer header.
-3. With the backend owner URL and owner subject in a private local environment, run `node --env-file=<private-env> scripts/dashboard-operator.mjs <private-operator-output>`. It applies migrations, creates `lyra_dashboard_operator`, inserts the owner allowlist entry and writes credentials mode 0600. It refuses to overwrite an existing file or role. Inspect actual state before recovering a partial provisioning failure.
-4. Add only in **Production**: `LYRA_DASHBOARD_OPERATOR_DATABASE_URL`, `LYRA_DASHBOARD_OAUTH_CLIENT_ID`, `LYRA_DASHBOARD_OAUTH_CLIENT_SECRET`, `LYRA_DASHBOARD_OWNER_SUBJECT`, `LYRA_DASHBOARD_ORIGIN` (HTTPS origin with no trailing slash) and a random `LYRA_DASHBOARD_SESSION_SECRET` of at least 32 characters. Keep all credentials private. Incomplete owner configuration leaves the dashboard in viewing mode.
+2. Resolve the owner's stable Vercel user ID from authenticated `/v2/user`. Set `LYRICA_DASHBOARD_OWNER_SUBJECT` to that ID; never infer it from a submitted form, email address or deployment-viewer header.
+3. With the backend owner URL and owner subject in a private local environment, run `node --env-file=<private-env> scripts/dashboard-operator.mjs <private-operator-output>`. It applies migrations, creates `lyrica_dashboard_operator`, inserts the owner allowlist entry and writes credentials mode 0600. It refuses to overwrite an existing file or role. Inspect actual state before recovering a partial provisioning failure.
+4. Add only in **Production**: `LYRICA_DASHBOARD_OPERATOR_DATABASE_URL`, `LYRICA_DASHBOARD_OAUTH_CLIENT_ID`, `LYRICA_DASHBOARD_OAUTH_CLIENT_SECRET`, `LYRICA_DASHBOARD_OWNER_SUBJECT`, `LYRICA_DASHBOARD_ORIGIN` (HTTPS origin with no trailing slash) and a random `LYRICA_DASHBOARD_SESSION_SECRET` of at least 32 characters. Keep all credentials private. Incomplete owner configuration leaves the dashboard in viewing mode.
 5. Verify owner OIDC sign-in and sign-out on the deployed origin, plus signed-out/cross-origin rejection and restricted database privileges. Do not move a real translation merely to test the UI; use synthetic local data for the complete restore journey.
 
 Every server action verifies a signed, one-hour HttpOnly/Secure/SameSite=Lax host-only session and the exact configured Origin. OIDC uses PKCE, state, nonce and ID-token claim validation through `openid-client`; the OAuth flow cookie expires after ten minutes. The database independently checks the enabled owner allowlist on every mutation. Removing or disabling that entry blocks writes even while a browser session remains valid. Rotating the session secret invalidates all dashboard sessions. The session is not refreshed automatically.

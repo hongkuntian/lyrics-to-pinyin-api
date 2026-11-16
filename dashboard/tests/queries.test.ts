@@ -211,7 +211,7 @@ test("reader sees views but cannot read tokens, provider payloads or alter recor
   const { db, q } = await setup();
   try {
     await db.exec(
-      "CREATE ROLE dashboard_test_reader; GRANT USAGE ON SCHEMA lyra_dashboard TO dashboard_test_reader; GRANT SELECT ON ALL TABLES IN SCHEMA lyra_dashboard TO dashboard_test_reader; SET ROLE dashboard_test_reader;",
+      "CREATE ROLE dashboard_test_reader; GRANT USAGE ON SCHEMA lyrica_dashboard TO dashboard_test_reader; GRANT SELECT ON ALL TABLES IN SCHEMA lyrica_dashboard TO dashboard_test_reader; SET ROLE dashboard_test_reader;",
     );
     assert.equal((await q.overview()).songs, 1);
     assert.equal((await q.song(id))?.lines.length, 2);
@@ -219,23 +219,23 @@ test("reader sees views but cannot read tokens, provider payloads or alter recor
     for (const sql of [
       "SELECT * FROM public.library_tokens",
       "SELECT provider_response FROM public.translation_jobs",
-      "UPDATE lyra_dashboard.settings SET enabled=false",
-      "UPDATE lyra_dashboard.jobs SET state='failed'",
+      "UPDATE lyrica_dashboard.settings SET enabled=false",
+      "UPDATE lyrica_dashboard.jobs SET state='failed'",
       "DELETE FROM public.song_translations",
       "SELECT * FROM public.library_spend_operations",
       "SELECT * FROM public.translation_revisions",
       "SELECT * FROM public.correction_batch_items",
       "SELECT * FROM public.correction_batches",
       "SELECT * FROM public.correction_review_outcomes",
-      "UPDATE lyra_dashboard.review_changes SET after='unreviewed'",
-      "UPDATE lyra_dashboard.settings SET review_publication_enabled=true",
-      "UPDATE lyra_dashboard.review_queue SET state='assessed'",
-      "UPDATE lyra_dashboard.review_worker SET last_outcome='assessed'",
-      "UPDATE lyra_dashboard.spend SET accounted_micros=0",
-      "CREATE TABLE lyra_dashboard.unwanted(id integer)",
-      "SELECT lyra_dashboard_control.set_control('owner','00000000-0000-4000-8000-000000000001',1,'reviews',true)",
-      "SELECT * FROM lyra_dashboard_control.operators",
-      "UPDATE lyra_dashboard.revisions SET reason='forged'",
+      "UPDATE lyrica_dashboard.review_changes SET after='unreviewed'",
+      "UPDATE lyrica_dashboard.settings SET review_publication_enabled=true",
+      "UPDATE lyrica_dashboard.review_queue SET state='assessed'",
+      "UPDATE lyrica_dashboard.review_worker SET last_outcome='assessed'",
+      "UPDATE lyrica_dashboard.spend SET accounted_micros=0",
+      "CREATE TABLE lyrica_dashboard.unwanted(id integer)",
+      "SELECT lyrica_dashboard_control.set_control('owner','00000000-0000-4000-8000-000000000001',1,'reviews',true)",
+      "SELECT * FROM lyrica_dashboard_control.operators",
+      "UPDATE lyrica_dashboard.revisions SET reason='forged'",
     ])
       await assert.rejects(db.query(sql));
     assert.equal((await q.revisions(id)).length,1);
@@ -269,7 +269,7 @@ test("two review stages join once and expose only comparison outcome and exact b
         VALUES($1,$2,$3,$4,$5,'[]',$6,$7,'done',$8)`,[operationID,batchID,reviewID,job,JSON.stringify({secret:'hidden-private-prompt'}),stage,
         stage==='verification'?JSON.stringify({candidateSlot:'B'}):null,JSON.stringify(stage==='assessment'?{decision:'correct',summary:'Source action.',changes:[{sourceID:'L0001',sourceQuote:'回家',replacement:'Return home.',reason:'The direction is home.'}]}:{preferred:'B',summary:'The correction is clearer.'})]);
     }
-    assert.equal((await db.query('SELECT * FROM lyra_dashboard.review_queue')).rows.length,1);
+    assert.equal((await db.query('SELECT * FROM lyrica_dashboard.review_queue')).rows.length,1);
     const detail=await q.report(reportID);assert.equal(detail?.review?.comparison,'correction_preferred');
     assert.deepEqual(detail?.changes,[{source_id:'L0001',source_text:'回家',before:'Go home.',after:'Return home.',reason:'The direction is home.'}]);
     assert.ok(!JSON.stringify(detail).includes('hidden-private-prompt'));

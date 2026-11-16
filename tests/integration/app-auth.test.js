@@ -107,10 +107,10 @@ test('worker claim rechecks kill switch and disabled account without submitting'
  assert.equal((await store.job(job.job.id)).state,'queued');
 });
 test('preview and production policy cannot silently share trust',()=>{
- const env={LYRA_APP_AUTH_AUDIENCE:'lyra-production',LYRA_APP_ATTEST_ENVIRONMENT:'production',LYRA_APP_ID_PREFIX:policy.prefix,LYRA_APP_BUNDLE_IDS:bundleID};
+ const env={LYRICA_APP_AUTH_AUDIENCE:'lyrica-production',LYRICA_APP_ATTEST_ENVIRONMENT:'production',LYRICA_APP_ID_PREFIX:policy.prefix,LYRICA_APP_BUNDLE_IDS:bundleID};
  assert.equal(authPolicy({...env,VERCEL_ENV:'production'}).environment,'production');
  assert.throws(()=>authPolicy({...env,VERCEL_ENV:'preview'}),{code:'app_auth_not_configured'});
- assert.throws(()=>authPolicy({...env,VERCEL_ENV:'production',LYRA_APP_ATTEST_ENVIRONMENT:'development'}),{code:'app_auth_not_configured'});
+ assert.throws(()=>authPolicy({...env,VERCEL_ENV:'production',LYRICA_APP_ATTEST_ENVIRONMENT:'development'}),{code:'app_auth_not_configured'});
 });
 test('operator controls revoke access immediately and validate emergency limits',async t=>{
  const {auth,db}=await fixture(t);let session=await enroll(auth);

@@ -25,7 +25,7 @@ test('stored refresh tokens are encrypted and bound to the identity',()=>{
 });
 test('StoreKit verifier refuses missing app identity and unsigned local transactions',async()=>{
   assert.throws(()=>new ApplePurchaseVerifier({env:{}}),{code:'purchases_unavailable'});
-  const verifier=new ApplePurchaseVerifier({env:{LYRA_STORE_BUNDLE_ID:'com.test.Lyrica',LYRA_STORE_APP_APPLE_ID:'123',LYRA_STORE_ALLOW_SANDBOX:'true'}});
+  const verifier=new ApplePurchaseVerifier({env:{LYRICA_STORE_BUNDLE_ID:'com.test.Lyrica',LYRICA_STORE_APP_APPLE_ID:'123',LYRICA_STORE_ALLOW_SANDBOX:'true'}});
   await assert.rejects(verifier.transaction(jwt()),{code:'invalid_transaction'});
   await assert.rejects(verifier.notification(jwt()),{code:'invalid_transaction'});
 });

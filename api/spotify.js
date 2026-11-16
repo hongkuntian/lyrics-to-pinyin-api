@@ -42,11 +42,11 @@ export function createSpotifyHandler({authStore,runtime,runtimeFactory=createSpo
   if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({version:1,code:'method_not_allowed'});}
   try{
    const input=validateSpotifyInput(req.body),token=bearer(req);
-   if(!token?.startsWith(input.action.startsWith('snapshot.')?'lyra_w_':'lyra_s_'))throw new LibraryError('unauthorized',401);
+   if(!token?.startsWith(input.action.startsWith('snapshot.')?'lyrica_w_':'lyrica_s_'))throw new LibraryError('unauthorized',401);
    const service=runtime??runtimeFactory();let result;
-   if(input.action.startsWith('snapshot.')){if(!token?.startsWith('lyra_w_'))throw new LibraryError('unauthorized',401);result=await service.snapshot(token,input);}
+   if(input.action.startsWith('snapshot.')){if(!token?.startsWith('lyrica_w_'))throw new LibraryError('unauthorized',401);result=await service.snapshot(token,input);}
    else{
-    if(!token?.startsWith('lyra_s_'))throw new LibraryError('unauthorized',401);
+    if(!token?.startsWith('lyrica_s_'))throw new LibraryError('unauthorized',401);
     const auth=authStore??new AppAuthStore(service.store.db),user=await auth.authenticate(token);await auth.limit?.(user.id);
     // Re-read attested environment rather than accepting client APNs selection.
     if(!user.environment){const key=(await auth.db.query('SELECT environment FROM app_attest_keys WHERE key_id=$1',[user.keyID])).rows[0];user.environment=key?.environment;}

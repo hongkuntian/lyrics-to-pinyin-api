@@ -1,7 +1,7 @@
 // Product identifiers are durable API data. Localized price/period copy comes from StoreKit.
 export const PRODUCTS=Object.freeze({
-  'com.hongkuntian.Lyra.pro.monthly':{tier:'pro',period:'month'},
-  'com.hongkuntian.Lyra.pro.annual':{tier:'pro',period:'year'}
+  'com.hongkuntian.Lyrica.pro.monthly':{tier:'pro',period:'month'},
+  'com.hongkuntian.Lyrica.pro.annual':{tier:'pro',period:'year'}
 });
 // One membership tier. Free accounts can read a few existing shared-library
 // translations each rolling week; a song stays readable once opened.

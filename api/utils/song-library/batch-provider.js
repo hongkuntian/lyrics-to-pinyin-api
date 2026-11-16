@@ -2,7 +2,7 @@ import {LibraryError,digest} from './store.js';
 import {strictJSON} from './translation.js';
 import {REVIEW_POLICY} from './review-assessment.js';
 
-export const batchFilename=id=>`lyra-review-${id}.jsonl`;
+export const batchFilename=id=>`lyrica-review-${id}.jsonl`;
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?
   Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value;
 export const stableJSON=value=>JSON.stringify(canonical(value));
@@ -13,7 +13,7 @@ const identifier=value=> {
 };
 export function batchMatches(remote,local) {
   return remote?.endpoint==='/v1/responses'&&remote.input_file_id===local.input_file_id&&
-    remote.metadata?.lyra_batch_id===local.id&&remote.metadata?.request_hash===local.request_hash&&remote.metadata?.policy_version===(local.policy_version??REVIEW_POLICY);
+    remote.metadata?.lyrica_batch_id===local.id&&remote.metadata?.request_hash===local.request_hash&&remote.metadata?.policy_version===(local.policy_version??REVIEW_POLICY);
 }
 export function parseBatchFiles(texts,items) {
   const expected=new Set(items.map(i=>i.operation_id)),found=new Map();
@@ -76,11 +76,11 @@ export class BatchProvider {
   }
   submit(local) {
     return this.request('/batches',{method:'POST',body:{input_file_id:local.input_file_id,endpoint:'/v1/responses',completion_window:'24h',
-      metadata:{lyra_batch_id:local.id,request_hash:local.request_hash,policy_version:local.policy_version??REVIEW_POLICY},
+      metadata:{lyrica_batch_id:local.id,request_hash:local.request_hash,policy_version:local.policy_version??REVIEW_POLICY},
       output_expires_after:{anchor:'created_at',seconds:2592000}}});
   }
   async findBatch(local) {
-    const matches=await this.locate('/batches',b=>b.metadata?.lyra_batch_id===local.id);
+    const matches=await this.locate('/batches',b=>b.metadata?.lyrica_batch_id===local.id);
     if(matches.length>1)throw new LibraryError('batch_identity_conflict',502);
     return matches[0]??null;
   }

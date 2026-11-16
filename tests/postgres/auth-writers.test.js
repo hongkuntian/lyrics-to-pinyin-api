@@ -89,10 +89,10 @@ async function quiescent(){
 }
 
 before(async()=>{
- const approved=process.env.LYRA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT;
+ const approved=process.env.LYRICA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT;
  assert.match(approved??'',/^[a-f0-9]{40}$/);assert.equal(git('rev-parse','HEAD'),approved);
  assert.equal(git('status','--porcelain=v1','--untracked-files=normal','--','.',':(exclude)node_modules'),'');
- const path=process.env.LYRA_TEST_POSTGRES_MANIFEST,uid=process.getuid();
+ const path=process.env.LYRICA_TEST_POSTGRES_MANIFEST,uid=process.getuid();
  assert.ok(path&&isAbsolute(path),'explicit current-user-owned local manifest required');
  const file=await lstat(path);assert.ok(file.isFile()&&!file.isSymbolicLink());assert.equal(file.uid,uid);assert.equal(file.mode&0o077,0);
  const marker=JSON.parse(await readFile(path,'utf8'));

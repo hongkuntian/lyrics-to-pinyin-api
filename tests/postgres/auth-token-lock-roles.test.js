@@ -7,7 +7,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
-const migration='032-auth-token-row-locks.sql',runtime='lyra_runtime_v1',account='lyra_account_v1';
+const migration='032-auth-token-row-locks.sql',runtime='lyrica_runtime_v1',account='lyrica_account_v1';
 const runID=randomUUID().replaceAll('-',''),provenance=`lyrica-auth-token-lock:${runID}`;
 const names=name=>`lyrica-token-${runID.slice(0,12)}-${name}`;
 const sha=value=>createHash('sha256').update(value).digest('hex');
@@ -123,11 +123,11 @@ const drift=error=>error.code==='23514'&&/auth_token_lock_.*catalog_mismatch/.te
 async function manifest(){
  // Complete local-file validation precedes imports of application modules and
  // every connection attempt. No DATABASE_URL, password file or .env is read.
- const approved=process.env.LYRA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT;
+ const approved=process.env.LYRICA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT;
  assert.match(approved??'',/^[a-f0-9]{40}$/);assert.equal(git('rev-parse','HEAD'),approved);
  assert.equal(git('status','--porcelain=v1','--untracked-files=normal','--','.',':(exclude)node_modules'),'');
  git('merge-base','--is-ancestor','5b12df46048a212a56b8b0cc146a80492f49481f',approved);
- const path=process.env.LYRA_TEST_POSTGRES_MANIFEST,uid=process.getuid();
+ const path=process.env.LYRICA_TEST_POSTGRES_MANIFEST,uid=process.getuid();
  assert.ok(path&&isAbsolute(path),'explicit current-user-owned local manifest required');
  const file=await lstat(path);assert.ok(file.isFile()&&!file.isSymbolicLink());assert.equal(file.uid,uid);
  assert.equal(file.mode&0o077,0,'manifest must be private');

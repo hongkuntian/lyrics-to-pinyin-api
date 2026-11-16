@@ -19,7 +19,7 @@ test('languages are enabled by direction, independently for explanations, and de
  assert.throws(()=>requireDirection(policy,'translation','fr','zh-Hans'),{code:'unsupported_direction'});
  assert.throws(()=>requireDirection(policy,'explanation','zh-Hans','fr'),{code:'unsupported_direction'});
  assert.throws(()=>requireDirection(languagePolicy(),'translation','zh','fr'),{code:'unsupported_direction'});
- assert.throws(()=>environmentLanguagePolicy({LYRA_TRANSLATION_DIRECTIONS:'["*:bogus"]'}),{code:'invalid_language_policy'});
+ assert.throws(()=>environmentLanguagePolicy({LYRICA_TRANSLATION_DIRECTIONS:'["*:bogus"]'}),{code:'invalid_language_policy'});
 });
 test('whole-song targets retain fidelity and use explicit target and uncertainty conventions',()=>{
  for(const [target,name,marker] of [['fr','French','[source incertaine]'],['es','Spanish','[original poco claro]'],['zh-Hans','Simplified Chinese','[原文不明]'],['zh-Hant','Traditional Chinese','[原文不明]']]){

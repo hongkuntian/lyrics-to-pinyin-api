@@ -45,7 +45,7 @@ function configuration(authStore,environment){
  if(!object(p)||typeof p.audience!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(p.audience)||
   !['production','development'].includes(p.environment)||!/^[A-Z0-9]{10}$/.test(p.prefix??'')||
   !Array.isArray(p.bundles)||p.bundles.length<1||p.bundles.length>32||!p.bundles.every(bundleID)||
-  (environment==='production'?p.environment!=='production':p.environment!=='development'||p.audience==='lyra-production'))fail();
+  (environment==='production'?p.environment!=='production':p.environment!=='development'||p.audience==='lyrica-production'))fail();
  return Object.freeze({audience:p.audience,attestEnvironment:p.environment,bundles:Object.freeze([...p.bundles])});
 }
 
@@ -140,8 +140,8 @@ export function createCurrentAuthContext({authStore,environment}={}){
  return Object.freeze({
   async prepare(bearer){return safe(async()=>{
    // The existing HTTP extractor allows 6..256 URL-safe characters and requires
-   // lyra_s_. Keep its bounded normal-session namespace; no guest credential.
-   if(typeof bearer!=='string'||!/^lyra_s_[A-Za-z0-9_-]{1,249}$/.test(bearer))fail('unauthorized');
+   // lyrica_s_. Keep its bounded normal-session namespace; no guest credential.
+   if(typeof bearer!=='string'||!/^lyrica_s_[A-Za-z0-9_-]{1,249}$/.test(bearer))fail('unauthorized');
    // Hash before awaiting: never accept a digest or prior auth tuple from HTTP.
    const sessionDigest=createHash('sha256').update(bearer).digest('hex');
    let user;
@@ -439,7 +439,7 @@ export function createWriterAuthContext({authStore,environment}={}){
  }
  return Object.freeze({
   async prepare(bearer){return safe(async()=>{
-   if(typeof bearer!=='string'||!/^lyra_s_[A-Za-z0-9_-]{1,249}$/.test(bearer))fail('unauthorized');
+   if(typeof bearer!=='string'||!/^lyrica_s_[A-Za-z0-9_-]{1,249}$/.test(bearer))fail('unauthorized');
    const sessionDigest=createHash('sha256').update(bearer).digest('hex');
    let user;try{user=await authStore.authenticate(bearer);}catch(error){
     if(['session_expired','unauthorized','app_access_revoked'].includes(error?.code))fail('unauthorized');fail();

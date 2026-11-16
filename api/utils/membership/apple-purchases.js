@@ -8,11 +8,11 @@ const roots=['AppleIncRootCertificate','AppleRootCA-G2','AppleRootCA-G3'].map(na
   readFileSync(new URL(`../../data/apple-pki/${name}.cer`,import.meta.url)));
 export class ApplePurchaseVerifier {
   constructor({env=process.env,Verifier=SignedDataVerifier}={}) {
-    this.bundleID=env.LYRA_STORE_BUNDLE_ID;
-    const appID=Number(env.LYRA_STORE_APP_APPLE_ID);
+    this.bundleID=env.LYRICA_STORE_BUNDLE_ID;
+    const appID=Number(env.LYRICA_STORE_APP_APPLE_ID);
     if(!this.bundleID||!Number.isSafeInteger(appID)||appID<=0)throw new LibraryError('purchases_unavailable',503);
     const environments=[Environment.PRODUCTION];
-    if(env.LYRA_STORE_ALLOW_SANDBOX==='true')environments.push(Environment.SANDBOX);
+    if(env.LYRICA_STORE_ALLOW_SANDBOX==='true')environments.push(Environment.SANDBOX);
     this.verifiers=environments.map(environment=>({environment,verifier:new Verifier(roots,true,environment,this.bundleID,appID)}));
   }
   async verify(method,value) {

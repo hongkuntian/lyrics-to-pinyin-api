@@ -9,13 +9,13 @@ const doc='a'.repeat(64),source='b'.repeat(64),initial='00000000-0000-4000-8000-
 async function setup(t) {
   const db=new PGlite();t.after(()=>db.close());
   await migrateLibrary({transaction:fn=>db.transaction(tx=>fn({query:(sql,values)=>values?tx.query(sql,values):tx.exec(sql)}))});
-  await db.query("INSERT INTO lyra_dashboard_control.operators(subject) VALUES('owner')");
-  await db.exec(`CREATE ROLE control_test NOINHERIT; GRANT USAGE ON SCHEMA lyra_dashboard_control TO control_test;
-    GRANT EXECUTE ON FUNCTION lyra_dashboard_control.set_control(text,uuid,bigint,text,boolean),
-      lyra_dashboard_control.rollback_translation(text,uuid,text,text,uuid,uuid,text) TO control_test`);
+  await db.query("INSERT INTO lyrica_dashboard_control.operators(subject) VALUES('owner')");
+  await db.exec(`CREATE ROLE control_test NOINHERIT; GRANT USAGE ON SCHEMA lyrica_dashboard_control TO control_test;
+    GRANT EXECUTE ON FUNCTION lyrica_dashboard_control.set_control(text,uuid,bigint,text,boolean),
+      lyrica_dashboard_control.rollback_translation(text,uuid,text,text,uuid,uuid,text) TO control_test`);
   return db;
 }
-const control=(db,id,version,field,enabled,actor='owner')=>db.query('SELECT lyra_dashboard_control.set_control($1,$2,$3,$4,$5) AS result',[actor,id,version,field,enabled]);
+const control=(db,id,version,field,enabled,actor='owner')=>db.query('SELECT lyrica_dashboard_control.set_control($1,$2,$3,$4,$5) AS result',[actor,id,version,field,enabled]);
 test('controls authorize each operator, preserve budgets, fence old pages, and deduplicate exact retries',async t=> {
   const db=await setup(t),id=randomUUID();
   const before=(await db.query('SELECT * FROM library_settings')).rows[0];
@@ -29,13 +29,13 @@ test('controls authorize each operator, preserve budgets, fence old pages, and d
   await assert.rejects(control(db,randomUUID(),2,'daily_micros',true),/invalid_control/);
   await assert.rejects(db.query('UPDATE library_settings SET daily_micros=99999999'),/permission denied/);
   await assert.rejects(db.query('SELECT * FROM library_users'),/permission denied/);
-  await assert.rejects(db.query('SELECT * FROM lyra_dashboard_control.operators'),/permission denied/);
+  await assert.rejects(db.query('SELECT * FROM lyrica_dashboard_control.operators'),/permission denied/);
   await db.exec('RESET ROLE');
   const after=(await db.query('SELECT * FROM library_settings')).rows[0];
   for(const key of ['daily_micros','monthly_micros','review_daily_micros','review_monthly_micros','review_max_daily','user_daily','user_monthly'])assert.equal(after[key],before[key]);
-  assert.equal((await db.query('SELECT count(*)::integer AS n FROM lyra_dashboard_control.actions')).rows[0].n,1);
-  await assert.rejects(db.exec('DELETE FROM lyra_dashboard_control.actions'),/dashboard_audit_immutable/);
-  await db.exec("UPDATE lyra_dashboard_control.operators SET enabled=false");
+  assert.equal((await db.query('SELECT count(*)::integer AS n FROM lyrica_dashboard_control.actions')).rows[0].n,1);
+  await assert.rejects(db.exec('DELETE FROM lyrica_dashboard_control.actions'),/dashboard_audit_immutable/);
+  await db.exec("UPDATE lyrica_dashboard_control.operators SET enabled=false");
   await assert.rejects(control(db,randomUUID(),2,'reviews',false),/owner_required/);
 });
 test('rollback copies the exact saved revision, creates a new head and audit, and cannot overwrite newer work',async t=> {
@@ -47,7 +47,7 @@ test('rollback copies the exact saved revision, creates a new head and audit, an
   await db.query("INSERT INTO song_translations(id,document_id,target,recipe,content) VALUES($1,$2,'en','fixture',$3)",[initial,doc,JSON.stringify({lines:[{sourceID:'L0001',lyricText:'Go home.',text:'Go home.',speakerID:null,startsTurn:false}],sourceNotes:[],rejectedNotes:[]})]);
   const correction=await publishRevision(db,{expectedRevisionID:initial,sourceHash:source,publicationKey:'correction',actor:'worker',reason:'fixture',candidate:{translations:{L0001:'Return home.'},sourceNotes:[]}});
   const id=randomUUID(),args=['owner',id,doc,source,correction.id,initial,'Restore the earlier wording.'];
-  const call=values=>db.query('SELECT lyra_dashboard_control.rollback_translation($1,$2,$3,$4,$5,$6,$7) AS result',values);
+  const call=values=>db.query('SELECT lyrica_dashboard_control.rollback_translation($1,$2,$3,$4,$5,$6,$7) AS result',values);
   await db.exec('SET ROLE control_test');
   await assert.rejects(call(['viewer',...args.slice(1)]),/owner_required/);
   await assert.rejects(call([...args.slice(0,3),'changed',...args.slice(4)]),/source_changed/);
@@ -61,5 +61,5 @@ test('rollback copies the exact saved revision, creates a new head and audit, an
   const rows=(await db.query('SELECT content FROM translation_revisions WHERE id=ANY($1::uuid[]) ORDER BY sequence',[[initial,restored.revision_id]])).rows;
   assert.deepEqual(rows[0].content,rows[1].content);
   assert.equal((await db.query('SELECT revision_id FROM translation_heads')).rows[0].revision_id,restored.revision_id);
-  assert.equal((await db.query('SELECT actor FROM lyra_dashboard_control.actions')).rows[0].actor,'owner');
+  assert.equal((await db.query('SELECT actor FROM lyrica_dashboard_control.actions')).rows[0].actor,'owner');
 });

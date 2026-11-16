@@ -29,8 +29,8 @@ try {
     const path=resolve(values['database-config-file']),metadata=await stat(path);
     if(!metadata.isFile()||(metadata.mode&0o077)!==0)throw new Error('Use an owner-only database configuration file.');
     const configuration=JSON.parse(await readFile(path,'utf8'));
-    if(typeof configuration.LYRA_LIBRARY_DATABASE_URL!=='string')throw new Error('Missing database URL.');
-    process.env.LYRA_LIBRARY_DATABASE_URL=configuration.LYRA_LIBRARY_DATABASE_URL;
+    if(typeof configuration.LYRICA_LIBRARY_DATABASE_URL!=='string')throw new Error('Missing database URL.');
+    process.env.LYRICA_LIBRARY_DATABASE_URL=configuration.LYRICA_LIBRARY_DATABASE_URL;
   }
   db=database();const store=new SongLibraryStore(db);
   const command=positionals[0];

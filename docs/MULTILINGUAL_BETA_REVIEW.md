@@ -65,7 +65,7 @@ versus negative request, a name that is also a common word, unstated speaker and
 addressee). The production builders translated each case into en/fr/es/zh-Hans and
 explained one original selection in each language: 12 translations and 12
 explanations, USD 0.036 recorded usage. They ran in an evaluation-only production
-build (`LYRA_EVALUATION_ONLY_BUILD=1`), which logs records to stderr and always fails,
+build (`LYRICA_EVALUATION_ONLY_BUILD=1`), which logs records to stderr and always fails,
 so it cannot be promoted. A first run lost its records because the packaging wrapper
 discards preflight stdout; it was rerun unchanged.
 
@@ -268,7 +268,7 @@ evaluations in this document used the one-word request in every language, so the
 not exercise the English path the app uses for word taps.
 
 `explain_line` now accepts every explanation language. A paid line-mode run
-(`LYRA_EVALUATION_MODE=line`, `LYRA_EVALUATION_COMPARE_SINGLES=3`) asked for every
+(`LYRICA_EVALUATION_MODE=line`, `LYRICA_EVALUATION_COMPARE_SINGLES=3`) asked for every
 word of the selected line in all four corpora, 67 directions and 478 words, and for
 the first three words of each non-English direction one at a time for comparison (150
 requests). USD 0.185 in total.
@@ -303,7 +303,7 @@ by the model. It is not converted from the Simplified result: several Simplified
 characters have more than one Traditional form (发 is 發 or 髮), and Study selections
 bind to the stored text.
 
-Four paid rounds (`LYRA_EVALUATION_TARGETS=["zh-Hant"]`, USD 0.163 in total) covered
+Four paid rounds (`LYRICA_EVALUATION_TARGETS=["zh-Hant"]`, USD 0.163 in total) covered
 translation, phrase explanation, word help by line and translated-word explanation from
 all 15 sources that are admitted into Simplified Chinese. Script was checked by
 machine: a Traditional answer may contain no character that has a distinct Traditional

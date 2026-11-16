@@ -46,7 +46,7 @@ for(const [label,row] of [['duet',duet],['ensemble',ensemble]])test(`reported Sp
  const {api,calls}=fixture(row),{db,store}=await libraryDB();t.after(()=>db.close());
  const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(service(api)),
   authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
- const call=async body=>{const res=createMockRes();await handler(createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res);return res;};
+ const call=async body=>{const res=createMockRes();await handler(createMockReq({body,headers:{authorization:'Bearer lyrica_s_fixture'}}),res);return res;};
  const first=await call({action:'lyrics',recording:row.recording,refresh:true});
  assert.equal(first.statusCode,200,JSON.stringify(first.body));
  const doc=first.body.document,response=doc.response;

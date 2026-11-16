@@ -55,7 +55,7 @@ export function canonicalProviderID(rawID) {
 }
 
 export function formatMusicResponse(songData, romanizedData) {
-  // Preserve the numeric wire shape older Lyra builds expect when a provider
+  // Preserve the numeric wire shape older Lyrica builds expect when a provider
   // represents an ordinary integer ID as text. Opaque/large/zero-prefixed IDs
   // retain their exact bytes for current clients; never round an identity.
   const rawID=songData.id;

@@ -7,7 +7,7 @@ import {createVault,sha} from '../../api/utils/spotify/vault.js';
 import {sourceCapsule,spotifyBinding} from '../../api/utils/song-library/spotify-recording.js';
 import {makeDocument} from '../../api/utils/song-library/document.js';
 import {publicDocument} from '../../api/utils/song-library/public-content.js';
-export const user={id:'owner',keyID:'a'.repeat(43)+'=',credentialDigest:'digest',bundleID:'com.hongkuntian.Lyra',environment:'development'};
+export const user={id:'owner',keyID:'a'.repeat(43)+'=',credentialDigest:'digest',bundleID:'com.hongkuntian.Lyrica',environment:'development'};
 export const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Fixture',artists:['Artist'],album:'Album',duration_ms:240000}};
 export function documentFor(r=recording,lines=[{original:'Fixture original',romanized:'Fixture reading',timestamp:0},{original:'Next original',romanized:'Next reading',timestamp:20}]){
  const selection='fixture-selection';

@@ -15,7 +15,7 @@ test('membership HTTP requires app sessions, verified purchase data and no start
  const store=new MembershipStore(f.store.db);
  const handler=createMembershipHandler({store,libraryStore:f.store,authStore:{authenticate:async()=>({id:'reader-a'})},
    verifier:{transaction:async()=>{throw new LibraryError('purchase_unverified',403);}}});
- async function call(body,credential='lyra_s_session') {
+ async function call(body,credential='lyrica_s_session') {
   const res=createMockRes();await handler({method:'POST',body,headers:{authorization:`Bearer ${credential}`}},res);return res;
  }
  assert.equal((await call({action:'status'},'guest')).statusCode,401);

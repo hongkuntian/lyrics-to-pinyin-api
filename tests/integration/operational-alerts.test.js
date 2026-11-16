@@ -7,7 +7,7 @@ import {runOperationalAlerts} from '../../api/utils/song-library/operational-ale
 import {createReviewReportsHandler} from '../../api/review-reports.js';
 import {SongLibraryStore} from '../../api/utils/song-library/store.js';
 import {source} from '../helpers/library-db.js';
-const env={VERCEL_ENV:'production',LYRA_ALERT_EMAIL_ENABLED:'true',RESEND_API_KEY:'test-secret',LYRA_ALERT_FROM:'alerts@example.com',LYRA_ALERT_TO:'owner@example.com'};
+const env={VERCEL_ENV:'production',LYRICA_ALERT_EMAIL_ENABLED:'true',RESEND_API_KEY:'test-secret',LYRICA_ALERT_FROM:'alerts@example.com',LYRICA_ALERT_TO:'owner@example.com'};
 async function fixture(t) {
   const pg=new PGlite();t.after(()=>pg.close());
   const db={query:(...a)=>pg.query(...a),transaction:fn=>pg.transaction(tx=>fn({query:(sql,args)=>args?tx.query(sql,args):tx.exec(sql).then(r=>r.at(-1))}))};
@@ -65,8 +65,8 @@ test('claim commit survives send success followed by storage failure',async t=>{
 });
 test('live dashboard can detect an overdue scheduler without a worker invocation',async t=>{
   const f=await fixture(t);await f.pg.query("UPDATE library_alert_monitor SET initialized_at=now()-interval '37 hours'");
-  assert.ok((await f.rows('lyra_dashboard.alert_conditions')).some(x=>x.code==='scheduler_overdue'));
-  await f.run();assert.ok(!(await f.rows('lyra_dashboard.alert_conditions')).some(x=>x.code==='scheduler_overdue'));
+  assert.ok((await f.rows('lyrica_dashboard.alert_conditions')).some(x=>x.code==='scheduler_overdue'));
+  await f.run();assert.ok(!(await f.rows('lyrica_dashboard.alert_conditions')).some(x=>x.code==='scheduler_overdue'));
   assert.equal(f.sent.length,0);
 });
 test('stalled generation and unknown charges remain held through budget rollover and clear only on recorded recovery',async t=>{
@@ -104,12 +104,12 @@ test('worker failures, missing provider key, and recovery use alerts without mak
   await f.run({workerError:false});assert.ok((await f.rows('library_alert_incidents'))[0].resolved_at);
 });
 test('reader sees bounded metadata but cannot read email addresses, payloads, keys or mutate incidents',async t=>{
-  const f=await fixture(t);await f.pg.exec('CREATE ROLE lyra_dashboard_reader; GRANT USAGE ON SCHEMA lyra_dashboard TO lyra_dashboard_reader; GRANT SELECT ON ALL TABLES IN SCHEMA lyra_dashboard TO lyra_dashboard_reader;');
-  await f.pg.query('UPDATE library_settings SET daily_micros=0');await f.run();await f.pg.exec('SET ROLE lyra_dashboard_reader');
+  const f=await fixture(t);await f.pg.exec('CREATE ROLE lyrica_dashboard_reader; GRANT USAGE ON SCHEMA lyrica_dashboard TO lyrica_dashboard_reader; GRANT SELECT ON ALL TABLES IN SCHEMA lyrica_dashboard TO lyrica_dashboard_reader;');
+  await f.pg.query('UPDATE library_settings SET daily_micros=0');await f.run();await f.pg.exec('SET ROLE lyrica_dashboard_reader');
   for(const table of ['alert_conditions','alert_incidents','alert_monitor']) {
-    const rows=await f.rows(`lyra_dashboard.${table}`);assert.ok(!JSON.stringify(rows).includes('example.com'));assert.ok(!JSON.stringify(rows).includes('test-secret'));
+    const rows=await f.rows(`lyrica_dashboard.${table}`);assert.ok(!JSON.stringify(rows).includes('example.com'));assert.ok(!JSON.stringify(rows).includes('test-secret'));
   }
   await assert.rejects(f.rows('library_alert_deliveries'),/permission denied/);
-  assert.equal((await f.pg.query("SELECT has_table_privilege(current_user,'lyra_dashboard.alert_incidents','DELETE') AS allowed")).rows[0].allowed,false);
+  assert.equal((await f.pg.query("SELECT has_table_privilege(current_user,'lyrica_dashboard.alert_incidents','DELETE') AS allowed")).rows[0].allowed,false);
   await assert.rejects(f.pg.query('DELETE FROM library_alert_incidents'),/permission denied/);
 });

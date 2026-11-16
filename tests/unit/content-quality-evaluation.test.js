@@ -33,8 +33,8 @@ test('changed plan cannot issue a provider call',async t=>{
 });
 test('build evaluation is opt-in, production-only and requires a reviewed plan hash',async()=>{
  await evaluateContentInBuild({});
- await assert.rejects(evaluateContentInBuild({LYRA_CONTENT_QUALITY_EVALUATE_ON_BUILD:'1',VERCEL:'1',VERCEL_ENV:'preview'}),/production_build/);
- await assert.rejects(evaluateContentInBuild({LYRA_CONTENT_QUALITY_EVALUATE_ON_BUILD:'1',VERCEL:'1',VERCEL_ENV:'production'}),/plan_hash/);
+ await assert.rejects(evaluateContentInBuild({LYRICA_CONTENT_QUALITY_EVALUATE_ON_BUILD:'1',VERCEL:'1',VERCEL_ENV:'preview'}),/production_build/);
+ await assert.rejects(evaluateContentInBuild({LYRICA_CONTENT_QUALITY_EVALUATE_ON_BUILD:'1',VERCEL:'1',VERCEL_ENV:'production'}),/plan_hash/);
 });
 test('prior uncertain attempts remain inside the same authorized budget',async t=>{
  const directory=await fixture(t);

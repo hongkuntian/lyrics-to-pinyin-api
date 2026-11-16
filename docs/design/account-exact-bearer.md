@@ -18,7 +18,7 @@ Account sign-in, sign-out and deletion are ordinary release functionality. They 
 
 The unconditional catalog preflight refuses deletion with `account_data_cleanup_required` (503) whenever `listening_v2` exists, including empty or partial schema, or the presence check cannot establish absence. It runs before external Apple revocation and again inside the scrub transaction. This is a truthful fail-closed stopgap, not completed V2 erasure. No output guard or external-object cleanup identifier may be deleted, reset or silently abandoned.
 
-`db/036-account-data-privacy.sql` maintains only the catalog-checked optional V1 `SELECT(user_id)` repair for `lyra_account_v1`. It runs on normal upgrades and late-role provisioning; historical feature migrations remain unchanged and outside active replay. See [initial release scope](../INITIAL_RELEASE_SCOPE.md).
+`db/036-account-data-privacy.sql` maintains only the catalog-checked optional V1 `SELECT(user_id)` repair for `lyrica_account_v1`. It runs on normal upgrades and late-role provisioning; historical feature migrations remain unchanged and outside active replay. See [initial release scope](../INITIAL_RELEASE_SCOPE.md).
 
 ## Verification
 

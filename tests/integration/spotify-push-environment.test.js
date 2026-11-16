@@ -16,10 +16,10 @@ async function personalFixture(t){
 }
 
 test('Spotify APNs destination is a strict server enum with production default and no caller selector',()=>{
- const env={LYRA_SPOTIFY_CLIENT_ID:'a'.repeat(32),LYRA_SPOTIFY_RATE_BUCKET:'fixture',VERCEL_ENV:'production',LYRA_SPOTIFY_VAULT_KEYRING:JSON.stringify({active:'one',keys:{one:Buffer.alloc(32,1).toString('base64')}})};
+ const env={LYRICA_SPOTIFY_CLIENT_ID:'a'.repeat(32),LYRICA_SPOTIFY_RATE_BUCKET:'fixture',VERCEL_ENV:'production',LYRICA_SPOTIFY_VAULT_KEYRING:JSON.stringify({active:'one',keys:{one:Buffer.alloc(32,1).toString('base64')}})};
  assert.equal(spotifyConfiguration(env).apnsEnvironment,'production');
- assert.equal(spotifyConfiguration({...env,LYRA_SPOTIFY_APNS_ENVIRONMENT:'development'}).apnsEnvironment,'development');
- for(const value of ['sandbox','preview','',null])assert.throws(()=>spotifyConfiguration({...env,LYRA_SPOTIFY_APNS_ENVIRONMENT:value}),{code:'spotify_not_configured'});
+ assert.equal(spotifyConfiguration({...env,LYRICA_SPOTIFY_APNS_ENVIRONMENT:'development'}).apnsEnvironment,'development');
+ for(const value of ['sandbox','preview','',null])assert.throws(()=>spotifyConfiguration({...env,LYRICA_SPOTIFY_APNS_ENVIRONMENT:value}),{code:'spotify_not_configured'});
  assert.throws(()=>validateSpotifyInput({version:1,action:'connection.enroll',enrollmentID:randomUUID(),refreshToken:'fixture',scopeRawValue:49152,apnsEnvironment:'development'}),{code:'invalid_request'});
 });
 

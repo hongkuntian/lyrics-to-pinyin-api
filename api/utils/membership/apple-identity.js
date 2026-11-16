@@ -34,11 +34,11 @@ export function openToken(value,key,subjectHash) {
 export class AppleIdentityService {
   constructor({env=process.env,fetchFn=fetch,now=Date.now}={}){this.env=env;this.fetch=fetchFn;this.now=now;this.cached=null;}
   configuration(bundleID) {
-    const env=this.env,key=Buffer.from(env.LYRA_ACCOUNT_ENCRYPTION_KEY??'','base64');
-    if(!/^[A-Z0-9]{10}$/.test(env.LYRA_APP_ID_PREFIX??'')||!/^[A-Z0-9]{10}$/.test(env.LYRA_SIGN_IN_APPLE_KEY_ID??'')||
-      !env.LYRA_SIGN_IN_APPLE_PRIVATE_KEY||key.length!==32||!(env.LYRA_APP_BUNDLE_IDS??'').split(',').includes(bundleID))
+    const env=this.env,key=Buffer.from(env.LYRICA_ACCOUNT_ENCRYPTION_KEY??'','base64');
+    if(!/^[A-Z0-9]{10}$/.test(env.LYRICA_APP_ID_PREFIX??'')||!/^[A-Z0-9]{10}$/.test(env.LYRICA_SIGN_IN_APPLE_KEY_ID??'')||
+      !env.LYRICA_SIGN_IN_APPLE_PRIVATE_KEY||key.length!==32||!(env.LYRICA_APP_BUNDLE_IDS??'').split(',').includes(bundleID))
       throw new LibraryError('apple_sign_in_unavailable',503);
-    return {key,team:env.LYRA_APP_ID_PREFIX,keyID:env.LYRA_SIGN_IN_APPLE_KEY_ID,privateKey:env.LYRA_SIGN_IN_APPLE_PRIVATE_KEY};
+    return {key,team:env.LYRICA_APP_ID_PREFIX,keyID:env.LYRICA_SIGN_IN_APPLE_KEY_ID,privateKey:env.LYRICA_SIGN_IN_APPLE_PRIVATE_KEY};
   }
   clientSecret(bundleID) {
     const config=this.configuration(bundleID),now=Math.floor(this.now()/1000);

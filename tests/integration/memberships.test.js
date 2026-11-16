@@ -23,7 +23,7 @@ test('free accounts cannot generate; there is no starter grant',async t=>{
   await assert.rejects(db.transaction(tx=>reserveMemberUsage(tx,'reader-b',randomUUID(),'study')),e=>e.code==='sign_in_required');
   assert.equal(Number((await db.query('SELECT count(*) AS n FROM membership_grants')).rows[0].n),0);
 });
-const transaction=token=>({originalID:'1000',transactionID:'1001',productID:'com.hongkuntian.Lyra.pro.annual',
+const transaction=token=>({originalID:'1000',transactionID:'1001',productID:'com.hongkuntian.Lyrica.pro.annual',
   tier:'pro',environment:'Production',appAccountToken:token,starts:new Date(Date.now()-86400000),expires:new Date(Date.now()+300*86400000),signedAt:new Date(),revoked:false});
 test('reservations enforce each allowance; repeat operations and failed work never double debit',async t=>{
   const {db,member,appToken}=await fixture(t);await member.recordTransaction('reader-a',transaction(appToken));
@@ -109,7 +109,7 @@ test('one live preview binds a recording and activity, expires and caps attempte
 test('paid relay access follows expiry and the project budget while preserving beta compatibility',async t=>{
   const {db,member,appToken}=await fixture(t),value=transaction(appToken),input={activityID:'a',state:{recordingID:'r'}};
   await db.query('UPDATE membership_settings SET live_enabled=true,relay_monthly_limit=1');
-  await member.recordTransaction('reader-a',{...value,productID:'com.hongkuntian.Lyra.pro.monthly'});
+  await member.recordTransaction('reader-a',{...value,productID:'com.hongkuntian.Lyrica.pro.monthly'});
   await admitMemberRelay(db,'reader-a',input);
   await assert.rejects(admitMemberRelay(db,'reader-a',input),e=>e.code==='live_lyrics_budget_exhausted');
   await admitMemberRelay(db,'reader-b',input);

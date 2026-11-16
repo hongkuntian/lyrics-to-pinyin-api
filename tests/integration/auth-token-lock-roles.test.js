@@ -49,7 +49,7 @@ async function database(t){
  const db=new PGlite();t.after(()=>db.close());return db;
 }
 async function runtime(db){
- await db.exec('CREATE ROLE lyra_runtime_v1 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS');
+ await db.exec('CREATE ROLE lyrica_runtime_v1 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS');
 }
 async function baseline(t,{role=true}={}){
  const db=await database(t);
@@ -72,10 +72,10 @@ async function baseline(t,{role=true}={}){
 async function observedSelect(db){
  // The only baseline addition to real migration grants is the measured
  // token SELECT plus schema USAGE. Never add token UPDATE/INSERT/DELETE.
- await db.exec('GRANT USAGE ON SCHEMA public TO lyra_runtime_v1; GRANT SELECT ON public.library_tokens TO lyra_runtime_v1');
+ await db.exec('GRANT USAGE ON SCHEMA public TO lyrica_runtime_v1; GRANT SELECT ON public.library_tokens TO lyrica_runtime_v1');
 }
 async function asRuntime(db,fn){
- await db.exec('SET ROLE lyra_runtime_v1');
+ await db.exec('SET ROLE lyrica_runtime_v1');
  try{return await fn();}finally{await db.exec('RESET ROLE');}
 }
 const tokenState=async db=>(await db.query(`SELECT digest,user_id,revoked,
@@ -84,21 +84,21 @@ const tupleState=async db=>(await db.query('SELECT digest,ctid::text AS ctid,xmi
 const receipts=async db=>(await db.query('SELECT name,sha256,applied_at::text AS applied_at FROM public.library_schema_migrations ORDER BY name')).rows;
 async function tokenPrivileges(db){
  return (await db.query(`SELECT
-  has_table_privilege('lyra_runtime_v1','public.library_tokens','SELECT') AS token_select,
-  has_table_privilege('lyra_runtime_v1','public.library_tokens','UPDATE') AS table_update,
-  has_any_column_privilege('lyra_runtime_v1','public.library_tokens','UPDATE') AS any_update,
-  has_table_privilege('lyra_runtime_v1','public.library_tokens','INSERT') AS token_insert,
-  has_table_privilege('lyra_runtime_v1','public.library_tokens','DELETE') AS token_delete,
-  has_table_privilege('lyra_runtime_v1','public.library_tokens','TRUNCATE') AS token_truncate,
-  has_schema_privilege('lyra_runtime_v1','public','CREATE') AS schema_create`)).rows[0];
+  has_table_privilege('lyrica_runtime_v1','public.library_tokens','SELECT') AS token_select,
+  has_table_privilege('lyrica_runtime_v1','public.library_tokens','UPDATE') AS table_update,
+  has_any_column_privilege('lyrica_runtime_v1','public.library_tokens','UPDATE') AS any_update,
+  has_table_privilege('lyrica_runtime_v1','public.library_tokens','INSERT') AS token_insert,
+  has_table_privilege('lyrica_runtime_v1','public.library_tokens','DELETE') AS token_delete,
+  has_table_privilege('lyrica_runtime_v1','public.library_tokens','TRUNCATE') AS token_truncate,
+  has_schema_privilege('lyrica_runtime_v1','public','CREATE') AS schema_create`)).rows[0];
 }
 async function assertLeastPrivilege(db){
  assert.deepEqual(await tokenPrivileges(db),{token_select:true,table_update:false,any_update:true,
   token_insert:false,token_delete:false,token_truncate:false,schema_create:false});
  for(const field of existingFields)for(const action of ['UPDATE','INSERT'])assert.equal((await db.query(
-  "SELECT has_column_privilege('lyra_runtime_v1','public.library_tokens',$1,$2) AS allowed",[field,action])).rows[0].allowed,false,`${field}:${action}`);
- assert.equal((await db.query("SELECT has_column_privilege('lyra_runtime_v1','public.library_tokens',$1,'UPDATE') AS allowed",[anchor])).rows[0].allowed,true);
- assert.equal((await db.query("SELECT rolcanlogin FROM pg_roles WHERE rolname='lyra_runtime_v1'")).rows[0].rolcanlogin,false);
+  "SELECT has_column_privilege('lyrica_runtime_v1','public.library_tokens',$1,$2) AS allowed",[field,action])).rows[0].allowed,false,`${field}:${action}`);
+ assert.equal((await db.query("SELECT has_column_privilege('lyrica_runtime_v1','public.library_tokens',$1,'UPDATE') AS allowed",[anchor])).rows[0].allowed,true);
+ assert.equal((await db.query("SELECT rolcanlogin FROM pg_roles WHERE rolname='lyrica_runtime_v1'")).rows[0].rolcanlogin,false);
 }
 async function privilegeSnapshot(db){
  return (await db.query(`SELECT c.oid::regclass::text AS relation,c.relacl::text AS table_acl,
@@ -123,7 +123,7 @@ test('minimal observed-role fixture reproduces 42501 before 032 and admits real 
  assert.deepEqual(await migrateLibrary(adapt(db)),[name]);
  await assertLeastPrivilege(db);
  await db.transaction(async tx=>{
-  await tx.exec('SET LOCAL ROLE lyra_runtime_v1');
+  await tx.exec('SET LOCAL ROLE lyrica_runtime_v1');
   assert.equal((await tx.query('SELECT digest FROM public.library_tokens WHERE false FOR UPDATE')).rows.length,0);
   assert.deepEqual((await tx.query('SELECT digest FROM public.library_tokens WHERE digest=$1 FOR UPDATE',['lock-token'])).rows,[{digest:'lock-token'}]);
  });
@@ -214,7 +214,7 @@ test('role absence creates no login; actual grant replay repairs late provisioni
  const roles=(await db.query('SELECT rolname,rolcanlogin FROM pg_roles ORDER BY rolname')).rows;
  assert.deepEqual(await migrateLibrary(adapt(db)),[name]);
  assert.deepEqual((await db.query('SELECT rolname,rolcanlogin FROM pg_roles ORDER BY rolname')).rows,roles);
- assert.equal((await db.query("SELECT count(*)::integer AS n FROM pg_roles WHERE rolname='lyra_runtime_v1'")).rows[0].n,0);
+ assert.equal((await db.query("SELECT count(*)::integer AS n FROM pg_roles WHERE rolname='lyrica_runtime_v1'")).rows[0].n,0);
  const prior=await receipts(db),tuples=await tupleState(db);
  await runtime(db);await observedSelect(db);
  await asRuntime(db,()=>denied(db.query('SELECT digest FROM public.library_tokens WHERE false FOR UPDATE')));

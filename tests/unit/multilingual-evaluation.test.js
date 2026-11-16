@@ -79,7 +79,7 @@ test('line mode asks for every word of the selected line once per target, with a
  await assert.rejects(()=>evaluateLines({apiKey:'fixture',corpus:expansion,explainLine:async()=>{throw new Error('secret');},log:s=>logs.push(JSON.parse(s))}),/incomplete/);
  assert.ok(logs.every(l=>!JSON.stringify(l).includes('secret')));
  await assert.rejects(()=>evaluateLines({corpus:expansion}),/provider_key/);await assert.rejects(()=>evaluateLines({apiKey:'fixture',corpus:expansion,compareSingles:9}),/comparison/);
- await assert.rejects(()=>runEvaluation({OPENAI_API_KEY:'fixture',LYRA_EVALUATION_MODE:'other'}),/invalid_evaluation_mode/);
+ await assert.rejects(()=>runEvaluation({OPENAI_API_KEY:'fixture',LYRICA_EVALUATION_MODE:'other'}),/invalid_evaluation_mode/);
 });
 
 test('named targets review Traditional Chinese, including Chinese songs, without changing the default run',async()=>{

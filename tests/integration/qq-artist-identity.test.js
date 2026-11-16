@@ -15,7 +15,7 @@ test('QQ identity proof survives memory, Redis and durable reopen without rebind
  fixture.legacyOnly();
  const options={getAvailableAPIsFn:()=>[fixture.api],resolveArtistIdentitiesFn:fixture.resolve,getCachedFn:async(_,key)=>disk.get(key),
   setCachedFn:async(_,key,value)=>disk.set(key,structuredClone(value)),waitUntilFn:promise=>pending.push(promise)};
- const source=yrcService(options),call=async(service,body)=>{const response=createMockRes();await service(createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),response);return response;};
+ const source=yrcService(options),call=async(service,body)=>{const response=createMockRes();await service(createMockReq({body,headers:{authorization:'Bearer lyrica_s_fixture'}}),response);return response;};
  const body={recording:fixture.recording,options:{lyric_sources_version:2}},first=await call(source.service,body);
  assert.equal(first.statusCode,200,JSON.stringify(first.body));
  const candidate=spotifyMatchEvidence(first.body);assert.equal(candidate.source,'qq');assert.ok(candidate.artistAliasEvidence);

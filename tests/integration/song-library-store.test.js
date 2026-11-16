@@ -9,7 +9,7 @@ async function fixture(t) {
   const f=await libraryDB();t.after(()=>f.db.close());await f.store.saveDocument(source);return f;
 }
 test('stored lyrics and translations survive a database close and reopen',async t=> {
-  const path=await mkdtemp(join(tmpdir(),'lyra-library-'));t.after(()=>rm(path,{recursive:true,force:true}));
+  const path=await mkdtemp(join(tmpdir(),'lyrica-library-'));t.after(()=>rm(path,{recursive:true,force:true}));
   let f=await libraryDB(path);await f.store.saveDocument(source);
   const job=await f.store.reserve(reservation);assert.equal(job.kind,'created');
   assert.ok(await f.store.claim(job.job.id));

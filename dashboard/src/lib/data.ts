@@ -21,7 +21,7 @@ export async function read<T>(
   }
   if (!pool) {
     pool = new pg.Pool({
-      connectionString: process.env.LYRA_DASHBOARD_DATABASE_URL,
+      connectionString: process.env.LYRICA_DASHBOARD_DATABASE_URL,
       max: 2,
       idleTimeoutMillis: 5000,
       connectionTimeoutMillis: 5000,
@@ -34,7 +34,7 @@ export async function read<T>(
   try {
     await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
     const { rows } = await client.query("SELECT current_user AS role");
-    if (rows[0]?.role !== "lyra_dashboard_reader")
+    if (rows[0]?.role !== "lyrica_dashboard_reader")
       throw new Error("dashboard_role_required");
     const queries = new DashboardQueries({
       query: async (text, values) => {

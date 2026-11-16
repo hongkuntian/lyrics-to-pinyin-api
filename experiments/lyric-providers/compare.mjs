@@ -66,7 +66,7 @@ export async function probe(provider, track, {env = {}, fetchFn = fetch,
   };
   const json = async (address, headers = {}) => {
     const r = await transport(address, {headers: {'User-Agent':
-      'LyraProviderExperiment/1.0 (https://github.com/hongkuntian/lyrics-to-pinyin-api)', ...headers}});
+      'LyricaProviderExperiment/1.0 (https://github.com/hongkuntian/lyrics-to-pinyin-api)', ...headers}});
     if (!r.ok) throw Object.assign(new Error(), {status: r.status});
     return r.json();
   };

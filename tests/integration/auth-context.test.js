@@ -9,11 +9,11 @@ import {AuthContextError} from '../../api/utils/app-auth/errors.js';
 
 // One embedded connection, actual auth DDL, no concurrent PostgreSQL claim.
 const environment='preview:auth-locks-r1';
-const bearer='lyra_s_'+'a'.repeat(43),replacement='lyra_s_'+'b'.repeat(43);
+const bearer='lyrica_s_'+'a'.repeat(43),replacement='lyrica_s_'+'b'.repeat(43);
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const credential=hash('original-credential'),otherCredential=hash('other-credential');
 const key=Buffer.alloc(32,7).toString('base64'),otherKey=Buffer.alloc(32,8).toString('base64');
-const policy=()=>({audience:'lyra-preview',environment:'development',prefix:'ABCDEFGHIJ',bundles:['com.lyrica.app']});
+const policy=()=>({audience:'lyrica-preview',environment:'development',prefix:'ABCDEFGHIJ',bundles:['com.lyrica.app']});
 let sql,trace,authenticateSQL,authCalls;
 before(async()=>{
  sql=new PGlite();
@@ -34,9 +34,9 @@ beforeEach(async()=>{
   VALUES($1,'guest',clock_timestamp()+interval '90 days'),($2,'aaa',NULL)`,[credential,otherCredential]);
  for(const [id,owner] of [[key,'guest'],[otherKey,'aaa']])await sql.query(`INSERT INTO public.app_attest_keys
   (key_id,user_id,audience,bundle_id,environment,public_key,receipt)
-  VALUES($1,$2,'lyra-preview','com.lyrica.app','development','fixture-public-key','fixture-receipt')`,[id,owner]);
+  VALUES($1,$2,'lyrica-preview','com.lyrica.app','development','fixture-public-key','fixture-receipt')`,[id,owner]);
  await sql.query(`INSERT INTO public.app_auth_sessions(digest,key_id,credential_digest,audience,expires_at)
-  VALUES($1,$2,$3,'lyra-preview',clock_timestamp()+interval '15 minutes')`,[hash(bearer),key,credential]);
+  VALUES($1,$2,$3,'lyrica-preview',clock_timestamp()+interval '15 minutes')`,[hash(bearer),key,credential]);
  trace=[];authCalls=[];
 });
 function store(p=policy()){
@@ -80,7 +80,7 @@ test('bearer preparation binds actual AppAuthStore evidence, survives receipt sp
   assert.ok(Object.isFrozen(scope));assert.ok(Object.isFrozen(discovery));
   for(const list of ['userIDs','credentialDigests','keyIDs'])assert.ok(Object.isFrozen(discovery[list]));
   assert.equal(scope.principalID,'guest');assert.equal(scope.credentialDigest,credential);
-  assert.equal(scope.bundleID,'com.lyrica.app');assert.equal(scope.audience,'lyra-preview');
+  assert.equal(scope.bundleID,'com.lyrica.app');assert.equal(scope.audience,'lyrica-preview');
   assert.equal(scope.attestEnvironment,'development');assert.equal(scope.accessKind,'guest');
   assert.equal(scope.notAfterMS,scope.sessionExpiresAtMS);
   assert.ok(scope.credentialExpiresAtMS>scope.notAfterMS);
@@ -93,8 +93,8 @@ test('bearer preparation binds actual AppAuthStore evidence, survives receipt sp
 
 test('malformed bearer fails before authentication and storage; no credential/header fallback',async()=>{
  const c=context();
- for(const input of [null,{},Buffer.from(bearer),'Bearer '+bearer,'lyra_g_'+'a'.repeat(43),'lyra_s_',
-  bearer+'\n',bearer+' ',bearer+'/', 'lyra_s_'+'a'.repeat(250)])await rejects(c.prepare(input));
+ for(const input of [null,{},Buffer.from(bearer),'Bearer '+bearer,'lyrica_g_'+'a'.repeat(43),'lyrica_s_',
+  bearer+'\n',bearer+' ',bearer+'/', 'lyrica_s_'+'a'.repeat(250)])await rejects(c.prepare(input));
  assert.deepEqual(authCalls,[]);assert.deepEqual(trace,[]);
 });
 
@@ -133,15 +133,15 @@ test('forged, cross-factory or identity-altered authentication cannot allocate l
 test('configured policy is copied, bounded and deployment fenced',async()=>{
  const p=policy(),c=context({authStore:store(p)}),a=await c.prepare(bearer);
  p.bundles[0]='other';p.audience='changed';p.environment='production';
- await run(c,a,(scope)=>assert.equal(scope.audience,'lyra-preview'));
+ await run(c,a,(scope)=>assert.equal(scope.audience,'lyrica-preview'));
  for(const options of [{environment:'preview'},{environment:'production'},
   {authStore:store({...policy(),environment:'production'})},
-  {authStore:store({...policy(),audience:'lyra-production'})},
+  {authStore:store({...policy(),audience:'lyrica-production'})},
   {authStore:store({...policy(),prefix:'bad'})},
   {authStore:store({...policy(),bundles:['']})},
   {authStore:store({...policy(),bundles:Array(33).fill('a')})}])
   assert.throws(()=>context(options),{code:'unavailable'});
- const production={...policy(),audience:'lyra-production',environment:'production'};
+ const production={...policy(),audience:'lyrica-production',environment:'production'};
  assert.ok(context({environment:'production',authStore:store(production)}));
 });
 
@@ -240,7 +240,7 @@ test('deleted old bearer cannot select a renewed session by credential/key; new 
  await sql.transaction(async tx=>{
   await tx.query('DELETE FROM public.app_auth_sessions WHERE key_id=$1',[key]);
   await tx.query(`INSERT INTO public.app_auth_sessions(digest,key_id,credential_digest,audience,expires_at)
-   VALUES($1,$2,$3,'lyra-preview',clock_timestamp()+interval '15 minutes')`,[hash(replacement),key,credential]);
+   VALUES($1,$2,$3,'lyrica-preview',clock_timestamp()+interval '15 minutes')`,[hash(replacement),key,credential]);
  });
  await rejects(run(c,old,()=>assert.fail()));
  const fresh=await c.prepare(replacement);

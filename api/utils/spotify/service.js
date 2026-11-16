@@ -160,7 +160,7 @@ export class SpotifyService {
   const result=await this.acquire(input.recording,user);if(result.status!==200||!result.document)fail('spotify_synced_lyrics_required');
   const binding=validateDocument(result.document,input.recording);if(!binding.synchronizationEligible)fail('spotify_synced_lyrics_required');
   await this.admit(c,{activityID:input.activityID,state:{recordingID:input.recording.item_id}});
-  const recipe=validateRecipe(input.recipe),resolved=await this.resolveRecipe(c,recipe,result.document),capability='lyra_w_'+randomBytes(32).toString('base64url');
+  const recipe=validateRecipe(input.recipe),resolved=await this.resolveRecipe(c,recipe,result.document),capability='lyrica_w_'+randomBytes(32).toString('base64url');
   await this.store.mutate(c.id,(current,put)=>{
    if(current.epoch!==input.connectionEpoch||current.status!=='connected')fail('spotify_connection_replaced');
    if(current.consumers[input.sessionID])return;

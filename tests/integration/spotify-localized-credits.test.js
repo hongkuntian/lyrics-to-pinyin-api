@@ -103,7 +103,7 @@ test('the reported Spotify duet keeps NetEase measured timing through acquisitio
   const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(service),
     authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
   const call=async body=>{
-    const res=createMockRes();await handler(createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res);return res;
+    const res=createMockRes();await handler(createMockReq({body,headers:{authorization:'Bearer lyrica_s_fixture'}}),res);return res;
   };
   const first=await call({action:'lyrics',recording:qianLiRecording,refresh:true});
   assert.equal(first.statusCode,200);
@@ -209,7 +209,7 @@ test('authenticated library route stores and reopens localized Spotify lyrics un
   const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(acquisition),
     authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
   const call=async(body)=>{
-    const res=createMockRes();await handler(createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res);return res;
+    const res=createMockRes();await handler(createMockReq({body,headers:{authorization:'Bearer lyrica_s_fixture'}}),res);return res;
   };
   const first=await call({action:'lyrics',recording,refresh:true});
   assert.equal(first.statusCode,200);assert.equal(first.body.state,'ready');
@@ -275,7 +275,7 @@ for(const [label,recording,song,profiles] of [
   const acquisition=createMusicRomanizeService({resolveArtistDiscoveryFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[api],resolveArtistIdentitiesFn:resolverFor(recording,song,profiles),logger:{info(){},error(){}}});
   const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(acquisition),
    authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
-  const call=async body=>{const req=createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res=createMockRes();await handler(req,res);return res;};
+  const call=async body=>{const req=createMockReq({body,headers:{authorization:'Bearer lyrica_s_fixture'}}),res=createMockRes();await handler(req,res);return res;};
   const first=await call({action:'lyrics',recording,refresh:true});assert.equal(first.statusCode,200);const doc=first.body.document;
   assert.equal(doc.recordingBinding.source.provider,'netease');assert.equal(doc.recordingBinding.source.itemID,String(song.id));
   assert.ok(doc.response.lines.every(l=>l.vocalTiming?.segments.length===2));
@@ -308,7 +308,7 @@ test('an unavailable identity resolver preserves readable fallback and cannot do
  fallback.getLyrics=async()=>({source:'lrclib',songId:900,lines:[{text:'一起听',timestamp:12},{text:'慢慢唱',timestamp:18}]});
  const acquisition=createMusicRomanizeService({resolveArtistDiscoveryFn:async()=>null,redis:null,getAvailableAPIsFn:()=>[api,fallback],resolveArtistIdentitiesFn:async(...args)=>available?resolve(...args):[],logger:{info(){},error(){}}});
  const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(acquisition),authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
- const call=async()=>{const res=createMockRes();await handler(createMockReq({body:{action:'lyrics',recording:zhangRecording,refresh:true},headers:{authorization:'Bearer lyra_s_fixture'}}),res);assert.equal(res.statusCode,200);return res.body.document;};
+ const call=async()=>{const res=createMockRes();await handler(createMockReq({body:{action:'lyrics',recording:zhangRecording,refresh:true},headers:{authorization:'Bearer lyrica_s_fixture'}}),res);assert.equal(res.statusCode,200);return res.body.document;};
  const first=await call();assert.ok(first.response.lines.every(l=>l.vocalTiming));available=false;
  const retained=await call();assert.equal(retained.id,first.id);assert.deepEqual(retained.response.lines,first.response.lines);
 });

@@ -14,7 +14,7 @@ import {digest} from '../../api/utils/song-library/store.js';
 import {activateMembership} from '../helpers/membership.js';
 import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.js';
 const policy={audience:'test',environment:'production',prefix:'9ESZX68J8U',bundles:['com.test.Lyrica']};
-const bundleID=policy.bundles[0],credential='lyra_g_'+'a'.repeat(43),keyID=Buffer.alloc(32,3).toString('base64');
+const bundleID=policy.bundles[0],credential='lyrica_g_'+'a'.repeat(43),keyID=Buffer.alloc(32,3).toString('base64');
 async function fixture(t,options={}){
   const f=await libraryDB();t.after(()=>f.db.close());await f.db.query('UPDATE membership_settings SET public_access_enabled=true');
   await f.db.exec(await readFile(new URL('../../db/032-auth-token-row-locks.sql',import.meta.url),'utf8'));
@@ -57,7 +57,7 @@ test('guest enrollment is attested, bounded and retryable without issuing a sess
   const f=await fixture(t),g=await guest(f);assert.deepEqual(await f.accounts.guest(g.body),{registered:true});
   const current=await session(f,g);assert.equal((await new MembershipStore(f.store.db).snapshot(current.user.id)).account.kind,'guest');
   await assert.rejects(f.auth.authenticate(g.token),{code:'session_expired'});
-  await assert.rejects(f.accounts.guest({...g.body,credential:'lyra_g_'+'b'.repeat(43)}),{code:'challenge_expired'});
+  await assert.rejects(f.accounts.guest({...g.body,credential:'lyrica_g_'+'b'.repeat(43)}),{code:'challenge_expired'});
   await f.db.query('UPDATE library_tokens SET expires_at=now() WHERE digest=$1',[digest(g.token)]);
   await assert.rejects(f.auth.authenticate(current.session),{code:'session_expired'});
 });
@@ -74,7 +74,7 @@ test('Apple login migrates only this device and converges on the same account an
   const appleSession=await session(f,{...g,token:first.credential},2);
   const members=new MembershipStore(f.store.db);await activateMembership(f.db,first.userID);const snapshot=await members.snapshot(first.userID);
   assert.equal(snapshot.allowances.translation.remaining,20);
-  const other=await guest(f,Buffer.alloc(32,4).toString('base64'),'lyra_g_'+'b'.repeat(43));
+  const other=await guest(f,Buffer.alloc(32,4).toString('base64'),'lyrica_g_'+'b'.repeat(43));
   const second=await login(f,(await session(f,other)).user);
   assert.equal(first.userID,second.userID);assert.equal((await members.snapshot(second.userID)).account.appAccountToken,snapshot.account.appAccountToken);
   assert.equal((await f.auth.authenticate(appleSession.session)).id,first.userID);
@@ -91,7 +91,7 @@ test('account deletion requires matching fresh Apple proof, revokes devices and 
   assert.deepEqual(await f.accounts.delete(signed.user,body,await authentication(f,signed.user)),{deleted:true});
   await assert.rejects(f.auth.authenticate(signed.session),{code:'session_expired'});
   const retained=(await f.db.query('SELECT * FROM account_identities')).rows[0];assert.equal(retained.refresh_token_encrypted,null);assert.ok(retained.deleted_at);
-  const returning=await guest(f,Buffer.alloc(32,5).toString('base64'),'lyra_g_'+'c'.repeat(43));
+  const returning=await guest(f,Buffer.alloc(32,5).toString('base64'),'lyrica_g_'+'c'.repeat(43));
   const result=await login(f,(await session(f,returning)).user);assert.equal(result.userID,signed.user.id);
   assert.equal((await members.snapshot(result.userID)).libraryTranslations.used,1);
 });
@@ -107,21 +107,21 @@ test('the separate account login can enroll and sign in but cannot change genera
   // This partial-schema fixture must install the guarded anchor before late
   // role provisioning; replay deliberately refuses an unmigrated database.
   await f.db.exec(await readFile(new URL('../../db/032-auth-token-row-locks.sql',import.meta.url),'utf8'));
-  await f.db.query('CREATE ROLE lyra_account_v1');
+  await f.db.query('CREATE ROLE lyrica_account_v1');
   await replayMembershipRoleGrants(f.db);
   await replayMembershipRoleGrants(f.db); // Late provisioning is idempotent.
-  await f.db.query('SET ROLE lyra_account_v1');
+  await f.db.query('SET ROLE lyrica_account_v1');
   const g=await guest(f);
   await assert.rejects(f.db.query("UPDATE library_users SET unlimited_generation=true"),e=>e.code==='42501');
   await assert.rejects(f.db.query("UPDATE membership_settings SET purchases_enabled=true"),e=>e.code==='42501');
   await assert.rejects(f.db.query("UPDATE library_settings SET enabled=true"),e=>e.code==='42501');
   await f.db.query('RESET ROLE');
   const signed=await session(f,g);
-  await f.db.query('SET ROLE lyra_account_v1');
-  const apple=await login(f,signed.user);assert.match(apple.credential,/^lyra_a_/);
+  await f.db.query('SET ROLE lyrica_account_v1');
+  const apple=await login(f,signed.user);assert.match(apple.credential,/^lyrica_a_/);
   await f.db.query('RESET ROLE');
   const active=await session(f,{...g,token:apple.credential},2);
-  await f.db.query('SET ROLE lyra_account_v1');
+  await f.db.query('SET ROLE lyrica_account_v1');
   const {challenge}=await f.accounts.challenge({purpose:'delete',bundleID},active.user);
   assert.deepEqual(await f.accounts.delete(active.user,{bundleID,challenge,identityToken:'i',authorizationCode:'c'},await authentication(f,active.user)),{deleted:true});
   await f.db.query('RESET ROLE');
@@ -185,7 +185,7 @@ test('constructors perform no SQL and schema-absent account transitions never qu
  const {g,current}=await signedAccount(f);
  const input=await appleInput(f,current.user,'delete');
  assert.deepEqual(await f.accounts.delete(current.user,input,await authentication(f,current.user)),{deleted:true});
- const other=await guest(f,Buffer.alloc(32,9).toString('base64'),'lyra_g_'+'z'.repeat(43));
+ const other=await guest(f,Buffer.alloc(32,9).toString('base64'),'lyrica_g_'+'z'.repeat(43));
  const active=await session(f,other);
  assert.deepEqual(await f.accounts.signOut(active.user,await authentication(f,active.user)),{signedOut:true});
  assert.equal(trace.some(row=>/privacy_personas|listening_v2_|sessions_privacy_epoch|controller_privacy_epoch|private_transfer_from_generation/.test(row.sql??'')),false);
@@ -252,7 +252,7 @@ for(const operation of ['signIn','delete'])test(operation+' wins with the exact 
  await assert.rejects(f.auth.authenticate(current.session),{code:'session_expired'});
  assert.equal((await f.db.query('SELECT revoked FROM library_tokens WHERE digest=$1',[current.user.credentialDigest])).rows[0].revoked,true);
  if(operation==='signIn'){
-  assert.match(result.credential,/^lyra_a_[A-Za-z0-9_-]{43}$/);
+  assert.match(result.credential,/^lyrica_a_[A-Za-z0-9_-]{43}$/);
   assert.equal((await f.db.query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[g.key])).rows[0].user_id,result.userID);
  }else assert.deepEqual(result,{deleted:true});
 });
@@ -407,7 +407,7 @@ test('HTTP prepares each exact bearer once and preserves V1 Apple, signOut and d
  const deleting=await appleInput(f,active.user,'delete');
  const removed=await request(active.session,{action:'delete',...deleting});
  assert.equal(removed.statusCode,200);assert.deepEqual(removed.body,{version:1,deleted:true});
- const other=await guest(f,Buffer.alloc(32,13).toString('base64'),'lyra_g_'+'q'.repeat(43)),out=await session(f,other);
+ const other=await guest(f,Buffer.alloc(32,13).toString('base64'),'lyrica_g_'+'q'.repeat(43)),out=await session(f,other);
  const signedOut=await request(out.session,{action:'signOut'});
  assert.equal(signedOut.statusCode,200);assert.deepEqual(signedOut.body,{version:1,signedOut:true});
  assert.deepEqual(preparedTokens,[current.session,active.session,out.session]);

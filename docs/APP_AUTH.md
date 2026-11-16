@@ -29,7 +29,7 @@ The session action sends a fresh challenge and base64 `assertion`. The server
 verifies the signature and App ID and advances the strictly increasing counter
 under a database lock. Consumed challenges and counter races cannot mint another
 session. The response contains `{version:1, token, expiresAt}`. The opaque
-`lyra_s_…` token expires in 15 minutes and is stored only as a digest server-side.
+`lyrica_s_…` token expires in 15 minutes and is stored only as a digest server-side.
 Issuing a new session retires previous sessions for that key.
 
 `/api/music-romanize`, `/api/romanize` and `/api/song-library` accept only these
@@ -66,12 +66,12 @@ Production requires these server variables:
 
 | Variable | Purpose |
 | --- | --- |
-| `LYRA_APP_AUTH_AUDIENCE` | `lyra-production` |
-| `LYRA_APP_ATTEST_ENVIRONMENT` | `production` |
-| `LYRA_APP_ID_PREFIX` | Actual App ID prefix from Apple Developer |
-| `LYRA_APP_BUNDLE_IDS` | Comma-separated exact bundle allowlist |
-| `LYRA_LIBRARY_DATABASE_URL` | Restricted runtime role |
-| `LYRA_LIBRARY_MIGRATE_ON_BUILD` | `0`; migrations are operator-only |
+| `LYRICA_APP_AUTH_AUDIENCE` | `lyrica-production` |
+| `LYRICA_APP_ATTEST_ENVIRONMENT` | `production` |
+| `LYRICA_APP_ID_PREFIX` | Actual App ID prefix from Apple Developer |
+| `LYRICA_APP_BUNDLE_IDS` | Comma-separated exact bundle allowlist |
+| `LYRICA_LIBRARY_DATABASE_URL` | Restricted runtime role |
+| `LYRICA_LIBRARY_MIGRATE_ON_BUILD` | `0`; migrations are operator-only |
 
 Apple Music, OpenAI, Redis, mail, cron and database credentials must be Sensitive,
 production-only Vercel variables. Preview/development receive no production keys,
@@ -81,7 +81,7 @@ hermetic tests inject fixtures explicitly; there is no runtime test bypass.
 The runtime role cannot create schema, rotate credentials, grant unlimited
 access, change budget caps or run migrations. Keep the owner connection outside
 Vercel. On the developer Mac, owner and restricted runtime configurations live
-in `~/.config/lyra/credentials/backend-admin/{migration,runtime}.json` with mode
+in `~/.config/lyrica/credentials/backend-admin/{migration,runtime}.json` with mode
 0600 inside a 0700 directory. MusicKit credentials stay in the separate private
 Apple Music credential directory. Never commit these files or print their values.
 
@@ -95,13 +95,13 @@ Run from this repository; `--database-config-file` reads the owner-only private
 JSON directly, avoiding secrets in command arguments, shell exports and logs:
 
 ```sh
-node scripts/song-library-admin.js usage --database-config-file ~/.config/lyra/credentials/backend-admin/migration.json
-node scripts/song-library-admin.js configure-emergency --daily-usd 5 --monthly-usd 50 --database-config-file ~/.config/lyra/credentials/backend-admin/migration.json
-node scripts/song-library-admin.js disable --database-config-file ~/.config/lyra/credentials/backend-admin/migration.json
-node scripts/song-library-admin.js disable-user --id USER_ID --database-config-file ~/.config/lyra/credentials/backend-admin/migration.json
-node scripts/song-library-admin.js revoke-sessions --id USER_ID --database-config-file ~/.config/lyra/credentials/backend-admin/migration.json
-node scripts/song-library-admin.js revoke-key --id BASE64_KEY_ID --database-config-file ~/.config/lyra/credentials/backend-admin/migration.json
-node scripts/song-library-admin.js user --id USER_ID --token-file /private/path/new-access.txt --database-config-file ~/.config/lyra/credentials/backend-admin/migration.json
+node scripts/song-library-admin.js usage --database-config-file ~/.config/lyrica/credentials/backend-admin/migration.json
+node scripts/song-library-admin.js configure-emergency --daily-usd 5 --monthly-usd 50 --database-config-file ~/.config/lyrica/credentials/backend-admin/migration.json
+node scripts/song-library-admin.js disable --database-config-file ~/.config/lyrica/credentials/backend-admin/migration.json
+node scripts/song-library-admin.js disable-user --id USER_ID --database-config-file ~/.config/lyrica/credentials/backend-admin/migration.json
+node scripts/song-library-admin.js revoke-sessions --id USER_ID --database-config-file ~/.config/lyrica/credentials/backend-admin/migration.json
+node scripts/song-library-admin.js revoke-key --id BASE64_KEY_ID --database-config-file ~/.config/lyrica/credentials/backend-admin/migration.json
+node scripts/song-library-admin.js user --id USER_ID --token-file /private/path/new-access.txt --database-config-file ~/.config/lyrica/credentials/backend-admin/migration.json
 ```
 
 Credential rotation preserves account usage and immediately invalidates sessions

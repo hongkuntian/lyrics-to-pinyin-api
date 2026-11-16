@@ -11,7 +11,7 @@ export function createLiveLyricsHandler({authStore,relay,env=process.env,send=cr
     res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','private, no-store');
     if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({version:1,code:'method_not_allowed'});}
     try {
-      const token=bearer(req);if(!token?.startsWith('lyra_s_'))throw new LibraryError('unauthorized',401);
+      const token=bearer(req);if(!token?.startsWith('lyrica_s_'))throw new LibraryError('unauthorized',401);
       if(!req.body||Buffer.byteLength(JSON.stringify(req.body))>8192)throw new LibraryError('invalid_request',400);
       const auth=authStore??new AppAuthStore(database()),user=await auth.authenticate(token);
       // The device cannot choose an APNs topic: use the identity proven during

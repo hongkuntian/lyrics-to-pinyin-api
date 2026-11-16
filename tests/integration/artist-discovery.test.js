@@ -44,7 +44,7 @@ test('the reported original-album Spotify recording discovers timed LRCLIB lyric
 test('source-bound aliases survive real library acquisition, immutable save and reopen',async t=>{
  const {db,store}=await libraryDB();t.after(()=>db.close());const f=fixture();
  const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(f.service),authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
- const request=async body=>{const res=createMockRes();await handler(createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res);return res;};
+ const request=async body=>{const res=createMockRes();await handler(createMockReq({body,headers:{authorization:'Bearer lyrica_s_fixture'}}),res);return res;};
  const first=await request({action:'lyrics',recording,refresh:true});assert.equal(first.statusCode,200);const doc=first.body.document;
  assert.equal(doc.response.song.id,source.id);assert.equal(doc.response.quality.synced,true);
  const reopened=await request({action:'lyrics',recording});assert.equal(reopened.statusCode,200);assert.equal(reopened.body.document.id,doc.id);

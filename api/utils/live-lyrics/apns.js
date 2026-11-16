@@ -2,7 +2,7 @@ import {createPrivateKey,sign} from 'node:crypto';
 import {connect} from 'node:http2';
 import {LibraryError} from '../song-library/store.js';
 
-const BUNDLES=new Set(['com.hongkuntian.musicromanization','com.hongkuntian.Lyra']);
+const BUNDLES=new Set(['com.hongkuntian.musicromanization','com.hongkuntian.Lyrica']);
 const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
 export function providerToken({teamID,keyID,privateKey},now=Date.now()) {
   const key=createPrivateKey(privateKey.replace(/\\n/g,'\n'));
@@ -12,7 +12,7 @@ export function providerToken({teamID,keyID,privateKey},now=Date.now()) {
 }
 
 export function apnsConfiguration(env=process.env) {
-  const config={teamID:env.LYRA_APNS_TEAM_ID,keyID:env.LYRA_APNS_KEY_ID,privateKey:env.LYRA_APNS_PRIVATE_KEY};
+  const config={teamID:env.LYRICA_APNS_TEAM_ID,keyID:env.LYRICA_APNS_KEY_ID,privateKey:env.LYRICA_APNS_PRIVATE_KEY};
   if(config.teamID!=='9ESZX68J8U'||!/^[A-Z0-9]{10}$/.test(config.keyID??'')||!config.privateKey)
     throw new LibraryError('push_not_configured',503);
   return config;

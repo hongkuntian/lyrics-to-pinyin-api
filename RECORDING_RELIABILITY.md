@@ -11,7 +11,7 @@ Romanization is selected from the fetched lyrics instead of the search labels, u
 - Optional request `catalog_id`: numeric Apple catalog song ID as a string.
 - Optional request `storefront`: lowercase two-letter country code, sourced from the MusicKit catalog URL.
 - After ordinary provider lookup fails, a bounded fallback looks up the same catalog ID in English and Traditional Chinese using Apple's public catalog lookup. At least one localization must match the caller's names and duration before an alternate localization can be tried. No user-supplied translations or fuzzy title guesses are accepted. This initial alias resolver covers English/Traditional Chinese; other language localizations can be added separately.
-- Alias matches retain the provider's original title/artist and add `metadata.recording_match` with `method: catalog_alias`, `catalog_id`, requested `artist`, `title`, and `duration`. Lyra validates this evidence against the request. Older clients ignore the additive field and may still reject localized names.
+- Alias matches retain the provider's original title/artist and add `metadata.recording_match` with `method: catalog_alias`, `catalog_id`, requested `artist`, `title`, and `duration`. Lyrica validates this evidence against the request. Older clients ignore the additive field and may still reject localized names.
 - Provider attempts retain individual deadlines, and all lookup rounds share a 16-second budget. Catalog lookup has a maximum 2.5-second budget; its failure does not turn an otherwise ordinary lookup into a server error. Cache keys include catalog identity, storefront and response version.
 - Bounded `lyrics_lookup` diagnostics record provider and result reason without lyric text or library contents.
 
@@ -23,7 +23,7 @@ Live local checks resolved Unbreakable Love through LRCLIB with English metadata
 
 Code checkpoint `dc99cd0` passed preview probes and was deployed to production at https://lyrics-to-pinyin-api.vercel.app. Both the older request without album metadata and the enriched catalog request return HTTP 200 with 33 timed lines and Mandarin pinyin. An incorrect 90-second duration remains rejected with 409; 晴天 returns 200 with 53 lines. The production error-log check returned no errors for the checked window.
 
-Lyra's physical-device acceptance test opened My Playlist #3 on T-Phone, selected Unbreakable Love, loaded timed lyrics, sought beyond one minute and resumed playback by tapping a lyric. The test passed, and its screenshot was inspected for pinyin. Lyra's full gate also passed all 23 unit and 7 UI smoke tests. Details and local evidence paths are recorded in the Lyra repository's `docs/RECORDING_RELIABILITY.md`.
+Lyrica's physical-device acceptance test opened My Playlist #3 on T-Phone, selected Unbreakable Love, loaded timed lyrics, sought beyond one minute and resumed playback by tapping a lyric. The test passed, and its screenshot was inspected for pinyin. Lyrica's full gate also passed all 23 unit and 7 UI smoke tests. Details and local evidence paths are recorded in the Lyrica repository's `docs/RECORDING_RELIABILITY.md`.
 # Reviewed lyric text exclusions
 
 Matching title, performer, album, and duration does not prove that a provider's
@@ -45,8 +45,8 @@ alter the fingerprint. Changed words require a new review to be excluded again.
 This is a bounded exclusion of verified bad provider data, not a general language
 classifier or a guarantee that every other provider transcription is accurate.
 
-Selection revisions must advance in both the backend and Lyra when such a repair
+Selection revisions must advance in both the backend and Lyrica when such a repair
 would otherwise reuse cached bad lyrics. Existing app versions remain response
 compatible, but their previously cached results can live until the old expiry;
-updating Lyra invalidates those entries immediately. Tests use original synthetic
+updating Lyrica invalidates those entries immediately. Tests use original synthetic
 words and injected exclusions; live checks separately verify the reviewed hash.

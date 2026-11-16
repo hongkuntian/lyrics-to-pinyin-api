@@ -7,7 +7,7 @@ export function createAppAuthHandler({store,logger=console}={}) {
     res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','private, no-store');
     if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({version:1,code:'method_not_allowed'});}
     try {
-      const token=bearer(req);if(!token||token.startsWith('lyra_s_'))throw new LibraryError('unauthorized',401);
+      const token=bearer(req);if(!token||token.startsWith('lyrica_s_'))throw new LibraryError('unauthorized',401);
       const body=req.body,fields={challenge:['purpose'],register:['challenge','attestation'],session:['challenge','assertion']};
       if(!body||typeof body!=='object'||Array.isArray(body)||!Object.hasOwn(fields,body.action)||
         Object.keys(body).some(k=>!['action','keyID','bundleID',...fields[body.action]].includes(k))||Buffer.byteLength(JSON.stringify(body))>32768||

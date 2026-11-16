@@ -29,7 +29,7 @@ async function invoke(route,{method='OPTIONS',query={},body=null,expected}={}){
  const vc=JSON.parse(await fs.readFile(path.join(dir,'.vc-config.json')));
  const request={method,headers:{},body,query:{...Object.fromEntries(url.searchParams),...query}};
  const program=`import handler from ${JSON.stringify(pathToFileURL(path.join(dir,vc.handler)).href)};let status=200,payload=null;const res={setHeader(){},status(n){status=n;return this},json(v){payload=v;return this},end(v){payload=v;return this},send(v){payload=v;return this}};await handler(${JSON.stringify(request)},res);console.log(JSON.stringify({status,payload}));`;
- const {stdout}=await execute(process.execPath,['--input-type=module','-e',program],{cwd:dir,env:{...process.env,LYRA_STORE_BUNDLE_ID:'invalid.example.emitted-proof',LYRA_STORE_APP_APPLE_ID:'1'}});
+ const {stdout}=await execute(process.execPath,['--input-type=module','-e',program],{cwd:dir,env:{...process.env,LYRICA_STORE_BUNDLE_ID:'invalid.example.emitted-proof',LYRICA_STORE_APP_APPLE_ID:'1'}});
  const result=JSON.parse(stdout.trim().split('\n').at(-1));
  if(expected!==undefined)assert.equal(result.status,expected);else assert([200,204,400,401,405].includes(result.status));
  runtime.push({route:route.src,method,status:result.status});return result;

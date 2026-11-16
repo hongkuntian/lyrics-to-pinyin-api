@@ -25,7 +25,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
   const file=values['database-config-file'],metadata=await stat(file);
   if(!metadata.isFile()||(metadata.mode&0o077)!==0)throw new Error('owner_only_configuration_required');
   const configuration=JSON.parse(await readFile(file,'utf8'));
-  db=database({LYRA_LIBRARY_DATABASE_URL:configuration.LYRA_LIBRARY_DATABASE_URL});
+  db=database({LYRICA_LIBRARY_DATABASE_URL:configuration.LYRICA_LIBRARY_DATABASE_URL});
   const snapshot=await contentSnapshot(db);
   await writeFile(values.output,JSON.stringify(snapshot,null,2)+'\n',{flag:'wx',mode:0o600});
   console.log(JSON.stringify({songs:snapshot.rows.length,studies:snapshot.study.length,readOnly:true}));

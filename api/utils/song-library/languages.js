@@ -38,8 +38,8 @@ export function languagePolicy({translation,explanation}={}) {
   return Object.freeze({translation:Object.freeze(policy.translation),explanation:Object.freeze(policy.explanation)});
 }
 export function environmentLanguagePolicy(env=process.env) {
-  try {return languagePolicy({translation:env.LYRA_TRANSLATION_DIRECTIONS===undefined?undefined:JSON.parse(env.LYRA_TRANSLATION_DIRECTIONS),
-    explanation:env.LYRA_EXPLANATION_DIRECTIONS===undefined?undefined:JSON.parse(env.LYRA_EXPLANATION_DIRECTIONS)});}
+  try {return languagePolicy({translation:env.LYRICA_TRANSLATION_DIRECTIONS===undefined?undefined:JSON.parse(env.LYRICA_TRANSLATION_DIRECTIONS),
+    explanation:env.LYRICA_EXPLANATION_DIRECTIONS===undefined?undefined:JSON.parse(env.LYRICA_EXPLANATION_DIRECTIONS)});}
   catch {throw new LibraryError('invalid_language_policy',503);}
 }
 export function requireDirection(policy,kind,source,target) {

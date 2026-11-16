@@ -10,7 +10,7 @@ test('build failure classification reports schema codes without credential-beari
 });
 test('local and preview builds never access the production database',async()=>{
  for(const env of [{},{VERCEL:'1',VERCEL_ENV:'preview'}])await verifyBuildSchema({env,open:()=>assert.fail('database access')});
- await assert.rejects(verifyBuildSchema({env:{LYRA_LIBRARY_MIGRATE_ON_BUILD:'1'},open:()=>assert.fail('database access')}),/migration_requires_production_build/);
+ await assert.rejects(verifyBuildSchema({env:{LYRICA_LIBRARY_MIGRATE_ON_BUILD:'1'},open:()=>assert.fail('database access')}),/migration_requires_production_build/);
 });
 test('normal production build checks schema without applying migrations',async()=>{
  let closed=0;
@@ -24,20 +24,20 @@ test('missing schema fails the build and releases its connection',async()=>{
 });
 test('explicit production migration runs before readiness check and logs only receipt names',async()=>{
  const events=[];
- await verifyBuildSchema({env:{...production,LYRA_LIBRARY_MIGRATE_ON_BUILD:'1'},open:()=>({query:async()=>{events.push('verify');return {rows:[{}]};},close:async()=>events.push('close')}),
+ await verifyBuildSchema({env:{...production,LYRICA_LIBRARY_MIGRATE_ON_BUILD:'1'},open:()=>({query:async()=>{events.push('verify');return {rows:[{}]};},close:async()=>events.push('close')}),
   migrate:async()=>{events.push('migrate');return [migrationNames.at(-1)];},migrateSources:async()=>{events.push('sources');return {migrated:2};},repairTranslations:async()=>{events.push('reuse');return {indexed:3,recovered:1,deferred:[]};},log:message=>{assert.ok(!message.includes('postgres'));events.push('log');}});
  assert.deepEqual(events,['migrate','log','sources','log','reuse','log','verify','log','close']);
 });
 test('migration errors never continue to readiness and still close',async()=>{
  let closed=0;
- await assert.rejects(verifyBuildSchema({env:{...production,LYRA_LIBRARY_MIGRATE_ON_BUILD:'1'},open:()=>({query:()=>assert.fail('query'),close:async()=>closed++}),migrate:async()=>{throw new Error('migration_changed');},log:()=>assert.fail('log')}),/migration_changed/);
+ await assert.rejects(verifyBuildSchema({env:{...production,LYRICA_LIBRARY_MIGRATE_ON_BUILD:'1'},open:()=>({query:()=>assert.fail('query'),close:async()=>closed++}),migrate:async()=>{throw new Error('migration_changed');},log:()=>assert.fail('log')}),/migration_changed/);
  assert.equal(closed,1);
 });
 
 test('production admission is validated before database access and recorded without secrets',async()=>{
- await assert.rejects(verifyBuildSchema({env:{...production,LYRA_TRANSLATION_DIRECTIONS:'invalid'},open:()=>assert.fail('database access')}),{code:'invalid_language_policy'});
+ await assert.rejects(verifyBuildSchema({env:{...production,LYRICA_TRANSLATION_DIRECTIONS:'invalid'},open:()=>assert.fail('database access')}),{code:'invalid_language_policy'});
  const events=[];
- await verifyBuildSchema({env:{...production,LYRA_TRANSLATION_DIRECTIONS:'["*:en","en:fr"]',LYRA_EXPLANATION_DIRECTIONS:'["*:en"]',OPENAI_API_KEY:'never-log-this'},
+ await verifyBuildSchema({env:{...production,LYRICA_TRANSLATION_DIRECTIONS:'["*:en","en:fr"]',LYRICA_EXPLANATION_DIRECTIONS:'["*:en"]',OPENAI_API_KEY:'never-log-this'},
   open:()=>({query:async()=>({rows:[{}]}),close:async()=>{}}),log:s=>events.push(JSON.parse(s))});
  assert.deepEqual(events[0].translationDirections,['*:en','en:fr']);
  assert.deepEqual(events[0].explanationDirections,['*:en']);

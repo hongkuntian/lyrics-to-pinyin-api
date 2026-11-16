@@ -9,15 +9,15 @@ import {
 } from "../src/lib/owner-session";
 const env = {
   VERCEL_ENV: "production",
-  LYRA_DASHBOARD_MODE: "production",
-  LYRA_DASHBOARD_PROTECTION: "vercel-all",
-  LYRA_DASHBOARD_DATABASE_URL: "reader",
-  LYRA_DASHBOARD_ORIGIN: "https://dashboard.example",
-  LYRA_DASHBOARD_SESSION_SECRET: "a".repeat(48),
-  LYRA_DASHBOARD_OWNER_SUBJECT: "owner",
-  LYRA_DASHBOARD_OAUTH_CLIENT_ID: "client",
-  LYRA_DASHBOARD_OAUTH_CLIENT_SECRET: "secret",
-  LYRA_DASHBOARD_OPERATOR_DATABASE_URL: "operator",
+  LYRICA_DASHBOARD_MODE: "production",
+  LYRICA_DASHBOARD_PROTECTION: "vercel-all",
+  LYRICA_DASHBOARD_DATABASE_URL: "reader",
+  LYRICA_DASHBOARD_ORIGIN: "https://dashboard.example",
+  LYRICA_DASHBOARD_SESSION_SECRET: "a".repeat(48),
+  LYRICA_DASHBOARD_OWNER_SUBJECT: "owner",
+  LYRICA_DASHBOARD_OAUTH_CLIENT_ID: "client",
+  LYRICA_DASHBOARD_OAUTH_CLIENT_SECRET: "secret",
+  LYRICA_DASHBOARD_OPERATOR_DATABASE_URL: "operator",
 };
 test("owner sessions reject forgery, expired tokens, other accounts and OAuth flow tokens", async () => {
   const config = ownerConfig(env)!;
@@ -92,27 +92,27 @@ test("owner sessions reject forgery, expired tokens, other accounts and OAuth fl
 });
 test("production and previews never accept fixture identity or incomplete controls configuration", () => {
   assert.equal(
-    ownerConfig({ ...env, LYRA_DASHBOARD_SESSION_SECRET: undefined }),
+    ownerConfig({ ...env, LYRICA_DASHBOARD_SESSION_SECRET: undefined }),
     null,
   );
   assert.equal(
     ownerConfig({
       VERCEL_ENV: "preview",
-      LYRA_DASHBOARD_FIXTURE_CONTROLS: "1",
+      LYRICA_DASHBOARD_FIXTURE_CONTROLS: "1",
     }),
     null,
   );
   assert.throws(() =>
     ownerConfig({
       VERCEL_ENV: "production",
-      LYRA_DASHBOARD_FIXTURE_CONTROLS: "1",
+      LYRICA_DASHBOARD_FIXTURE_CONTROLS: "1",
     }),
   );
   assert.throws(() =>
-    ownerConfig({ ...env, LYRA_DASHBOARD_ORIGIN: "http://dashboard.example" }),
+    ownerConfig({ ...env, LYRICA_DASHBOARD_ORIGIN: "http://dashboard.example" }),
   );
   assert.equal(
-    ownerConfig({ LYRA_DASHBOARD_FIXTURE_CONTROLS: "1" })?.fixture,
+    ownerConfig({ LYRICA_DASHBOARD_FIXTURE_CONTROLS: "1" })?.fixture,
     true,
   );
 });

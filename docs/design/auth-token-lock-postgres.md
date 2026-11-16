@@ -10,9 +10,9 @@ The contracts are [token row locks](auth-token-row-locks.md), [writer ordering](
 
 ## Source and cluster admission
 
-Run only from an explicitly approved, clean, immutable source commit. Supply its full SHA in `LYRA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT`; each harness requires HEAD to match. Changed-input pins are read from that Git object, not refreshed from working-tree bytes. The token-lock suite retains literal pins for unchanged historical inputs and verifies the required ancestry.
+Run only from an explicitly approved, clean, immutable source commit. Supply its full SHA in `LYRICA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT`; each harness requires HEAD to match. Changed-input pins are read from that Git object, not refreshed from working-tree bytes. The token-lock suite retains literal pins for unchanged historical inputs and verifies the required ancestry.
 
-`LYRA_TEST_POSTGRES_MANIFEST` must identify a private, nonsymlink, current-UID-owned file for an independently created disposable local cluster. Its marker must contain `purpose: lyrica-auth-local-qualification`, `active: true`, `TCPListening: false`, the exact `sourceCommit`, `ownerUID`, `socketDirectory`, `dataDirectory`, `port` and `user`. The socket directory is private, current-UID-owned and named `/tmp/lyrica-auth-pg-<owned suffix>`. The absolute data directory is likewise private, nonsymlink and owned. No production URL or arbitrary supplied database is an acceptable target.
+`LYRICA_TEST_POSTGRES_MANIFEST` must identify a private, nonsymlink, current-UID-owned file for an independently created disposable local cluster. Its marker must contain `purpose: lyrica-auth-local-qualification`, `active: true`, `TCPListening: false`, the exact `sourceCommit`, `ownerUID`, `socketDirectory`, `dataDirectory`, `port` and `user`. The socket directory is private, current-UID-owned and named `/tmp/lyrica-auth-pg-<owned suffix>`. The absolute data directory is likewise private, nonsymlink and owned. No production URL or arbitrary supplied database is an acceptable target.
 
 Before creating fixtures, the harness checks the actual server's data directory, Unix socket, port, current role, superuser capability, absence of TCP listening and supported PostgreSQL version. The marker is evidence to validate, not sufficient authority by itself. Refuse a preexisting fixed fixture role instead of altering or adopting it.
 
@@ -28,7 +28,7 @@ Real-client assertions include token lock blocking, reader/writer and writer/wri
 
 With the independently verified owned cluster running and the private marker prepared:
 
-`LYRA_TEST_POSTGRES_MANIFEST=<private marker> LYRA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT=<approved SHA> node --test tests/postgres/auth-token-lock-roles.test.js tests/postgres/auth-writers.test.js tests/postgres/listening-account-delete-privileges.test.js`
+`LYRICA_TEST_POSTGRES_MANIFEST=<private marker> LYRICA_TEST_POSTGRES_EXPECTED_SOURCE_COMMIT=<approved SHA> node --test tests/postgres/auth-token-lock-roles.test.js tests/postgres/auth-writers.test.js tests/postgres/listening-account-delete-privileges.test.js`
 
 Each suite creates random fixture databases, records identity/provenance and checks them before cleanup. Terminate connections only to an exact database created and owned by that run, then drop that database and only its own roles. Never use DROP OWNED, stop another cluster, drop an arbitrary supplied database, rewrite receipts or change global timezone. Drain every held contender and return borrowed clients before cleanup. The external cluster owner stops its own server after the suites finish.
 

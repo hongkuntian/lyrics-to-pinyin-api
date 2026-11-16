@@ -32,7 +32,7 @@ test('recovered aliases survive fresh source IDs, Redis, memory and durable reop
     getCachedFn:async(_,k)=>saved.get(k)??null,setCachedFn:async(_,k,v)=>saved.set(k,structuredClone(v)),
     waitUntilFn:p=>writes.push(p),logger:{info(){},error(){}}}};};
   const first=deps(),service=createMusicRomanizeService(first.options);
-  const call=async(svc,body)=>{const res=createMockRes();await svc(createMockReq({body,headers:{authorization:'Bearer lyra_s_fixture'}}),res);return res;};
+  const call=async(svc,body)=>{const res=createMockRes();await svc(createMockReq({body,headers:{authorization:'Bearer lyrica_s_fixture'}}),res);return res;};
   const response=await call(service,{recording:row.recording});assert.equal(response.statusCode,200);
   const candidate=spotifyMatchEvidence(response.body);assert.ok(candidate.artistAliasEvidence);
   assert.deepEqual(candidate.creditedArtistNames,row.songs[0].artists.map(p=>p.name));

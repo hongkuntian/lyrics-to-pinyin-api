@@ -3,14 +3,14 @@ import {readFileSync} from 'node:fs';
 const catalog=JSON.parse(readFileSync(new URL('../../../shared/alert-catalog.json',import.meta.url),'utf8'));
 
 export const ALERT_LIMITS=Object.freeze({daily:1,monthly:5});
-const DASHBOARD='https://lyra-dashboard-roan.vercel.app';
+const DASHBOARD='https://lyrica-dashboard.vercel.app';
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0];
 export function emailConfiguration(env) {
   const address=value=>typeof value==='string'&&value.length<=254&&/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value);
-  if(env.VERCEL_ENV!=='production'||env.LYRA_ALERT_EMAIL_ENABLED!=='true'||
+  if(env.VERCEL_ENV!=='production'||env.LYRICA_ALERT_EMAIL_ENABLED!=='true'||
     typeof env.RESEND_API_KEY!=='string'||!env.RESEND_API_KEY.trim()||
-    !address(env.LYRA_ALERT_FROM)||!address(env.LYRA_ALERT_TO))return null;
-  return {key:env.RESEND_API_KEY,from:env.LYRA_ALERT_FROM,to:env.LYRA_ALERT_TO};
+    !address(env.LYRICA_ALERT_FROM)||!address(env.LYRICA_ALERT_TO))return null;
+  return {key:env.RESEND_API_KEY,from:env.LYRICA_ALERT_FROM,to:env.LYRICA_ALERT_TO};
 }
 export function alertEmail(codes,config) {
   const messages=[...new Set(codes)].filter(code=>Object.hasOwn(catalog,code)).map(code=>catalog[code]);
@@ -63,7 +63,7 @@ export async function runOperationalAlerts({db,env=process.env,send=sendAlertEma
 
 export async function sendAlertEmail({id,payload,key,fetchImpl=fetch}) {
   const response=await fetchImpl('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(8000),
-    headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','Idempotency-Key':`lyra-incident/${id}`},body:JSON.stringify(payload)});
+    headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json','Idempotency-Key':`lyrica-incident/${id}`},body:JSON.stringify(payload)});
   if(!response.ok)return {state:response.status>=400&&response.status<500?'rejected':'unknown'};
   const result=await response.json();
   return {state:'accepted',id:result?.id};

@@ -149,7 +149,7 @@ export class AccountStore {
     input=Object.freeze({...input,keyID:user.keyID});
     await this.enabled();
     await this.nonce(this.db,input,'apple',user.id);
-    const verified=await this.apple.authenticate(input),credential='lyra_a_'+randomBytes(32).toString('base64url');
+    const verified=await this.apple.authenticate(input),credential='lyrica_a_'+randomBytes(32).toString('base64url');
     let userID,spotifyCleanup=[];
     await this.db.transaction(async db=>{
       // Serialize identity creation, deletion and starter claims across devices.

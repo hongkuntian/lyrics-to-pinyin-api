@@ -12,8 +12,8 @@ test('the restricted production role can relay after migration without gaining a
   const {db}=await libraryDB();
   const migration=await readFile(new URL('../../db/023-live-lyrics-runtime.sql',import.meta.url),'utf8');
   try {
-    await db.exec('CREATE ROLE lyra_runtime_v1 NOSUPERUSER NOCREATEDB NOCREATEROLE');
-    await db.exec('SET ROLE lyra_runtime_v1');
+    await db.exec('CREATE ROLE lyrica_runtime_v1 NOSUPERUSER NOCREATEDB NOCREATEROLE');
+    await db.exec('SET ROLE lyrica_runtime_v1');
     const relay=new LiveLyricsPushRelay(db,{send:async()=>{},now:()=>pushTime});
     await assert.rejects(()=>relay.update('reader-a',validatePush(pushBody(),pushTime)),{code:'42501'});
     await db.exec('RESET ROLE');
@@ -21,7 +21,7 @@ test('the restricted production role can relay after migration without gaining a
     await db.exec(migration); // The grant is safe to repeat during operator recovery.
     const memberships=await readFile(new URL('../../db/025-memberships.sql',import.meta.url),'utf8');
     await db.exec(memberships.slice(memberships.indexOf('DO $$ BEGIN'),memberships.lastIndexOf('COMMIT;')));
-    await db.exec('SET ROLE lyra_runtime_v1');
+    await db.exec('SET ROLE lyrica_runtime_v1');
     assert.deepEqual(await relay.update('reader-a',validatePush(pushBody(),pushTime)),
       {state:'accepted',sequence:1,timestamp:pushTime/1000});
     await assert.rejects(()=>db.query("UPDATE library_users SET disabled=true WHERE id='reader-a'"),{code:'42501'});
@@ -80,19 +80,19 @@ test('endpoint requires authenticated app sessions and returns actionable retry 
     const res=createMockRes();await handler(createMockReq({body:pushBody(),headers:{authorization}}),res);assert.equal(res.statusCode,401);
   }
   assert.equal(calls,0);
-  const res=createMockRes();await handler(createMockReq({body:pushBody(),headers:{authorization:'Bearer lyra_s_fixture'}}),res);
+  const res=createMockRes();await handler(createMockReq({body:pushBody(),headers:{authorization:'Bearer lyrica_s_fixture'}}),res);
   assert.equal(res.statusCode,429);assert.equal(res.headers['Retry-After'],'1');assert.equal(res.headers['Cache-Control'],'private, no-store');
 });
 
 test('relay chooses its APNs topic from the attested session and rejects body overrides',async()=>{
   const {db}=await libraryDB();let time=pushTime;
   try {
-    for(const bundleID of ['com.hongkuntian.musicromanization','com.hongkuntian.Lyra']) {
+    for(const bundleID of ['com.hongkuntian.musicromanization','com.hongkuntian.Lyrica']) {
       const sent=[];
       const handler=createLiveLyricsHandler({authStore:{db,authenticate:async()=>({id:'reader-a',bundleID})},
         relay:new LiveLyricsPushRelay(db,{send:async input=>sent.push(input),now:()=>time}),now:()=>time});
       const body=pushBody(1,time);body.activityID=bundleID.replaceAll('.','-');
-      const headers={authorization:'Bearer lyra_s_fixture'};
+      const headers={authorization:'Bearer lyrica_s_fixture'};
       const res=createMockRes();await handler(createMockReq({body,headers}),res);
       assert.equal(res.statusCode,200);assert.equal(sent.length,1);assert.equal(sent[0].bundleID,bundleID);
       const spoof=createMockRes();await handler(createMockReq({body:{...body,bundleID:'com.unrelated.app'},headers}),spoof);

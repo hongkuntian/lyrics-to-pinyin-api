@@ -59,7 +59,7 @@ function finish(request,songs,catalogID,method,reviewedSearches=[]) {
 }
 export async function resolveCatalogAliases(request,context={}) {
  if(!Number.isFinite(request.duration))return [];
- if(process.env.LYRA_CATALOG_RESOLUTION_ENABLED==='0')return [];
+ if(process.env.LYRICA_CATALOG_RESOLUTION_ENABLED==='0')return [];
  const appleCatalog=context.appleCatalog===undefined?configuredAppleCatalog():context.appleCatalog;
  const deadline=Date.now()+Math.min(context.catalogBudgetMs??2300,2300),budget={deadline,signal:context.signal};
  let catalogID=request.catalog_id,discovered=[];
@@ -101,7 +101,7 @@ export async function resolveCatalogAliases(request,context={}) {
  if(request.album&&!songs.some(s=>s.album&&normalizedAlbum(s.album)===normalizedAlbum(request.album)))return [];
  const anchor=songs.find(s=>s.isrc&&s.artist_ids?.length);
  if(request.isrc&&anchor?.isrc&&request.isrc!==anchor.isrc)return [];
- if(appleCatalog&&anchor&&!context.signal?.aborted&&process.env.LYRA_CATALOG_EQUIVALENTS_ENABLED!=='0'){
+ if(appleCatalog&&anchor&&!context.signal?.aborted&&process.env.LYRICA_CATALOG_EQUIVALENTS_ENABLED!=='0'){
   const missing=countries.filter(country=>!songs.some(s=>s.storefront===country));
   const equivalents=await mapBounded(missing.slice(0,3),async(country,signal)=>{
    try{

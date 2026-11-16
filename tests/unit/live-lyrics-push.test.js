@@ -25,7 +25,7 @@ test('push validation preserves default Swift Codable dates and rejects stale or
   assert.throws(()=>validatePush(valid,pushTime+8000),{code:'push_observation_expired'});
 });
 test('HTTP/2 delivery chooses the correct environment, topic, priority and zero expiry',async()=>{
-  for(const environment of ['development','production']) for(const bundleID of ['com.hongkuntian.musicromanization','com.hongkuntian.Lyra']) {
+  for(const environment of ['development','production']) for(const bundleID of ['com.hongkuntian.musicromanization','com.hongkuntian.Lyrica']) {
     let host,headers,body,closed=false;
     const stream=new EventEmitter();stream.setEncoding=()=>{};stream.close=()=>{};
     stream.end=value=>{body=JSON.parse(value);queueMicrotask(()=>{stream.emit('response',{':status':200});stream.emit('end');});};
@@ -37,13 +37,13 @@ test('HTTP/2 delivery chooses the correct environment, topic, priority and zero 
     assert.equal(headers['apns-push-type'],'liveactivity');assert.equal(headers['apns-priority'],'5');assert.equal(headers['apns-expiration'],'0');
     assert.deepEqual(body,input.payload);assert.equal(closed,true);
   }
-  for(const bundleID of [undefined,'com.unrelated.app','com.hongkuntian.Lyra\r\ninjected']) {
+  for(const bundleID of [undefined,'com.unrelated.app','com.hongkuntian.Lyrica\r\ninjected']) {
     assert.throws(()=>sendAPNs({bundleID},()=>{throw Error('unexpected transport');}),{code:'app_access_revoked'});
   }
 });
 test('APNs errors are bounded and invalid activity tokens are distinguished from credentials',async()=>{
   const {privateKey}=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
-  const env={LYRA_APNS_TEAM_ID:'9ESZX68J8U',LYRA_APNS_KEY_ID:'TESTKEY123',LYRA_APNS_PRIVATE_KEY:privateKey.export({type:'pkcs8',format:'pem'})};
+  const env={LYRICA_APNS_TEAM_ID:'9ESZX68J8U',LYRICA_APNS_KEY_ID:'TESTKEY123',LYRICA_APNS_PRIVATE_KEY:privateKey.export({type:'pkcs8',format:'pem'})};
   for(const [result,code] of [[{status:410,reason:'Unregistered'},'push_token_invalid'],[{status:403},'push_credentials_rejected'],[{status:429},'push_rate_limited'],[{status:500},'push_unavailable']]) {
     const send=createAPNsSender({env,send:async()=>result});await assert.rejects(()=>send({}),{code});
   }
@@ -55,7 +55,7 @@ test('WidgetKit push derives an allowlisted topic from configured app identity a
  const stream=new EventEmitter();stream.setEncoding=()=>{};stream.close=()=>{};
  stream.end=value=>{body=JSON.parse(value);queueMicrotask(()=>{stream.emit('response',{':status':200});stream.emit('end');});};
  const session=new EventEmitter();session.request=value=>{headers=value;return stream;};session.close=()=>{};session.destroy=()=>{};
- await sendAPNs({bundleID:'com.hongkuntian.Lyra',environment:'development',token:'ab'.repeat(32),jwt:'fixture',priority:5,pushType:'widgets',payload:{aps:{'content-changed':true}}},()=>session);
- assert.equal(headers['apns-topic'],'com.hongkuntian.Lyra.push-type.widgets');assert.equal(headers['apns-push-type'],'widgets');assert.deepEqual(body,{aps:{'content-changed':true}});
- for(const pushType of ['alert','widgets\r\ninjected','com.other.topic'])assert.throws(()=>sendAPNs({bundleID:'com.hongkuntian.Lyra',pushType},()=>{throw Error('unexpected');}),{code:'invalid_request'});
+ await sendAPNs({bundleID:'com.hongkuntian.Lyrica',environment:'development',token:'ab'.repeat(32),jwt:'fixture',priority:5,pushType:'widgets',payload:{aps:{'content-changed':true}}},()=>session);
+ assert.equal(headers['apns-topic'],'com.hongkuntian.Lyrica.push-type.widgets');assert.equal(headers['apns-push-type'],'widgets');assert.deepEqual(body,{aps:{'content-changed':true}});
+ for(const pushType of ['alert','widgets\r\ninjected','com.other.topic'])assert.throws(()=>sendAPNs({bundleID:'com.hongkuntian.Lyrica',pushType},()=>{throw Error('unexpected');}),{code:'invalid_request'});
 });

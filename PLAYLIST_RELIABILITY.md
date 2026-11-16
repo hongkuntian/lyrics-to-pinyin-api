@@ -16,7 +16,7 @@ The library audit reproduces failures using the Mac Music export's artist, title
 - NetEase can verify translated performer names from `artist/detail` using the artist IDs in a plausible search result. Only exact aliases are accepted; all guests, duration and version guards remain. Artist metadata is bounded and cached, and unrelated titles/durations do not trigger artist lookups.
 - NetEase receives Simplified Chinese query text when Han characters are available. English titles are never guessed into Chinese.
 
-API version 2.3.0 invalidates cached responses from the older matching policy. `recording_match.method` now permits `metadata_alias`; `recording_match.album` binds that proof to metadata-only requests. Updated Lyra validates it before accepting differently localized provider names.
+API version 2.3.0 invalidates cached responses from the older matching policy. `recording_match.method` now permits `metadata_alias`; `recording_match.album` binds that proof to metadata-only requests. Updated Lyrica validates it before accepting differently localized provider names.
 
 ## Verification
 

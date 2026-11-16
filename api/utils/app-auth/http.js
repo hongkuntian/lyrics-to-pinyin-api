@@ -13,7 +13,7 @@ export function withAppAuth(service,{authStore,libraryStore,route,logger=console
     res.setHeader('Cache-Control','private, no-store');res.setHeader('Content-Type','application/json');
     if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({version:1,code:'method_not_allowed'});}
     try {
-      const token=bearer(req);if(!token?.startsWith('lyra_s_'))throw new LibraryError('unauthorized',401);
+      const token=bearer(req);if(!token?.startsWith('lyrica_s_'))throw new LibraryError('unauthorized',401);
       const body=req.body;if(!body||typeof body!=='object'||Array.isArray(body)||Buffer.byteLength(JSON.stringify(body))>(route==='library'?8192:32768))
         throw new LibraryError('invalid_request',400);
       const auth=authStore??new AppAuthStore(database()),user=await auth.authenticate(token);

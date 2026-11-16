@@ -43,7 +43,7 @@ async function make(t,{roles=true}={}){
 }
 
 const correction='036-account-data-privacy.sql';
-const account='lyra_account_v1',runtime='lyra_runtime_v1';
+const account='lyrica_account_v1',runtime='lyrica_runtime_v1';
 const policy={audience:'delete-privilege-test',environment:'development',prefix:'ABCDEFGHIJ',bundles:['test.lyrica']};
 const bundleID=policy.bundles[0];
 const sha=value=>createHash('sha256').update(value).digest('hex');
@@ -143,7 +143,7 @@ async function image(h){
 }
 async function seed(h,{retained=true,rate='matching'}={}){
  const id='delete-target',other='delete-other',keys=[1,2,3].map(n=>Buffer.alloc(32,n).toString('base64'));
- const credentials=['target-c1','target-c2','other-c'].map(sha),bearers=['lyra_s_target_exact','lyra_s_target_sibling','lyra_s_other'];
+ const credentials=['target-c1','target-c2','other-c'].map(sha),bearers=['lyrica_s_target_exact','lyrica_s_target_sibling','lyrica_s_other'];
  const rooms=[1,2,3,4].map(n=>'00000000-0000-0000-0000-'+String(n).padStart(12,'0'));
  const appToken='11111111-1111-1111-1111-111111111111',grant='22222222-2222-2222-2222-222222222222';
  await h.query("INSERT INTO public.library_users(id,access_kind) VALUES($1,'apple'),($2,'apple')",[id,other]);

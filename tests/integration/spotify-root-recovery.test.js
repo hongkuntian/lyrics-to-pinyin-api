@@ -120,7 +120,7 @@ test('owner revocation locks attested keys before connection rows even before an
  const f=await libraryDB();t.after(()=>f.db.close());
  await f.db.exec(await readFile(new URL('../../db/027-spotify-background.sql',import.meta.url),'utf8'));
  await f.db.exec(await readFile(new URL('../../db/032-auth-token-row-locks.sql',import.meta.url),'utf8'));
- const policy={audience:'fixture',environment:'development',prefix:'ABCDEFGHIJ',bundles:['com.hongkuntian.Lyra']},bundleID=policy.bundles[0];
+ const policy={audience:'fixture',environment:'development',prefix:'ABCDEFGHIJ',bundles:['com.hongkuntian.Lyrica']},bundleID=policy.bundles[0];
  const keyID=Buffer.alloc(32,9).toString('base64'),secondKey=Buffer.alloc(32,1).toString('base64');
  const auth=new AppAuthStore(f.store.db,{policy,attestFn:()=>({publicKey:'proof',receipt:Buffer.from('proof')}),assertionFn:({assertion})=>Number(assertion.toString())});
  for(const key of [keyID,secondKey]){

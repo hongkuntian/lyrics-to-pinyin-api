@@ -22,9 +22,9 @@ test('enrollment accepts the app\'s playback and library grants and rejects anyt
 });
 test('narrow snapshot token cannot call account, enrollment or arbitrary widget target actions',async()=>{
  let calls=0;const handler=createSpotifyHandler({runtime:{snapshot:async()=>{calls++;return {version:1,status:'registered',tokenVersion:3};}},authStore:{authenticate:async()=>{throw Error('must not authenticate capability');}},logger:{error(){}}});
- const res=createMockRes();await handler({method:'POST',headers:{authorization:'Bearer lyra_w_fixturecapability'},body:{version:1,action:'snapshot.token',widgetToken:'ab'.repeat(32),tokenVersion:3}},res);
+ const res=createMockRes();await handler({method:'POST',headers:{authorization:'Bearer lyrica_w_fixturecapability'},body:{version:1,action:'snapshot.token',widgetToken:'ab'.repeat(32),tokenVersion:3}},res);
  assert.equal(res.statusCode,200);assert.deepEqual(res.body,{version:1,status:'registered',tokenVersion:3});assert.equal(calls,1);
- for(const body of [{version:1,action:'snapshot.token',widgetToken:'ab'.repeat(32),tokenVersion:3,sessionID:randomUUID()},{version:1,action:'connection.status',enrollmentID:randomUUID()}]){const r=createMockRes();await handler({method:'POST',headers:{authorization:'Bearer lyra_w_fixturecapability'},body},r);assert([400,401].includes(r.statusCode));}
+ for(const body of [{version:1,action:'snapshot.token',widgetToken:'ab'.repeat(32),tokenVersion:3,sessionID:randomUUID()},{version:1,action:'connection.status',enrollmentID:randomUUID()}]){const r=createMockRes();await handler({method:'POST',headers:{authorization:'Bearer lyrica_w_fixturecapability'},body},r);assert([400,401].includes(r.statusCode));}
 });
 test('explicit packaging lists ten canonical routes and two private topic subscriptions within eleven functions',()=>{
  assert.equal(manifest.entries.length,11);assert.equal(manifest.routes.length,10);assert.deepEqual(manifest.crons,[{path:'/api/review-reports',schedule:'0 8 * * *'}]);

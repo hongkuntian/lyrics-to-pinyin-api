@@ -60,7 +60,7 @@ complete ordered pending name/digest list, before applying any migration SQL.
 Any additional, missing, already-applied or changed migration fails closed.
 For this retirement, only `036-account-data-privacy.sql` is eligible; retain its
 reviewed digest with the deployment evidence. Disable
-`LYRA_LIBRARY_MIGRATE_ON_BUILD` for the production build after that bounded
+`LYRICA_LIBRARY_MIGRATE_ON_BUILD` for the production build after that bounded
 upgrade. Its broad migration mode also repairs source content and translation
 reuse and is not part of this release operation.
 

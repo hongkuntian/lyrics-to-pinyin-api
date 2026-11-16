@@ -4,12 +4,12 @@ import {attest,assertion} from './verification.js';
 const first=async(db,sql,args=[])=>(await db.query(sql,args)).rows[0]??null;
 const fail=(code='unauthorized',status=401)=>{throw new LibraryError(code,status);};
 export function authPolicy(env=process.env) {
-  const audience=env.LYRA_APP_AUTH_AUDIENCE,environment=env.LYRA_APP_ATTEST_ENVIRONMENT,prefix=env.LYRA_APP_ID_PREFIX;
-  const bundles=(env.LYRA_APP_BUNDLE_IDS??'').split(',').filter(Boolean);
+  const audience=env.LYRICA_APP_AUTH_AUDIENCE,environment=env.LYRICA_APP_ATTEST_ENVIRONMENT,prefix=env.LYRICA_APP_ID_PREFIX;
+  const bundles=(env.LYRICA_APP_BUNDLE_IDS??'').split(',').filter(Boolean);
   if(!audience||!/^[A-Za-z0-9_-]{1,64}$/.test(audience)||!['production','development'].includes(environment)||
     !/^[A-Z0-9]{10}$/.test(prefix??'')||!bundles.length||bundles.some(b=>!/^[A-Za-z0-9.-]{1,128}$/.test(b))||
     (env.VERCEL_ENV==='production'&&environment!=='production')||
-    (env.VERCEL_ENV&&env.VERCEL_ENV!=='production'&&(environment!=='development'||audience==='lyra-production')))
+    (env.VERCEL_ENV&&env.VERCEL_ENV!=='production'&&(environment!=='development'||audience==='lyrica-production')))
     fail('app_auth_not_configured',503);
   return {audience,environment,prefix,bundles};
 }
@@ -100,7 +100,7 @@ export class AppAuthStore {
         prefix:this.policy.prefix,signCount:Number(key.sign_count)});}catch{fail('app_assertion_invalid',403);}
       if(!Number.isSafeInteger(counter)||counter<=Number(key.sign_count))fail('app_assertion_invalid',403);
       await db.query('UPDATE app_attest_keys SET sign_count=$2 WHERE key_id=$1',[keyID,counter]);
-      const value='lyra_s_'+randomBytes(32).toString('base64url');
+      const value='lyrica_s_'+randomBytes(32).toString('base64url');
       await db.query('DELETE FROM app_auth_sessions WHERE key_id=$1',[keyID]);
       const row=await first(db,`INSERT INTO app_auth_sessions(digest,key_id,credential_digest,audience,expires_at)
         VALUES($1,$2,$3,$4,clock_timestamp()+interval '15 minutes') RETURNING expires_at`,[digest(value),keyID,user.digest,this.policy.audience]);

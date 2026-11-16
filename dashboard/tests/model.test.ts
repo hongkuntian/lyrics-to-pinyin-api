@@ -27,24 +27,24 @@ test("production cannot fall back to sample data or use an unacknowledged config
   assert.throws(() => dataMode({ VERCEL_ENV: "production" }));
   assert.throws(() =>
     dataMode({
-      LYRA_DASHBOARD_MODE: "production",
-      LYRA_DASHBOARD_DATABASE_URL: "test",
+      LYRICA_DASHBOARD_MODE: "production",
+      LYRICA_DASHBOARD_DATABASE_URL: "test",
     }),
   );
   assert.throws(() =>
     dataMode({
       VERCEL_ENV: "preview",
-      LYRA_DASHBOARD_MODE: "production",
-      LYRA_DASHBOARD_DATABASE_URL: "test",
-      LYRA_DASHBOARD_PROTECTION: "vercel-all",
+      LYRICA_DASHBOARD_MODE: "production",
+      LYRICA_DASHBOARD_DATABASE_URL: "test",
+      LYRICA_DASHBOARD_PROTECTION: "vercel-all",
     }),
   );
   assert.equal(
     dataMode({
       VERCEL_ENV: "production",
-      LYRA_DASHBOARD_MODE: "production",
-      LYRA_DASHBOARD_DATABASE_URL: "test",
-      LYRA_DASHBOARD_PROTECTION: "vercel-all",
+      LYRICA_DASHBOARD_MODE: "production",
+      LYRICA_DASHBOARD_DATABASE_URL: "test",
+      LYRICA_DASHBOARD_PROTECTION: "vercel-all",
     }),
     "production",
   );

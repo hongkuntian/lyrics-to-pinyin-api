@@ -23,7 +23,7 @@ async function fixture(t,{report=true,second=false,sourceNotes=[]}={}) {
     async upload(){this.uploads++;return 'file-test';},
     async findUpload(){return 'file-test';},
     async submit(local){this.submits++;this.remote={id:`batch-test-${this.submits}`,status:'in_progress',endpoint:'/v1/responses',input_file_id:local.input_file_id,
-      metadata:{lyra_batch_id:local.id,request_hash:local.request_hash,policy_version:local.policy_version}};return this.remote;},
+      metadata:{lyrica_batch_id:local.id,request_hash:local.request_hash,policy_version:local.policy_version}};return this.remote;},
     async findBatch(){return this.remote;},async get(){this.gets++;return this.remote;},async file(){return this.text;}
   };
   return {...f,database:db,ids,provider,run:()=>runReviewQueue({db,provider}),queue:()=>new ReviewQueue(db)};

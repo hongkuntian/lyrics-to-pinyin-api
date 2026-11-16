@@ -26,13 +26,13 @@ The legacy romanize endpoints now use the same engines. Music response version 2
 
 ## Rollout and rollback
 
-Apply the additive migration before promotion. A production build with the one-shot build environment `LYRA_LIBRARY_MIGRATE_ON_BUILD=1` applies and verifies migrations using the existing private database connection. Subsequent builds verify schema readiness. Do not put credentials in a request or repository.
+Apply the additive migration before promotion. A production build with the one-shot build environment `LYRICA_LIBRARY_MIGRATE_ON_BUILD=1` applies and verifies migrations using the existing private database connection. Subsequent builds verify schema readiness. Do not put credentials in a request or repository.
 
-The default enabled set is all three beta profiles. `LYRA_PRONUNCIATION_PROFILES` can contain a JSON array of profile IDs, including `[]` to stop new annotation requests. Disabled profiles are omitted from capabilities and return 422 even when cached on the server. Already downloaded app annotations remain usable offline. This switch controls the new artifact path; rolling back the deployment restores the previous legacy processors. Keep the additive table on rollback.
+The default enabled set is all three beta profiles. `LYRICA_PRONUNCIATION_PROFILES` can contain a JSON array of profile IDs, including `[]` to stop new annotation requests. Disabled profiles are omitted from capabilities and return 422 even when cached on the server. Already downloaded app annotations remain usable offline. This switch controls the new artifact path; rolling back the deployment restores the previous legacy processors. Keep the additive table on rollback.
 
 The iOS client validates exact text, profile/engine version and ranges, caches each profile independently and rejects stale responses after a song or preference change. Japanese offers Romaji/Kana/Off; Korean offers romanization on/off. Japanese requires a versioned profile; unversioned embedded readings, including saved selected-source bridges, cannot establish the current engine and must not bypass invalidation. Original lyrics remain readable when a current profile is unavailable. Korean retains its existing legacy whole-line fallback policy.
 
-Japanese engine `kuromoji-0.1.2-kuroshiro-1.2.0-lyra-2` adds reviewed source-span readings for Blue Bird: `飛翔いたら` → `はばたいたら`, `遊迷` → `ゆめ`, and `共鳴けて` → `あずけて`, based on the [published ruby](https://www.uta-net.com/song/66961/). These artistic readings are not inferred from dictionary kanji pronunciation. The registry requires matching title, artist, duration and album, or the specifically reviewed albumless Kugou source 468823329. Other recordings and unrelated text retain dictionary analysis. Both Kana/Romaji artifacts and newly acquired embedded output share this analysis; existing documents are never rewritten. Profile version and text basis stay unchanged; Korean stays on `koroman-1.0.16-lyra-1`.
+Japanese engine `kuromoji-0.1.2-kuroshiro-1.2.0-lyrica-2` adds reviewed source-span readings for Blue Bird: `飛翔いたら` → `はばたいたら`, `遊迷` → `ゆめ`, and `共鳴けて` → `あずけて`, based on the [published ruby](https://www.uta-net.com/song/66961/). These artistic readings are not inferred from dictionary kanji pronunciation. The registry requires matching title, artist, duration and album, or the specifically reviewed albumless Kugou source 468823329. Other recordings and unrelated text retain dictionary analysis. Both Kana/Romaji artifacts and newly acquired embedded output share this analysis; existing documents are never rewritten. Profile version and text basis stay unchanged; Korean stays on `koroman-1.0.16-lyrica-1`.
 
 ## Adding another notation
 
@@ -50,7 +50,7 @@ Sources: [Kuroshiro](https://github.com/hexenq/kuroshiro), [Koroman](https://git
 
 ## Contextual Japanese readings
 
-Engine `kuromoji-0.1.2-kuroshiro-1.2.0-lyra-3` adds bounded conventional-text corrections after analyzer reconstruction and before reading groups are rendered. It handles standalone one/two-person counters, 人気者, and selected deserted-place, food and empty-container contexts. Numeral chains, compounds and punctuation boundaries constrain matching. Lexical kana and pronounced kana remain separate; ambiguous 明日/行く keep the analyzer best effort. Existing recording-bound artistic readings retain priority. No Japanese speech or learning-admission capability is enabled.
+Engine `kuromoji-0.1.2-kuroshiro-1.2.0-lyrica-3` adds bounded conventional-text corrections after analyzer reconstruction and before reading groups are rendered. It handles standalone one/two-person counters, 人気者, and selected deserted-place, food and empty-container contexts. Numeral chains, compounds and punctuation boundaries constrain matching. Lexical kana and pronounced kana remain separate; ambiguous 明日/行く keep the analyzer best effort. Existing recording-bound artistic readings retain priority. No Japanese speech or learning-admission capability is enabled.
 
 The development and independent challenge corpora are model-authored diagnostics, not fluent review or recording/population accuracy. `scripts/evaluate-reading-context.mjs CORPUS BASELINE_SOURCE OUTPUT` compares target readings and reports fixes, regressions and targets that cannot be scored from complete groups. Retain the baseline module from `git show 9680332f9425dc0728a6dba6af89dc87cd28b201:api/utils/pronunciation-aids.js`. The harness resolves dependencies from the current checkout; dependency versions must match the lockfile for a comparable replay.
 
@@ -58,13 +58,13 @@ Reading references: [Kanji Kentei's 辛 entry](https://www.kanjipedia.jp/kanji/0
 
 ## Korean cluster audit
 
-Engine `koroman-1.0.16-lyra-2` corrects the standard verb/adjective ㄺ-before-ㄱ exception on a finite set of stems (읽/맑/밝/늙/묽/긁/굵) and endings. The transformed Hangul is used only as a pronunciation intermediate for RR output. Canonical reading, source bytes and grapheme ranges remain the original Hangul. Noun compounds such as 닭고기 and ordinary endings such as 읽다 retain the existing analysis.
+Engine `koroman-1.0.16-lyrica-2` corrects the standard verb/adjective ㄺ-before-ㄱ exception on a finite set of stems (읽/맑/밝/늙/묽/긁/굵) and endings. The transformed Hangul is used only as a pronunciation intermediate for RR output. Canonical reading, source bytes and grapheme ranges remain the original Hangul. Noun compounds such as 닭고기 and ordinary endings such as 읽다 retain the existing analysis.
 
 The audit corpus also covers liaison, assimilation, palatalization and ㅎ; it does not imply all Korean pronunciation exceptions are solved. References: [NIKL standard-pronunciation explanation for 읽고/맑게](https://www.korean.go.kr/front/onlineQna/onlineQnaView.do?mn_id=&pageIndex=1&qna_seq=316913) and [official Revised Romanization](https://www.korean.go.kr/front_eng/roman/roman_01.do). RR remains distinct from full phonetics and from a recording's actual singing.
 
 ## Thai Paiboon profile
 
-`th-paiboon` (engine `wiktionary-20261108-icu-lyra-3`) reads Thai-script runs (spaces
+`th-paiboon` (engine `wiktionary-20261108-icu-lyrica-3`) reads Thai-script runs (spaces
 included, so a spaced ๆ joins its word). `Intl.Segmenter('th')` supplies words; a
 word without a reading is re-read together with its neighbours as the fewest listed
 words that spell it exactly, which repairs ICU splits such as `เพ|ลง`. Readings come

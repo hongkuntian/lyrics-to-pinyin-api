@@ -5,7 +5,7 @@ let pool: pg.Pool | undefined;
 export async function operate(subject: string, input: OwnerInput) {
   if (!pool) {
     pool = new pg.Pool({
-      connectionString: process.env.LYRA_DASHBOARD_OPERATOR_DATABASE_URL,
+      connectionString: process.env.LYRICA_DASHBOARD_OPERATOR_DATABASE_URL,
       max: 2,
       connectionTimeoutMillis: 5000,
       idleTimeoutMillis: 5000,
@@ -17,16 +17,16 @@ export async function operate(subject: string, input: OwnerInput) {
   const db = await pool.connect();
   try {
     const identity = await db.query("SELECT current_user AS role");
-    if (identity.rows[0]?.role !== "lyra_dashboard_operator")
+    if (identity.rows[0]?.role !== "lyrica_dashboard_operator")
       throw new Error("owner_required");
     if (input.kind === "control") {
       await db.query(
-        "SELECT lyra_dashboard_control.set_control($1,$2,$3,$4,$5)",
+        "SELECT lyrica_dashboard_control.set_control($1,$2,$3,$4,$5)",
         [subject, input.requestID, input.version, input.control, input.enabled],
       );
     } else {
       await db.query(
-        "SELECT lyra_dashboard_control.rollback_translation($1,$2,$3,$4,$5,$6,$7)",
+        "SELECT lyrica_dashboard_control.rollback_translation($1,$2,$3,$4,$5,$6,$7)",
         [
           subject,
           input.requestID,

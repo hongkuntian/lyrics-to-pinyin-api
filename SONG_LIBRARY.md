@@ -98,7 +98,7 @@ per million input tokens and US$0.50 per million output/reasoning tokens (verifi
 ## Deployment and operations
 
 1. Connect a free Neon PostgreSQL resource through the Vercel Marketplace, with
-   `LYRA_LIBRARY_` environment prefix and region matching the function (iad1).
+   `LYRICA_LIBRARY_` environment prefix and region matching the function (iad1).
 2. Pull environment variables privately and run `node --env-file=.env.local
    scripts/song-library-admin.js migrate`. The new database starts disabled.
 3. Keep `OPENAI_API_KEY` server-side in the Vercel project. Use a dedicated project

@@ -13,7 +13,7 @@ if(values['env-file']) {
   const env=parse(await readFile(values['env-file']));
   // Catalog credentials may improve identity verification. Production database,
   // Redis, paid model credentials and access tokens are deliberately not loaded.
-  for(const key of ['APPLE_MUSIC_TEAM_ID','APPLE_MUSIC_KEY_ID','APPLE_MUSIC_PRIVATE_KEY','LYRA_CATALOG_RESOLUTION_ENABLED','LYRA_CATALOG_EQUIVALENTS_ENABLED'])
+  for(const key of ['APPLE_MUSIC_TEAM_ID','APPLE_MUSIC_KEY_ID','APPLE_MUSIC_PRIVATE_KEY','LYRICA_CATALOG_RESOLUTION_ENABLED','LYRICA_CATALOG_EQUIVALENTS_ENABLED'])
     if(env[key])process.env[key]=env[key];
 }
 const [{createMusicRomanizeService,SELECTION_REVISION},{createSongLibraryService,lyricLoader},{libraryDB},{createMockReq,createMockRes}]=await Promise.all([

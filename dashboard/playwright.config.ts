@@ -17,18 +17,18 @@ export default defineConfig({
     {
       command: "npm run start -- --hostname 127.0.0.1 --port 4331",
       url: "http://127.0.0.1:4331",
-      env: {LYRA_DASHBOARD_FIXTURE_CONTROLS:"1"},
+      env: {LYRICA_DASHBOARD_FIXTURE_CONTROLS:"1"},
       reuseExistingServer: !process.env.CI,
     },
     {
       command: "npm run start -- --hostname 127.0.0.1 --port 4333",
       url: "http://127.0.0.1:4333",
-      env: { LYRA_DASHBOARD_MODE: "empty" },
+      env: { LYRICA_DASHBOARD_MODE: "empty" },
     },
     {
       command: "npm run start -- --hostname 127.0.0.1 --port 4334",
       url: "http://127.0.0.1:4334/icon.svg",
-      env: { LYRA_DASHBOARD_MODE: "error" },
+      env: { LYRICA_DASHBOARD_MODE: "error" },
       ignoreHTTPSErrors: true,
     },
   ],
