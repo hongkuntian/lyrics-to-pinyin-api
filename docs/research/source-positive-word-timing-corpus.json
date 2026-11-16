@@ -16,11 +16,13 @@
       "metadataEvidence": "Exact reported Spotify catalog metadata captured 2026-11-14 UTC. Fresh NetEase metadata and measured YRC verified against the same duration; no acoustic or installed-app verification.",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "6dMFbxf7TdjTy4KxnZJl7w",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "梁山伯與茱麗葉",
             "artists": [
               "卓文萱",
@@ -54,11 +56,13 @@
       "metadataEvidence": "Exact reported Spotify catalog metadata captured 2026-11-14 UTC. Fresh NetEase metadata and measured YRC verified against the same duration; no acoustic or installed-app verification.",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5bcbAT32LJS87hklgOxUqM",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "明天會更好",
             "artists": [
               "Tsai Chin",
@@ -173,12 +177,14 @@
       "metadataURL": "https://open.spotify.com/track/2sFepQNyl1WjpROruP8bJ0?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=b2d9b676-e6cd-44ed-bd37-a149cbf598f7",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "2sFepQNyl1WjpROruP8bJ0",
           "market": "GB",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Housewife",
             "artists": [
               "Tate McRae"
@@ -233,12 +239,14 @@
       "metadataURL": "https://open.spotify.com/track/1o9mAOmNm3wT2NdyGV1Ard?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=bdaa0f23-9eb9-41c8-a95a-6f7138012cf7",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "1o9mAOmNm3wT2NdyGV1Ard",
           "market": "GB",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Babydoll",
             "artists": [
               "Jamie Miller"
@@ -293,12 +301,14 @@
       "metadataURL": "https://open.spotify.com/track/5YcC8NpP56X2qQIEek9XVA?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=50329293-f1d2-4adc-a945-4b012c767a32",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5YcC8NpP56X2qQIEek9XVA",
           "market": "GB",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Great Expectation",
             "artists": [
               "SIENNA SPIRO"
@@ -353,12 +363,14 @@
       "metadataURL": "https://open.spotify.com/track/3zOYmiNOuyDL0ClxJcEJ0T?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=f2fe466e-ec6e-4d81-8973-fa4c5621aeac",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3zOYmiNOuyDL0ClxJcEJ0T",
           "market": "GB",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Stop The Wedding!",
             "artists": [
               "Ashe"
@@ -413,12 +425,14 @@
       "metadataURL": "https://open.spotify.com/track/0mYXRQpTGjaLJt1l9MY4ps?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=d0eb249b-0d20-46a1-a82a-0e6923e5d67e",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "0mYXRQpTGjaLJt1l9MY4ps",
           "market": "GB",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Man I Need",
             "artists": [
               "Olivia Dean"
@@ -473,12 +487,14 @@
       "metadataURL": "https://open.spotify.com/track/65DbTqJKhbwqYbZ1Okr0rc?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=c5c09b06-6420-4865-ad6a-4d93a683d762",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "65DbTqJKhbwqYbZ1Okr0rc",
           "market": "GB",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Choosin' Texas",
             "artists": [
               "Ella Langley"
@@ -533,12 +549,14 @@
       "metadataURL": "https://open.spotify.com/track/2sFepQNyl1WjpROruP8bJ0?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=a45ba240-8313-44d8-be7a-aadfcf65d454",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "2sFepQNyl1WjpROruP8bJ0",
           "market": "DE",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Housewife",
             "artists": [
               "Tate McRae"
@@ -593,12 +611,14 @@
       "metadataURL": "https://open.spotify.com/track/11hcBLPtbMp4aQI6zGQLub?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=67b88f8c-0ae7-417b-9744-8df19c7eddfe",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "11hcBLPtbMp4aQI6zGQLub",
           "market": "DE",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Patient Zero",
             "artists": [
               "Taylor Swift"
@@ -653,12 +673,14 @@
       "metadataURL": "https://open.spotify.com/track/0kosUz0jePvjiz4ctmR6wL?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=ca2ca3e3-fcb3-4571-9c86-c5868bf3847f",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "0kosUz0jePvjiz4ctmR6wL",
           "market": "DE",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Dai Dai",
             "artists": [
               "Shakira",
@@ -714,12 +736,14 @@
       "metadataURL": "https://open.spotify.com/track/4qW3BbQAwZsrnu8a3ZRdyT?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=5df4aa65-a421-4888-b36d-1867ec6c26a3",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "4qW3BbQAwZsrnu8a3ZRdyT",
           "market": "DE",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Self Aware",
             "artists": [
               "Temper City"
@@ -774,12 +798,14 @@
       "metadataURL": "https://open.spotify.com/track/3zOYmiNOuyDL0ClxJcEJ0T?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=aec4ce0d-0e9d-48df-931f-b6bb202da1e8",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3zOYmiNOuyDL0ClxJcEJ0T",
           "market": "DE",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Stop The Wedding!",
             "artists": [
               "Ashe"
@@ -834,12 +860,14 @@
       "metadataURL": "https://open.spotify.com/track/2sFepQNyl1WjpROruP8bJ0?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=38e54618-d7b2-49d1-8830-14b12b6a0b35",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "2sFepQNyl1WjpROruP8bJ0",
           "market": "BR",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Housewife",
             "artists": [
               "Tate McRae"
@@ -894,12 +922,14 @@
       "metadataURL": "https://open.spotify.com/track/3XmwAZpIMNpTJy8faw3ajD?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=1c737010-11e3-41e2-ae21-609eacb0bdde",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3XmwAZpIMNpTJy8faw3ajD",
           "market": "BR",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "expectations (feat. Chappell Roan)",
             "artists": [
               "Olivia Rodrigo",
@@ -955,12 +985,14 @@
       "metadataURL": "https://open.spotify.com/track/55pBIZO1cqoldeqpp5WR7H?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=a0338289-ede4-4bd5-b60d-1411f9757fbb",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "55pBIZO1cqoldeqpp5WR7H",
           "market": "BR",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "the cure",
             "artists": [
               "Olivia Rodrigo"
@@ -1016,12 +1048,14 @@
       "metadataURL": "https://open.spotify.com/track/6eLQXa6uk2EW8drsiKbABZ?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=6025e957-60a7-4804-ab3c-f415e160c168",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "6eLQXa6uk2EW8drsiKbABZ",
           "market": "MX",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "TU SANCHO",
             "artists": [
               "Fuerza Regida"
@@ -1077,12 +1111,14 @@
       "metadataURL": "https://open.spotify.com/track/6UtWwuheJr5LLDeVypPNx7?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=c7ac6c0f-16ca-41be-bcb9-e426b5f05189",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "6UtWwuheJr5LLDeVypPNx7",
           "market": "MX",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "EXCESOS",
             "artists": [
               "Fuerza Regida"
@@ -1137,12 +1173,14 @@
       "metadataURL": "https://open.spotify.com/track/5vTJrmnmJMAvFjrUpUWxyy?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=3de013b4-0881-4bce-8fb4-91c1fc1de748",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5vTJrmnmJMAvFjrUpUWxyy",
           "market": "IN",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Ashke",
             "artists": [
               "Karan Aujla",
@@ -1199,12 +1237,14 @@
       "metadataURL": "https://open.spotify.com/track/4GvJskA0Jn4NorP2YWxuaf?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=24610eb3-7f8d-46a0-95a2-164f4fe5e651",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "4GvJskA0Jn4NorP2YWxuaf",
           "market": "JP",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "しわあわせ",
             "artists": [
               "Vaundy"
@@ -1259,12 +1299,14 @@
       "metadataURL": "https://open.spotify.com/track/2j0mQg77Ivev2aIksyiiqc?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=557b48ee-aa75-468b-88b2-2f6a8b739d6b",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "2j0mQg77Ivev2aIksyiiqc",
           "market": "JP",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "結び",
             "artists": [
               "Ayumu Imazu"
@@ -1319,12 +1361,14 @@
       "metadataURL": "https://open.spotify.com/track/3Z8NMM7IRu4YKDHBo6vmX3?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=2311932d-dc36-4171-aff3-68c7a5dd748d",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3Z8NMM7IRu4YKDHBo6vmX3",
           "market": "JP",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Brand New",
             "artists": [
               "Mrs. GREEN APPLE"
@@ -1379,12 +1423,14 @@
       "metadataURL": "https://open.spotify.com/track/5P3Nmg0jSYfrSKoYonTGan?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=dd87e1a2-1eb2-4f29-985a-6bab8b9298b9",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5P3Nmg0jSYfrSKoYonTGan",
           "market": "JP",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "共犯",
             "artists": [
               "Mrs. GREEN APPLE"
@@ -1439,12 +1485,14 @@
       "metadataURL": "https://open.spotify.com/track/21VsLvoE7elUmJZLSawaMh?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e9fee9ed-3957-4a69-ac1e-1a8406d6f2fc",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "21VsLvoE7elUmJZLSawaMh",
           "market": "JP",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "ライラック",
             "artists": [
               "Mrs. GREEN APPLE"
@@ -1499,12 +1547,14 @@
       "metadataURL": "https://open.spotify.com/track/3wGesqRt3l2D4ZmYCv9A11?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=224a0e27-6226-4dd2-a5b6-a50589b7e91a",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3wGesqRt3l2D4ZmYCv9A11",
           "market": "JP",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "花束",
             "artists": [
               "back number"
@@ -1559,12 +1609,14 @@
       "metadataURL": "https://open.spotify.com/track/7Jpb9OejYYIwsBIVQwceRy?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=7c18b96e-24e3-4ff1-96d2-371b0192f24f",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7Jpb9OejYYIwsBIVQwceRy",
           "market": "KR",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "SUN KISS",
             "artists": [
               "TUIDE"
@@ -1619,12 +1671,14 @@
       "metadataURL": "https://open.spotify.com/track/3kcGkOmFXtaFjVdz7ge1WL?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e581c8b5-50a0-4a5d-8903-f8951c1ecbd0",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3kcGkOmFXtaFjVdz7ge1WL",
           "market": "KR",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "I SPY",
             "artists": [
               "NCT WISH"
@@ -1679,12 +1733,14 @@
       "metadataURL": "https://open.spotify.com/track/1hXVB56zx5oM7KUJsFRTxy?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=473b204b-7574-41e5-8448-9053d6ad9f4c",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "1hXVB56zx5oM7KUJsFRTxy",
           "market": "KR",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "CRASH",
             "artists": [
               "ALLDAY PROJECT"
@@ -1739,12 +1795,14 @@
       "metadataURL": "https://open.spotify.com/track/67bXdWqZFre6lPaBIaZHlO?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e219a706-c8a0-4c73-91c4-5e1890582a8d",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "67bXdWqZFre6lPaBIaZHlO",
           "market": "KR",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "The Adult I Dreamed Of",
             "artists": [
               "머무르"
@@ -1799,12 +1857,14 @@
       "metadataURL": "https://open.spotify.com/track/6cnhP7JmTV1CHJJEonNC4b?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=dbd1f376-d7f1-4802-9c00-77e7e93bd8e7",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "6cnhP7JmTV1CHJJEonNC4b",
           "market": "TW",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Birthday Wish",
             "artists": [
               "NMIXX"
@@ -1934,12 +1994,14 @@
       "metadataURL": "https://open.spotify.com/track/4azVNx8uhpnKezwrNhcvYz?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=b6329e9c-bc11-4234-b31b-b61ae97ccaf2",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "4azVNx8uhpnKezwrNhcvYz",
           "market": "TW",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "要去什麼地方",
             "artists": [
               "Hebe Tien"
@@ -1994,12 +2056,14 @@
       "metadataURL": "https://open.spotify.com/track/79kqYxIkS29va2I9AeL9ak?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=9aba9555-55ff-4a8f-ae65-e4b21d590ca2",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "79kqYxIkS29va2I9AeL9ak",
           "market": "TW",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Looks Can Kill",
             "artists": [
               "IVE"
@@ -2054,12 +2118,14 @@
       "metadataURL": "https://open.spotify.com/track/3bHIyMzAs0BC3T0YVn4Ctb?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=e4f32be1-cfce-4fc7-9e43-3adf055d9952",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3bHIyMzAs0BC3T0YVn4Ctb",
           "market": "HK",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "淺粉紅 pale pink",
             "artists": [
               "Gareth.T"
@@ -2114,12 +2180,14 @@
       "metadataURL": "https://open.spotify.com/track/1jQp4mCBDmXr8NMqsMpH8E?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=0d0c127e-17d7-453a-aba9-f54d03b4f799",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "1jQp4mCBDmXr8NMqsMpH8E",
           "market": "HK",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "用背脊唱情歌",
             "artists": [
               "Gareth.T"
@@ -2174,12 +2242,14 @@
       "metadataURL": "https://open.spotify.com/track/1R116HqW5ECo5VRjeewhM9?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=90015e37-2856-4c1c-81ca-19172cf1dd52",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "1R116HqW5ECo5VRjeewhM9",
           "market": "HK",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "說謊者",
             "artists": [
               "MC 張天賦"
@@ -2234,12 +2304,14 @@
       "metadataURL": "https://open.spotify.com/track/0r0VLsvWv7jo2HGfvlt5xh?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=d5ffb26c-c5f5-4ef7-a96d-eb4b5d6741d7",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "0r0VLsvWv7jo2HGfvlt5xh",
           "market": "HK",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "未深入但了解",
             "artists": [
               "MC 張天賦"
@@ -2294,12 +2366,14 @@
       "metadataURL": "https://open.spotify.com/track/7M0ZCvE0HcikCJUy4cTsAF?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=723ce71d-3405-4595-8784-be5f2fd5e20f",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7M0ZCvE0HcikCJUy4cTsAF",
           "market": "HK",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "男人怎可以",
             "artists": [
               "MC 張天賦"
@@ -2354,12 +2428,14 @@
       "metadataURL": "https://open.spotify.com/track/79kqYxIkS29va2I9AeL9ak?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=8ab2ebac-517d-456b-aa94-b8bcced8320c",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "79kqYxIkS29va2I9AeL9ak",
           "market": "HK",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Looks Can Kill",
             "artists": [
               "IVE"
@@ -2439,12 +2515,14 @@
       "metadataURL": "https://open.spotify.com/track/1sb71AvysPMJlsx4qYtTpG?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=2789e5d9-923e-43da-9daa-757c7445fcca",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "1sb71AvysPMJlsx4qYtTpG",
           "market": "HK",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "緊急聯絡人",
             "artists": [
               "Gareth.T"
@@ -2474,12 +2552,14 @@
       "metadataURL": "https://open.spotify.com/track/0cOMncRq4cmDLO4tPQnkBF?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=5958b54d-4469-4e68-ad82-65cae38363f1",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "0cOMncRq4cmDLO4tPQnkBF",
           "market": "TW",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "擱淺",
             "artists": [
               "Jay Chou"
@@ -2509,12 +2589,14 @@
       "metadataURL": "https://open.spotify.com/track/4XrWar13kLO1jr535AzKrQ?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=009f78a1-ab50-4a23-9bc1-8172a76ee11d",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "4XrWar13kLO1jr535AzKrQ",
           "market": "TW",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "我不難過",
             "artists": [
               "Stefanie Sun"
@@ -2544,12 +2626,14 @@
       "metadataURL": "https://open.spotify.com/track/57w29bSwdIZ6gr6xXOqwc1?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=debb2248-f9b0-4a81-ba2f-e03a401b6405",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "57w29bSwdIZ6gr6xXOqwc1",
           "market": "TW",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "七里香",
             "artists": [
               "Jay Chou"
@@ -2579,12 +2663,14 @@
       "metadataURL": "https://open.spotify.com/track/0pmGleExiQyd0HxV5kAOwK?utm_source=openai&utm_medium=chatgpt&go=1&nap_web=1&request_id=c873b097-cf77-4831-8e10-5848c19a8dd7",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "0pmGleExiQyd0HxV5kAOwK",
           "market": "HK",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "陀飛輪",
             "artists": [
               "Eason Chan"
@@ -2933,12 +3019,14 @@
       "metadataURL": "https://open.spotify.com/track/46fURCnWErjFdNM2yBJ2c8",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "46fURCnWErjFdNM2yBJ2c8",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "永不失聯的愛",
             "artists": [
               "Eric Chou"
@@ -2969,12 +3057,14 @@
       "metadataURL": "https://open.spotify.com/track/56UzFYxgkvxU188BsCKBOc",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "56UzFYxgkvxU188BsCKBOc",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "當你",
             "artists": [
               "JJ Lin"
@@ -3005,12 +3095,14 @@
       "metadataURL": "https://open.spotify.com/track/2wzXhxWPX0aODraKNXoJYY",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "2wzXhxWPX0aODraKNXoJYY",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "後來",
             "artists": [
               "Rene Liu"
@@ -3041,12 +3133,14 @@
       "metadataURL": "https://open.spotify.com/track/2CAyR8dnIGZ3IMvqUEOSTR",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "2CAyR8dnIGZ3IMvqUEOSTR",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "大約在冬季",
             "artists": [
               "Chyi Chin"
@@ -3077,12 +3171,14 @@
       "metadataURL": "https://open.spotify.com/track/3AJwUDP919kvQ9QcozQPxg",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3AJwUDP919kvQ9QcozQPxg",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Yellow",
             "artists": [
               "Coldplay"
@@ -3113,12 +3209,14 @@
       "metadataURL": "https://open.spotify.com/track/1mea3bSkSGXuIRvnydlB5b",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "1mea3bSkSGXuIRvnydlB5b",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Viva La Vida",
             "artists": [
               "Coldplay"
@@ -3149,12 +3247,14 @@
       "metadataURL": "https://open.spotify.com/track/7qiZfU4dY1lWllzX7mPBI3",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7qiZfU4dY1lWllzX7mPBI3",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Shape of You",
             "artists": [
               "Ed Sheeran"
@@ -3185,12 +3285,14 @@
       "metadataURL": "https://open.spotify.com/track/4sPmO7WMQUAf45kwMOtONw",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "4sPmO7WMQUAf45kwMOtONw",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Hello",
             "artists": [
               "Adele"
@@ -3221,12 +3323,14 @@
       "metadataURL": "https://open.spotify.com/track/5wANPM4fQCJwkGd4rN57mH",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5wANPM4fQCJwkGd4rN57mH",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "drivers license",
             "artists": [
               "Olivia Rodrigo"
@@ -3257,12 +3361,14 @@
       "metadataURL": "https://open.spotify.com/track/7ovUcF5uHTBRzUpB6ZOmvt",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7ovUcF5uHTBRzUpB6ZOmvt",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "アイドル",
             "artists": [
               "YOASOBI"
@@ -3293,12 +3399,14 @@
       "metadataURL": "https://open.spotify.com/track/4Dr2hJ3EnVh2Aaot6fRwDO",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "4Dr2hJ3EnVh2Aaot6fRwDO",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Blueming",
             "artists": [
               "IU"
@@ -3352,12 +3460,14 @@
       "pairID": "mei-na-simple",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "4xZIMRwaaBx7CZMmM6KLuh",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "沒那麽簡單",
             "artists": [
               "黃小琥"
@@ -3386,11 +3496,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "2PXhHrVL1HkKk4fto9D8zE",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "第一次",
             "artists": [
               "Michael Wong"
@@ -3420,11 +3532,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7BYMjh3vWnHU4IFyfZdIDO",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Mojito",
             "artists": [
               "Jay Chou"
@@ -3457,11 +3571,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7mubQiRZ1Q94ZN3zCrNbzn",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "天天想你",
             "artists": [
               "Zhang Yu Sheng"
@@ -3494,11 +3610,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5WD10VSuBAm2YxnaiqQ3eA",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "聽海",
             "artists": [
               "A-Mei Chang"

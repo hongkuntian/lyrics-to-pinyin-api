@@ -5,7 +5,7 @@ import {makeDocument} from '../../api/utils/song-library/document.js';
 import {sourceCapsule,spotifyBinding} from '../../api/utils/song-library/spotify-recording.js';
 import {parseTranslation,requestBody,translationRecipe} from '../../api/utils/song-library/translation.js';
 
-const policy='bridge-test',recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Song',artists:['Artist'],duration_ms:240000}};
+const policy='bridge-test',recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Song',artists:['Artist'],duration_ms:240000}};
 function response() {
   return {song:{id:'independent-42',title:{original:'Song'},artist:{original:'Artist'},duration:240,language:'zh',romanization_system:'pinyin'},
     lines:[{original:'風來了',romanized:'feng lai le',timestamp:12},{original:'海在這裡',romanized:'hai zai zhe li',timestamp:60}],

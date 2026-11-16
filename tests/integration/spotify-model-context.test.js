@@ -11,7 +11,7 @@ import {translationIdentity} from '../../api/utils/song-library/translation-iden
 import {retryTranslation} from '../../api/utils/song-library/translation-retry.js';
 import {batchInput} from '../../api/utils/song-library/batch-provider.js';
 import {executeTranslationJob} from '../../api/utils/song-library/translation-worker.js';
-const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',market:'US',metadata:{origin:'spotify',title:'SPOTIFY_PRIVATE_TITLE',artists:['SPOTIFY_PRIVATE_ARTIST'],album:'SPOTIFY_PRIVATE_ALBUM',duration_ms:240001,isrc:'USABC2600001',explicit:false}};
+const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',market:'US',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'SPOTIFY_PRIVATE_TITLE',artists:['SPOTIFY_PRIVATE_ARTIST'],album:'SPOTIFY_PRIVATE_ALBUM',duration_ms:240001,isrc:'USABC2600001',explicit:false}};
 function document({names=true,r=recording,timestamp=12.5}={}) {
   const value={song:{id:'independent-source-42',title:{original:names?'Independent title':''},artist:{original:names?'Independent artist':''},album:names?'Independent album':null,language:'zh',romanization_system:'pinyin',duration:240},
     lines:[{original:'風來了',romanized:'fēng lái le',timestamp}],quality:{synced:true,partial:false,instrumental:false},metadata:{source:'LRCAPI',selection_revision:'test'}};

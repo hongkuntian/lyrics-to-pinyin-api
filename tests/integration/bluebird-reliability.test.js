@@ -10,7 +10,7 @@ import {libraryDB} from '../helpers/library-db.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 
 const recording={title:'ブルーバード',artist:'Ikimonogakari',album:'Chou Ikimonobakari Tennen Kinen Members Best Selection',duration:215.707,catalog_id:'1089186523',storefront:'us'};
-const spotify={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',market:'US',metadata:{origin:'spotify',title:recording.title,artists:[recording.artist],album:recording.album,duration_ms:215707}};
+const spotify={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',market:'US',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:recording.title,artists:[recording.artist],album:recording.album,duration_ms:215707}};
 const texts=['飛翔いたら','遊迷','共鳴けて'];
 const raw=starts=>texts.map((text,index)=>`[${starts[index]},2000]<0,2000,0>${text}`).join('\n');
 const ordinary=raw([10000,60000,120000]);

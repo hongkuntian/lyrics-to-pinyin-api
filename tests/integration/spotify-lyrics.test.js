@@ -7,7 +7,7 @@ import {sourceCapsule,spotifyBinding,spotifySearchRequest,spotifyHashes} from '.
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 import {createSpotifyLyricsService} from '../../api/utils/spotify-lyrics.js';
 import {validateDocument} from '../../api/utils/spotify/render.js';
-const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Request title',artists:['Band & Name','Guest'],duration_ms:240001}};
+const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Request title',artists:['Band & Name','Guest'],duration_ms:240001}};
 const song={id:'source-42',title:'Request title',artist:'Band & Name & Guest',creditedArtistNames:['Band & Name','Guest'],duration:240,source:'lrclib'};
 const words=[{text:'風來了',timestamp:12.5},{text:'海在這裡',timestamp:60.125}];
 function fixture({source=song,lines=words,partial=false}={}) {
@@ -20,7 +20,7 @@ function fixture({source=song,lines=words,partial=false}={}) {
   return {service,queries};
 }
 async function call(service,body) {const res=createMockRes();await service(createMockReq({body}),res);return res;}
-test('both envelopes use one V2 fingerprint and independent fallback capsule with no Apple proof',async()=>{
+test('both envelopes use one V3 fingerprint and independent fallback capsule with no Apple proof',async()=>{
   const {service,queries}=fixture();
   const response=await call(service,{recording,options:{tone_style:'marks',separator:' ',case:'lower'}});
   assert.equal(response.statusCode,200);const body=response.body;
@@ -34,6 +34,23 @@ test('both envelopes use one V2 fingerprint and independent fallback capsule wit
   assert.equal(doc.recordingBinding.requestHash,body.recordingBinding.requestHash);assert.equal(doc.recordingBinding.documentID,doc.id);
   assert.equal(doc.recordingBinding.sourceHash,body.recordingBinding.sourceHash);assert.equal(doc.response.recordingBinding,undefined);
   assert.deepEqual(doc.sourceCapsule,sourceCapsule(body));assert.equal(doc.canonicalRecordingID,null);
+});
+test('native observations load independent lyrics without catalog enrichment and keep their own durable evidence',async()=>{
+  const {service,queries}=fixture();
+  const native={...recording,metadata:{...recording.metadata,observation:'app_remote',artists_complete:false,artists:['Band & Name']}};
+  const first=await call(service,{recording:native});
+  assert.equal(first.statusCode,200);assert.equal(first.body.recordingBinding.version,3);
+  assert.equal(queries.length,1);assert.equal(queries[0].context.creditedArtistsComplete,false);
+  assert.deepEqual(queries[0].context.creditedArtistNames,['Band & Name']);
+  const nativeDocument=makeDocument(native,first.body,SELECTION_REVISION);
+  const enriched=await call(service,{recording});
+  assert.equal(enriched.statusCode,200);assert.equal(queries.length,2);
+  const webDocument=makeDocument(recording,enriched.body,SELECTION_REVISION);
+  assert.equal(nativeDocument.recordingKey,webDocument.recordingKey);
+  assert.equal(nativeDocument.sourceHash,webDocument.sourceHash);
+  assert.notEqual(nativeDocument.id,webDocument.id);
+  assert.equal(nativeDocument.requestRecording.metadata.observation,'app_remote');
+  assert.throws(()=>makeDocument(recording,first.body,SELECTION_REVISION),{code:'recording_mismatch'});
 });
 test('Spotify mixed envelope/selectors and invalid recording fail before provider lookup',async()=>{
   const {service,queries}=fixture();
@@ -125,7 +142,7 @@ test('Spotify rejects fresh Redis credit leaks and persists only clean independe
 });
 
 test('reviewed Spotify language guards reject fresh and cached wrong-language sources',async()=>{
-  const r={version:2,provider:'spotify',item_id:'7ovUcF5uHTBRzUpB6ZOmvt',metadata:{origin:'spotify',title:'Idol',artists:['YOASOBI'],duration_ms:213234}};
+  const r={version:3,provider:'spotify',item_id:'7ovUcF5uHTBRzUpB6ZOmvt',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Idol',artists:['YOASOBI'],duration_ms:213234}};
   const source={id:'reviewed-test',title:'Idol',artist:'YOASOBI',duration:213.234};
   let searches=0,lines=[{text:'An English version.',timestamp:12},{text:'A second English line.',timestamp:60}];
   const api={name:'LRCAPI',searchSong:async()=>{searches++;return source;},getLyrics:async()=>({lines})};

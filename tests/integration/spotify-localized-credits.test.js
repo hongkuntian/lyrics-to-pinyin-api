@@ -17,7 +17,7 @@ const identityTarget=(recording,resolve)=>({...spotifySearchRequest(recording),r
 
 // Request ID is synthetic. Provider IDs/names/aliases were observed live;
 // performed words are original test fixtures.
-const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',market:'US',metadata:{origin:'spotify',
+const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',market:'US',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,
   title:'因為愛情',artists:['Eason Chan','Faye Wong'],album:'Stranger Under My Skin',duration_ms:216893}};
 const raw={id:64317,name:'因为爱情',artists:[{id:2116,name:'陈奕迅'},{id:9621,name:'王菲'}],
   album:{name:'Stranger Under My Skin'},duration:218277};
@@ -52,7 +52,7 @@ test('Spotify English contributor names resolve only through each independent pr
 
 // Metadata observed from Spotify and NetEase on 2026-10-26. Only the lyrics
 // below are invented; the two-second catalog duration discrepancy is real.
-const qianLiRecording={version:2,provider:'spotify',item_id:'3Pjp7lBM20zYzTlRurI6B7',metadata:{origin:'spotify',
+const qianLiRecording={version:3,provider:'spotify',item_id:'3Pjp7lBM20zYzTlRurI6B7',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,
   title:'千里之外',artists:['Jay Chou','Fei Yu-ching'],artist_ids:['2elBjNSdBE2Y3f0j1mjrql','6aSJ9LaNaHOKiPchLDYGYl'],album:'依然范特西',duration_ms:256372}};
 const qianLiSong={id:185880,name:'千里之外',artists:[{id:6452,name:'周杰伦'},{id:2747,name:'费玉清'}],
   album:{name:'依然范特西'},duration:254373};
@@ -226,7 +226,7 @@ test('authenticated library route stores and reopens localized Spotify lyrics un
 
 // Fresh catalog metadata matches the original Spotify album and millisecond
 // duration. NetEase lists Tom Chang but omits Spotify's Zhang Yu Sheng label.
-const zhangRecording={version:2,provider:'spotify',item_id:'1123456789ABCDEFGHIJKL',metadata:{origin:'spotify',
+const zhangRecording={version:3,provider:'spotify',item_id:'1123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,
  title:'天天想你',artists:['Zhang Yu Sheng'],artist_ids:['3LefT7hR0PJgShJNQoPns5'],album:'天天想你',duration_ms:252866}};
 const zhangSong={id:188177,name:'天天想你',artists:[{id:6459,name:'张雨生'}],album:{name:'天天想你'},duration:252866};
 const zhangProfile={6459:{id:6459,name:'张雨生',alias:['Tom Chang','小宝']}};
@@ -243,7 +243,7 @@ test('NetEase verifies artist identity while its mismatched-credit profile is lo
  assert.equal(song.id,zhangSong.id);assert.ok(song.artistAliasEvidence);
 });
 
-const ameiRecording={version:2,provider:'spotify',item_id:'2123456789ABCDEFGHIJKL',metadata:{origin:'spotify',
+const ameiRecording={version:3,provider:'spotify',item_id:'2123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,
  title:'聽海',artists:['A-Mei Chang'],artist_ids:['6noxsCszBEEK04kCehugOp'],album:'BAD BOY',duration_ms:318333}};
 const ameiSong={id:327584,name:'听海',artists:[{id:10559,name:'张惠妹'}],album:{name:'BAD BOY'},duration:318626};
 const ameiProfile={10559:{id:10559,name:'张惠妹',alias:['aMEI','阿妹','阿密特']}};

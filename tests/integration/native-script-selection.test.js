@@ -15,7 +15,7 @@ for(const platform of ['apple','spotify'])for(const available of [true,false])te
   resolveCatalogAliasesFn:async()=>[],lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
   getProcessorFn:()=>({romanize:async text=>({romanized:text})}),logger:{error(){},info(){},log(){}}});
  const metadata={artist:'Hacken Lee',title,album:'紅日',duration:287};
- const body=platform==='apple'?metadata:{recording:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title,artists:['Hacken Lee'],album:'紅日',duration_ms:287000}}};
+ const body=platform==='apple'?metadata:{recording:{version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title,artists:['Hacken Lee'],album:'紅日',duration_ms:287000}}};
  const response=createMockRes();await service(createMockReq({body}),response);
  assert.equal(response.statusCode,200,JSON.stringify(response.body));
  assert.ok(searched.includes('native'));

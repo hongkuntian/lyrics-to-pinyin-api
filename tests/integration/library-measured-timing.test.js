@@ -112,7 +112,8 @@ for(const [platform,recording] of [['apple',appleRequest],['spotify',spotifyRequ
 test('Spotify source replacement leaves peer fingerprints, learning records and a running completion on the original document',async t=>{
  const f=await fixture(t,{mode:'absent'}),recording=spotifyRequest,peer={...recording,market:'US'};
  const old=(await f.call({action:'lyrics',recording})).body.document;
- assert.equal((await f.call({action:'lyrics',recording:peer})).body.document.id,old.id);
+ const peerDocument=(await f.call({action:'lyrics',recording:peer})).body.document;
+ assert.notEqual(peerDocument.id,old.id);assert.equal(peerDocument.sourceHash,old.sourceHash);
  const requested=await f.call({action:'translate',documentID:old.id,sourceHash:old.sourceHash,target:'en',allowGeneration:true});
  assert.equal(requested.statusCode,202);await Promise.all(f.pending);
  const meaning=(await f.call({action:'current',documentID:old.id,sourceHash:old.sourceHash,target:'en'})).body.translation;
@@ -128,7 +129,7 @@ test('Spotify source replacement leaves peer fingerprints, learning records and 
  try {
   await started.promise;f.state.mode='words';const current=(await f.call({action:'lyrics',recording,refresh:true})).body.document;
   assert.notEqual(current.id,old.id);assert.ok(cueCount(current.response)>0);
-  assert.equal((await f.store.documentForRequest(requestKey(peer),SELECTION_REVISION)).id,old.id);
+  assert.equal((await f.store.documentForRequest(requestKey(peer),SELECTION_REVISION)).id,peerDocument.id);
   finish.resolve();await worker;
   assert.equal((await f.store.job(reserved.job.id)).documentID,old.id);
   assert.equal((await f.db.query('SELECT document_id FROM song_translations WHERE id=$1',[reserved.job.id])).rows[0].document_id,old.id);

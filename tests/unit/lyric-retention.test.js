@@ -5,7 +5,7 @@ import {makeDocument} from '../../api/utils/song-library/document.js';
 import {sourceCapsule,spotifyBinding} from '../../api/utils/song-library/spotify-recording.js';
 import {completenessTarget,completenessCandidate,fullerCandidate} from '../helpers/lyric-completeness-fixture.js';
 const apple={catalog_id:'123',duration:120};
-const spotify={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Fixture',artists:['Fixture'],duration_ms:120000}};
+const spotify={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Fixture',artists:['Fixture'],duration_ms:120000}};
 function response(recording,{coverage=[4,4],grouped=false,id='42'}={}) {
  const lines=['abcd','efgh'].map((original,index)=>{
   const timestamp=10+index*10,count=coverage[index];
@@ -27,8 +27,8 @@ function completenessDocument(recording,candidate,{canonicalID=null}={}) {
  return makeDocument(recording,value,'test');
 }
 for(const platform of ['apple','spotify']) {
- const recording=platform==='apple'?{catalog_id:'123',...completenessTarget}:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',
-  metadata:{origin:'spotify',title:completenessTarget.title,artists:[completenessTarget.artist],album:completenessTarget.album,duration_ms:240000}};
+ const recording=platform==='apple'?{catalog_id:'123',...completenessTarget}:{version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',
+  metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:completenessTarget.title,artists:[completenessTarget.artist],album:completenessTarget.album,duration_ms:240000}};
  test(`${platform}: fuller corroborated edition outranks timed excerpt in both refresh directions`,()=>{
   const excerpt=completenessDocument(recording,completenessCandidate()),full=completenessDocument(recording,fullerCandidate());
   assert.equal(shouldRetainLyricDocument(excerpt,full,recording),false);

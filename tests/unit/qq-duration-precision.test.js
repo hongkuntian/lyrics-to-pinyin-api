@@ -102,7 +102,7 @@ test('precision evidence itself participates in Apple and Spotify immutable timi
  const structure={version:'source-speakers-1',speakers:[],occurrences:[]},identity={recordingKey:'synthetic-recording',textRevision:'synthetic-text'};
  const a=appleVocalHashes(precise,structure,identity),b=appleVocalHashes(exact,structure,identity);
  assert.notEqual(a.timingRevision,b.timingRevision);assert.notEqual(a.sourceHash,b.sourceHash);
- const recording={version:2,provider:'spotify',item_id:'A'.repeat(22),metadata:{origin:'spotify',title:'Synthetic Song',artists:['Synthetic Artist'],album:'Synthetic Album',duration_ms:229387}};
+ const recording={version:3,provider:'spotify',item_id:'A'.repeat(22),metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Synthetic Song',artists:['Synthetic Artist'],album:'Synthetic Album',duration_ms:229387}};
  const spotify=attach(lyrics,'spotify'),capsule=sourceCapsule(spotify),clone=structuredClone(capsule);delete clone.lyricTiming.durationResolution;
  const x=spotifyHashes(recording,capsule,'synthetic-selection'),y=spotifyHashes(recording,clone,'synthetic-selection');
  assert.notEqual(x.timingRevision,y.timingRevision);assert.notEqual(x.sourceHash,y.sourceHash);

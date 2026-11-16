@@ -126,7 +126,7 @@ for(const provider of ['apple','spotify'])test(`${provider}: handler recovers th
   resolveCatalogAliasesFn:async()=>[],lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
   getDefaultRomanizationSystemFn:()=> 'none',logger:{info(){},error(){}}});
  const itemID='0123456789ABCDEFGHIJKL';
- const body=provider==='apple'?duet:{recording:{version:2,provider:'spotify',item_id:itemID,metadata:{origin:'spotify',title:duet.title,artists:['Tay Kewei','沈志豪'],album:duet.album,duration_ms:320227}}};
+ const body=provider==='apple'?duet:{recording:{version:3,provider:'spotify',item_id:itemID,metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:duet.title,artists:['Tay Kewei','沈志豪'],album:duet.album,duration_ms:320227}}};
  const res=createMockRes();await service({method:'POST',body},res);
  assert.equal(res.statusCode,200);
  assert.equal(String(res.body.song.id),String(timedDuet.id));
@@ -252,7 +252,7 @@ for(const provider of ['apple','spotify'])test(`${provider}: handler publishes s
   resolveCatalogAliasesFn:async()=>[],lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
   getDefaultRomanizationSystemFn:()=> 'none',logger:{info(){},error(){}}});
  const itemID='0123456789ABCDEFGHIJKL';
- const body=provider==='apple'?target:{recording:{version:2,provider:'spotify',item_id:itemID,metadata:{origin:'spotify',title:target.title,artists:[target.artist],album:target.album,duration_ms:232827}}};
+ const body=provider==='apple'?target:{recording:{version:3,provider:'spotify',item_id:itemID,metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:target.title,artists:[target.artist],album:target.album,duration_ms:232827}}};
  const res=createMockRes();await service({method:'POST',body},res);
  assert.equal(res.statusCode,200);
  assert.equal(String(res.body.song.id),String(measured.id));

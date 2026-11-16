@@ -10,7 +10,7 @@
       "metadataEvidence": "Exact user-supplied Spotify ID confirmed; fresh Spotify catalog lookup 2026-11-14. Album Kimberley首張同名專輯, solo artist Kimberley Chen, duration 207840 ms.",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "0n7Ij8XEDfYYFRgBQjNjnf",
           "metadata": {
@@ -23,7 +23,9 @@
               "1dVbVQZjRGDjQmHD8oiS8k"
             ],
             "album": "Kimberley首張同名專輯",
-            "duration_ms": 207840
+            "duration_ms": 207840,
+            "observation": "web_api",
+            "artists_complete": true
           }
         }
       },

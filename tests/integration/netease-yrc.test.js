@@ -137,9 +137,9 @@ test('timed Apple and Spotify survive JSONB close/reopen with immutable source, 
  const hint={...spotifyRequest,market:'US'},hintDoc=(await acquired(hint)).doc;await save(store,hintDoc);
  const replacement=(await acquired(spotifyRequest,{yrc:syntheticYRC.replace('10000,500,9','10000,400,9')})).doc;
  await assert.rejects(store.saveDocument(replacement,{replaceID:s.id,lookupOwner:'00000000-0000-4000-8000-000000000001'}),{code:'lookup_superseded'});
- await save(store,replacement,s.id);assert.equal((await store.documentForRequest(requestKey(hint),SELECTION_REVISION)).id,s.id);
+ await save(store,replacement,s.id);assert.equal((await store.documentForRequest(requestKey(hint),SELECTION_REVISION)).id,hintDoc.id);
  await db.close();({db,store}=await libraryDB(path));
- for(const [r,d] of [[appleRequest,a],[hint,s]]){const loaded=await store.documentForRequest(requestKey(r),SELECTION_REVISION),wire=publicDocument(loaded,r);assert.equal(wire.id,d.id);assert.deepEqual(wire.response.lines,d.response.lines);assert.deepEqual(wire.response.metadata.lyric_timing,d.response.metadata.lyric_timing);assert.equal(loaded.timingRevision,d.timingRevision);}
+ for(const [r,d] of [[appleRequest,a],[hint,hintDoc]]){const loaded=await store.documentForRequest(requestKey(r),SELECTION_REVISION),wire=publicDocument(loaded,r);assert.equal(wire.id,d.id);assert.deepEqual(wire.response.lines,d.response.lines);assert.deepEqual(wire.response.metadata.lyric_timing,d.response.metadata.lyric_timing);assert.equal(loaded.timingRevision,d.timingRevision);}
  const saved=await store.document(s.id);assert.equal(saved.id,s.id);assert.deepEqual(saved.sourceCapsule,s.sourceCapsule);assert.equal((await store.existingTranslationJob(saved,'en')).id,job.job.id);
  assert.equal((await store.documentForRequest(requestKey(spotifyRequest),SELECTION_REVISION)).id,replacement.id);assert.equal(Number((await store.usage()).accounted_micros),10000);
 });

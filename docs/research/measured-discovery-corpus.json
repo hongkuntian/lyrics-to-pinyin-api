@@ -19,11 +19,13 @@
       "metadataEvidence": "Exact reported Spotify catalog metadata captured 2026-11-14 UTC. Fresh NetEase metadata and measured YRC verified against the same duration; no acoustic or installed-app verification.",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "6dMFbxf7TdjTy4KxnZJl7w",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "梁山伯與茱麗葉",
             "artists": [
               "卓文萱",
@@ -57,11 +59,13 @@
       "metadataEvidence": "Exact reported Spotify catalog metadata captured 2026-11-14 UTC. Fresh NetEase metadata and measured YRC verified against the same duration; no acoustic or installed-app verification.",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5bcbAT32LJS87hklgOxUqM",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "明天會更好",
             "artists": [
               "Tsai Chin",
@@ -150,11 +154,13 @@
       "catalogURL": "https://open.spotify.com/track/7dIi9GxNOaCJ75ZDLIQo70",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7dIi9GxNOaCJ75ZDLIQo70",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Butter-Fly (デジモンアドベンチャー)",
             "artists": ["Sho Oosawa"],
             "artist_ids": ["2CjRvmpvJbyoGeXA4OtSYp"],
@@ -376,12 +382,14 @@
       "metadataURL": "https://open.spotify.com/track/46fURCnWErjFdNM2yBJ2c8",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "46fURCnWErjFdNM2yBJ2c8",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "永不失聯的愛",
             "artists": [
               "Eric Chou"
@@ -402,12 +410,14 @@
       "metadataURL": "https://open.spotify.com/track/56UzFYxgkvxU188BsCKBOc",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "56UzFYxgkvxU188BsCKBOc",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "當你",
             "artists": [
               "JJ Lin"
@@ -428,12 +438,14 @@
       "metadataURL": "https://open.spotify.com/track/2wzXhxWPX0aODraKNXoJYY",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "2wzXhxWPX0aODraKNXoJYY",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "後來",
             "artists": [
               "Rene Liu"
@@ -454,12 +466,14 @@
       "metadataURL": "https://open.spotify.com/track/2CAyR8dnIGZ3IMvqUEOSTR",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "2CAyR8dnIGZ3IMvqUEOSTR",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "大約在冬季",
             "artists": [
               "Chyi Chin"
@@ -480,12 +494,14 @@
       "metadataURL": "https://open.spotify.com/track/3AJwUDP919kvQ9QcozQPxg",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3AJwUDP919kvQ9QcozQPxg",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Yellow",
             "artists": [
               "Coldplay"
@@ -506,12 +522,14 @@
       "metadataURL": "https://open.spotify.com/track/1mea3bSkSGXuIRvnydlB5b",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "1mea3bSkSGXuIRvnydlB5b",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Viva La Vida",
             "artists": [
               "Coldplay"
@@ -532,12 +550,14 @@
       "metadataURL": "https://open.spotify.com/track/7qiZfU4dY1lWllzX7mPBI3",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7qiZfU4dY1lWllzX7mPBI3",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Shape of You",
             "artists": [
               "Ed Sheeran"
@@ -558,12 +578,14 @@
       "metadataURL": "https://open.spotify.com/track/4sPmO7WMQUAf45kwMOtONw",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "4sPmO7WMQUAf45kwMOtONw",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Hello",
             "artists": [
               "Adele"
@@ -584,12 +606,14 @@
       "metadataURL": "https://open.spotify.com/track/5wANPM4fQCJwkGd4rN57mH",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5wANPM4fQCJwkGd4rN57mH",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "drivers license",
             "artists": [
               "Olivia Rodrigo"
@@ -610,12 +634,14 @@
       "metadataURL": "https://open.spotify.com/track/7ovUcF5uHTBRzUpB6ZOmvt",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7ovUcF5uHTBRzUpB6ZOmvt",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "アイドル",
             "artists": [
               "YOASOBI"
@@ -636,12 +662,14 @@
       "metadataURL": "https://open.spotify.com/track/4Dr2hJ3EnVh2Aaot6fRwDO",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "4Dr2hJ3EnVh2Aaot6fRwDO",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Blueming",
             "artists": [
               "IU"
@@ -675,12 +703,14 @@
       "pairID": "mei-na-simple",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "4xZIMRwaaBx7CZMmM6KLuh",
           "market": "US",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "沒那麽簡單",
             "artists": [
               "黃小琥"
@@ -701,11 +731,13 @@
       "metadataCapturedAt": "2026-10-26",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3Pjp7lBM20zYzTlRurI6B7",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "千里之外",
             "artists": [
               "Jay Chou",
@@ -728,11 +760,13 @@
       "metadataCapturedAt": "2026-10-26",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "6WOwRdX67b4VKujGIal4tK",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "因為愛情",
             "artists": [
               "Eason Chan",
@@ -753,11 +787,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "1k0YFNylstvLBC3C5vPWP9",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "吻別",
             "artists": [
               "Jacky Cheung"
@@ -781,11 +817,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5ufg2o33urFZ1AQfTxwNZO",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "忘情水",
             "artists": [
               "Andy Lau"
@@ -809,11 +847,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3Srw8isgDzmYsgwDi4MtbD",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "月亮代表我的心",
             "artists": [
               "Teresa Teng"
@@ -837,11 +877,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5l94Up12BJSjhH7Mhr2ji4",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "紅豆",
             "artists": [
               "Faye Wong"
@@ -865,11 +907,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "1HvAJPhhs2LnNViKxQ7APT",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "倔強",
             "artists": [
               "Mayday"
@@ -893,11 +937,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5KdZLYyoBP0qsjDTDP28do",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "挪威的森林",
             "artists": [
               "Wu Bai"
@@ -921,11 +967,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5WD10VSuBAm2YxnaiqQ3eA",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "聽海",
             "artists": [
               "A-Mei Chang"
@@ -949,11 +997,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "0YgvF6fNWydNGzCY3pzK4Y",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "江南",
             "artists": [
               "JJ Lin"
@@ -977,11 +1027,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3OXHwY8gI2QUh0QliXBwrI",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "愛, 很簡單",
             "artists": [
               "David Tao"
@@ -1005,11 +1057,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "3xJK8ywApYVEYIDhymYMC6",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "遇見",
             "artists": [
               "Stefanie Sun"
@@ -1033,11 +1087,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7BYMjh3vWnHU4IFyfZdIDO",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "Mojito",
             "artists": [
               "Jay Chou"
@@ -1057,11 +1113,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "5pIcwtJYNJx93l420oR2Vm",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "晴天",
             "artists": ["Jay Chou"],
             "album": "葉惠美",
@@ -1078,11 +1136,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "77jIEebt4z9WzaI6LsntDG",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "不能說的秘密",
             "artists": ["Jay Chou"],
             "album": "不能說的秘密 電影原聲帶",
@@ -1099,11 +1159,13 @@
       "platform": "spotify",
       "request": {
         "recording": {
-          "version": 2,
+          "version": 3,
           "provider": "spotify",
           "item_id": "7mubQiRZ1Q94ZN3zCrNbzn",
           "metadata": {
             "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
             "title": "天天想你",
             "artists": [
               "Zhang Yu Sheng"

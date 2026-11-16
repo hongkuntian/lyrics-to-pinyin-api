@@ -218,8 +218,8 @@ test('stale plain documents upgrade with an immutable revision and fence old gen
   assert.equal(calls,2);
 });
 for(const platform of ['apple','spotify'])for(const measured of [false,true])test(`${platform}: corroborated fuller library text replaces a ${measured?'word':'line'}-timed excerpt without rewriting its source`,async t=>{
- const request=platform==='apple'?{catalog_id:'123',...completenessTarget}:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',
-  metadata:{origin:'spotify',title:completenessTarget.title,artists:[completenessTarget.artist],album:completenessTarget.album,duration_ms:240000}};
+ const request=platform==='apple'?{catalog_id:'123',...completenessTarget}:{version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',
+  metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:completenessTarget.title,artists:[completenessTarget.artist],album:completenessTarget.album,duration_ms:240000}};
  const edition=(candidate,words=false)=>{
   const value={song:{...candidate.song,title:{original:candidate.song.title},artist:{original:candidate.song.artist},language:'en',romanization_system:'identity'},
    lines:candidate.lyrics.lines.map(line=>({original:line.text,romanized:line.text,timestamp:line.timestamp,...(words?{vocalTiming:{end:line.timestamp+1,
@@ -247,8 +247,8 @@ for(const platform of ['apple','spotify'])for(const measured of [false,true])tes
  assert.deepEqual(refreshes,[false,true,true]);
 });
 for(const platform of ['apple','spotify'])for(const omitDuration of [false,true])test(`${platform}: early-cutoff library positives ${omitDuration?'without source duration ':''}recheck in five minutes and remain readable during outages`,async t=>{
- const request=platform==='apple'?{catalog_id:'123',...completenessTarget}:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',
-  metadata:{origin:'spotify',title:completenessTarget.title,artists:[completenessTarget.artist],duration_ms:240000}};
+ const request=platform==='apple'?{catalog_id:'123',...completenessTarget}:{version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',
+  metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:completenessTarget.title,artists:[completenessTarget.artist],duration_ms:240000}};
  const candidate=completenessCandidate(),value={song:{...candidate.song,title:{original:candidate.song.title},artist:{original:candidate.song.artist},language:'en',romanization_system:'identity'},
   lines:candidate.lyrics.lines.map(line=>({original:line.text,romanized:line.text,timestamp:line.timestamp})),quality:{synced:true,partial:false,instrumental:false},metadata:{source:'LRCAPI',selection_revision:'test'}};
  if(omitDuration)delete value.song.duration;

@@ -46,8 +46,8 @@ for(const platform of ['apple','spotify'])for(const available of [true,false])te
  const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],speculativeDiscovery:false,
   resolveCatalogAliasesFn:async()=>[],lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
   getProcessorFn:()=>({romanize:async text=>({romanized:text})}),logger:{info(){},error(){}}});
- const body=platform==='apple'?recording:{recording:{version:2,provider:'spotify',item_id:'7dIi9GxNOaCJ75ZDLIQo70',
-  metadata:{origin:'spotify',title:recording.title,artists:[recording.artist],album:recording.album,duration_ms:257950}}};
+ const body=platform==='apple'?recording:{recording:{version:3,provider:'spotify',item_id:'7dIi9GxNOaCJ75ZDLIQo70',
+  metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:recording.title,artists:[recording.artist],album:recording.album,duration_ms:257950}}};
  const response=createMockRes();await service(createMockReq({body}),response);
  assert.equal(response.statusCode,200,JSON.stringify(response.body));
  assert.ok(urls.some(url=>url.searchParams.get('artist_name')===recording.artist&&url.searchParams.get('track_name')==='Butter-Fly'));

@@ -11,7 +11,7 @@ import {streamResponse,frames} from '../helpers/stream-http.js';
 // Catalog metadata from the report, with original invented lyric content.
 const apple={artist:'Eric Chou',title:'Unbreakable Love',album:'The Chaos After You',duration:258.264,catalog_id:'1321295664',storefront:'ca'};
 const native={...apple,artist:'周興哲',title:'永不失聯的愛',album:'如果雨之後'};
-const spotify={version:2,provider:'spotify',item_id:'46fURCnWErjFdNM2yBJ2c8',market:'US',metadata:{origin:'spotify',title:native.title,artists:[apple.artist],album:native.album,duration_ms:258954}};
+const spotify={version:3,provider:'spotify',item_id:'46fURCnWErjFdNM2yBJ2c8',market:'US',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:native.title,artists:[apple.artist],album:native.album,duration_ms:258954}};
 const line=()=>({source:'netease',lines:[{text:'第一句測試文字',timestamp:10},{text:'第二句測試文字',timestamp:30}]});
 const words=id=>parseYRC('[10000,2000](10000,2000,0)第一句測試文字\n[30000,2000](30000,2000,0)第二句測試文字',{songId:id});
 const qrc=id=>parseQRC('<QrcInfos><LyricInfo LyricCount="1"><Lyric_1 LyricType="1" LyricContent="[10000,2000]第一句測試文字(10000,2000)&#10;[30000,2000]第二句測試文字(30000,2000)"/></LyricInfo></QrcInfos>',{songId:id});

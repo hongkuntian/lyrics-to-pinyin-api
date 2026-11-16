@@ -1,5 +1,5 @@
 // Observed catalog metadata; performed words in tests are synthetic.
-export const recording={version:2,provider:'spotify',item_id:'0n7Ij8XEDfYYFRgBQjNjnf',metadata:{origin:'spotify',title:'愛你',artists:['Kimberley Chen'],artist_ids:['1dVbVQZjRGDjQmHD8oiS8k'],album:'Kimberley首張同名專輯',duration_ms:207840}};
+export const recording={version:3,provider:'spotify',item_id:'0n7Ij8XEDfYYFRgBQjNjnf',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'愛你',artists:['Kimberley Chen'],artist_ids:['1dVbVQZjRGDjQmHD8oiS8k'],album:'Kimberley首張同名專輯',duration_ms:207840}};
 export const mbID='20a80371-5185-4c7a-9c68-2afa264834b3',urlID='e6070c4a-9a7a-44bc-bcba-e84e42c6e88e';
 export function discoveryFixture() {
  const resource='https://open.spotify.com/artist/'+recording.metadata.artist_ids[0];

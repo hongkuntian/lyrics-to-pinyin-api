@@ -2,7 +2,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 
 // Invented songs/words/IDs unless explicitly labelled captured metadata.
 // Label variants and faults are evaluation inputs, never catalog authority.
-const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',
+const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,
   title:'归途之歌',artists:['Lin Tsung-Hao'],album:'Invented Album',duration_ms:240000}};
 const song={id:70042,name:recording.metadata.title,artists:[{id:70027,name:'Invented Performer'}],
   album:{name:recording.metadata.album},duration:240000};
@@ -40,7 +40,7 @@ export function recoveryCorpus() {
   });
   add('accent-profile-alias','control',r=>{r.recording.metadata.artists=['Rene Liu'];r.profiles[70027].alias=['René Liu'];});
   add('reported-qian-li-zhi-wai','control',r=>{
-    r.recording={version:2,provider:'spotify',item_id:'3Pjp7lBM20zYzTlRurI6B7',metadata:{origin:'spotify',title:'千里之外',
+    r.recording={version:3,provider:'spotify',item_id:'3Pjp7lBM20zYzTlRurI6B7',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'千里之外',
       artists:['Jay Chou','Fei Yu-ching'],artist_ids:['2elBjNSdBE2Y3f0j1mjrql','6aSJ9LaNaHOKiPchLDYGYl'],album:'依然范特西',duration_ms:256372}};
     r.songs=[{id:185880,name:'千里之外',artists:[{id:6452,name:'周杰伦'},{id:2747,name:'费玉清'}],album:{name:'依然范特西'},duration:254373}];
     r.profiles={6452:{id:6452,name:'周杰伦',alias:['Jay Chou','周董']},2747:{id:2747,name:'费玉清',alias:['Yu-Ching Fei','张彦亭','小哥']}};

@@ -96,7 +96,7 @@ test('admitted metadata with empty words retains lyrics_absent diagnostic',async
  const f=fixture();f.api.getLyrics=async()=>({lines:[]});const res=await f.call(f.make());assert.equal(res.statusCode,404);assert.equal(res.body.code,'lyrics_absent');
 });
 test('Spotify fresh ID recovery revalidates words and retains trusted match evidence for durable admission',async()=>{
- const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Song',artists:['Artist'],duration_ms:240000}};
+ const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Song',artists:['Artist'],duration_ms:240000}};
  const f=fixture({rejectRecordingLyricsFn:lines=>lines.some(l=>l.text==='错误歌词')});const first=await f.call(f.make(),{recording});assert.equal(first.statusCode,200);f.clearContent();f.reset();f.api.getRecording=async()=>{f.stats.id++;return {song:{...song},lyrics:{lines:[{text:'错误歌词',timestamp:12}]}};};
  const second=await f.call(f.make(),{recording});assert.equal(second.statusCode,200);assert.equal(f.stats.search,1);assert.equal(f.stats.id,1);assert.equal(f.stats.catalog,0);const doc=makeDocument(recording,second.body,LYRIC_SELECTION_REVISION);assert.equal(doc.recordingBinding.documentID,doc.id);assert.equal(doc.requestEvidence.candidate.id,'42');
 });
@@ -134,7 +134,7 @@ test('an original probe absent from admitted catalog searches cannot pollute fin
 });
 
 for(const provider of ['apple','spotify'])for(const refresh of [false,true])test(`${provider}: accepted NetEase ID survives instance restart${refresh?' and explicit refresh':''} without reusing stale words`,async()=>{
- const f=fixture(),r=provider==='apple'?{...request}:{recording:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Song',artists:['Artist'],album:'Album',duration_ms:240000}}};
+ const f=fixture(),r=provider==='apple'?{...request}:{recording:{version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Song',artists:['Artist'],album:'Album',duration_ms:240000}}};
  f.api.name='NeteaseAPI';f.api.supportsVocalTiming=true;
  const first=await f.call(f.make(),r);assert.equal(first.statusCode,200);
  assert.equal(first.body.metadata.word_timing_upgrade_supported,true);
@@ -154,7 +154,7 @@ test('capability is derived from registry and curated timing remains non-upgrade
 });
 
 for(const provider of ['apple','spotify'])test(`${provider}: incomplete hint formatting cannot occupy the discovery opportunity for measured words`,async()=>{
- const f=fixture(),r=provider==='apple'?{...request}:{recording:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Song',artists:['Artist'],album:'Album',duration_ms:240000}}};
+ const f=fixture(),r=provider==='apple'?{...request}:{recording:{version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Song',artists:['Artist'],album:'Album',duration_ms:240000}}};
  f.api.name='NeteaseAPI';f.api.supportsVocalTiming=true;
  assert.equal((await f.call(f.make(),r)).statusCode,200);f.clearContent();f.reset();
  const formatting=gate(),release=gate();

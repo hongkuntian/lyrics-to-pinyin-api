@@ -21,7 +21,7 @@ export function playlistCorpus(snapshot){
     ||pages.reduce((n,p)=>n+p.returned,0)!==total||items.length!==total)throw 0;
    for(const item of items){
     if(item.entityType!=='MUSIC'||!/^spotify:track:[A-Za-z0-9]{22}$/.test(item.uri))throw 0;
-    const recording=spotifyRecording({version:2,provider:'spotify',item_id:item.uri.split(':')[2],metadata:{origin:'spotify',
+    const recording=spotifyRecording({version:3,provider:'spotify',item_id:item.uri.split(':')[2],metadata:{origin:'spotify',observation:'web_api',artists_complete:true,
      title:item.title,artists:item.artists?.map(a=>a.name),album:item.album,duration_ms:item.durationMS}});
     const previous=records.get(recording.item_id);
     if(previous&&JSON.stringify(previous)!==JSON.stringify(recording))throw 0;

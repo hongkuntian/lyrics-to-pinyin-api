@@ -8,7 +8,7 @@ import {makeDocument,requestKey} from '../../api/utils/song-library/document.js'
 import {sourceCapsule,spotifyBinding} from '../../api/utils/song-library/spotify-recording.js';
 import {publicDocument} from '../../api/utils/song-library/public-content.js';
 import {createSongLibraryService} from '../../api/song-library.js';
-const A={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Song',artists:['Artist'],duration_ms:240001}};
+const A={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Song',artists:['Artist'],duration_ms:240001}};
 const B={...A,market:'US',metadata:{...A.metadata,album:'Album',isrc:'USABC2600001',explicit:false}};
 const policy='spotify-test-selection';
 const response=(id='source-1')=>({song:{id,title:{original:'Song'},artist:{original:'Artist'},album:'Album',duration:240,language:'zh',romanization_system:'pinyin'},
@@ -22,7 +22,7 @@ async function save(store,r,id='source-1',replaceID=null) {
 test('Spotify source, exact request, context and revisions survive reopen and preserve admitted jobs',async t=>{
   const path=await mkdtemp(join(tmpdir(),'spotify-library-'));t.after(()=>rm(path,{recursive:true,force:true}));
   let {db,store}=await libraryDB(path);const original=await save(store,A),job=await store.reserve({userID:'reader-a',documentID:original.id,target:'en',recipe:'test',reservedMicros:10000});
-  const other=await save(store,B);assert.equal(other.id,original.id);assert.notEqual(requestKey(A),requestKey(B));
+  const other=await save(store,B);assert.notEqual(other.id,original.id);assert.equal(other.sourceHash,original.sourceHash);assert.notEqual(requestKey(A),requestKey(B));
   await db.close();({db,store}=await libraryDB(path));t.after(()=>db.close());
   const restored=await store.documentForRequest(requestKey(A),policy);
   assert.deepEqual(restored.requestRecording,A);assert.deepEqual(restored.sourceCapsule,original.sourceCapsule);assert.deepEqual(restored.modelContext,original.modelContext);
@@ -62,21 +62,21 @@ test('artist-ID fingerprints keep separate immutable documents and preserve old 
  await store.releaseLookup(requestKey(withIDs),policy,owner);
  assert.deepEqual((await store.document(first.id)).response,before.response);
 });
-test('Spotify refresh advances only the leased fingerprint and leaves shared saved source current',async t=>{
+test('Spotify refresh advances only the leased fingerprint and preserves the peer document',async t=>{
   const {db,store}=await libraryDB();t.after(()=>db.close());const original=await save(store,A);await save(store,B);
   const oldB=await store.documentForRequest(requestKey(B),policy),newA=doc(A,'source-2');
   const owner=await store.claimLookup(requestKey(A),policy);
   const [updated,concurrentB]=await Promise.all([store.saveDocument(newA,{replaceID:original.id,lookupOwner:owner}),store.documentForRequest(requestKey(B),policy)]);
-  assert.equal(updated.id,newA.id);assert.equal(concurrentB.id,original.id);
+  assert.equal(updated.id,newA.id);assert.equal(concurrentB.id,oldB.id);
   const stillB=await store.documentForRequest(requestKey(B),policy);assert.equal(stillB.id,oldB.id);assert.equal(stillB.requestEvidence.source.itemID,'source-1');
-  assert.equal(publicDocument(stillB,B).recordingBinding.source.itemID,'source-1');assert.equal(await store.isCurrentDocument(original.id,policy),true);
+  assert.equal(publicDocument(stillB,B).recordingBinding.source.itemID,'source-1');assert.equal(await store.isCurrentDocument(oldB.id,policy),true);
   assert.equal((await store.document(original.id)).response.song.id,'source-1');
-  assert.equal((await db.query('SELECT superseded_by FROM lyric_documents WHERE id=$1',[original.id])).rows[0].superseded_by,null);
+  assert.equal((await db.query('SELECT superseded_by FROM lyric_documents WHERE id=$1',[oldB.id])).rows[0].superseded_by,null);
   await assert.rejects(store.saveDocument(doc(B,'source-2'),{replaceID:oldB.id,lookupOwner:owner}),{code:'lookup_superseded'});
   await assert.rejects(store.saveDocument(doc(B,'source-2'),{replaceID:oldB.id}),{code:'lookup_superseded'});
   const ownerB=await store.claimLookup(requestKey(B),policy);await db.query("UPDATE lyric_lookups SET expires_at=now()-interval '1 second' WHERE owner=$1",[ownerB]);
   await assert.rejects(store.saveDocument(doc(B,'source-2'),{replaceID:oldB.id,lookupOwner:ownerB}),{code:'lookup_superseded'});
-  const changedB=await save(store,B,'source-2',oldB.id);assert.equal(changedB.id,newA.id);
+  const changedB=await save(store,B,'source-2',oldB.id);assert.notEqual(changedB.id,newA.id);assert.equal(changedB.sourceHash,newA.sourceHash);
   assert.equal(publicDocument(changedB,B).recordingBinding.requestHash,requestKey(B));
 });
 test('request-bound public projection refuses fresh bindings for another fingerprint or immutable document',async t=>{

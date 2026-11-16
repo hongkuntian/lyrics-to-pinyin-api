@@ -10,7 +10,7 @@ for(const policy of ['legacy','spotify'])test(`${policy} lookup logs bounded mat
  const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],detectLanguageFn:async()=> 'en',speculativeDiscovery:false,
   resolveCatalogAliasesFn:async()=>[],lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
   logger:{info:(event,details)=>events.push({event,details}),error(){}}});
- const body=policy==='legacy'?{artist:'Singer',title:'Song',duration:188}:{recording:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Song',artists:['Singer'],duration_ms:188000}}};
+ const body=policy==='legacy'?{artist:'Singer',title:'Song',duration:188}:{recording:{version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Song',artists:['Singer'],duration_ms:188000}}};
  const response=createMockRes();await service(createMockReq({body}),response);
  assert.equal(response.statusCode,409);
  assert.equal(response.body.code,'recording_mismatch');

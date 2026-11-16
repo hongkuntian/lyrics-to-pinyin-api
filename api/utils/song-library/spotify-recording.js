@@ -9,8 +9,8 @@ const matchEvidence=new WeakMap();
 export function attachSpotifyMatchEvidence(response,candidate) {matchEvidence.set(response,structuredClone(candidate));return response;}
 export const spotifyMatchEvidence=response=>matchEvidence.get(response)??null;
 
-export const SPOTIFY_MATCH_POLICY='spotify-request-match-1';
-export const isSpotifyRecording=value=>value?.provider==='spotify'&&value?.version===2;
+export const SPOTIFY_MATCH_POLICY='spotify-request-match-2';
+export const isSpotifyRecording=value=>value?.provider==='spotify'&&value?.version===3;
 const object=value=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.getPrototypeOf(value)===Object.prototype;
 const scalars=value=>typeof value==='string'&&!/[\u0000-\u001f\u007f-\u009f\ud800-\udfff]/u.test(value);
 const name=(value,max=500)=>scalars(value)&&value.trim().length>0&&Array.from(value).length<=max;
@@ -18,18 +18,21 @@ const id=value=>typeof value==='string'&&/^[A-Za-z0-9]{22}$/.test(value);
 const keys=(value,allowed)=>object(value)&&Object.keys(value).every(key=>allowed.includes(key));
 export function spotifyRecording(value) {
   const m=value?.metadata;
-  if(!keys(value,['version','provider','item_id','requested_item_id','market','metadata'])||value.version!==2||value.provider!=='spotify'||!id(value.item_id)
+  if(!keys(value,['version','provider','item_id','requested_item_id','market','metadata'])||value.version!==3||value.provider!=='spotify'||!id(value.item_id)
     ||('requested_item_id' in value&&!id(value.requested_item_id))||('market' in value&&(typeof value.market!=='string'||!/^[A-Z]{2}$/.test(value.market)))
-    ||!keys(m,['origin','title','artists','artist_ids','album','duration_ms','isrc','explicit'])||m.origin!=='spotify'||!name(m.title)
+    ||!keys(m,['origin','observation','artists_complete','title','artists','artist_ids','album','duration_ms','isrc','explicit'])||m.origin!=='spotify'||!name(m.title)
+    ||!['app_remote','web_api'].includes(m.observation)||typeof m.artists_complete!=='boolean'
     ||!Array.isArray(m.artists)||m.artists.length<1||m.artists.length>32||!m.artists.every(value=>name(value))
     ||('artist_ids' in m&&(!Array.isArray(m.artist_ids)||m.artist_ids.length!==m.artists.length||!m.artist_ids.every(id)||new Set(m.artist_ids).size!==m.artist_ids.length))
+    ||(m.observation==='app_remote'&&(m.artists_complete||m.artists.length!==1||'artist_ids' in m||'isrc' in m||'explicit' in m))
+    ||(m.observation==='web_api'&&!m.artists_complete)
     ||!Number.isInteger(m.duration_ms)||m.duration_ms<1||m.duration_ms>7200000
     ||('album' in m&&!name(m.album))||('isrc' in m&&(typeof m.isrc!=='string'||!/^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$/.test(m.isrc)))
     ||('explicit' in m&&typeof m.explicit!=='boolean'))throw new LibraryError('invalid_recording',400);
   return structuredClone(value);
 }
 
-// This serializer belongs exclusively to Spotify V2. Legacy digest uses its
+// This serializer belongs exclusively to Spotify. The Apple digest uses its
 // original property insertion order and JSON.stringify behavior unchanged.
 export function canonicalJSON(value) {
   const seen=new Set();
@@ -55,12 +58,12 @@ export function canonicalJSON(value) {
 export const spotifyHash=value=>createHash('sha256').update(canonicalJSON(value),'utf8').digest('hex');
 export function spotifyRequestHash(value) {
   const r=spotifyRecording(value),m=r.metadata;
-  return spotifyHash(['spotify-request-2',r.item_id,r.requested_item_id??null,r.market??null,m.title,m.artists,m.album??null,m.duration_ms,m.isrc??null,m.explicit??null,...(m.artist_ids?[m.artist_ids]:[])]);
+  return spotifyHash(['spotify-request-3',r.item_id,r.requested_item_id??null,r.market??null,m.observation,m.artists_complete,m.title,m.artists,m.artist_ids??null,m.album??null,m.duration_ms,m.isrc??null,m.explicit??null]);
 }
 export const spotifyRecordingKey=r=>spotifyHash(['spotify-recording-2',spotifyRecording(r).item_id]);
 export function spotifySearchRequest(value) {
   const r=spotifyRecording(value),m=r.metadata;
-  return {recordingProvider:'spotify',recordingItemID:r.item_id,creditedArtistNames:[...m.artists],...(m.artist_ids?{creditedArtistIDs:[...m.artist_ids]}:{}),artist:m.artists.join(' & '),title:m.title,
+  return {recordingProvider:'spotify',recordingItemID:r.item_id,creditedArtistNames:[...m.artists],creditedArtistsComplete:m.artists_complete,...(m.artist_ids?{creditedArtistIDs:[...m.artist_ids]}:{}),artist:m.artists.join(' & '),title:m.title,
     ...(m.album!==undefined?{album:m.album}:{}),duration:m.duration_ms/1000,...(m.isrc?{isrc:m.isrc}:{}),...(m.explicit!==undefined?{explicit:m.explicit}:{})};
 }
 // Legacy source-only documents may predate structured candidate evidence.
@@ -100,7 +103,7 @@ export function spotifyHashes(r,s,selectionRevision) {
   const timingRevision=spotifyHash(['spotify-timing-2',recordingKey,s.provider,s.itemID,textRevision,s.lines.map(l=>[l.original,l.timestamp??null,l.vocalTiming??null]),s.lyricTiming??null]);
   const readingRevision=spotifyHash(['spotify-reading-2',textRevision,s.romanizationSystem,s.lines.map(l=>l.romanized)]);
   const sourceHash=spotifyHash(['spotify-source-2',s.provider,s.itemID,contextHash,s.language,s.romanizationSystem,s.lines,s.structure,s.lyricTiming??null]);
-  const documentID=spotifyHash(r.metadata.artist_ids?['spotify-document-artist-ids-1',recordingKey,sourceHash,selectionRevision,requestHash]:['spotify-document-2',recordingKey,sourceHash,selectionRevision]);
+  const documentID=spotifyHash(['spotify-document-3',recordingKey,sourceHash,selectionRevision,requestHash]);
   return {recordingKey,requestHash,contextHash,textRevision,timingRevision,readingRevision,sourceHash,documentID};
 }
 export function synchronizationEligible(response) {
@@ -114,7 +117,7 @@ export function synchronizationEligible(response) {
 }
 export function spotifyBinding(r,s,selectionRevision,response,{durable=false}={}) {
   const h=spotifyHashes(r,s,selectionRevision);
-  return {version:2,provider:'spotify',itemID:r.item_id,requestedItemID:r.requested_item_id??null,market:r.market??null,
+  return {version:3,provider:'spotify',itemID:r.item_id,requestedItemID:r.requested_item_id??null,market:r.market??null,
     recordingKey:h.recordingKey,requestHash:h.requestHash,documentID:durable?h.documentID:null,
     source:{provider:s.provider,itemID:s.itemID,metadataOrigin:'independent_lyric_source',contextHash:h.contextHash},
     sourceHash:h.sourceHash,textRevision:h.textRevision,timingRevision:h.timingRevision,readingRevision:h.readingRevision,selectionRevision,

@@ -55,7 +55,7 @@ test('cold Apple and Spotify handlers reject contradictory QQ title and album ed
   }
   const f=yrcService({resolution:false,speculativeDiscovery:false,getAvailableAPIsFn:()=>[api],getContextFn:async()=>null});
   const target=provider==='apple'?{catalog_id:'123',title:c.title,artist:'Test',album,duration:120}:
-   {recording:{version:2,provider:'spotify',item_id:spotifyRequest.item_id,metadata:{origin:'spotify',title:c.title,artists:['Test'],album,duration_ms:120000,...(c.explicit!==undefined?{explicit:c.explicit}:{})}}};
+   {recording:{version:3,provider:'spotify',item_id:spotifyRequest.item_id,metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:c.title,artists:['Test'],album,duration_ms:120000,...(c.explicit!==undefined?{explicit:c.explicit}:{})}}};
   const r=await f.call({...target,options:{lyric_sources_version:2}});
   const accepted=c.accepted===true||c.accepted===provider;
   assert.equal(r.statusCode,accepted?200:409,`${provider}: ${JSON.stringify(c)} / ${JSON.stringify(r.body)}`);
@@ -65,8 +65,8 @@ test('cold Apple and Spotify handlers reject contradictory QQ title and album ed
 
 test('Spotify cold QQ acquisition retains the exact target needed to revalidate an explicit sheet',async()=>{
  const hex=JSON.parse(readFileSync(new URL('../fixtures/qrc-codec-fixtures.json',import.meta.url))).providerExplicitQRC;
- const recording={version:2,provider:'spotify',item_id:spotifyRequest.item_id,
-  metadata:{origin:'spotify',title:'Synthetic',artists:['Test'],album:'Example',duration_ms:120000,explicit:true}};
+ const recording={version:3,provider:'spotify',item_id:spotifyRequest.item_id,
+  metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Synthetic',artists:['Test'],album:'Example',duration_ms:120000,explicit:true}};
  const detail={id:123,mid:'00000000000123',name:'Synthetic',title:'Synthetic',subtitle:'',interval:120,
   album:{id:2,mid:'00000000000002',name:'Example'},singer:[{id:1,mid:'00000000000001',name:'Test'}]};
  const answer=(data,url)=>({ok:true,status:200,url,headers:new Map(),json:async()=>data});

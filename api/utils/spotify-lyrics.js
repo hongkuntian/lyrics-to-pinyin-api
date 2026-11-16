@@ -43,7 +43,7 @@ export function createSpotifyLyricsService(dependencies={}) {
     rejectRecordingLyricsFn=isRejectedRecordingLyrics,analyzeLyricLanguageFn=analyzeLyricLanguage,waitUntilFn=waitUntil,logger=console,contextNow=Date.now,contextTTLms=21600000,sourceHintBudgetMs=800,neteaseSourceHintBudgetMs=2500}=dependencies;
   const resolveArtistIdentities=dependencies.resolveArtistIdentitiesFn??createArtistIdentityResolver({redis,getFn:getCachedFn,setFn:setCachedFn,now:contextNow,cacheTimeoutMs});
   const resolveArtistDiscovery=dependencies.resolveArtistDiscoveryFn??createArtistDiscoveryResolver({redis,getFn:getCachedFn,setFn:setCachedFn,now:contextNow,cacheTimeoutMs});
-  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-1',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,sourceNames:NETEASE_TITLE_CAPABILITY,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY,reviewedSources:SPOTIFY_REVIEWED_SOURCE_CAPABILITY,vocalSelection:VOCAL_SELECTION_CAPABILITY,languageEvidence:PROVIDER_LANGUAGE_EVIDENCE_VERSION}});
+  const contexts=createVerifiedContextCache({redis,getFn:dependencies.getContextFn??getCachedFn,setFn:dependencies.setContextFn??setCachedFn,waitUntilFn,now:contextNow,ttlMs:contextTTLms,cacheTimeoutMs,policy:{response:'spotify-3',selection:LYRIC_SELECTION_REVISION,normalization:LYRIC_NORMALIZATION_VERSION,sourceNames:NETEASE_TITLE_CAPABILITY,providerCapability:NETEASE_ACQUISITION_CACHE_CAPABILITY,reviewedSources:SPOTIFY_REVIEWED_SOURCE_CAPABILITY,vocalSelection:VOCAL_SELECTION_CAPABILITY,languageEvidence:PROVIDER_LANGUAGE_EVIDENCE_VERSION}});
   const cache=new BoundedCache(),inflight=new Map();let latestStart=0;
   const validCached=(entry,r)=>{
     const response=entry?.response,candidate=entry?.candidate;
@@ -81,7 +81,7 @@ export function createSpotifyLyricsService(dependencies={}) {
       // Native raw timing requests and the library loader both request v2.
       // Explicit v1/omitted raw calls retain their separate provider/cache policy.
       const sourceVersion=options.lyric_sources_version??1;
-      const key=`spotify:lyrics:v2:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}:${NETEASE_TITLE_CAPABILITY}:${PROVIDER_LANGUAGE_EVIDENCE_VERSION}:${ARTIST_IDENTITY_CAPABILITY}:${ARTIST_DISCOVERY_CAPABILITY}:${SPOTIFY_REVIEWED_SOURCE_CAPABILITY}:sources-${sourceVersion}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
+      const key=`spotify:lyrics:v3:${requestHash}:${LYRIC_SELECTION_REVISION}:${NETEASE_ACQUISITION_CACHE_CAPABILITY}:${VOCAL_SELECTION_CAPABILITY}:${NETEASE_TITLE_CAPABILITY}:${PROVIDER_LANGUAGE_EVIDENCE_VERSION}:${ARTIST_IDENTITY_CAPABILITY}:${ARTIST_DISCOVERY_CAPABILITY}:${SPOTIFY_REVIEWED_SOURCE_CAPABILITY}:sources-${sourceVersion}`,workKey=key+(options.refresh?':refresh':'')+':owner:'+(req.lyricDelivery?.acquisitionID??'legacy');
       const send=result=>{if(result.candidate)attachSpotifyMatchEvidence(result.body,result.candidate);res.setHeader('X-Lyrics-Cache',result.cache??'MISS');return reply(result.status,result.body);};
       const cached=!options.refresh&&cache.get(key);
       if(cached&&validate('cache_validation',()=>validCached(cached,r)))return send({status:200,body:cached.response,candidate:cached.candidate,cache:'MEMORY'});

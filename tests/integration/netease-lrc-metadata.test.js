@@ -36,7 +36,7 @@ test('actual Spotify service keeps line synchronization eligible without claimin
   ?{code:200,result:{songs:[{id:42,name:'Invented Song',duration:240000,artists:[{id:7,name:'Invented Artist'}],album:{name:'Invented Album'}}]}}
   :{code:200,lrc:{lyric:raw}}});
  for(const name of ['searchSong','getLyrics']){const original=api[name].bind(api);api[name]=(...args)=>{args[args.length-1]={...args.at(-1),fetchFn};return original(...args);};}
- const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Invented Song',artists:['Invented Artist'],album:'Invented Album',duration_ms:240000}};
+ const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Invented Song',artists:['Invented Artist'],album:'Invented Album',duration_ms:240000}};
  const handler=createSpotifyLyricsService({redis:null,getAvailableAPIsFn:()=>[api],detectLanguageFn:async()=> 'en',getDefaultRomanizationSystemFn:()=> 'none',logger:{info(){},error(){}}});
  const res=createMockRes();await handler(createMockReq({body:{recording,options:{refresh:true}}}),res);
  assert.equal(res.statusCode,200);assert.equal(res.body.lines.length,2);

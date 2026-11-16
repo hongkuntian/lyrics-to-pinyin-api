@@ -55,7 +55,7 @@ test('Spotify fresh ID keeps whole credited names and never drops a guest or spl
 test('existing verified context persists NetEase signature only and does not extend expiry',async()=>{
  let now=1000;const disk=new Map(),pending=[];
  const deps={redis:{},now:()=>now,ttlMs:100,policy:{selection:'s'},getFn:async(_,k)=>disk.get(k),setFn:async(_,k,v)=>disk.set(k,structuredClone(v)),waitUntilFn:p=>pending.push(p)};
- const r={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:request.title,artists:['Eason Chan'],duration_ms:240000}};
+ const r={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:request.title,artists:['Eason Chan'],duration_ms:240000}};
  const cache=createVerifiedContextCache(deps),base=cache.spotify(r,{recordingBinding:{sourceHash:'a'.repeat(64)}},10);
  const hinted=cache.hint(base,{api:{name:'NeteaseAPI'},song:{id:42,...request,source:'netease',lyricsData:{privateWords:true}},target:request});
  assert.equal(hinted.hints[0].provider,'NeteaseAPI');assert.equal(hinted.hints[0].signature.lyricsData,undefined);cache.save(hinted);await Promise.all(pending);

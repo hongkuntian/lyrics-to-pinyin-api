@@ -17,7 +17,7 @@ test('reviewed Japanese recording rejects English-version and romanized substitu
 });
 
 test('reviewed Spotify language evidence is bound to the actual item, not title spelling or Apple IDs',()=>{
-  const recording={version:2,provider:'spotify',item_id:'7ovUcF5uHTBRzUpB6ZOmvt',metadata:{origin:'spotify',title:'Idol',artists:['YOASOBI'],duration_ms:213234}};
+  const recording={version:3,provider:'spotify',item_id:'7ovUcF5uHTBRzUpB6ZOmvt',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Idol',artists:['YOASOBI'],duration_ms:213234}};
   const context={recordingProvider:'spotify',recordingItemID:recording.item_id,title:'Idol',artist:'YOASOBI',creditedArtistNames:['YOASOBI'],duration:213.234};
   for(const request of [recording,context,{recordingProvider:'spotify',recordingKey:spotifyRecordingKey(recording)}]) {
     assert.equal(isRejectedRecordingLyrics([{text:'An English version.'}],request),true);

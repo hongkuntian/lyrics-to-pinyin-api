@@ -27,8 +27,8 @@ export function isRejectedLyrics(provider,id,lines,records=recordings) {
 // words/timing. Provider metadata still validates through the ordinary matcher.
 export function isRejectedRecordingLyrics(lines,request={},records=catalogRecordings) {
   // Negative evidence never aliases a Spotify item to an Apple recording. The
-  // same predicate accepts the validated V2 request and its internal search DTO.
-  const spotifyID=request.provider==='spotify'&&request.version===2?request.item_id
+  // same predicate accepts the validated V3 request and its internal search DTO.
+  const spotifyID=request.provider==='spotify'&&request.version===3?request.item_id
     :request.recordingProvider==='spotify'?request.recordingItemID:null;
   const immutableReview=request.recordingProvider==='spotify'?spotifyKeys.get(request.recordingKey):null;
   const matches=[...records.filter(record=>record.catalogIDs?.includes(request.catalog_id)),

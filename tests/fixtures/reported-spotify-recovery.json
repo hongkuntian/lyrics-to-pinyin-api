@@ -3,7 +3,7 @@
   "provenance": "Exact Spotify catalog and fresh NetEase source metadata; performed words in tests are synthetic.",
   "duet": {
     "recording": {
-      "version": 2,
+      "version": 3,
       "provider": "spotify",
       "item_id": "6dMFbxf7TdjTy4KxnZJl7w",
       "metadata": {
@@ -18,7 +18,9 @@
           "1mfzcypCggFwpCJ1gmi8BK"
         ],
         "album": "習慣",
-        "duration_ms": 232896
+        "duration_ms": 232896,
+        "observation": "web_api",
+        "artists_complete": true
       }
     },
     "source": {
@@ -53,7 +55,7 @@
   },
   "ensemble": {
     "recording": {
-      "version": 2,
+      "version": 3,
       "provider": "spotify",
       "item_id": "5bcbAT32LJS87hklgOxUqM",
       "metadata": {
@@ -102,7 +104,9 @@
           "2akngaSc3QswOEJUentus9"
         ],
         "album": "明天會更好",
-        "duration_ms": 320720
+        "duration_ms": 320720,
+        "observation": "web_api",
+        "artists_complete": true
       }
     },
     "source": {

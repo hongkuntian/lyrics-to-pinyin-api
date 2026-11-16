@@ -328,6 +328,15 @@ function spotifyNameFailure(song,request) {
   const parsed=source?[source.map(normalizeRecordingText)]:creditSegmentations(song.artist,known);
   if(parsed.length!==1)return 'contributor_conflict';
   const a=withGuests(parsed[0],left.guests),b=withGuests(requested,right.guests);
+  // App Remote exposes one artist, not the complete track credit list. Known
+  // whole names and printed request guests must still occur in independent
+  // source credits. Unknown flat credits remain ambiguous and are rejected by
+  // creditSegmentations above; never split a known artist name to force a match.
+  if(request.creditedArtistsComplete===false&&a!==null&&b!==null) {
+    const remaining=[...a];
+    for(const name of b) {const index=remaining.indexOf(name);if(index<0)return 'contributor_conflict';remaining.splice(index,1);}
+    return null;
+  }
   return a!==null&&b!==null&&JSON.stringify(a)===JSON.stringify(b)?null:'contributor_conflict';
 }
 const explicitVersionMarker=/\bexplicit\b/iu;

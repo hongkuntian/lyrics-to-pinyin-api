@@ -17,7 +17,7 @@ const cases=[
 ];
 async function fixture(row=cases[0]) {
  const [language,requested,native,alias,title]=row;
- const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title,artists:[requested],artist_ids:['1123456789ABCDEFGHIJKL'],album:'Invented album',duration_ms:240000}};
+ const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title,artists:[requested],artist_ids:['1123456789ABCDEFGHIJKL'],album:'Invented album',duration_ms:240000}};
  const raw={id:42,name:title,artists:[{id:27,name:native}],album:{name:'Invented album'},duration:240000};
  const profiles={27:{id:27,name:native,alias:[alias]}},catalog=identityCatalog(recording,raw,profiles);
  const identities=await createArtistIdentityResolver({fetchFn:catalog.fetchFn})(recording.metadata.artist_ids);

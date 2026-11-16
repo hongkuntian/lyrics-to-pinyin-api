@@ -7,7 +7,7 @@ const qrc=JSON.parse(readFileSync(new URL('../fixtures/qrc-codec-fixtures.json',
 export function qqIdentityFixture() {
  const catalog=identityFixture(),entity=catalog.entities.Q101,singerMID='0025NhlN2yWrP4';
  entity.labels={en:{value:'English Test'},native:{value:'Test'}};entity.aliases={};entity.claims.P10410=[claim(singerMID)];
- const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Synthetic',artists:['English Test'],artist_ids:[artistIDs[0]],album:'Example',duration_ms:120000}};
+ const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Synthetic',artists:['English Test'],artist_ids:[artistIDs[0]],album:'Example',duration_ms:120000}};
  const detail={id:123,mid:'00000000000123',name:'Synthetic',title:'Synthetic',interval:120,album:{id:2,mid:'00000000000002',name:'Example'},singer:[{id:1,mid:singerMID,name:'Test'}]};
  const calls=[];let details=true,transform=value=>value;
  const fetchFn=async(url,init={})=>{

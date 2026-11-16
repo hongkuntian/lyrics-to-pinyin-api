@@ -8,7 +8,7 @@ import {sourceCapsule,verifySpotifyBinding,spotifyRecording} from '../../api/uti
 import {LYRIC_SELECTION_REVISION} from '../../api/utils/lyric-annotations.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 
-const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'Synthetic Song',artists:['Synthetic Artist'],album:'Synthetic Album',duration_ms:1000000}};
+const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Synthetic Song',artists:['Synthetic Artist'],album:'Synthetic Album',duration_ms:1000000}};
 const song={source:'kugou',id:'42',title:recording.metadata.title,artist:recording.metadata.artists[0],album:recording.metadata.album,duration:1000};
 const sheet=Array.from({length:190},(_,i)=>`[${(i*4+1)*1000},1000]<0,1000,0>Invented synthetic row ${i}`).join('\n');
 const parsed=parseKRC(sheet,{songId:'42',duration:1000});assert.ok(parsed);

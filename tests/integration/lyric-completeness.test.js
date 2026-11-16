@@ -6,8 +6,8 @@ import {completenessTarget,completenessCandidate,fullerCandidate} from '../helpe
 import {streamResponse,frames} from '../helpers/stream-http.js';
 import {resolveCatalogAliases} from '../../api/utils/catalog-aliases.js';
 
-const bodyFor=(platform,options={})=>platform==='apple'?{...completenessTarget,options}:{recording:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',
- metadata:{origin:'spotify',title:completenessTarget.title,artists:[completenessTarget.artist],album:completenessTarget.album,duration_ms:240000}},options};
+const bodyFor=(platform,options={})=>platform==='apple'?{...completenessTarget,options}:{recording:{version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',
+ metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:completenessTarget.title,artists:[completenessTarget.artist],album:completenessTarget.album,duration_ms:240000}},options};
 const serviceFor=(apis,dependencies={})=>createMusicRomanizeService({redis:null,speculativeDiscovery:false,getAvailableAPIsFn:()=>apis,
  hedgeDelayMs:1,untimedGraceMs:5,wordTimingGraceMs:0,providerTimeoutMs:100,
  resolveCatalogAliasesFn:async()=>[],lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
@@ -69,7 +69,7 @@ for(const platform of ['apple','spotify'])for(const order of ['excerpt-first','f
   hedgeDelayMs:1,untimedGraceMs:5,wordTimingGraceMs:0,providerTimeoutMs:100,
   resolveCatalogAliasesFn:async()=>[],lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
   getProcessorFn:()=>({romanize:async text=>({romanized:text})}),logger:{error(){},info(){},log(){}}});
- const body=platform==='apple'?completenessTarget:{recording:{version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',
+ const body=platform==='apple'?completenessTarget:{recording:{version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,
   title:completenessTarget.title,artists:[completenessTarget.artist],album:completenessTarget.album,duration_ms:240000}}};
  for(const options of [{},{},{refresh:true},{}]) {
   const response=createMockRes();await service(createMockReq({body:{...body,options}}),response);

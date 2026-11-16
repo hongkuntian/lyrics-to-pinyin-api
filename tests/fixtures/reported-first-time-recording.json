@@ -3,11 +3,13 @@
   "kind": "observed_recording_metadata_with_invented_test_words",
   "capturedAt": "2026-10-26",
   "recording": {
-    "version": 2,
+    "version": 3,
     "provider": "spotify",
     "item_id": "2PXhHrVL1HkKk4fto9D8zE",
     "metadata": {
       "origin": "spotify",
+      "observation": "web_api",
+      "artists_complete": true,
       "title": "第一次",
       "artists": ["Michael Wong"],
       "album": "十光年精選輯",

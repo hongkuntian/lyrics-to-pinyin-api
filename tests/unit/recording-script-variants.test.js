@@ -20,7 +20,7 @@ test('dictionary Chinese variants match catalogue metadata without granting reco
  assert.notEqual(normalizeRecordingText('한祕'),normalizeRecordingText('한秘'));
 });
 test('catalogue normalization never changes raw Spotify request bytes or its hash',()=>{
- const recording={version:2,provider:'spotify',item_id:'4xZIMRwaaBx7CZMmM6KLuh',metadata:{origin:'spotify',title:target.title,artists:[target.artist],album:target.album,duration_ms:310133}};
+ const recording={version:3,provider:'spotify',item_id:'4xZIMRwaaBx7CZMmM6KLuh',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:target.title,artists:[target.artist],album:target.album,duration_ms:310133}};
  const bytes=canonicalJSON(recording),hash=spotifyRequestHash(recording);
  assert.ok(recordingScore(source,target)>=0);
  assert.equal(canonicalJSON(recording),bytes);assert.equal(spotifyRequestHash(recording),hash);

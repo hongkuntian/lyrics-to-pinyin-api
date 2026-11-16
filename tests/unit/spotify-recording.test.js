@@ -39,7 +39,7 @@ test('Apple known explicitness conflicts reject before ordinary source ranking',
  assert.equal(recordingScore(source,{...source,explicit:false}),-1);
  assert.ok(recordingScore(source,{...source,explicit:true})>=0);
 });
-test('published V2 hashes and unchanged Apple request bytes match the frozen vectors',()=>{
+test('published V3 hashes and unchanged Apple request bytes match the frozen vectors',()=>{
   for(const f of vectors.fixtures) {
     const r=recordingRequest(f.recording);assert.deepEqual(r,f.recording);
     const hashes=spotifyHashes(r,f.source,f.selectionRevision);
@@ -53,8 +53,8 @@ test('published V2 hashes and unchanged Apple request bytes match the frozen vec
   assert.equal(requestKey({catalog_id:'123',artist:'Artist',title:'Title',duration:240}),'bdaba34af78107e842fa070fdae9c58a6f59d4cc470b50c4468d87491eb6d54e');
   assert.equal(requestKey({catalog_id:'123',artist:'Artist',title:'Title',duration:240,isrc:'USABC2600001',account_storefront:'us'}),'bdaba34af78107e842fa070fdae9c58a6f59d4cc470b50c4468d87491eb6d54e');
 });
-test('V2 rejects unknown, mixed, null, malformed and non-scalar inputs without trimming legal names',()=>{
-  const bad=[{...minimal,version:3},{...minimal,provider:'apple'},{...minimal,catalog_id:'123'},{...minimal,item_id:'spotify:track:'+minimal.item_id},
+test('V3 rejects unknown, mixed, null, malformed and non-scalar inputs without trimming legal names',()=>{
+  const bad=[{...minimal,version:2},{...minimal,provider:'apple'},{...minimal,catalog_id:'123'},{...minimal,item_id:'spotify:track:'+minimal.item_id},
     {...minimal,item_id:' '+minimal.item_id},{...minimal,market:null},{...minimal,requested_item_id:null},{...minimal,match:{}},
     ...[null,0,true,'240000',240.1,Infinity,7200001,-0].map(duration_ms=>({...minimal,metadata:{...minimal.metadata,duration_ms}})),
     ...['',' ','x\u0001','x\u0085','x\ud800','x'.repeat(501)].map(title=>({...minimal,metadata:{...minimal.metadata,title}})),
@@ -92,7 +92,7 @@ test('Spotify requires positive source duration, corroborates ISRC, and preserve
 test('source revisions separate item, optional request hints, text, cue and reading changes',()=>{
   const f=vectors.fixtures[0],h=spotifyHashes(f.recording,f.source,f.selectionRevision);
   const hint=spotifyHashes(vectors.fixtures[1].recording,f.source,f.selectionRevision);
-  assert.notEqual(h.requestHash,hint.requestHash);assert.equal(h.documentID,hint.documentID);assert.equal(h.timingRevision,hint.timingRevision);
+  assert.notEqual(h.requestHash,hint.requestHash);assert.notEqual(h.documentID,hint.documentID);assert.equal(h.timingRevision,hint.timingRevision);
   const other=spotifyHashes({...f.recording,item_id:'0123456789ABCDEFGHIJKM'},f.source,f.selectionRevision);
   assert.notEqual(other.recordingKey,h.recordingKey);assert.notEqual(other.documentID,h.documentID);assert.notEqual(other.timingRevision,h.timingRevision);assert.equal(other.sourceHash,h.sourceHash);
   const timed=structuredClone(f.source);timed.lines[0].timestamp+=1;

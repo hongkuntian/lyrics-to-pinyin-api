@@ -10,7 +10,7 @@ import {createMockRes} from '../helpers/mock-http.js';
 
 // Real reported metadata, original invented vocal content, no network.
 const title='沒那麽簡單',artist='黃小琥',album='簡單不簡單';
-const recording={version:2,provider:'spotify',item_id:'4xZIMRwaaBx7CZMmM6KLuh',market:'US',metadata:{origin:'spotify',title,artists:[artist],album,duration_ms:310133}};
+const recording={version:3,provider:'spotify',item_id:'4xZIMRwaaBx7CZMmM6KLuh',market:'US',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title,artists:[artist],album,duration_ms:310133}};
 const yrc='[10000,2000](10000,2000,0)Invented first row\n[30000,2000](30000,2000,0)Invented second row';
 for(const platform of ['apple','spotify'])test(`${platform}: dictionary title variant reaches measured provider without rewriting request or source timing`,async()=>{
  const api=new NeteaseAPI(),queries=[];

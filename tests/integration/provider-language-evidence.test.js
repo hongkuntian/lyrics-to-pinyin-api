@@ -10,7 +10,7 @@ import {catalogProof} from '../helpers/netease-yrc.js';
 import {encodeKRC} from '../helpers/kugou-krc.js';
 
 const request={catalog_id:'123',storefront:'us',artist:'Synthetic Singer',title:'Synthetic Song',album:'Synthetic Album',duration:120};
-const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:request.title,artists:[request.artist],album:request.album,duration_ms:120000}};
+const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:request.title,artists:[request.artist],album:request.album,duration_ms:120000}};
 const raw='[ar:Synthetic Singer]\n[ti:Synthetic Song]\n[10000,2000]<0,1000,0>These invented words describe a quiet morning, <1000,1000,0>and we repeat them only in this synthetic test.\n[20000,2000]<0,1000,0>We speak about a fictional journey together, <1000,1000,0>with no commercial song or provider text in these words.';
 function fixture(language){
  const calls=[],pending=[],values=new Map(),api=new KugouAPI();

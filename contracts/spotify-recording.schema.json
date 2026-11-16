@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Spotify recording v2 (semantic scalar/control validation also enforced by recordingRequest)",
+  "title": "Spotify recording v3 (observation and credit coherence also enforced by recordingRequest)",
   "type": "object",
   "properties": {
     "version": {
-      "const": 2
+      "const": 3
     },
     "provider": {
       "const": "spotify"
@@ -66,15 +66,27 @@
             "type": "string",
             "pattern": "^[A-Za-z0-9]{22}$"
           }
+        },
+        "observation": {
+          "enum": [
+            "app_remote",
+            "web_api"
+          ]
+        },
+        "artists_complete": {
+          "type": "boolean"
         }
       },
       "required": [
         "origin",
         "title",
         "artists",
-        "duration_ms"
+        "duration_ms",
+        "observation",
+        "artists_complete"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "app_remote carries exactly one incomplete artist name, without artist_ids, isrc or explicit. web_api carries complete credits. Optional artist_ids align one-to-one with artists."
     }
   },
   "required": [

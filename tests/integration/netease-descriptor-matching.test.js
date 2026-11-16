@@ -12,7 +12,7 @@ import {syntheticYRC} from '../helpers/netease-yrc.js';
 import {libraryDB} from '../helpers/library-db.js';
 
 const descriptor='动画剧集《虚构世界：第二章》中文主题曲';
-const recording={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:'合成之歌 - 《虛構世界：第二章》動畫劇集中文主題曲',artists:['Invented Singer'],album:'合成之歌 (《虛構世界：第二章》動畫劇集中文主題曲)',duration_ms:240000}};
+const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'合成之歌 - 《虛構世界：第二章》動畫劇集中文主題曲',artists:['Invented Singer'],album:'合成之歌 (《虛構世界：第二章》動畫劇集中文主題曲)',duration_ms:240000}};
 const raw=()=>({id:42,name:'合成之歌',alias:[descriptor],duration:240000,artists:[{id:7,name:'合成歌手'}],album:{id:8,name:'合成之歌'}});
 function fixture({source=raw(),aliases=['Invented Singer'],profileID=7,searchRows,words=syntheticYRC}={}){
  const calls=[],api=new NeteaseAPI();

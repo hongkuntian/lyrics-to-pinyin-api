@@ -9,7 +9,7 @@ import {streamResponse,frames} from '../helpers/stream-http.js';
 import {createMockRes} from '../helpers/mock-http.js';
 const song={id:'source-1',title:'Original song',artist:'Test artist',duration:240};
 const recording={catalog_id:'123',artist:song.artist,title:song.title,duration:240};
-const spotify={version:2,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',title:song.title,artists:[song.artist],duration_ms:240000}};
+const spotify={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:song.title,artists:[song.artist],duration_ms:240000}};
 const text=[{text:'一起唱',timestamp:12},{text:'向前走',timestamp:30}];
 const deferred=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:(...args)=>resolve(...args)};};
 const until=async predicate=>{const end=Date.now()+2000;while(!predicate()){assert.ok(Date.now()<end,'expected progressive event');await new Promise(r=>setImmediate(r));}};
