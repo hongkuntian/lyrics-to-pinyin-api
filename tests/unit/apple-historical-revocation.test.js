@@ -47,7 +47,13 @@ test('active app client secrets retain the exact active allowlist',()=>{
 for(const [label,change] of [
  ['missing token',identity=>({...identity,refresh_token_encrypted:null})],
  ['different subject',identity=>({...identity,subject_hash:digest('different-subject')})],
- ['tampered ciphertext',identity=>({...identity,refresh_token_encrypted:identity.refresh_token_encrypted.slice(0,-2)+'xx'})],
+ ['tampered ciphertext',identity=>{
+  const parts=identity.refresh_token_encrypted.split('.'),bytes=Buffer.from(parts[2],'base64url');
+  // Replacing trailing base64 characters can change only unused padding bits.
+  // Flip authenticated ciphertext bytes so this negative always tampers data.
+  bytes[0]^=1;parts[2]=bytes.toString('base64url');
+  return {...identity,refresh_token_encrypted:parts.join('.')};
+ }],
  ['missing client',identity=>({...identity,apple_client_id:null})],
  ['URL client',identity=>({...identity,apple_client_id:'https://attacker.example/client'})],
  ['newline client',identity=>({...identity,apple_client_id:'com.example.Other\n'})],
