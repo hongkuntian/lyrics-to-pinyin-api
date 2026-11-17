@@ -228,7 +228,7 @@ test('account deletion removes only that account selected links and cannot recov
   const challenge=await auth.challenge('token-a',{keyID,bundleID,purpose:'session'});
   const session=await auth.session('token-a',{keyID,bundleID,...challenge,assertion:Buffer.from('1').toString('base64')});
   const user=await auth.authenticate(session.token);
-  const accounts=new AccountStore(store.db,{policy,apple:{authenticate:async()=>({subjectHash:'selected-subject',refreshTokenEncrypted:'proof'}),revoke:async()=>{}},spotifyCleanupFn:async()=>{}});
+  const accounts=new AccountStore(store.db,{policy,apple:{authenticate:async()=>({subjectHash:'selected-subject',refreshTokenEncrypted:'proof'}),revoke:async()=>{}}});
   const input={bundleID,...(await accounts.challenge({purpose:'delete',bundleID},user))};
   const authentication=await accounts.prepareWriterAuthentication(session.token);
   assert.deepEqual(await accounts.delete(user,input,authentication),{deleted:true});

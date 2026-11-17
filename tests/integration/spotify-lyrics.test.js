@@ -6,7 +6,7 @@ import {makeDocument,requestKey} from '../../api/utils/song-library/document.js'
 import {sourceCapsule,spotifyBinding,spotifySearchRequest,spotifyHashes} from '../../api/utils/song-library/spotify-recording.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 import {createSpotifyLyricsService} from '../../api/utils/spotify-lyrics.js';
-import {validateDocument} from '../../api/utils/spotify/render.js';
+import {isRejectedRecordingLyrics} from '../../api/utils/rejected-lyrics.js';
 const recording={version:3,provider:'spotify',item_id:'0123456789ABCDEFGHIJKL',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,title:'Request title',artists:['Band & Name','Guest'],duration_ms:240001}};
 const song={id:'source-42',title:'Request title',artist:'Band & Name & Guest',creditedArtistNames:['Band & Name','Guest'],duration:240,source:'lrclib'};
 const words=[{text:'風來了',timestamp:12.5},{text:'海在這裡',timestamp:60.125}];
@@ -157,7 +157,8 @@ test('reviewed Spotify language guards reject fresh and cached wrong-language so
   const hashes=spotifyHashes(r,sourceCapsule(stale),SELECTION_REVISION);
   const oldDocument={...hashes,id:hashes.documentID,selectionRevision:SELECTION_REVISION,response:stale,
     recordingBinding:spotifyBinding(r,sourceCapsule(stale),SELECTION_REVISION,stale,{durable:true})};
-  assert.throws(()=>validateDocument(oldDocument,r),{code:'recording_mismatch'});
+  // The reviewed-language fence also rejects the immutable pre-repair document.
+  assert.equal(isRejectedRecordingLyrics(oldDocument.response.lines.map(l=>({text:l.original})),r),true);
   searches=0;
   const restored=await call(createSpotifyLyricsService({...dependencies,redis:{},getCachedFn:async()=>({response:stale,candidate:source}),setCachedFn:async()=>{},waitUntilFn:p=>p.catch(()=>{})}),{recording:r});
   assert.equal(restored.statusCode,200);assert.equal(searches,1);

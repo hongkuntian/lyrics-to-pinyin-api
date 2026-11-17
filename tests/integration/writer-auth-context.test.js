@@ -20,8 +20,8 @@ const sibling=Buffer.alloc(32,2).toString('base64'),foreign=Buffer.alloc(32,3).t
 let db,adapter,auth,source,bearer,trace,intercept;
 before(async()=>{
  db=new PGlite();
- assert.equal(migrationNames.length,31);
- assert.equal(migrationNames.at(-1),'037-lyrica-namespace.sql');
+ assert.equal(migrationNames.length,32);
+ assert.equal(migrationNames.at(-1),'038-retire-spotify-observer.sql');
  assert.ok(migrationNames.every(migrationName=>!/^0(?:29|3[01345])-/.test(migrationName)));
  for(const name of migrationNames)await db.exec(await readFile(new URL('../../db/'+name,import.meta.url),'utf8'));
  adapter={query:(...a)=>db.query(...a),transaction:fn=>db.transaction(fn)};
@@ -195,7 +195,7 @@ test('complete sorted user/token/key/session union, source allKeys and reader lo
  assert.ok(locks().filter(r=>/library_users/.test(r.sql)).every(r=>/FOR UPDATE/.test(r.sql)&&!/NO KEY/.test(r.sql)));
 });
 
-test('signOut discovers every source key although its credential narrows Spotify connections',async()=>{
+test('signOut discovers and locks every source key of the owner, not only its credential key',async()=>{
  const c=factory(),a=await c.prepare(bearer);
  await locked(c,a,operation(),async(s,tx)=>{await changed('signOut',tx);await s.verifyPostimage({tx});});
  assert.deepEqual(locks().filter(r=>/app_attest_keys/.test(r.sql)).map(r=>r.args[0]),[keyID,sibling].sort());

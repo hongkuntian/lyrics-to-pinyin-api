@@ -45,8 +45,9 @@ npm test
 Shared listening Sessions are outside the [initial release scope](docs/INITIAL_RELEASE_SCOPE.md).
 Do not restore its room endpoints, worker, command schemas or feature test suites
 to make an import or historical fixture pass. Keep ordinary account/App Attest
-session authorization, account-delete privileges, Spotify connection security and
-listening-reviewed lyric-timing tests. Historical SQL migrations and receipts are
+session authorization, account-delete privileges, Spotify recording-identity and
+listening-reviewed lyric-timing tests. The Spotify server observer is retired; do
+not reintroduce server-held Spotify grants, Web API polling or queue consumers. Historical SQL migrations and receipts are
 not disposable feature code; migration changes require separate review.
 
 ### Optional live checks

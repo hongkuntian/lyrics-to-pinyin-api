@@ -52,14 +52,6 @@ const sourcePins={
  "api/utils/song-library/translation-reuse.js": "32067bf9dbb392f0645727d5380a2e5eadfba98aaee77fe4a448408177533d4a",
  "api/utils/song-library/translation-source.js": "050bdc5035a73aff19efbba73b29d767f798797c7851b6921e65eb121389a95a",
  "api/utils/song-library/translation.js": "7e7ac5bf95260d76af037c03883fdc240111617545e1f1d4fbbf582d28cd09de",
- "api/utils/spotify/display.js": "4556eb96da6e0e52bb9852f109a50ea4f53f450ac58758772debd047ed01e0aa",
- "api/utils/spotify/observation.js": "db3a88d3766ebbd2b1d888b2be6e41450641595371c031fcd8d35010b4e39d2c",
- "api/utils/spotify/queue.js": "3e180347c2bd05765a4cd8fc9e1d095622feea84236199be5ae05929c22f0212",
- "api/utils/spotify/render.js": "b06bfc3412ea15f27a42aff86587479c79c70c8481b75168e0b951cd79574bd6",
- "api/utils/spotify/revocation.js": "a27ce0ea1774d6b40fabf68b16c58d75485361840893b01bb28abc8c4bb119e4",
- "api/utils/spotify/service.js": "ff21d2dbb9397f0c2dee28f7e8002ffdd6ccd03cbf85cb0bfdf28b2c47981d08",
- "api/utils/spotify/store.js": "e2e5d65e0bfd37b4fbe0baf0a45f63af6e1c3d375971a0790f5568cf1119a30d",
- "api/utils/spotify/vault.js": "c2cc7e473b985c7438d7a4f2927548303721a7ec0ac92b8539e7193db24bb68d",
  "api/utils/vocal-timing.js": "3b165f435cfc4fc5f4ba6dea4482be59b2f4163c0aee714ca122f85351be213c",
  "db/001-song-library.sql": "f1386620cf96a317ccb76f03593f74d5b2fe21150bd7ec8a6858dac853c42fd3",
  "db/002-dashboard-views.sql": "221eba47bf1bf05a90e6d49e6cd64a944c66fca0a13c9bc6318c5be487f1c2a3",
@@ -95,10 +87,10 @@ const sourcePins={
 };
 // Explicit changed-input pin refresh comes ONLY from Root's supplied clean
 // immutable commit, never hashes accepted from the current working files.
-const refreshPinPaths=["api/utils/app-auth/admin.js","api/utils/app-auth/store.js","api/utils/app-auth/auth-context.js","api/utils/app-auth/errors.js","api/utils/membership/accounts.js","api/utils/membership/account-data-privacy.js","api/utils/song-library/store.js","api/utils/spotify/service.js","scripts/library-migrations.js","scripts/membership-role-grants.js","db/036-account-data-privacy.sql"];
+const refreshPinPaths=["api/utils/app-auth/admin.js","api/utils/app-auth/store.js","api/utils/app-auth/auth-context.js","api/utils/app-auth/errors.js","api/utils/membership/accounts.js","api/utils/membership/account-data-privacy.js","api/utils/song-library/store.js","scripts/library-migrations.js","scripts/membership-role-grants.js","db/036-account-data-privacy.sql"];
 const gitRoot=fileURLToPath(new URL('../../',import.meta.url));
 const git=(...args)=>execFileSync('git',args,{cwd:gitRoot,encoding:'utf8',stdio:['ignore','pipe','pipe'],env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}}).trim();
-const correction='036-account-data-privacy.sql',namespace='037-lyrica-namespace.sql';
+const correction='036-account-data-privacy.sql',namespace='037-lyrica-namespace.sql',retirement='038-retire-spotify-observer.sql';
 const aclMetadataSHA256='7ee564f93b162fc2b75d6ed791622414c2e44449ff776cc61705644b433e1972';
 const existingTokenFields=['digest','user_id','revoked','created_at','expires_at'];
 const observed={
@@ -113,7 +105,7 @@ const observed={
 const observedUpdates={library_users:['auth_window','auth_count','refresh_window','refresh_count'],
  library_settings:['enabled','review_enabled'],membership_settings:['id']};
 const policy={audience:'token-lock-pg-test',environment:'development',prefix:'ABCDEFGHIJ',bundles:['test.lyrica']};
-let pg,AppAuthStore,AccountStore,SpotifyStore,createCurrentAuthContext,migrateLibrary,migrationNames,replayMembershipRoleGrants;
+let pg,AppAuthStore,AccountStore,createCurrentAuthContext,migrateLibrary,migrationNames,replayMembershipRoleGrants;
 let admin,adminConnected=false,config,clusterLease=false;
 const ownedRoles=[],databases=new Set();
 const combine=(errors,label)=>errors.length===1?errors[0]:new AggregateError(errors,label);
@@ -155,11 +147,10 @@ async function connect(){
  ({default:pg}=await import('pg'));
  ({AppAuthStore}=await import('../../api/utils/app-auth/store.js'));
  ({AccountStore}=await import('../../api/utils/membership/accounts.js'));
- ({SpotifyStore}=await import('../../api/utils/spotify/store.js'));
  ({createCurrentAuthContext}=await import('../../api/utils/app-auth/auth-context.js'));
  const registered=await import('../../scripts/library-migrations.js');migrationNames=registered.migrationNames;
  migrateLibrary=async database=>{
-  const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>n!==correction&&n!==namespace));
+  const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>n!==correction&&n!==namespace&&n!==retirement));
   try{return await registered.migrateLibrary(database);}
   finally{migrationNames.splice(0,migrationNames.length,...saved);}
  };
@@ -446,8 +437,7 @@ async function lateReplay(h){
 const cryptoFixtures={attestFn:()=>({publicKey:'external-crypto-fixture',receipt:Buffer.from('fixture')}),
  assertionFn:({assertion})=>Number(assertion.toString())};
 const auth=db=>new AppAuthStore(db,{policy,...cryptoFixtures});
-const cleanupFixture=async()=>{}; // External postcommit queue boundary only.
-const accounts=db=>new AccountStore(db,{policy,attestFn:cryptoFixtures.attestFn,apple:Object.freeze({}),spotifyCleanupFn:cleanupFixture});
+const accounts=db=>new AccountStore(db,{policy,attestFn:cryptoFixtures.attestFn,apple:Object.freeze({})});
 async function seed(h,label){
  const id='auth-fixture-'+randomUUID(),credential='fixture-'+randomUUID(),key=Buffer.from(sha(id),'hex').toString('base64');
  await h.query("INSERT INTO library_users(id,access_kind) VALUES($1,'guest')",[id]);
@@ -470,14 +460,6 @@ async function current(f,db,authorized=()=>{}){
   authorized();return scope.principalID;
  });
 }
-async function connection(h,f){
- const c={id:randomUUID(),epoch:randomUUID(),enrollmentID:randomUUID(),ownerID:f.user.id,keyID:f.key,
-  credentialDigest:f.user.credentialDigest,bundleID:f.user.bundleID,ownerEnvironment:'development',status:'connected',consumers:{}};
- const store=new SpotifyStore(h.db('spotify',{role:runtime}));assert.deepEqual(await store.create(c),c);
- assert.deepEqual(await store.enrollment(f.user,c.enrollmentID),c);
- assert.equal(await store.adopt(c.id,f.user,row=>{row.qualificationMarker=true;return row.id;}),c.id);
- assert.equal((await store.read(c.id)).qualificationMarker,true);return c;
-}
 async function noRoomWrites(h){
  assert.equal((await h.query("SELECT to_regnamespace('listening_v2')::text AS name")).rows[0].name,null);
  const rows=(await h.query(`SELECT to_regclass('public.listening_rooms')::text AS rooms,
@@ -485,7 +467,7 @@ async function noRoomWrites(h){
  assert.deepEqual(rows,[{rooms:null,commands:null,outbox:null}]);
 }
 async function authRace(h,order,observerFailure=false){
- const f=await seed(h,'race-seed'),c=await connection(h,f),hold=h.barrier(),pending=[],errors=[],trace=[];
+ const f=await seed(h,'race-seed'),hold=h.barrier(),pending=[],errors=[],trace=[];
  const sentinel=new Error('injected lock observer failure');let reading,writing,authorized=0,draining;
  const drain=()=>draining??=(async()=>{hold.release();try{await Promise.all(pending);}finally{h.scopes.delete(drain);}})();h.scopes.add(drain);
  try{
@@ -520,7 +502,6 @@ async function authRace(h,order,observerFailure=false){
    await assert.rejects(current(f,h.db('post-replay',{role:runtime})),{code:'unauthorized'});
    await assert.rejects(f.context.prepare(f.bearer),{code:'unauthorized'});
    await assert.rejects(f.a.authenticate(f.bearer),{code:'session_expired'});
-   const store=new SpotifyStore(h.db('spotify-after',{role:runtime}));assert.equal((await store.read(c.id)).reason,'signedOut');
    await noRoomWrites(h);await quiescent(h);
   }catch(error){errors.push(error);}
  }
@@ -562,8 +543,8 @@ async function upgradeAndMethods(h,t){
  // Account privileges are precisely the actual 025/027/028 conditional
  // grants from the baseline, with no runtime metadata copied to that role.
  assert.equal((await h.query("SELECT has_column_privilege($1,'public.library_tokens','revoked','UPDATE') AS allowed",[account])).rows[0].allowed,true);
- await t.test('restricted actual challenge/register/session/authenticate and Spotify enrollment/adoption/current-auth',async()=>{
-  const f=await seed(h,'actual-auth'),c=await connection(h,f);
+ await t.test('restricted actual challenge/register/session/authenticate/current-auth',async()=>{
+  const f=await seed(h,'actual-auth');
   assert.equal(await current(f,h.db('auth-current',{role:runtime})),f.user.id);
   const challenge=await f.a.challenge(f.credential,{keyID:f.key,bundleID:f.user.bundleID,purpose:'session'});
   const next=await f.a.session(f.credential,{keyID:f.key,bundleID:f.user.bundleID,...challenge,assertion:'Mg=='});
@@ -571,7 +552,6 @@ async function upgradeAndMethods(h,t){
   await assert.rejects(current(f,h.db('old-exact-bearer',{role:runtime})),{code:'unauthorized'});
   const fresh={...f,authentication:await f.context.prepare(next.token)};
   assert.equal(await current(fresh,h.db('new-exact-bearer',{role:runtime})),f.user.id);
-  assert.equal((await new SpotifyStore(h.db('read',{role:runtime})).read(c.id)).qualificationMarker,true);
   await noRoomWrites(h);await quiescent(h);
  });
  for(const order of ['revocation-first','auth-first']){

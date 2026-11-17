@@ -9,7 +9,6 @@ import {AppAuthStore} from '../../api/utils/app-auth/store.js';
 import {AccountStore} from '../../api/utils/membership/accounts.js';
 import {SongLibraryStore,digest} from '../../api/utils/song-library/store.js';
 import {disableUser,revokeKey,revokeSessions} from '../../api/utils/app-auth/admin.js';
-import {SpotifyStore} from '../../api/utils/spotify/store.js';
 import {createCurrentAuthContext} from '../../api/utils/app-auth/auth-context.js';
 import {migrationNames,migrateLibrary} from '../../scripts/library-migrations.js';
 import {execFileSync} from 'node:child_process';
@@ -121,8 +120,8 @@ before(async()=>{
  await admin.query('CREATE DATABASE '+databaseName);created=true;
  pool=new pg.Pool({...config,database:databaseName,max:6,idleTimeoutMillis:1000});
  pool.on('error',error=>poolErrors.push(error));
- assert.equal(migrationNames.length,30);
- assert.equal(migrationNames.at(-1),'036-account-data-privacy.sql');
+ assert.equal(migrationNames.length,32);
+ assert.equal(migrationNames.at(-1),'038-retire-spotify-observer.sql');
  await migrateLibrary({transaction:async operation=>{const lease=await acquire();try{await lease.client.query('BEGIN');const result=await operation(lease.client);await lease.client.query('COMMIT');return result;}finally{await rollbackRelease(lease);}}});
 },{timeout:45000});
 
@@ -169,12 +168,10 @@ function database(name,{enter,afterSQL}={}){
 const cryptoFixtures={attestFn:()=>({publicKey:'external-crypto-fixture',receipt:Buffer.from('fixture')}),
  assertionFn:({assertion})=>Number(assertion.toString())};
 const appleFixture={authenticate:async()=>({subjectHash:digest('apple-target'),refreshTokenEncrypted:'fixture-ciphertext'}),revoke:async()=>{}};
-const cleanupFixture=async()=>{}; // External postcommit queue boundary only.
-const accounts=(db,apple=appleFixture)=>new AccountStore(db,{policy,...cryptoFixtures,apple,spotifyCleanupFn:cleanupFixture});
+const accounts=(db,apple=appleFixture)=>new AccountStore(db,{policy,...cryptoFixtures,apple});
 const auth=db=>new AppAuthStore(db,{policy,...cryptoFixtures});
 async function seed(){
  await quiescent();pids.clear();
- await query('TRUNCATE spotify_connections CASCADE');
  await query('TRUNCATE library_users CASCADE');
  await query('TRUNCATE account_rate_windows,account_nonces');
  await query('UPDATE membership_settings SET public_access_enabled=true');
@@ -195,7 +192,6 @@ async function current(p,db,requiredScopes){return db.transaction(async tx=>{
  const discovery=await p.context.discover({tx,authentication:p.authentication,requiredScopes});
  const scope=await p.context.lock({tx,discovery});await scope.revalidate({tx});return scope.principalID;
 });}
-async function connected(f){const c={id:randomUUID(),epoch:randomUUID(),enrollmentID:randomUUID(),ownerID:f.user.id,keyID:f.key,credentialDigest:f.user.credentialDigest,status:'connected',consumers:{}};await new SpotifyStore(f.db).create(c);return c;}
 async function loginInput(f){return {...await accounts(f.db).challenge({purpose:'apple',bundleID},f.user),bundleID,identityToken:'fixture',authorizationCode:'fixture'};}
 
 
@@ -217,13 +213,13 @@ async function signedAccount(f){
 // Read committed images through a different borrower after the legitimate
 // winner commits and before the loser resumes. PostgreSQL JSON text preserves
 // timestamp/int8 precision. These fixed existing tables cover account nonce,
-// identity/reactivation, source auth, Spotify, V1 scrub and account data writes;
+// identity/reactivation, source auth, V1 scrub and account data writes;
 // no successful postimage, auth response or schema is manufactured.
 async function accountWriterState(){
  const state={};
  for(const table of ['library_users','library_tokens','app_attest_keys','app_auth_sessions','app_auth_challenges',
   'account_identities','account_nonces','account_rate_windows','library_rate_windows','translation_jobs',
-  'spotify_connections','spotify_snapshot_capabilities','spotify_outbox','selected_source_access','live_lyrics_push_receipts','correction_reports'])
+  'selected_source_access','live_lyrics_push_receipts','correction_reports'])
   state[table]=(await query(`SELECT to_jsonb(t)::text AS data FROM ${table} t ORDER BY (to_jsonb(t)::text) COLLATE "C"`)).rows.map(r=>r.data);
  return state;
 }
@@ -244,7 +240,6 @@ async function observedRace({barriers,pending,observe,checks}){
 }
 const userWriterLock=sql=>/^SELECT id FROM (?:public\.)?library_users WHERE id=\$1 FOR NO KEY UPDATE$/.test(sql);
 async function issuanceBeforeWriter(f,writer,input,counter){
- const connection=await connected(f);
  const body=await sessionInput(f,counter),isAccount=['signOut','signIn','delete'].includes(writer);
  let resumed;
  const db=database('writer',{afterSQL:(sql,_,args)=>userWriterLock(sql)&&args[0]===f.user.id?resumed.point():undefined});
@@ -255,8 +250,8 @@ async function issuanceBeforeWriter(f,writer,input,counter){
   issuing=outcome(auth(database('issuer',{afterSQL:sql=>/^UPDATE app_attest_keys SET sign_count/.test(sql)?issuerHold.point():undefined})).session(f.token,body));pending.push(issuing);
   await entered(issuerHold,issuing);
   writing=outcome(({signOut:()=>account.signOut(),signIn:()=>account.signIn(input),delete:()=>account.delete(input),
-   disableUser:()=>disableUser(db,f.user.id,{spotifyCleanupFn:cleanupFixture}),
-   revokeKey:()=>revokeKey(db,f.key,{spotifyCleanupFn:cleanupFixture})})[writer]());pending.push(writing);
+   disableUser:()=>disableUser(db,f.user.id),
+   revokeKey:()=>revokeKey(db,f.key)})[writer]());pending.push(writing);
   await blocked('writer',pids.get('issuer'));
   issuerHold.release();assert.equal((await issuing).error,undefined);
   await entered(resumed,writing);
@@ -271,7 +266,6 @@ async function issuanceBeforeWriter(f,writer,input,counter){
     assert.ok(afterIssuer);assert.deepEqual(await accountWriterState(),afterIssuer,'refused old-S account writer rolls back all its writes, preserving the committed issuer');
     assert.equal((await f.auth.authenticate((await issuing).value.token)).id,f.user.id);
     assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].revoked,false);
-    assert.equal((await new SpotifyStore(f.db).read(connection.id)).status,'connected');
    }else await assert.rejects(f.auth.authenticate((await issuing).value.token),{code:'session_expired'});
   },
   async()=>{await assert.rejects(f.auth.authenticate(f.bearer),{code:'session_expired'});
@@ -296,28 +290,25 @@ test('session key -> token FK cycle versus actual current-auth is removed',{time
  assert.equal((await f.auth.authenticate((await issuing).value.token)).id,f.user.id);
 });
 
-for(const writer of ['signOut','disableUser','revokeKey','rotate','signIn','delete','spotifyCreate','spotifyAdopt'])test(writer+' respects current-auth anchors before later rows',{timeout:10000},async()=>{
- let f=await seed(),input,c;
+for(const writer of ['signOut','disableUser','revokeKey','rotate','signIn','delete'])test(writer+' respects current-auth anchors before later rows',{timeout:10000},async()=>{
+ let f=await seed(),input;
  if(writer==='delete'){
   const signed=await (await accountWriter(f)).signIn(await loginInput(f));f.token=signed.credential;
   const issued=await f.auth.session(f.token,await sessionInput(f));f.bearer=issued.token;f.user=await f.auth.authenticate(f.bearer);
   input={...await accounts(f.db).challenge({purpose:'delete',bundleID},f.user),bundleID,identityToken:'fixture',authorizationCode:'fixture'};
  }else if(writer==='signIn')input=await loginInput(f);
- if(writer.startsWith('spotify'))c=await connected(f);
  const p=await prepared(f),hold=barrier();
  const reading=outcome(current(p,database('current',{afterSQL:sql=>/public\.library_tokens WHERE digest=\$1 FOR UPDATE/.test(sql)?hold.point():undefined})));
  let writing;
  try{
   await entered(hold,reading);const db=database('writer');
-  const work={signOut:async()=>(await accountWriter(f,db)).signOut(),disableUser:()=>disableUser(db,f.user.id,{spotifyCleanupFn:cleanupFixture}),
-   revokeKey:()=>revokeKey(db,f.key,{spotifyCleanupFn:cleanupFixture}),rotate:()=>new SongLibraryStore(db).createUser(f.user.id,'replacement'),
-   signIn:async()=>(await accountWriter(f,db)).signIn(input),delete:async()=>(await accountWriter(f,db)).delete(input),
-   spotifyCreate:()=>new SpotifyStore(db).create({...c,id:randomUUID(),enrollmentID:randomUUID()}),
-   spotifyAdopt:()=>new SpotifyStore(db).adopt(c.id,f.user,row=>{row.qualifiedMarker=true;})};
+  const work={signOut:async()=>(await accountWriter(f,db)).signOut(),disableUser:()=>disableUser(db,f.user.id),
+   revokeKey:()=>revokeKey(db,f.key),rotate:()=>new SongLibraryStore(db).createUser(f.user.id,'replacement'),
+   signIn:async()=>(await accountWriter(f,db)).signIn(input),delete:async()=>(await accountWriter(f,db)).delete(input)};
   writing=outcome(work[writer]());await blocked('writer',pids.get('current'));
  }finally{hold.release();await reading;if(writing)await writing;}
  assert.equal((await reading).error,undefined);assert.equal((await writing).error,undefined);
- if(!writer.startsWith('spotify'))await assert.rejects(f.auth.authenticate(f.bearer),{code:'session_expired'});
+ await assert.rejects(f.auth.authenticate(f.bearer),{code:'session_expired'});
 });
 
 test('issuance wins; captured-old-S signOut refuses and preserves new S, C and counter 2',{timeout:10000},async()=>{
@@ -445,8 +436,8 @@ for(const writer of ['signOut','revokeKey','disableUser','signIn'])test(writer+'
  const f=await seed(),p=await prepared(f),input=writer==='signIn'?await loginInput(f):null,hold=barrier();let reading;
  const stop=writer==='revokeKey'?/^UPDATE app_attest_keys SET revoked/:/^UPDATE library_tokens SET revoked/;
  const db=database('writer',{afterSQL:sql=>stop.test(sql.trim())?hold.point():undefined});
- const writing=outcome(({signOut:async()=>(await accountWriter(f,db)).signOut(),revokeKey:()=>revokeKey(db,f.key,{spotifyCleanupFn:cleanupFixture}),
-  disableUser:()=>disableUser(db,f.user.id,{spotifyCleanupFn:cleanupFixture}),signIn:async()=>(await accountWriter(f,db)).signIn(input)})[writer]());
+ const writing=outcome(({signOut:async()=>(await accountWriter(f,db)).signOut(),revokeKey:()=>revokeKey(db,f.key),
+  disableUser:()=>disableUser(db,f.user.id),signIn:async()=>(await accountWriter(f,db)).signIn(input)})[writer]());
  try{await entered(hold,writing);reading=outcome(current(p,database('current')));await blocked('current',pids.get('writer'));}
  finally{hold.release();await writing;if(reading)await reading;}
  assert.equal((await writing).error,undefined);
@@ -475,13 +466,11 @@ test('owner-wide signOut locks keys in byte order including sibling credentials'
  const f=await seed(),ids=[Buffer.alloc(32,248).toString('base64'),Buffer.alloc(32,255).toString('base64')];
  for(const key of ids){const input={keyID:key,bundleID,...await f.auth.challenge(f.token,{keyID:key,bundleID,purpose:'register'}),attestation:'Zml4dHVyZQ=='};await f.auth.register(f.token,input);}
  await query('INSERT INTO library_tokens(digest,user_id) VALUES($1,$2)',[digest('sibling-credential'),f.user.id]);
- const sibling={id:randomUUID(),epoch:randomUUID(),enrollmentID:randomUUID(),ownerID:f.user.id,keyID:ids[0],credentialDigest:digest('sibling-credential'),status:'connected',consumers:{}};
- const spotify=new SpotifyStore(f.db);await spotify.create(sibling);
- const own=await connected(f),seen=[];
+ const seen=[];
  await (await accountWriter(f,database('signout-order',{afterSQL:async(sql,_,args)=>{if(/FROM (?:public\.)?app_attest_keys WHERE key_id=\$1 FOR UPDATE/.test(sql))seen.push(args[0]);}}))).signOut();
  assert.deepEqual(seen,[f.key,...ids].sort((a,b)=>Buffer.compare(Buffer.from(a),Buffer.from(b))));
- assert.equal((await spotify.read(own.id)).reason,'signedOut');
- assert.equal((await spotify.read(sibling.id)).status,'connected','credential selector still limits connections');
+ assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].revoked,true);
+ assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[digest('sibling-credential')])).rows[0].revoked,false,'sign-out revokes only its own credential');
 });
 
 test('standalone ordered session revoke waits for exact current-auth session then invalidates it',{timeout:10000},async()=>{
@@ -516,7 +505,6 @@ for(const operation of ['signIn','delete'])for(const boundary of operation==='de
 for(const observerFailure of [false,true])test(operation+' exact-S renewal during held Apple '+boundary+' refuses with issuer-only postimage; observer failure='+observerFailure,{timeout:10000},async()=>{
  const f=await seed();let counter=2;
  if(operation==='delete'){await signedAccount(f);counter=3;}
- const connection=await connected(f);
  const input=operation==='delete'?{...await accounts(f.db).challenge({purpose:'delete',bundleID},f.user),bundleID,identityToken:'fixture',authorizationCode:'fixture'}:await loginInput(f);
  const body=await sessionInput(f,counter),appleCalls=[];
  let appleHold,preparations=0,prepared=false;
@@ -541,11 +529,10 @@ for(const observerFailure of [false,true])test(operation+' exact-S renewal durin
  },checks:[
   async()=>{assert.ok(issuing);assert.equal((await issuing).error,undefined);},
   async()=>{assert.ok(writing);assert.equal((await writing).error?.code,'app_access_revoked');assert.equal((await writing).error?.status,403);},
-  async()=>{assert.ok(afterIssuer);assert.deepEqual(await accountWriterState(),afterIssuer,'loser nonce/identity/auth/Spotify/scrub writes roll back; issuer changes remain');},
+  async()=>{assert.ok(afterIssuer);assert.deepEqual(await accountWriterState(),afterIssuer,'loser nonce/identity/auth/scrub writes roll back; issuer changes remain');},
   async()=>{assert.equal(preparations,1);assert.deepEqual(appleCalls,operation==='delete'?['authenticate','revoke']:['authenticate']);
    assert.equal((await f.auth.authenticate((await issuing).value.token)).id,f.user.id);
    assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].revoked,false);
-   assert.equal((await new SpotifyStore(f.db).read(connection.id)).status,'connected');
    assert.equal(Number((await query('SELECT sign_count FROM app_attest_keys WHERE key_id=$1',[f.key])).rows[0].sign_count),counter);
    assert.equal((await query('SELECT consumed FROM account_nonces WHERE digest=$1',[digest(input.challenge)])).rows[0].consumed,false);},
   quiescent
@@ -557,7 +544,6 @@ for(const operation of ['signOut','signIn','delete'])for(const observerFailure o
 test(operation+' source mutation commits before old-C issuance, which refuses without losing writer state; observer failure='+observerFailure,{timeout:10000},async()=>{
  const f=await seed();let counter=2;
  if(operation==='delete'){await signedAccount(f);counter=3;}
- const connection=await connected(f);
  const input=operation==='signOut'?null:operation==='delete'?{...await accounts(f.db).challenge({purpose:'delete',bundleID},f.user),bundleID,identityToken:'fixture',authorizationCode:'fixture'}:await loginInput(f);
  const body=await sessionInput(f,counter),priorCounter=counter-1;
  let mutationHold,issuerResumed,prepared=false,preparations=0;
@@ -591,7 +577,6 @@ test(operation+' source mutation commits before old-C issuance, which refuses wi
    assert.equal(Number((await query('SELECT sign_count FROM app_attest_keys WHERE key_id=$1',[f.key])).rows[0].sign_count),priorCounter);
    assert.equal((await query('SELECT consumed FROM app_auth_challenges WHERE digest=$1',[digest(body.challenge)])).rows[0].consumed,false);
    assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].revoked,true);
-   assert.equal((await new SpotifyStore(f.db).read(connection.id)).reason,operation==='signIn'?'ownerChanged':operation==='delete'?'accountDeleted':'signedOut');
    if(operation==='signIn'){
     const result=(await writing).value;assert.equal((await f.library.authenticate(result.credential)).id,result.userID);
     assert.equal((await query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[f.key])).rows[0].user_id,result.userID);

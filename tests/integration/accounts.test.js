@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {setTimeout} from 'node:timers/promises';
 import {createWriterAuthContext} from '../../api/utils/app-auth/auth-context.js';
-import {flushSpotifyCleanup} from '../../api/utils/spotify/revocation.js';
 import {libraryDB} from '../helpers/library-db.js';
 import {AccountStore} from '../../api/utils/membership/accounts.js';
 import {MembershipStore,admitLibraryTranslation} from '../../api/utils/membership/store.js';
@@ -20,7 +19,7 @@ async function fixture(t,options={}){
   await f.db.exec(await readFile(new URL('../../db/032-auth-token-row-locks.sql',import.meta.url),'utf8'));
   const db=observedDatabase(f.store.db,options);
   const apple={authenticate:async()=>({subjectHash:digest('subject'),refreshTokenEncrypted:'encrypted'}),revoke:async()=>{}};
-  const accounts=new AccountStore(db,{policy,apple,spotifyCleanupFn:async(...args)=>{options.onSpotifyCleanup?.();return flushSpotifyCleanup(...args);},attestFn:()=>({publicKey:'proof',receipt:Buffer.from('receipt')})});
+  const accounts=new AccountStore(db,{policy,apple,attestFn:()=>({publicKey:'proof',receipt:Buffer.from('receipt')})});
   const auth=new AppAuthStore(db,{policy,attestFn:()=>({publicKey:'proof',receipt:Buffer.from('receipt')}),assertionFn:({assertion})=>Number(assertion.toString())});
   return {...f,accounts,auth,apple,sessionByUser:new WeakMap(),observedDB:db};
 }
@@ -281,14 +280,14 @@ test('signOut requires its submitted live session even when another session auth
 });
 
 test('failed delete rolls back consumed nonce and every account write after the last data mutation',async t=>{
- let armed=false,failed=false,flushes=0;
- const f=await fixture(t,{onSpotifyCleanup:()=>{flushes++;},afterQuery:async({sql},tx)=>{
+ let armed=false,failed=false;
+ const f=await fixture(t,{afterQuery:async({sql},tx)=>{
   if(armed&&/^UPDATE correction_reports/.test(sql)){failed=true;await tx.query('SELECT 1/0');}
  }});
  const {current}=await signedAccount(f),input=await appleInput(f,current.user,'delete'),prepared=await authentication(f,current.user);
- const before=await accountState(f),beforeFlushes=flushes;armed=true;
+ const before=await accountState(f);armed=true;
  await assert.rejects(f.accounts.delete(current.user,input,prepared));
- assert.equal(failed,true);assert.deepEqual(await accountState(f),before);assert.equal(flushes,beforeFlushes);
+ assert.equal(failed,true);assert.deepEqual(await accountState(f),before);
  assert.equal((await f.auth.authenticate(current.session)).id,current.user.id);
  armed=false;
  assert.deepEqual(await f.accounts.delete(current.user,input,await authentication(f,current.user)),{deleted:true});

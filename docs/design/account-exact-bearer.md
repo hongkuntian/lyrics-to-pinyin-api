@@ -6,11 +6,11 @@ Account sign-in, sign-out and deletion are ordinary release functionality. They 
 
 - `AccountStore` prepares the exact supplied bearer before provider work and passes only private writer evidence to its transaction.
 - Preserve frozen principal, credential, key, session, environment, audience, bundle and original deadline identities. A newer bearer or replacement session cannot authorize an old request.
-- Lock the canonical bounded user/token/key/session union before Spotify or lower-resource mutation. Preserve `FOR NO KEY UPDATE` user anchors and explicit row-lock privileges.
+- Lock the canonical bounded user/token/key/session union before any lower-resource mutation. Preserve `FOR NO KEY UPDATE` user anchors and explicit row-lock privileges.
 - Revalidate the preimage before mutation; verify the exact deliberate postimage afterward. Unexpected changes roll the whole transaction back.
 - Sign-in inserts an absent target digest. Foreign ownership is never overwritten. Same-owner reuse elsewhere retains its own nullable/finite expiry and unrelated data.
 - Sample the final database clock against original source deadlines. Final postimage verification remains the last SQL before commit.
-- Preserve durable Spotify revocation and postcommit cleanup on sign-out, deletion and applicable admin mutations. The removal does not authorize dropping connection-security obligations.
+- The backend holds no Spotify grant: the server observer is retired and migration 038 drops its connection tables, so sign-out, deletion and admin mutations have no Spotify revocation step or postcommit cleanup.
 
 ## Retained account data
 
@@ -22,4 +22,4 @@ The unconditional catalog preflight refuses deletion with `account_data_cleanup_
 
 ## Verification
 
-Retain account exact-bearer, deadline, final-SQL-order and rollback tests, Spotify owner-revocation tests, both retained-data privilege suites, and the neutral [writer context](writer-auth-context.md) regressions. Cover absent and populated historical schema, insufficient privileges, partial V2 schema, unchanged safety records and truthful refusal. Local fixture proof is not deployed database inventory or external erasure evidence.
+Retain account exact-bearer, deadline, final-SQL-order and rollback tests, the account-lifecycle-without-Spotify regression, both retained-data privilege suites, and the neutral [writer context](writer-auth-context.md) regressions. Cover absent and populated historical schema, insufficient privileges, partial V2 schema, unchanged safety records and truthful refusal. Local fixture proof is not deployed database inventory or external erasure evidence.

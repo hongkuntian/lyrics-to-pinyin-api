@@ -51,7 +51,6 @@ export async function packageFunctions({workPath=root,output=path.join(workPath,
   const required=[...new Set((await Promise.all((includeFiles??[]).map(pattern=>u.glob(pattern,stage)))).flatMap(files=>Object.keys(files)))];
   for(const included of required)await fs.access(path.join(dir,included));
   for(const trigger of vc.experimentalTriggers??[])if(!trigger.consumer)throw new Error('processed_consumer_required');
-  if(entry.includes('_spotify-')&&!(vc.experimentalTriggers?.length))throw new Error('private_trigger_required');
   inventory.push({entry,output:name+'.func',...vc,files:Object.keys(lambda.files).length,includes:required});
  }
  // A status-only fallback may still execute a public function at the incoming

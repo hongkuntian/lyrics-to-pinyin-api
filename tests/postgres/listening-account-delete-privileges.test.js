@@ -107,8 +107,7 @@ async function schema(h,{historical=false,footprint='minimal'}={}){
   // Exactly the retained runtime footprint; no added account permission.
   const map={app_attest_keys:'SELECT,INSERT,UPDATE',app_auth_challenges:'SELECT,INSERT,UPDATE,DELETE',
    app_auth_sessions:'SELECT,INSERT,UPDATE,DELETE',library_settings:'SELECT',library_tokens:'SELECT',
-   library_users:'SELECT',membership_settings:'SELECT',spotify_connections:'SELECT,INSERT,UPDATE,DELETE',
-   spotify_outbox:'SELECT,INSERT,UPDATE,DELETE',spotify_snapshot_capabilities:'SELECT,INSERT,UPDATE,DELETE'};
+   library_users:'SELECT',membership_settings:'SELECT'};
   for(const [table,rights] of Object.entries(map))await h.query('GRANT '+rights+' ON public.'+table+' TO '+runtime);
   await h.query('GRANT UPDATE(auth_window,auth_count,refresh_window,refresh_count) ON public.library_users TO '+runtime);
   await h.query('GRANT UPDATE(enabled,review_enabled) ON public.library_settings TO '+runtime);
@@ -118,7 +117,7 @@ const imageTables=['library_users','library_tokens','app_attest_keys','app_auth_
  'account_identities','account_nonces','account_rate_windows','listening_rooms','listening_commands','listening_outbox',
  'listening_rate_windows','selected_source_access','lyric_documents','live_lyrics_push_receipts','correction_reports',
  'membership_subscriptions','membership_grants','membership_usage','membership_preview_claims','membership_relay_usage',
- 'spotify_connections','spotify_snapshot_capabilities','spotify_outbox','library_schema_migrations'];
+ 'library_schema_migrations'];
 async function image(h){
  const result={};
  for(const table of imageTables){
@@ -161,24 +160,17 @@ async function seed(h,{retained=true,rate='matching'}={}){
  await h.query("INSERT INTO public.membership_usage(operation_id,user_id,grant_id,kind,state) VALUES($1,$2,$3,'translation','consumed')",[randomUUID(),id,grant]);
  await h.query("INSERT INTO public.membership_preview_claims(user_id,activity_id,recording_id,expires_at) VALUES($1,'preview','exact-recording','2099-01-01T00:00:00Z')",[id]);
  await h.query("INSERT INTO public.membership_relay_usage(user_id,period_start,request_count) VALUES($1,'2026-01-01',9)",[id]);
- for(let i=0;i<3;i++){
-  const c={id:'spotify-'+i,epoch:'old-epoch-'+i,enrollmentID:'enrollment-'+i,ownerID:i===2?other:id,keyID:keys[i],credentialDigest:credentials[i],status:'connected',refresh:'encrypted-refresh',access:'encrypted-access',stage:{opaque:true},document:{exact:'source'},observation:{exact:true},metadata:{retained:'value'},consumers:{live:{status:'active',generation:1,sessionID:'live-'+i,tokenVersion:1,lastTimestamp:0}}};
-  await h.query('INSERT INTO public.spotify_connections(id,owner_id,key_id,credential_digest,enrollment_id,data) VALUES($1,$2,$3,$4,$5,$6)',[c.id,c.ownerID,c.keyID,c.credentialDigest,c.enrollmentID,c]);
-  await h.query('INSERT INTO public.spotify_snapshot_capabilities(digest,connection_id,session_id,expires_at_ms) VALUES($1,$2,$3,9007199254740991)',[sha('cap-'+i),c.id,'live-'+i]);
-  await h.query("INSERT INTO public.spotify_outbox(id,connection_id,epoch,kind,due_at_ms,data,expires_at) VALUES($1,$2,$3,'tick',0,'{\"keep\":true}','2099-01-01T00:00:00Z')",['old-job-'+i,c.id,c.epoch]);
- }
  const challenge='delete-confirmation';
  await h.query("INSERT INTO public.account_nonces(digest,purpose,bundle_id,key_id,user_id,expires_at) VALUES($1,'delete',$2,$3,$4,clock_timestamp()+interval '5 minutes')",[sha(challenge),bundleID,keys[0],id]);
  return {id,other,keys,credentials,bearers,rooms,input:{challenge,bundleID,identityToken:'external-Apple',authorizationCode:'external-Apple'}};
 }
 async function actual(h,f,{owner=false,beforeSQL,afterSQL,trace=[]}={}){
- const effects={appleAuthenticate:0,appleRevoke:0,cleanup:[]},role=owner?null:account;
+ const effects={appleAuthenticate:0,appleRevoke:0},role=owner?null:account;
  const db=h.adapter(role,{trace,beforeSQL,afterSQL});
  const auth=new AppAuthStore(db,{policy}); // Actual authenticate SQL; no auth replacement.
  const user=await auth.authenticate(f.bearers[0]);assert.equal(user.id,f.id);
  const count=trace.length;
- const store=new AccountStore(db,{policy,apple:{authenticate:async()=>{effects.appleAuthenticate++;return {subjectHash:sha('apple-subject'),refreshTokenEncrypted:'fresh-encrypted'};},revoke:async()=>{effects.appleRevoke++;}},
-  spotifyCleanupFn:async(_db,ids)=>{effects.cleanup.push([...ids]);}});
+ const store=new AccountStore(db,{policy,apple:{authenticate:async()=>{effects.appleAuthenticate++;return {subjectHash:sha('apple-subject'),refreshTokenEncrypted:'fresh-encrypted'};},revoke:async()=>{effects.appleRevoke++;}}});
  assert.equal(trace.length,count,'default-off construction executes no SQL');
  const handle=await store.prepareWriterAuthentication(f.bearers[0]);
  return {effects,trace,run:()=>store.delete(user,f.input,handle)};
@@ -214,20 +206,6 @@ function assertDeleted(before,after,f){
  for(const old of before.account_identities){const row=after.account_identities.find(r=>r.user_id===old.user_id);unchangedExcept(old,row,['deleted_at','refresh_token_encrypted','apple_client_id']);assert.ok(row.deleted_at);assert.equal(row.refresh_token_encrypted,null);assert.equal(row.apple_client_id,null);}
  assert.deepEqual(after.account_nonces,before.account_nonces.map(r=>r.digest===sha(f.input.challenge)?{...r,consumed:true}:r));
  assert.deepEqual(sorted(after.correction_reports),sorted(before.correction_reports.map(r=>target(r)?{...r,detail:'[Account deleted]',assessment:null}:r)));
- for(const old of before.spotify_connections){
-  const row=after.spotify_connections.find(r=>r.id===old.id);
-  if(old.owner_id!==f.id){assert.deepEqual(row,old);continue;}
-  unchangedExcept(old,row,['data','updated_at']);const c=row.data;
-  assert.equal(c.status,'disconnected');assert.equal(c.reason,'accountDeleted');assert.notEqual(c.epoch,old.data.epoch);assert.ok(Number.isSafeInteger(c.closedAt));
-  for(const field of ['refresh','access','stage','refreshLease','pollLease','document','observation'])assert.equal(c[field],null);
-  assert.deepEqual(c.metadata,old.data.metadata);
-  assert.deepEqual(c.consumers.live,{...old.data.consumers.live,generation:2,status:'ended',reason:'accountDeleted',endedAt:c.closedAt});
-  unchangedExcept(old.data,c,['epoch','status','reason','closedAt','refresh','access','stage','refreshLease','pollLease','document','observation','consumers']);
- }
- assert.deepEqual(after.spotify_snapshot_capabilities,before.spotify_snapshot_capabilities.filter(r=>r.connection_id==='spotify-2'));
- for(const old of before.spotify_outbox)assert.ok(after.spotify_outbox.some(row=>JSON.stringify(row)===JSON.stringify(old)),'prior Spotify jobs preserved');
- const fresh=after.spotify_outbox.filter(r=>!before.spotify_outbox.some(old=>old.id===r.id));assert.equal(fresh.length,2);
- for(const row of fresh){assert.equal(row.kind,'cleanup');assert.equal(row.state,'pending');assert.equal(row.receipt,null);assert.equal(row.data.reason,'accountDeleted');assert.equal(row.data.generation,1);assert.ok(['spotify-0','spotify-1'].includes(row.connection_id));}
 }
 async function acl(h){return (await h.query(`SELECT n.nspname,c.relname,'table' AS scope,NULL::text AS column_name,x.grantor,x.grantee,x.privilege_type,x.is_grantable
  FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
@@ -285,7 +263,7 @@ async function runCases(caseTest,make){
   const h=await make(t);await schema(h,config);const f=await seed(h,config),before=await image(h),trace=[];
   const a=await actual(h,f,{trace});assert.deepEqual(await a.run(),{deleted:true});
   const after=await image(h);assertDeleted(before,after,f);traceSuccess(trace,account);
-  assert.equal(a.effects.appleRevoke,1);assert.deepEqual(a.effects.cleanup,[['spotify-0','spotify-1']]);
+  assert.equal(a.effects.appleRevoke,1);assert.equal(trace.some(e=>/spotify_/.test(e.text??'')),false);
   await narrow(h,true);
  });
  for(const rate of ['matching','nonmatching','empty'])await caseTest('historical registry actual restricted delete reaches exact 42501 and populated rollback; '+rate,async t=>{
@@ -294,7 +272,7 @@ async function runCases(caseTest,make){
   await narrow(h,false);await assert.rejects(a.run(),permission);assert.deepEqual(await image(h),before);
   assert.ok(trace.some(e=>e.text?.startsWith('DELETE FROM listening_rooms')));
   assert.ok(trace.some(e=>e.text?.startsWith('UPDATE listening_rooms')));
-  assert.equal(trace.at(-1).event,'ROLLBACK');assert.equal(a.effects.appleRevoke,1);assert.deepEqual(a.effects.cleanup,[]);
+  assert.equal(trace.at(-1).event,'ROLLBACK');assert.equal(a.effects.appleRevoke,1);
   for(const e of trace.filter(e=>e.text))assert.equal(e.currentUser,account);
  });
  await caseTest('original owner positive control remains separate from restricted qualification',async t=>{
@@ -328,7 +306,7 @@ async function runCases(caseTest,make){
     await raw.query('SELECT pg_sleep(GREATEST(0,extract(epoch FROM ($1::timestamptz-clock_timestamp())))+0.01)',[deadline]);injected=true;
    }
   },afterSQL:async(text,raw)=>{
-   if(injected||!text.startsWith('INSERT INTO spotify_outbox'))return;
+   if(injected||!text.startsWith('UPDATE correction_reports'))return;
    if(fault.endsWith('deadline'))return;
    injected=true;
    if(fault==='last-SQL-failure')await raw.query('SELECT 1/0');
@@ -337,10 +315,10 @@ async function runCases(caseTest,make){
     else await raw.query("INSERT INTO public.app_auth_sessions(digest,key_id,credential_digest,audience,expires_at) VALUES($1,$2,$3,$4,clock_timestamp()+interval '15 minutes')",[sha(f.bearers[0]),f.keys[0],f.credentials[0],policy.audience]);
    });
   }});
-  await assert.rejects(a.run(),fault==='last-SQL-failure'?e=>e.code==='spotify_revocation_unavailable':{code:'app_access_revoked'});
+  await assert.rejects(a.run(),fault==='last-SQL-failure'?{code:'22012'}:{code:'app_access_revoked'});
   assert.equal(injected,true);assert.ok(trace.some(e=>e.text?.startsWith('DELETE FROM listening_rate_windows')));
-  assert.ok(trace.some(e=>e.text?.startsWith('UPDATE spotify_connections')));
-  assert.equal(trace.at(-1).event,'ROLLBACK');assert.deepEqual(await image(h),before);assert.deepEqual(a.effects.cleanup,[]);assert.equal(a.effects.appleRevoke,1,'external Apple revoke is recorded, never asserted rolled back');
+  assert.ok(trace.some(e=>e.text?.startsWith('UPDATE correction_reports')));
+  assert.equal(trace.at(-1).event,'ROLLBACK');assert.deepEqual(await image(h),before);assert.equal(a.effects.appleRevoke,1,'external Apple revoke is recorded, never asserted rolled back');
 
   // A deadline cannot be extended as an auth recovery claim. Owner fixture
   // renewal here starts a separately prepared attempt after rollback.
@@ -381,11 +359,12 @@ async function runCases(caseTest,make){
   assert.equal(roles.roles.some(r=>[account,runtime].includes(r.rolname)),false);
   await h.query(body(await sqlFile(correction)));assert.deepEqual(await authority(h),roles);assert.deepEqual(await image(h),before);
   await h.createRoles();const calls=[];await replayMembershipRoleGrants({query:async text=>{calls.push(text);return h.query(text);}});assert.equal(calls.length,1);
-  // No invisible 027/029 repair and no role inheritance in this genuine writer path.
-  for(const relation of ['spotify_connections','spotify_snapshot_capabilities','spotify_outbox','listening_rooms'])assert.equal((await one(h,'SELECT pg_catalog.has_table_privilege($1,$2,\'SELECT\') AS allowed',[account,'public.'+relation])).allowed,false,relation);
+  // No invisible 029 repair and no role inheritance in this genuine writer path.
+  for(const relation of ['listening_rooms'])assert.equal((await one(h,'SELECT pg_catalog.has_table_privilege($1,$2,\'SELECT\') AS allowed',[account,'public.'+relation])).allowed,false,relation);
   assert.equal((await one(h,"SELECT pg_catalog.has_column_privilege($1,'public.listening_rate_windows','user_id','SELECT') AS allowed",[account])).allowed,true);
   assert.equal((await one(h,"SELECT pg_catalog.has_table_privilege($1,'public.listening_rate_windows','DELETE') AS allowed",[account])).allowed,false);
-  const lateBefore=await image(h),a=await actual(h,f);await assert.rejects(a.run(),{code:'spotify_revocation_unavailable'});assert.deepEqual(await image(h),lateBefore);assert.deepEqual(a.effects.cleanup,[]);
+  // Without the retired Spotify pre-step, the late role stops at its first missing listening privilege.
+  const lateBefore=await image(h),a=await actual(h,f);await assert.rejects(a.run(),e=>e.code==='42501'&&e.message.includes('listening_rooms'));assert.deepEqual(await image(h),lateBefore);
  });
  await caseTest('fresh runner failure before 036 receipt rolls schema and grants back together',async t=>{
   const h=await make(t),old=await authority(h);
@@ -395,13 +374,11 @@ async function runCases(caseTest,make){
   assert.deepEqual(await migrateLibrary(h.migrator()),migrationNames);
   assert.equal((await one(h,"SELECT to_regclass('public.listening_rate_windows')::text AS name")).name,null);
  });
- await caseTest('late replay with EXPLICIT independently established historical 027/029 prerequisites can delete',async t=>{
+ await caseTest('late replay with EXPLICIT independently established historical 029 prerequisites can delete',async t=>{
   const h=await make(t,{roles:false});await schema(h);const f=await seed(h);await h.createRoles();
   // This is a separate compatible footprint, NEVER the genuine source-writer
   // negative above. Establish and label the actual omitted old prerequisites.
-  for(const name of ['027-spotify-background.sql']){
-   const blocks=(await sqlFile(name)).match(/DO \$\$ BEGIN[\s\S]*?END \$\$;/g);assert.equal(blocks.length,1);await h.query(blocks[0]);
-  }
+  // Retired Spotify observer grants (027) are no longer a deletion prerequisite.
   await historicalAccountGrants(h);await replayMembershipRoleGrants(h);await narrow(h,true);
   const before=await image(h),a=await actual(h,f);assert.deepEqual(await a.run(),{deleted:true});assertDeleted(before,await image(h),f);
  });

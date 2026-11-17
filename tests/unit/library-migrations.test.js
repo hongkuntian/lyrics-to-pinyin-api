@@ -9,6 +9,8 @@ const migrations=await Promise.all(migrationNames.map(async name=>{
  return {name,sql,sha256:createHash('sha256').update(sql).digest('hex')};
 }));
 const checkpoint=migrations.at(-1);
+// The runner executes the reviewed file without its outer BEGIN/COMMIT.
+const checkpointBody=checkpoint.sql.replace(/^BEGIN;\s*/,'').replace(/COMMIT;\s*$/,'');
 const reviewed=[{name:checkpoint.name,sha256:checkpoint.sha256}];
 
 function fixture({missing=[checkpoint.name],changed}={}){
@@ -35,7 +37,7 @@ test('bounded migration applies only the exact reviewed pending name and digest 
  const state=fixture();
  assert.deepEqual(await migrateLibrary(state.database,{expectedPending:reviewed}),[checkpoint.name]);
  assert.equal(state.receipts.get(checkpoint.name),checkpoint.sha256);
- const executed=state.events.filter(event=>event.includes('$lyrica_namespace$'));
+ const executed=state.events.filter(event=>event===checkpointBody);
  assert.equal(executed.length,1);
  assert.ok(state.events.indexOf('SELECT pg_advisory_xact_lock(71309,1)')<state.events.indexOf(executed[0]));
  assert.equal(state.events.at(-1),'COMMIT');
@@ -52,7 +54,7 @@ for(const [label,expectedPending] of [
  const state=fixture();
  await assert.rejects(migrateLibrary(state.database,{expectedPending}),{code:'migration_plan_changed'});
  assert.equal(state.receipts.has(checkpoint.name),false);
- assert.equal(state.events.some(event=>event.includes('$lyrica_namespace$')),false);
+ assert.equal(state.events.some(event=>event===checkpointBody),false);
  assert.equal(state.events.at(-1),'ROLLBACK');
 });
 

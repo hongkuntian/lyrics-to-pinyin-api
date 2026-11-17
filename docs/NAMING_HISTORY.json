@@ -216,6 +216,10 @@
       "reason": "PostgreSQL historical 036 SQL privilege qualification uses the original role namespace."
     },
     {
+      "path": "tests/integration/spotify-observer-retirement.test.js",
+      "reason": "Upgrade fixture applies historical 027 grants to the original roles before 037 renames them and 038 drops them."
+    },
+    {
       "path": "tests/unit/naming-contract.test.js",
       "reason": "The naming guard must spell the prior token that it rejects in current source."
     }

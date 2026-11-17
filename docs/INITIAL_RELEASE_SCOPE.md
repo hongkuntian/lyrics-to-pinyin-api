@@ -25,9 +25,11 @@ capabilities remain available.
   account and credential operations.
 - Account deletion, sign-out, revocation and credential rotation keep their
   existing data-integrity and provider-security guarantees.
-- Spotify connection enrollment, current-track lookup, lyric acquisition,
-  refresh ownership and revocation remain in scope. Shared-room playback and
-  private session-playlist permissions are not prerequisites for those paths.
+- Spotify lyric acquisition and recording identity remain in scope. Spotify is
+  native-only: the app reads the current track through the App Remote SDK. The
+  server observer (`/api/spotify` enrollment, grant vault, Web playback polling,
+  queue consumers and Spotify Live Lyrics publication) is retired, and migration
+  `038-retire-spotify-observer.sql` drops its stored grants and state.
 - `api/utils/listening-reviewed-recordings.js` reviews ordinary lyric timing. Its
   name does not make it part of shared Sessions; preserve it and its regression
   tests, together with source/document/learning identity safeguards.
@@ -37,7 +39,8 @@ capabilities remain available.
 Historical SQL migrations, applied migration receipts and the account-delete
 privileges needed for existing database state are a separate compatibility and
 security boundary. Removing runtime feature code does not authorize rewriting
-migration history, dropping deployed tables or deleting user data.
+migration history, dropping deployed tables or deleting user data. Migration 038
+is the explicitly authorized exception for the retired Spotify observer only.
 
 Maintained authentication helpers live under `api/utils/app-auth`, and retained
 account-data cleanup lives under `api/utils/membership/account-data-privacy.js`.

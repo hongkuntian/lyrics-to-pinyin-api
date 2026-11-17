@@ -16,6 +16,8 @@ migrationNames.push('032-auth-token-row-locks.sql');
 migrationNames.push('036-account-data-privacy.sql');
 // One hard prerelease namespace cutover; no aliases or data rewrites.
 migrationNames.push('037-lyrica-namespace.sql');
+// Spotify is native-only: drop the retired server observer's grants and state.
+migrationNames.push('038-retire-spotify-observer.sql');
 export async function migrateLibrary(database,{expectedPending}={}) {
   return database.transaction(async db=> {
     await db.query("SET LOCAL lock_timeout='5s'");

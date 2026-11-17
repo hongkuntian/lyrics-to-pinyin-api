@@ -14,21 +14,8 @@ For a reproducible local comparison, run `node scripts/benchmark-live-lyrics.mjs
 
 Verify sustained physical-phone playback in unlocked Notification Center without a debugger, plus pause, seek and track transitions. Compare system pixels against observations; `push-accepted` and ActivityKit `contentUpdates` alone do not establish rendering or exact lyric timing. Keep the experiment off by default until that evidence supports enabling it.
 
-## Spotify line timing
+## Spotify
 
-Credential enrollment and renewal validate the Accounts grant and its returned
-scopes without probing Web playback. A Web playback 403 ends active Live Lyrics
-consumers through their durable cleanup path, while preserving the connection,
-epoch and refresh ownership for native playback. Invalid grants and missing
-required grant scopes still require authorization. Foreground native lyric
-loading does not establish server playback permission.
+Spotify Live Lyrics are app-fed: the app observes playback natively (App Remote SDK) and sends each update through this relay like any other source. The relay carries app-computed lyric content and timing only, never Spotify credentials.
 
-The Spotify publisher (`api/utils/spotify`) polls playback every two seconds. Until 10 November 2026 a line was published when the next poll noticed it, which put it on the card 1.67 seconds after it started (0.47–2.31, measured on an iPhone). Most of that was the wait for the poll; a publication itself reached the card in 0.48 seconds (0.33–0.84).
-
-- **Head start.** `renderState` selects each cue `leadSeconds` (0.65 s) early: the measured time from decision to drawn card, plus a short reading head start. Only cue selection moves. `confirmedAt` and the eight-second deadline are the observation's own.
-- **Between polls.** After a poll commits, its invocation stays alive for up to four seconds (`follow` in `service.js`) and publishes each line or page change at its own moment. It runs after the queue message is acknowledged, through `waitUntil`, so it cannot delay or fail a poll. Only the invocation that committed the newest observation publishes; a newer poll takes over. It never polls, never extends a lease, publishes at most once per real second and never manufactures a timestamp.
-- **Sending.** A line published this way is persisted before it is sent, as an outbox record with `data.cue = true` that no drain acts on (inserted `cancelled`, closed as `published`/`accepted` or with the failure code as its receipt). It holds the per-activity send lease taken in the same transaction. If the send fails, the next poll publishes the line.
-- **No stepping back.** A new sample can sit slightly behind the previous estimate. A position up to `holdSeconds` (0.75 s) behind the cue already shown holds that cue; a larger regression or a new playback occurrence is followed.
-- **Keep-alives.** A line published late in a lease carries that older deadline, so its keep-alive is due when less than 3.5 seconds remain, not only four seconds after publication. No keep-alive is sent when the next line will be published at least 1.5 seconds before the deadline. The deadline is counted as the card counts it: `stale-date` is a whole second, up to a second before the lease ends. A keep-alive is sent at the priority of a line change (10 with More Frequent Updates on, otherwise 5), for the reason given above.
-
-`SpotifyService` follows cues only when given a `sleep` function; `createSpotifyRuntime` supplies it and `defer`. Tests inject a fake `sleep` that advances their clock.
+The former server publisher (`api/spotify.js`, `api/utils/spotify`, the `_spotify-tick`/`_spotify-acquire` queue consumers) enrolled Spotify refresh grants, polled Web playback every two seconds and published ActivityKit updates itself. It was retired on 17 November 2026 so that it cannot compete with the native publisher. Migration `038-retire-spotify-observer.sql` drops its stored grants, polls and widget capabilities. Its measured cue-timing findings (a 0.48 s publication-to-card delay, the 0.65 s cue head start and 0.75 s hold) remain in this file's Git history for the app-fed path.
