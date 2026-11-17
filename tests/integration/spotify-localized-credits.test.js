@@ -50,6 +50,32 @@ test('Spotify English contributor names resolve only through each independent pr
   assert.equal(calls.filter(u=>u.pathname==='/artist/detail').length,2);
 });
 
+test('incomplete native credits uniquely resolve one observed name and retain independently structured duet contributors',async()=>{
+  const target={...spotifySearchRequest(recording),creditedArtistNames:['Eason Chan'],artist:'Eason Chan',creditedArtistsComplete:false};
+  const {api,calls}=fixture();
+  const song=await api.searchSong(target.artist,target.title,target);
+  assert.deepEqual(song.creditedArtistNames,['Eason Chan','王菲']);
+  assert.deepEqual(song.creditedArtistIDs,['2116','9621']);
+  assert.equal(song.artist,'陈奕迅 & 王菲');
+  assert.equal(calls.filter(u=>u.pathname==='/artist/detail').length,2);
+  const {api:fresh,fetchFn}=fixture();
+  assert.deepEqual((await fresh.getRecording(raw.id,{...target,fetchFn})).song.creditedArtistNames,song.creditedArtistNames);
+  for(const options of [
+    {changeProfile:p=>({...p,id:999})},
+    {changeProfile:p=>({...p,alias:['Unknown']})},
+    {changeProfile:p=>({...p,alias:['Eason Chan']})},
+    {song:{...raw,name:raw.name+' (Live)'}},
+    {song:{...raw,duration:240000}}
+  ]) {
+    const {api:rejected}=fixture(options);
+    await assert.rejects(()=>rejected.searchSong(target.artist,target.title,target),{code:'recording_mismatch'});
+  }
+  const {api:complete}=fixture();
+  await assert.rejects(()=>complete.searchSong(target.artist,target.title,{...target,creditedArtistsComplete:true}),{code:'recording_mismatch'});
+  const {api:guest}=fixture();
+  await assert.rejects(()=>guest.searchSong(target.artist,target.title+' (feat. Missing Guest)',{...target,title:target.title+' (feat. Missing Guest)'}),{code:'recording_mismatch'});
+});
+
 // Metadata observed from Spotify and NetEase on 2026-10-26. Only the lyrics
 // below are invented; the two-second catalog duration discrepancy is real.
 const qianLiRecording={version:3,provider:'spotify',item_id:'3Pjp7lBM20zYzTlRurI6B7',metadata:{origin:'spotify',observation:'web_api',artists_complete:true,
@@ -61,6 +87,46 @@ const qianLiProfiles={6452:{id:6452,name:'周杰伦',alias:['Jay Chou','周董']
 const qianLiLyrics={code:200,lrc:{lyric:'[00:12]一起听\n[00:18]慢慢唱'},
   yrc:{lyric:'[12000,2000](12000,1000,0)一起(13000,1000,0)听\n[18000,2000](18000,1000,0)慢慢(19000,1000,0)唱'}};
 const qianLiFixture=options=>fixture({song:qianLiSong,performerProfiles:qianLiProfiles,lyricPayload:qianLiLyrics,...options});
+
+// Exact Spotify/NetEase metadata observed 2026-11-17. The source timelines
+// below are original fixtures; the unrelated album must not win by response order.
+const kevinRecording={version:3,provider:'spotify',item_id:'6h9km3YJWVABKCV6SVF9LS',metadata:{
+  origin:'spotify',observation:'web_api',artists_complete:true,title:'你那麼愛她',artists:['Kevin Lin','Sam Lee'],
+  artist_ids:['69P1UFKEnZf2kt5F07Kp1a','7ya3wFqG9X35S7L7XSrE2i'],
+  album:"Men's Talk About Love新歌+1992~2005精選",duration_ms:261880}};
+const kevinSong={id:116513,name:'你那么爱她',artists:[{id:3716,name:'林隆璇'},{id:3705,name:'李圣杰'}],
+  album:{name:"Men's Talk About Love"},duration:261880};
+const kevinProfiles={3716:{id:3716,name:'林隆璇',alias:['Kevin Lin']},3705:{id:3705,name:'李圣杰',alias:['Sam Lee','李杰']}};
+
+for(const native of [false,true])test(`reported duet selects its album and retains request/source identity through library reopen (${native?'native':'catalog'})`,async t=>{
+  const request=structuredClone(kevinRecording);
+  if(native)Object.assign(request.metadata,{observation:'app_remote',artists_complete:false,artists:['Kevin Lin']});
+  if(native)delete request.metadata.artist_ids;
+  const {db,store}=await libraryDB();t.after(()=>db.close());
+  const other={...kevinSong,id:114604,artists:[...kevinSong.artists].reverse(),album:{name:'关于你的歌'}};
+  const {api}=fixture({song:kevinSong,songs:[other,kevinSong],performerProfiles:kevinProfiles,lyricPayload:qianLiLyrics});
+  const service=createMusicRomanizeService({redis:null,getAvailableAPIsFn:()=>[api],logger:{info(){},error(){}},
+    resolveArtistIdentitiesFn:async()=>[],resolveArtistDiscoveryFn:async()=>null,
+    resolveCatalogAliasesFn:()=>assert.fail('Spotify must not use Apple aliases')});
+  const handler=createSongLibraryHandler({store,loadLyrics:lyricLoader(service),
+    authStore:{authenticate:async()=>({id:'reader-a'}),limit:async()=>{}},logger:{info(){},error(){}}});
+  const call=async refresh=>{
+    const res=createMockRes();await handler(createMockReq({body:{action:'lyrics',recording:request,...(refresh?{refresh:true}:{})},
+      headers:{authorization:'Bearer lyrica_s_fixture'}}),res);return res;
+  };
+  const first=await call(true);assert.equal(first.statusCode,200);
+  const doc=first.body.document,response=doc.response;
+  assert.equal(response.song.id,116513);
+  assert.equal(response.song.album,kevinSong.album.name);
+  assert.equal(response.song.artist.original,'林隆璇 & 李圣杰');
+  assert.deepEqual(response.lines.map(l=>l.timestamp),[12,18]);
+  assert.ok(response.lines.every(l=>l.vocalTiming?.segments.length===2));
+  const reopened=await call(false);assert.equal(reopened.statusCode,200);
+  assert.equal(reopened.body.document.id,doc.id);
+  assert.deepEqual(reopened.body.document.response.lines,response.lines);
+  verifySpotifyBinding(reopened.body.document.recordingBinding,request,sourceCapsule(response),SELECTION_REVISION,response,{durable:true});
+  assert.equal(Number((await store.usage()).jobs),0);
+});
 
 test('automatic artist identity admits the exact duet through search and fresh source-ID lookup without a registry',async()=>{
   const {api,calls}=qianLiFixture(),target=identityTarget(qianLiRecording,resolverFor(qianLiRecording,qianLiSong,qianLiProfiles));

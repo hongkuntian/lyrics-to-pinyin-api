@@ -352,3 +352,13 @@ bilingual duet header and sparse `光`/`曹` cues, bare titles, standalone cues,
 repeated cleanup and unchanged timing. Native Karaoke/Study fixtures use authored
 timestamps, preserve source and word-offset identity, and do not prove alignment
 to the actual recording.
+
+Complete NetEase musician-attribution rows and complete cash/traffic incentive
+campaign rows are provider promotions under the shared whole-row policy. Unknown
+platform labels, appended prose, malformed wrappers and verified performer cue
+bodies are preserved. Filtering happens before timing qualification and source
+hashing; non-vocal out-of-duration footers cannot make every vocal line
+unsynchronizable. Existing documents containing those notices are selectively
+refetched through `lyricSourceNeedsRefresh`; immutable old documents and jobs
+remain intact. Vocal wording/timestamps are not shifted and Spotify
+`synchronizationEligible` still requires every retained vocal row to be timed.

@@ -176,22 +176,39 @@ export class NeteaseAPI extends BaseMusicAPI {
   async resolveArtistAliases(song,performers,request,context,profiles=new Map()) {
     const spotify=context.recordingProvider==='spotify',expected=recordingNames(request);
     const expectedCredits=spotify?(request.creditedArtistNames??[]).map(normalizeRecordingText).sort():expected.credits;
-    if(!performers.length || performers.length>3 || performers.length!==expectedCredits.length)return;
+    const incomplete=spotify&&request.creditedArtistsComplete===false;
+    if(!performers.length || performers.length>3 || (incomplete?performers.length<expectedCredits.length:performers.length!==expectedCredits.length))return;
     // Search already supplied a plausible recording with different credit
     // labels. Resolve its catalog identity while the provider profile loads;
     // neither result can authorize lyrics without the ordinary admission rules.
     const identity=spotify&&request.creditedArtistIDs&&typeof context.resolveArtistIdentities==='function'
       &&performers.some(p=>!expectedCredits.includes(normalizeRecordingText(p.name)))
       ?context.resolveArtistIdentities({signal:context.signal}).catch(()=>[]):null;
-    const aliases=await Promise.all(performers.map(async performer=>{
+    const choices=await Promise.all(performers.map(async performer=>{
       const direct=[performer.name].filter(name=>expectedCredits.includes(normalizeRecordingText(name)));
-      if(direct.length)return direct[0];
-      if(!/^\d{1,20}$/.test(String(performer.id)))return null;
+      if(direct.length)return direct;
+      if(!/^\d{1,20}$/.test(String(performer.id)))return [];
       const id=String(performer.id);
       if(!profiles.has(id))profiles.set(id,this.namesForArtist(id,context));
       const names=await profiles.get(id),matching=names.filter(name=>expectedCredits.includes(normalizeRecordingText(name)));
-      return new Set(matching.map(normalizeRecordingText)).size===1?matching[0]:null;
+      return matching;
     }));
+    if(incomplete) {
+      // App Remote's whole observed name must identify exactly one provider
+      // performer. Keep every other structured source credit; never invent a
+      // missing Spotify contributor or relabel this as complete catalog data.
+      const matched=request.creditedArtistNames.map(name=>choices.flatMap((names,index)=>
+        names.some(value=>normalizeRecordingText(value)===normalizeRecordingText(name))?[index]:[]));
+      if(matched.every(indices=>indices.length===1)&&new Set(matched.flat()).size===matched.length) {
+        const aliases=performers.map(p=>p.name);
+        matched.forEach(([index],at)=>{aliases[index]=request.creditedArtistNames[at];});
+        song.creditedArtistNames=aliases;
+        if(recordingScore(song,request)>=0)context.onVerifiedArtistCredits?.({
+          names:matched.map(([index])=>performers[index].name),aliases:[...request.creditedArtistNames]});
+      }
+      return;
+    }
+    const aliases=choices.map(matching=>new Set(matching.map(normalizeRecordingText)).size===1?matching[0]:null);
     if(aliases.every(Boolean)&&JSON.stringify(aliases.map(normalizeRecordingText).sort())===JSON.stringify(expectedCredits)) {
       if(spotify) {
         song.creditedArtistNames=aliases;

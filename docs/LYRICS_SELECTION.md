@@ -58,6 +58,26 @@ LRCLIB's spaced `Singer + Guest` delimiter can normalize to `Singer & Guest` onl
 
 Spotify's independent provider path can resolve contributor names through NetEase's artist-ID profiles. Every requested complete credit must map to exactly one profile name or alias, preserving multiplicity and all recording/version/duration checks. Provider display labels remain unchanged. If NetEase has ambiguous lyric timelines, one bounded native-name retry lets another independent provider validate its own complete recording and supply its own lyrics/timing. Only verified contributor-name equivalence is shared; Apple catalog aliases, lyric text and timestamps are not transferred. The original Spotify request hash, independent source context and response binding remain separate.
 
+Incomplete App Remote credits use the same subset rule during NetEase profile
+alias resolution as during recording admission: each observed whole name must
+map to exactly one independently identified performer. Additional structured
+provider contributors remain present; a complete catalog request still requires
+all credits. Ambiguous profile aliases abstain. This fixes native duet lookups
+whose observed English primary name differs from the provider's native spelling.
+
+For Spotify album ranking only, a terminal `新歌+YYYY~YYYY精選` compilation caption
+(including simplified script, full-width plus, dash ranges and `精選輯`) can match
+the other album's complete base label. The years must be ordered. Exact album
+labels rank higher; unrelated albums, different printed ranges and unknown
+suffixes remain distinct. Original title/album version evidence and all artist,
+duration, ISRC and sheet-ambiguity checks run unchanged. No words or timestamps
+are merged between sources. The reported `6h9km3YJWVABKCV6SVF9LS` duet now selects
+NetEase `116513` from *Men's Talk About Love*, rather than tying it with `114604`
+from *关于你的歌*. Both native and catalog paths are in the maintained measured
+discovery/source-positive cohorts; hermetic regressions also cover durable
+save/reopen. Acquisition cache capabilities change; saved source identities and
+already accepted document snapshots are preserved.
+
 Duplicated lyrics can normalize script, punctuation and production credits only when all remaining line timestamps agree exactly. Conflicting timelines remain ambiguous. A response containing timestamps proves structural timing availability, not acoustic alignment.
 
 Spotify uses complete credited artist names and its own request-bound identity.

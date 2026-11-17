@@ -1203,6 +1203,81 @@
         },
         "metadataOnly": true
       }
+    },
+    {
+      "caseID": "spotify-6h9km3YJWVABKCV6SVF9LS",
+      "platform": "spotify",
+      "catalogURL": "https://open.spotify.com/track/6h9km3YJWVABKCV6SVF9LS",
+      "metadataEvidence": "Exact Spotify embed/catalog metadata captured 2026-11-17 UTC. Native variant preserves the incomplete single observed Kevin Lin credit shown by the reported app path; its request metadata is a reproduction, not a captured device request. Fresh NetEase source/profile metadata and YRC independently checked; no acoustic or installed-app verification.",
+      "request": {
+        "recording": {
+          "version": 3,
+          "provider": "spotify",
+          "item_id": "6h9km3YJWVABKCV6SVF9LS",
+          "metadata": {
+            "origin": "spotify",
+            "observation": "web_api",
+            "artists_complete": true,
+            "title": "你那麼愛她",
+            "artists": [
+              "Kevin Lin",
+              "Sam Lee"
+            ],
+            "artist_ids": [
+              "69P1UFKEnZf2kt5F07Kp1a",
+              "7ya3wFqG9X35S7L7XSrE2i"
+            ],
+            "album": "Men's Talk About Love新歌+1992~2005精選",
+            "duration_ms": 261880
+          }
+        }
+      },
+      "availabilityEvidence": {
+        "fromCaseID": "spotify-6h9km3YJWVABKCV6SVF9LS",
+        "observedAt": "2026-11-17",
+        "source": {
+          "provider": "NeteaseAPI",
+          "itemID": "116513",
+          "timing": "netease:116513:yrc"
+        },
+        "measuredCues": 320,
+        "metadataOnly": true
+      }
+    },
+    {
+      "caseID": "spotify-6h9km3YJWVABKCV6SVF9LS-native",
+      "platform": "spotify",
+      "catalogURL": "https://open.spotify.com/track/6h9km3YJWVABKCV6SVF9LS",
+      "metadataEvidence": "Exact Spotify embed/catalog metadata captured 2026-11-17 UTC. Native variant preserves the incomplete single observed Kevin Lin credit shown by the reported app path; its request metadata is a reproduction, not a captured device request. Fresh NetEase source/profile metadata and YRC independently checked; no acoustic or installed-app verification.",
+      "request": {
+        "recording": {
+          "version": 3,
+          "provider": "spotify",
+          "item_id": "6h9km3YJWVABKCV6SVF9LS",
+          "metadata": {
+            "origin": "spotify",
+            "observation": "app_remote",
+            "artists_complete": false,
+            "title": "你那麼愛她",
+            "artists": [
+              "Kevin Lin"
+            ],
+            "album": "Men's Talk About Love新歌+1992~2005精選",
+            "duration_ms": 261880
+          }
+        }
+      },
+      "availabilityEvidence": {
+        "fromCaseID": "spotify-6h9km3YJWVABKCV6SVF9LS",
+        "observedAt": "2026-11-17",
+        "source": {
+          "provider": "NeteaseAPI",
+          "itemID": "116513",
+          "timing": "netease:116513:yrc"
+        },
+        "measuredCues": 320,
+        "metadataOnly": true
+      }
     }
   ]
 }

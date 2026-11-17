@@ -44,6 +44,23 @@ const unwrappedAlbum=value=>value.replace(/^Optional\("(.*)"\)$/, '$1');
 export function normalizedAlbum(value) {
   return normalizeRecordingText(unwrappedAlbum(value).replace(/\s+-\s+(single|ep)$/i,''));
 }
+// A compilation's new-songs/year-range caption is presentation metadata, not
+// permission to erase arbitrary edition labels. Use it only as weaker album
+// ranking after every Spotify recording gate, retaining raw version evidence.
+function spotifyCompilationAlbum(value) {
+  const label=simplifyRecordingScript(unwrappedAlbum(value)).normalize('NFKC');
+  const match=label.match(/^(.+?)\s*新歌\s*\+\s*((?:19|20)\d{2})\s*[~〜–—-]\s*((?:19|20)\d{2})\s*精选(?:辑)?\s*$/u);
+  return match&&Number(match[2])<=Number(match[3])?normalizedAlbum(match[1]):null;
+}
+function spotifyAlbumScore(source,requested) {
+  if(!source||!requested)return 0;
+  const a=normalizedAlbum(source),b=normalizedAlbum(requested);
+  if(a===b)return normalizeRecordingText(unwrappedAlbum(source))===normalizeRecordingText(unwrappedAlbum(requested))?3:2.5;
+  const left=spotifyCompilationAlbum(source),right=spotifyCompilationAlbum(requested);
+  // Two different printed ranges remain different editions. Only compare one
+  // captioned label with the other's entire, unshortened base album.
+  return left&&!right&&left===b||right&&!left&&right===a?2:0;
+}
 // Keep every contributor. Only explicit credit syntax is interchangeable; a solo
 // recording, unnamed guest, remix or live suffix is never silently discarded.
 export function recordingNames({title='',artist='',artist_entities=[]},knownEntities=[]) {
@@ -176,11 +193,9 @@ function evaluateRecordingMatch(song,request) {
     if(!Number.isFinite(song.duration)||song.duration<=0||!Number.isFinite(request.duration)||Math.abs(song.duration-request.duration)>3)return rejectedMatch('duration_conflict');
     const failure=spotifyNameFailure(song,request);
     if(failure)return rejectedMatch(failure);
-    let score=3-Math.abs(request.duration-song.duration)/10;
-    if(request.album&&song.album&&normalizedAlbum(request.album)===normalizedAlbum(song.album)) {
-      score+=normalizeRecordingText(unwrappedAlbum(request.album))===normalizeRecordingText(unwrappedAlbum(song.album))?3:2.5;
-    }
-    return {score,reason:null,rules:[]};
+    const albumScore=spotifyAlbumScore(song.album,request.album);
+    return {score:3-Math.abs(request.duration-song.duration)/10+albumScore,reason:null,
+      rules:albumScore===2?['compilation_album_caption']:[]};
   }
   if(typeof song.explicit==='boolean'&&typeof request.explicit==='boolean'&&song.explicit!==request.explicit)return rejectedMatch('explicit_conflict');
   const failure=recordingNameFailure(song,request),strict=failure===null;

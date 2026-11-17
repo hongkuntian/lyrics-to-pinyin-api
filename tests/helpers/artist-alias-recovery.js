@@ -33,6 +33,18 @@ export function recoveryCorpus() {
   add('native-title-query-and-name-recovery','recover',r=>{r.hiddenOnCombinedQuery=true;},'constructed_discovery_fault');
   add('exact-native-credit','control',r=>{r.recording.metadata.artists=['Invented Performer'];});
   add('exact-provider-alias','control',r=>{r.profiles[70027].alias=['Lin Tsung-Hao'];});
+  add('native-duet-provider-alias','recover',r=>{
+    Object.assign(r.recording.metadata,{observation:'app_remote',artists_complete:false});
+    r.profiles[70027].alias=['Lin Tsung-Hao'];
+    r.songs[0].artists.push({id:70028,name:'Second Singer'});
+    r.profiles[70028]={id:70028,name:'Second Singer',alias:['Second Singer']};
+  });
+  add('native-duet-ambiguous-provider-alias','reject',r=>{
+    Object.assign(r.recording.metadata,{observation:'app_remote',artists_complete:false});
+    r.profiles[70027].alias=['Lin Tsung-Hao'];
+    r.songs[0].artists.push({id:70028,name:'Second Singer'});
+    r.profiles[70028]={id:70028,name:'Second Singer',alias:['Lin Tsung-Hao']};
+  });
   add('exact-alias-with-recovered-peer','control',r=>{
     r.profiles[70027].alias=['Lin Tsung-Hao'];
     r.songs.push({...copy(r.songs[0]),id:70043,artists:[{id:70028,name:'Second Performer'}]});
