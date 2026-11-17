@@ -6,7 +6,11 @@ BEGIN;
 -- enrollment records, queued polls/cleanups and widget capabilities they held,
 -- together with their indexes, constraints and role grants.
 --
--- Deploy the code that no longer reads these tables before applying this.
+-- Apply this before deploying the code that removes the observer: the
+-- production build requires every registered migration's receipt, and the
+-- earlier code treats these tables as absent schema (account flows skip
+-- Spotify; its queue consumers fail on their first read, before any Spotify
+-- request), so the drop also stops server polling immediately.
 -- IF EXISTS keeps a repeat or a never-provisioned installation a no-op. The
 -- default RESTRICT refuses (and rolls back) if anything else depends on them;
 -- no other object is dropped. Spotify recording identity and lyric documents
