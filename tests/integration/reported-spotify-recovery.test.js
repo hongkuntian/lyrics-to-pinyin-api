@@ -60,14 +60,29 @@ for(const [label,row] of [['duet',duet],['ensemble',ensemble]])test(`reported Sp
  assert.equal(Number((await store.usage()).jobs),0);
 });
 
-test('a verified Spotify source gets its lyric-download budget after slow metadata, inside the unchanged request deadline',async()=>{
- const {api}=fixture(duet,{searchDelay:100,lyricDelay:100});
+test('a verified Spotify source gets its lyric-download budget after slow metadata, inside the unchanged request deadline',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:Date.now()});
+ const metadata=Promise.withResolvers(),words=Promise.withResolvers(),{api}=fixture(duet);
+ let metadataStarted=false,wordsStarted=false;
+ const search=api.searchSong.bind(api),lyrics=api.getLyrics.bind(api);
+ api.searchSong=async(...args)=>{metadataStarted=true;await metadata.promise;return search(...args);};
+ api.getLyrics=async(...args)=>{wordsStarted=true;await words.promise;return lyrics(...args);};
+ const until=async predicate=>{
+  for(let i=0;i<200&&!predicate();i++){t.mock.timers.tick(0);await new Promise(resolve=>setImmediate(resolve));}
+  assert.ok(predicate(),'expected acquisition stage to start');
+ };
  const plain={name:'LRCAPI',supportsLanguage:()=>true,searchSong:async()=>({id:37355964,source:'lrclib',
   title:duet.recording.metadata.title,artist:duet.recording.metadata.artists.join(' & '),
   creditedArtistNames:duet.recording.metadata.artists,album:duet.recording.metadata.album,duration:232.896}),
   getLyrics:async()=>({source:'lrclib',songId:37355964,lines:[{text:'一起听',timestamp:null},{text:'慢慢唱',timestamp:null}]})};
  const handler=service(api,{getAvailableAPIsFn:()=>[api,plain],providerTimeoutMs:150,hedgeDelayMs:1});
- const result=await acquire(handler,duet.recording);
+ const work=acquire(handler,duet.recording);
+ await until(()=>metadataStarted);t.mock.timers.tick(100);metadata.resolve();
+ await until(()=>wordsStarted);
+ // Cross the original 150 ms stage deadline without spending the new lyric
+ // stage's 150 ms budget. Runner load cannot consume a simulated margin.
+ t.mock.timers.tick(100);words.resolve();
+ let result;work.then(value=>{result=value;});await until(()=>result);
  assert.equal(result.statusCode,200);assert.equal(result.body.song.id,327736);
  assert.equal(result.body.quality.synced,true);assert.ok(result.body.lines.every(line=>line.vocalTiming));
 });
