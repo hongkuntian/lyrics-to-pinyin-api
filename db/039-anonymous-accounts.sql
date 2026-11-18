@@ -17,6 +17,9 @@ ALTER TABLE public.library_users ADD COLUMN IF NOT EXISTS app_account_token uuid
 ALTER TABLE public.library_users ADD COLUMN IF NOT EXISTS free_allowance_held_until timestamptz;
 -- Offer-code transactions carry no appAccountToken.
 ALTER TABLE public.membership_subscriptions ALTER COLUMN app_account_token DROP NOT NULL;
+-- A paid period's allowance is counted across every account that held the
+-- subscription (Restore moves it), by grant period and kind.
+CREATE INDEX IF NOT EXISTS membership_grants_period_kind ON public.membership_grants(period_key,kind);
 
 -- Live Lyrics relay admission: 'members' by default, 'everyone' in prerelease.
 -- Set only when the column is created, so a rerun keeps the operator's value.
@@ -30,6 +33,18 @@ DO $relay_access$ BEGIN
     UPDATE public.membership_settings SET relay_access='everyone' WHERE id=1;
   END IF;
 END $relay_access$;
+
+-- The reset deletes the Apple account's subscriptions. Production has only
+-- two expired Sandbox ones; refuse (rolling everything back) rather than
+-- delete a Production or still-active purchase.
+DO $apple_subscriptions$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.membership_subscriptions s JOIN public.library_users u ON u.id=s.user_id
+    WHERE u.access_kind='apple' AND (s.environment<>'Sandbox' OR s.expires_at>now())
+  ) THEN
+    RAISE EXCEPTION 'apple_account_live_subscription' USING ERRCODE='23514';
+  END IF;
+END $apple_subscriptions$;
 
 -- Reset every Sign in with Apple account (production: exactly one). The row
 -- stays as a disabled 'apple' account so retained ledgers keep their owner.

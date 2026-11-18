@@ -48,7 +48,11 @@ bit 1 means "this device has used the Live Lyrics preview".
 `LYRICA_DEVICECHECK_PRIVATE_KEY` and the APNs team ID `LYRICA_APNS_TEAM_ID`. The
 Debug bundle asks `api.development.devicecheck.apple.com` first, every other
 bundle `api.devicecheck.apple.com` first; a `400` for the device token retries
-once on the other host; each call has a 3 s timeout; Apple's "no state" answer
+once on the other host; each call has a 3 s timeout. Apple's answers are
+classified by status code only: any other 4xx except 401, 403 and 429 rejects
+the device token (treated as no token); 401 or 403 means our key or
+configuration is wrong (fail open, logged at error level); 429, 5xx, timeouts
+and network errors fail open. Apple's "no state" answer
 (`200 Failed to find bit state`, documented as `Bit State Not Found`) means both
 bits are false. One client per process caches the JWT. Without the key DeviceCheck is *unconfigured*, a
 state distinct from *failing*. Device tokens and JWTs are never logged.
@@ -60,8 +64,8 @@ outside the database transaction:
 2. Hold the new account's free allowance for 7 days
    (`free_allowance_held_until`) when bit 0 is set and `last_update_time` is the
    current or previous UTC month, or when DeviceCheck is configured but the
-   request has no `deviceToken`. A token Apple rejects on both hosts counts as no
-   token, so a made-up token cannot skip the hold.
+   request has no `deviceToken`. A token Apple rejects counts as no token, so a
+   made-up token cannot skip the hold.
 3. After the account commits, set bit 0 (which refreshes `last_update_time`).
 4. Unconfigured, unreachable or failing DeviceCheck creates the account without a
    hold and logs `devicecheck_unavailable` (with a reason, never the token).
@@ -101,9 +105,27 @@ Free (guest) accounts can read **3 existing shared-library translations per roll
 
 Public reads never authorize new provider work. Translation `allowGeneration=true` and Study `allowGeneration:true` mark explicit generation; Study `readOnly:true` returns saved content or `missing`. Opening or revisiting a reader and changing accounts must not silently spend allowance. Concurrent admission locks the account and existing budget rows before reserving.
 
-Live Lyrics relay admission (`admitMemberRelay`): beta or unlimited accounts are admitted; otherwise Live Lyrics must be enabled (`live_lyrics_unavailable`); then `membership_settings.relay_access = 'everyone'` admits any account (prerelease), and `members` needs an active membership or a claimed preview (otherwise `membership_required`). Changing `relay_access` needs no new build: `node scripts/membership-admin.mjs configure ... --set relay_access=members` (the launch setting). Every admission except beta/unlimited counts toward the global monthly budget and the usage ledger. A preview is once per non-beta account and, with DeviceCheck configured, once per device: a claim without a `deviceToken`, with a token Apple rejects on both hosts, or from a device whose bit 1 is set, is `live_preview_used`; otherwise the claim is recorded and bit 1 is set afterwards. Unconfigured or failing DeviceCheck allows the claim. A preview is bound to one activity and recording, and ends at 10 minutes or 200 admitted relay requests. Defaults cap new previews at 100/day. The operational relay ceiling is 1,000,000 requests/month across public users; failures still count admitted infrastructure work. These are bounded operational safeguards, not advertised paid-user minute quotas. Beta access preserves its existing policy. `sign_in_required`, `purchase_account_unbound` and the `apple_*` error codes no longer exist.
+Live Lyrics relay admission (`admitMemberRelay`): beta or unlimited accounts are admitted; otherwise Live Lyrics must be enabled (`live_lyrics_unavailable`); then `membership_settings.relay_access = 'everyone'` admits any account (prerelease), and `members` needs an active membership or a claimed preview (otherwise `membership_required`). Changing `relay_access` needs no new build: `node scripts/membership-admin.mjs configure ... --set relay_access=members` (the launch setting). Every admission except beta/unlimited counts toward the global monthly budget and the usage ledger. A preview is once per non-beta account and, with DeviceCheck configured, once per device: a claim without a `deviceToken`, with a token Apple rejects, or from a device whose bit 1 is set, is `live_preview_used`; otherwise the claim is recorded and bit 1 is set afterwards. Unconfigured or failing DeviceCheck allows the claim. An account whose Live Lyrics is already included (beta, unlimited, a member, or `relay_access = 'everyone'`) gets `400 invalid_request` without a DeviceCheck call. A preview is bound to one activity and recording, and ends at 10 minutes or 200 admitted relay requests. Defaults cap new previews at 100/day. The operational relay ceiling is 1,000,000 requests/month across public users; failures still count admitted infrastructure work. These are bounded operational safeguards, not advertised paid-user minute quotas. Beta access preserves its existing policy. `sign_in_required`, `purchase_account_unbound` and the `apple_*` error codes no longer exist.
 
 The relay derives its APNs topic from the session's App Attest bundle identity. Both `com.hongkuntian.Lyrica` and the existing `com.hongkuntian.Lyrica.Debug` development bundle use their own Live Activity topic; request bodies cannot override it. The APNs environment still follows the signed app's provisioning environment.
+
+## Accepted prerelease risks
+
+Recorded 17 November 2026; revisit before App Store release.
+
+- **Restore with stale or leaked signed data.** An explicit Restore moves a
+  purchase's ownership whatever the JWS `signedDate`: a leaked signed
+  transaction lets another account take the subscription until the owner taps
+  Restore again. Requiring a newer `signedDate` could refuse legitimate
+  restores, because the signed date of the transaction StoreKit hands back
+  after `AppStore.sync()` is not something the server can rely on. Stale data
+  still never overwrites newer subscription state.
+- **Parallel enrollments sharing one real device token.** Two new accounts
+  enrolled at the same time from one device both query DeviceCheck before
+  either sets bit 0, so neither is held.
+- **One `last_update_time` for both bits.** Setting bit 1 (a preview claim)
+  refreshes it, so a device that claimed a preview recently can have a
+  re-enrollment held although its bit 0 is older.
 
 ## Operator setup
 

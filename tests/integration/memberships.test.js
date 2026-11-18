@@ -253,11 +253,13 @@ test('with DeviceCheck configured, a preview needs a token and an unused bit 1, 
   assert.equal(f.mock.calls.length,2);
 });
 
-test('a device token Apple rejects on both hosts is refused like a missing one',async t=>{
-  const f=await fixture(t,{deviceCheck:{respond:()=>reply(400,'Missing or incorrectly formatted device token payload')}});
+for(const [status,calls] of [[400,2],[413,1]])
+test('a device token Apple rejects ('+status+') is refused like a missing one',async t=>{
+  const f=await fixture(t,{deviceCheck:{respond:()=>reply(status,'any text')}});
   await f.db.query('UPDATE membership_settings SET live_enabled=true');
   await assert.rejects(f.member.claimPreview('reader-a',{...claim,deviceToken:'AAAA'}),e=>e.code==='live_preview_used');
-  assert.equal(await claims(f.db),0);assert.deepEqual(f.mock.calls.map(c=>c.path),['/v1/query_two_bits','/v1/query_two_bits']);
+  assert.equal(await claims(f.db),0);assert.equal(f.mock.calls.length,calls);
+  assert.equal(f.mock.calls.some(c=>c.path==='/v1/update_two_bits'),false);
 });
 
 test('a device whose bit 1 is set cannot claim another account preview',async t=>{
@@ -268,13 +270,14 @@ test('a device whose bit 1 is set cannot claim another account preview',async t=
 });
 
 test('unconfigured or failing DeviceCheck allows the preview claim and is logged without the token',async t=>{
-  for(const [deviceCheck,reason] of [[{configured:false},'unconfigured'],[{respond:()=>reply(500)},'status_500']]){
+  for(const [deviceCheck,reason,level] of [[{configured:false},'unconfigured','warn'],[{respond:()=>reply(500)},'status_500','warn'],
+    [{respond:()=>reply(429)},'status_429','warn'],[{respond:()=>reply(401)},'status_401','error'],[{respond:()=>reply(403)},'status_403','error']]){
     const f=await fixture(t,{deviceCheck});
     await f.db.query('UPDATE membership_settings SET live_enabled=true');
     assert.ok((await f.member.claimPreview('reader-a',{...claim,deviceToken})).preview.expiresAt);
     if(deviceCheck.configured===false)assert.ok((await f.member.claimPreview('reader-b',claim)).preview.expiresAt,'no token is fine when unconfigured');
     assert.equal(f.mock.calls.some(c=>c.path==='/v1/update_two_bits'),false);
-    assert.ok(f.log.events.some(e=>e.value.event==='devicecheck_unavailable'&&e.value.stage==='preview'&&e.value.reason===reason));
+    assert.ok(f.log.events.some(e=>e.level===level&&e.value.event==='devicecheck_unavailable'&&e.value.stage==='preview'&&e.value.reason===reason),reason);
     assert.equal(JSON.stringify(f.log.events).includes(deviceToken),false);
   }
 });
@@ -344,4 +347,49 @@ test('translation admission uses membership credits only for genuinely new work'
   assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,19);
   await store.claim(work.job.id);await store.fail(work.job.id,'provider_error',0);
   assert.equal((await member.snapshot('reader-a')).allowances.translation.remaining,20);
+});
+
+// Models a concurrent first record committing between this transaction's
+// ownership read and its insert, without changing any SQL under test.
+function racingDatabase(raw,competitor){
+  let armed=true;
+  const wrap=tx=>({query:async(sql,args)=>{
+    if(armed&&/^\s*(?:const recorded=)?INSERT INTO membership_subscriptions/.test(sql.trim())){armed=false;await competitor(tx);}
+    return tx.query(sql,args);
+  }});
+  return {query:(...args)=>raw.query(...args),transaction:fn=>raw.transaction(tx=>fn(wrap(tx)))};
+}
+test('a Restore that loses the first-record race still takes ownership; any other caller is told it lost',async t=>{
+  const {db,store,tokens}=await fixture(t),value=transaction(null);let raced=false;
+  const competitor=tx=>(raced=true,tx).query(`INSERT INTO membership_subscriptions(original_transaction_id,user_id,transaction_id,product_id,tier,environment,
+    app_account_token,period_start,expires_at,signed_at) VALUES($1,'reader-a',$1,'com.hongkuntian.Lyrica.pro.annual','pro','Production',NULL,now(),now()+interval '30 days',now())`,[value.originalID]);
+  const restoring=new MembershipStore(racingDatabase(store.db,competitor),{deviceCheck:{configured:false},logger:{}});
+  assert.equal((await restoring.recordTransaction('reader-b',value,{restore:true})).tier,'pro');
+  assert.equal(raced,true);assert.equal(await owner(db,value),'reader-b');
+  // Without Restore the loser gets purchase_account_mismatch and nothing changes.
+  const other=transaction(null),before=(await db.query('SELECT count(*)::int AS n FROM membership_subscriptions')).rows[0].n;
+  const syncing=new MembershipStore(racingDatabase(store.db,tx=>tx.query(`INSERT INTO membership_subscriptions(original_transaction_id,user_id,transaction_id,product_id,tier,environment,
+    app_account_token,period_start,expires_at,signed_at) VALUES($1,'reader-a',$1,'com.hongkuntian.Lyrica.pro.annual','pro','Production',$2,now(),now()+interval '30 days',now())`,
+    [other.originalID,tokens['reader-a']])),{deviceCheck:{configured:false},logger:{}});
+  await assert.rejects(syncing.recordTransaction('reader-b',other),mismatch);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM membership_subscriptions')).rows[0].n,before,'the losing transaction rolled back, competitor included');
+});
+
+test('a preview is refused before DeviceCheck when Live Lyrics is already included',async t=>{
+  const f=await fixture(t,{deviceCheck:{}}),{db,member,appToken}=f;
+  const refuse=async(user,code)=>{
+    await assert.rejects(member.claimPreview(user,{...claim,deviceToken}),e=>e.code===code);
+    assert.equal(f.mock.calls.length,0);assert.equal(await claims(db),0);
+  };
+  await refuse('reader-a','live_lyrics_unavailable');
+  await db.query('UPDATE membership_settings SET live_enabled=true');
+  await member.recordTransaction('reader-a',transaction(appToken));
+  await refuse('reader-a','invalid_request');                      // member
+  await db.query("UPDATE library_users SET unlimited_generation=true WHERE id='reader-b'");
+  await refuse('reader-b','invalid_request');                      // unlimited
+  await db.query("UPDATE library_users SET unlimited_generation=false WHERE id='reader-b'");
+  await db.query("UPDATE membership_settings SET relay_access='everyone'");
+  await refuse('reader-b','invalid_request');                      // everyone
+  await db.query("UPDATE membership_settings SET relay_access='members'");
+  assert.ok((await member.claimPreview('reader-b',{...claim,deviceToken})).preview.expiresAt);
 });

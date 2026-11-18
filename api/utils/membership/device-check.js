@@ -11,9 +11,18 @@ const DEBUG_BUNDLE='com.hongkuntian.Lyrica.Debug';
 const JWT_LIFETIME_MS=50*60*1000;
 
 // "Unconfigured" (no DeviceCheck key) is a distinct state, checked with
-// `configured`; every failure of a configured service is this error.
+// `configured`; every failure of a configured service is this error. `kind`:
+//   rejected     Apple refused the device token: callers treat it as no token.
+//   credentials  Apple refused our key/JWT (or the key is unusable): fail open, log at error.
+//   unavailable  429, 5xx, timeout, network or a malformed answer: fail open.
 export class DeviceCheckError extends Error {
-  constructor(reason){super('devicecheck_unavailable');this.name='DeviceCheckError';this.reason=reason;}
+  constructor(reason,kind='unavailable'){super('devicecheck_unavailable');this.name='DeviceCheckError';this.reason=reason;this.kind=kind;}
+}
+// Classify Apple's answer by status code alone; response text is not stable.
+function statusError(status) {
+  if(status===401||status===403)return new DeviceCheckError('status_'+status,'credentials');
+  if(status>=400&&status<500&&status!==429)return new DeviceCheckError('status_'+status,'rejected');
+  return new DeviceCheckError('status_'+status,'unavailable');
 }
 
 // The team ID is the one APNs already uses. Validation of the key itself
@@ -34,10 +43,10 @@ export function recentlyUpdated(lastUpdateTime,now=Date.now()) {
   return lastUpdateTime===month(year,index)||lastUpdateTime===(index===0?month(year-1,11):month(year,index-1));
 }
 
-// A device token Apple rejects on both hosts is not a valid token: callers
-// treat it as a missing token, never as an outage, so a made-up token cannot
-// skip the enrollment hold or the per-device preview limit.
-export const rejectedDeviceToken=error=>error instanceof DeviceCheckError&&error.reason==='bad_device_token';
+// A device token Apple rejects (after the other-host retry for a 400) is not a
+// valid token: callers treat it as a missing token, never as an outage, so a
+// made-up token cannot skip the enrollment hold or the per-device preview limit.
+export const rejectedDeviceToken=error=>error instanceof DeviceCheckError&&error.kind==='rejected';
 
 export class DeviceCheckService {
   #cached=null;
@@ -47,11 +56,11 @@ export class DeviceCheckService {
   get configured(){return deviceCheckConfiguration(this.env)!==null;}
   #jwt() {
     const config=deviceCheckConfiguration(this.env);
-    if(!config)throw new DeviceCheckError('unconfigured');
+    if(!config)throw new DeviceCheckError('unconfigured','unconfigured');
     const time=this.now();
     if(!this.#cached||this.#cached.keyID!==config.keyID||time-this.#cached.at>=JWT_LIFETIME_MS||time<this.#cached.at) {
       try{this.#cached={at:time,keyID:config.keyID,token:providerToken(config,time)};}
-      catch{this.#cached=null;throw new DeviceCheckError('invalid_key');}
+      catch{this.#cached=null;throw new DeviceCheckError('invalid_key','credentials');}
     }
     return this.#cached.token;
   }
@@ -68,21 +77,22 @@ export class DeviceCheckService {
     }
     return {status:response.status,text:typeof text==='string'?text.slice(0,4096):''};
   }
-  // The Debug bundle's tokens come from development-signed builds. A 400 for
-  // the device token retries once on the other host; nothing else retries.
+  // The Debug bundle's tokens come from development-signed builds. A 400 (a
+  // token the host does not know) retries once on the other host; nothing
+  // else retries.
   async #request(path,token,{bundleID,...fields}) {
-    if(!validDeviceToken(token))throw new DeviceCheckError('invalid_token');
+    if(!validDeviceToken(token))throw new DeviceCheckError('invalid_token','rejected');
     const hosts=bundleID===DEBUG_BUNDLE?['development','production']:['production','development'];
     const body={device_token:token,transaction_id:randomUUID(),timestamp:this.now(),...fields};
     let result=await this.#post(hosts[0],path,body);
-    if(result.status===400&&/device.?token/i.test(result.text))
+    if(result.status===400)
       result=await this.#post(hosts[1],path,{...body,transaction_id:randomUUID(),timestamp:this.now()});
     if(result.status===401||result.status===403)this.#cached=null;
     return result;
   }
   async query(token,{bundleID}={}) {
     const {status,text}=await this.#request('/v1/query_two_bits',token,{bundleID});
-    if(status!==200)throw new DeviceCheckError(status===400&&/device.?token/i.test(text)?'bad_device_token':'status_'+status);
+    if(status!==200)throw statusError(status);
     // Apple documents this answer as "Bit State Not Found"; the service sends
     // "Failed to find bit state". Either means both bits are false.
     if(/^(?:bit state not found|failed to find bit state)\.?$/i.test(text.trim()))return {bit0:false,bit1:false,lastUpdateTime:null};
@@ -94,8 +104,8 @@ export class DeviceCheckService {
   // Sets exactly one bit to true; Apple leaves an omitted bit unchanged.
   async setBit(token,{bundleID,bit}={}) {
     if(bit!==0&&bit!==1)throw new DeviceCheckError('invalid_bit');
-    const {status,text}=await this.#request('/v1/update_two_bits',token,{bundleID,[`bit${bit}`]:true});
-    if(status!==200)throw new DeviceCheckError(status===400&&/device.?token/i.test(text)?'bad_device_token':'status_'+status);
+    const {status}=await this.#request('/v1/update_two_bits',token,{bundleID,[`bit${bit}`]:true});
+    if(status!==200)throw statusError(status);
   }
 }
 

@@ -84,31 +84,64 @@ test("both wordings of Apple's no-state answer mean both bits are false",async()
   await assert.rejects(device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),e=>e.reason==='malformed_response');
 });
 
-test('a 400 bad device token retries exactly once on the other host',async()=>{
-  const bad=()=>reply(400,'Missing or incorrectly formatted device token payload');
+test('a 400 with any text retries exactly once on the other host; nothing else retries',async()=>{
+  const bad=()=>reply(400,'anything at all');
   let f=service({responses:[bad(),reply(200,JSON.stringify({bit0:false,bit1:true,last_update_time:'2026-10'}))]});
   assert.deepEqual(await f.device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),{bit0:false,bit1:true,lastUpdateTime:'2026-10'});
   assert.deepEqual(f.calls.map(c=>c.url),[prod+'/v1/query_two_bits',dev+'/v1/query_two_bits']);
   assert.notEqual(f.calls[0].body.transaction_id,f.calls[1].body.transaction_id);
   f=service({responses:[bad(),bad()]});
-  await assert.rejects(f.device.setBit(token,{bundleID:'com.hongkuntian.Lyrica.Debug',bit:0}),e=>e.reason==='bad_device_token');
+  await assert.rejects(f.device.setBit(token,{bundleID:'com.hongkuntian.Lyrica.Debug',bit:0}),e=>e.kind==='rejected'&&e.reason==='status_400');
   assert.deepEqual(f.calls.map(c=>c.url),[dev+'/v1/update_two_bits',prod+'/v1/update_two_bits']);
-  // Other failures never retry.
-  for(const [status,text,reason] of [[400,'Missing or badly formatted authorization token','status_400'],[401,'Unable to verify authorization token','status_401'],
-    [500,'','status_500'],[200,'{"bit0":"yes"}','malformed_response'],[200,'<html>','malformed_response']]){
-    f=service({responses:[reply(status,text)]});
-    await assert.rejects(f.device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),e=>e.reason===reason);
-    assert.equal(f.calls.length,1);
+  for(const status of [401,403,404,413,429,500,503]){
+    f=service({responses:[reply(status,'Missing or incorrectly formatted device token payload')]});
+    await assert.rejects(f.device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),e=>e.reason==='status_'+status);
+    assert.equal(f.calls.length,1,String(status));
   }
+});
+
+// Classified by status code only; response text never changes the class.
+for(const [label,statuses,kind] of [
+  ['token rejected: any 4xx except 401, 403 and 429',[400,404,410,413,422,499],'rejected'],
+  ['our key or configuration refused: 401 and 403',[401,403],'credentials'],
+  ['outage: 429, 5xx and unexpected statuses',[429,500,502,503,504,302,204],'unavailable']])
+test('answer class '+label,async()=>{
+  for(const status of statuses)for(const text of ['','Missing or incorrectly formatted device token payload','Unable to verify authorization token']){
+    for(const operation of ['query','setBit']){
+      const f=service({responses:[reply(status,text),reply(status,text)]});
+      const call=operation==='query'?f.device.query(token,{bundleID:'com.hongkuntian.Lyrica'}):f.device.setBit(token,{bundleID:'com.hongkuntian.Lyrica',bit:0});
+      await assert.rejects(call,e=>e instanceof DeviceCheckError&&e.kind===kind&&e.reason==='status_'+status,`${operation} ${status} ${text}`);
+    }
+  }
+});
+
+test('a refused key drops the cached JWT so the next call signs a fresh one',async()=>{
+  let time=T0;
+  const {device,calls}=service({now:()=>time,responses:[reply(401),reply(200,'Failed to find bit state')]});
+  await assert.rejects(device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),e=>e.kind==='credentials');
+  time+=1000;await device.query(token,{bundleID:'com.hongkuntian.Lyrica'});
+  assert.notEqual(calls[1].jwt,calls[0].jwt);
+});
+
+test('malformed answers, a malformed key and a locally invalid token are classified',async()=>{
+  for(const text of ['{"bit0":"yes"}','<html>']){
+    const f=service({responses:[reply(200,text)]});
+    await assert.rejects(f.device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),e=>e.kind==='unavailable'&&e.reason==='malformed_response');
+  }
+  const broken=service({overrides:{LYRICA_DEVICECHECK_PRIVATE_KEY:'not a key'}});
+  await assert.rejects(broken.device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),e=>e.kind==='credentials'&&e.reason==='invalid_key');
+  const local=service();
+  await assert.rejects(local.device.query('not base64!',{bundleID:'com.hongkuntian.Lyrica'}),e=>e.kind==='rejected'&&e.reason==='invalid_token');
+  assert.equal(local.calls.length+broken.calls.length,0);
 });
 
 test('each call is bounded by its own timeout and network failures are failures, not unconfigured',async()=>{
   const hang=options=>new Promise((_,reject)=>options.signal.addEventListener('abort',()=>reject(options.signal.reason)));
   let f=service({timeoutMs:20,responses:[hang]});
-  await assert.rejects(f.device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),e=>e instanceof DeviceCheckError&&e.reason==='timeout');
+  await assert.rejects(f.device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),e=>e instanceof DeviceCheckError&&e.reason==='timeout'&&e.kind==='unavailable');
   assert.equal(f.calls.length,1);
   f=service({responses:[()=>{throw new TypeError('fetch failed');}]});
-  await assert.rejects(f.device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),e=>e.reason==='network');
+  await assert.rejects(f.device.query(token,{bundleID:'com.hongkuntian.Lyrica'}),e=>e.reason==='network'&&e.kind==='unavailable');
 });
 
 test('device tokens and JWTs never appear in an error',async()=>{

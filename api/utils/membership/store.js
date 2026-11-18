@@ -90,6 +90,16 @@ export async function admitLibraryTranslation(database,userID,documentID,{unlock
   });
 }
 
+// A preview is only for an account whose Live Lyrics is not already included
+// (snapshot liveLyricsIncluded): beta, unlimited, a member, or relay_access
+// 'everyone' get 400 invalid_request, as the app never offers it to them.
+async function previewNeeded(db,user,settings) {
+  if(user.access_kind==='beta')throw new LibraryError('invalid_request',400);
+  if(!settings?.live_enabled)throw new LibraryError('live_lyrics_unavailable',503);
+  if(user.unlimited_generation===true||settings.relay_access==='everyone'||
+    await entitlement(db,user.id,(await first(db,'SELECT now() AS now')).now))throw new LibraryError('invalid_request',400);
+}
+
 export class MembershipStore {
   constructor(db,{now=()=>new Date(),deviceCheck=defaultDeviceCheck(),logger=console}={}) {
     this.db=db;this.now=now;this.deviceCheck=deviceCheck;this.logger=logger;
@@ -135,11 +145,19 @@ export class MembershipStore {
         throw new LibraryError('purchase_account_mismatch',403);
       if(previous&&(new Date(previous.signed_at)>value.signedAt||
         (+new Date(previous.signed_at)===+value.signedAt&&(previous.revoked||!value.revoked))))return;
-      await db.query(`INSERT INTO membership_subscriptions(original_transaction_id,user_id,transaction_id,product_id,tier,environment,
+      // A concurrent first record can win the insert race: Restore still takes
+      // ownership, and any other caller learns it lost instead of silently
+      // receiving a snapshot without the purchase.
+      const recorded=await first(db,`INSERT INTO membership_subscriptions(original_transaction_id,user_id,transaction_id,product_id,tier,environment,
         app_account_token,period_start,expires_at,revoked,signed_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-        ON CONFLICT(original_transaction_id) DO UPDATE SET transaction_id=$3,product_id=$4,tier=$5,environment=$6,
-          period_start=$8,expires_at=$9,revoked=$10,signed_at=$11,verified_at=now()`,
-        [value.originalID,userID,value.transactionID,value.productID,value.tier,value.environment,value.appAccountToken,value.starts,value.expires,value.revoked,value.signedAt]);
+        ON CONFLICT(original_transaction_id) DO UPDATE SET
+          user_id=CASE WHEN $12::boolean THEN EXCLUDED.user_id ELSE membership_subscriptions.user_id END,
+          transaction_id=$3,product_id=$4,tier=$5,environment=$6,
+          period_start=$8,expires_at=$9,revoked=$10,signed_at=$11,verified_at=now()
+        RETURNING user_id`,
+        [value.originalID,userID,value.transactionID,value.productID,value.tier,value.environment,value.appAccountToken,value.starts,value.expires,value.revoked,value.signedAt,
+          restore&&!serverNotification]);
+      if(recorded.user_id!==userID)throw new LibraryError('purchase_account_mismatch',403);
     });
     return serverNotification?null:this.snapshot(userID);
   }
@@ -154,9 +172,11 @@ export class MembershipStore {
     await this.db.query('INSERT INTO membership_notifications(id) VALUES($1) ON CONFLICT DO NOTHING',[id]);
   }
   #deviceCheckUnavailable(error) {
-    // Never the device token, JWT or Apple's response body.
-    this.logger.warn?.({event:'devicecheck_unavailable',stage:'preview',
-      reason:error===null?'unconfigured':error instanceof DeviceCheckError?error.reason:'error'});
+    // Never the device token, JWT or Apple's response body. A refused key is
+    // our configuration, so it is logged at error level.
+    const event={event:'devicecheck_unavailable',stage:'preview',
+      reason:error===null?'unconfigured':error instanceof DeviceCheckError?error.reason:'error'};
+    if(error instanceof DeviceCheckError&&error.kind==='credentials')this.logger.error?.(event);else this.logger.warn?.(event);
   }
   // One Live Lyrics preview per non-beta account and, with DeviceCheck, per
   // device (bit 1). A missing token, or one Apple rejects on both hosts, is
@@ -168,9 +188,8 @@ export class MembershipStore {
     // A retry or repeat claim is answered without asking Apple.
     const claimed=await first(this.db,'SELECT activity_id,recording_id FROM membership_preview_claims WHERE user_id=$1',[userID]);
     if(claimed){if(claimed.activity_id===activityID&&claimed.recording_id===recordingID)return this.snapshot(userID);throw new LibraryError('live_preview_used',403);}
-    const user=await account(this.db,userID);
-    if(user.access_kind==='beta')throw new LibraryError('invalid_request',400);
-    if(!(await first(this.db,'SELECT live_enabled FROM membership_settings WHERE id=1'))?.live_enabled)throw new LibraryError('live_lyrics_unavailable',503);
+    // Refuse before asking Apple when the preview would change nothing.
+    await previewNeeded(this.db,await account(this.db,userID),await first(this.db,'SELECT * FROM membership_settings WHERE id=1'));
     let mark=false;
     if(!this.deviceCheck.configured)this.#deviceCheckUnavailable(null);
     else if(deviceToken===undefined)throw new LibraryError('live_preview_used',403);
@@ -183,9 +202,7 @@ export class MembershipStore {
     }
     await this.db.transaction(async db=>{
       const settings=await first(db,'SELECT * FROM membership_settings WHERE id=1 FOR UPDATE');
-      const current=await account(db,userID,{lock:true});
-      if(current.access_kind==='beta')throw new LibraryError('invalid_request',400);
-      if(!settings.live_enabled)throw new LibraryError('live_lyrics_unavailable',503);
+      await previewNeeded(db,await account(db,userID,{lock:true}),settings);
       const previous=await first(db,'SELECT * FROM membership_preview_claims WHERE user_id=$1',[userID]);
       if(previous){if(previous.activity_id===activityID&&previous.recording_id===recordingID)return;throw new LibraryError('live_preview_used',403);}
       const daily=Number((await first(db,"SELECT count(*) AS n FROM membership_preview_claims WHERE claimed_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'")).n);

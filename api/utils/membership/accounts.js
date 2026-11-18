@@ -152,9 +152,11 @@ export class AccountStore {
     return {registered:true};
   }
   #deviceCheckUnavailable(error,stage) {
-    // Never the device token, JWT or Apple's response body.
-    this.logger.warn?.({event:'devicecheck_unavailable',stage,
-      reason:error===null?'unconfigured':error instanceof DeviceCheckError?error.reason:'error'});
+    // Never the device token, JWT or Apple's response body. A refused key is
+    // our configuration, so it is logged at error level.
+    const event={event:'devicecheck_unavailable',stage,
+      reason:error===null?'unconfigured':error instanceof DeviceCheckError?error.reason:'error'};
+    if(error instanceof DeviceCheckError&&error.kind==='credentials')this.logger.error?.(event);else this.logger.warn?.(event);
   }
   // Hold a new account's free allowance when this device created an account
   // in the current or previous UTC month, or when a configured service gets

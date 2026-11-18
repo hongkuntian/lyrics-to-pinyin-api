@@ -98,24 +98,38 @@ test('unconfigured DeviceCheck never holds and never calls Apple '+(token?'with'
   assert.deepEqual(f.events,['BEGIN','COMMIT']);noTokenLogged(f);
 });
 
+const errors=f=>f.log.events.filter(e=>e.level==='error').map(e=>e.value);
 for(const [label,respond,reason,timeoutMs] of [
   ['server error',()=>reply(500),'status_500'],
+  ['rate limited',()=>reply(429),'status_429'],
+  ['network',()=>{throw new TypeError('fetch failed');},'network'],
   ['timeout',(_,options)=>new Promise((_,reject)=>options.signal.addEventListener('abort',()=>reject(options.signal.reason))),'timeout',20],
   ['malformed answer',()=>reply(200,'{"bit0":1}'),'malformed_response']])
 test('failing DeviceCheck ('+label+') enrolls without a hold or mark and logs devicecheck_unavailable',async t=>{
   const f=await fixture(t,{respond,timeoutMs}),{user}=await enroll(f,{token:deviceToken});
   assert.equal(user.free_allowance_held_until,null);
   assert.equal(f.mock.calls.some(c=>c.path==='/v1/update_two_bits'),false);
-  assert.deepEqual(warnings(f),[{event:'devicecheck_unavailable',stage:'enrollment',reason}]);noTokenLogged(f);
+  assert.deepEqual(warnings(f),[{event:'devicecheck_unavailable',stage:'enrollment',reason}]);
+  assert.deepEqual(errors(f),[]);noTokenLogged(f);
 });
 
-test('a device token Apple rejects on both hosts counts as no token and holds',async t=>{
-  const f=await fixture(t,{respond:()=>reply(400,'Missing or incorrectly formatted device token payload')});
+for(const status of [401,403])
+test('a refused DeviceCheck key ('+status+') enrolls without a hold and logs at error level',async t=>{
+  const f=await fixture(t,{respond:()=>reply(status,'Unable to verify authorization token')}),{user}=await enroll(f,{token:deviceToken});
+  assert.equal(user.free_allowance_held_until,null);
+  assert.deepEqual(f.mock.calls.map(c=>c.path),['/v1/query_two_bits']);
+  assert.deepEqual(errors(f),[{event:'devicecheck_unavailable',stage:'enrollment',reason:'status_'+status}]);
+  assert.deepEqual(warnings(f),[]);noTokenLogged(f);
+});
+
+for(const [status,text,calls] of [[400,'Missing or incorrectly formatted device token payload',2],[400,'',2],[413,'Payload Too Large',1],[404,'',1]])
+test('a device token Apple rejects ('+status+(text?' '+text:'')+') counts as no token and holds',async t=>{
+  const f=await fixture(t,{respond:()=>reply(status,text)});
   const {user}=await enroll(f,{token:Buffer.from('made-up').toString('base64')});
   assert.equal(user.seven_days,true);
-  assert.deepEqual(f.mock.calls.map(c=>[c.host,c.path]),[['api.devicecheck.apple.com','/v1/query_two_bits'],
-    ['api.development.devicecheck.apple.com','/v1/query_two_bits']]);
-  assert.deepEqual(warnings(f),[]);
+  assert.deepEqual(f.mock.calls.map(c=>c.host),['api.devicecheck.apple.com','api.development.devicecheck.apple.com'].slice(0,calls));
+  assert.equal(f.mock.calls.some(c=>c.path==='/v1/update_two_bits'),false);
+  assert.deepEqual(warnings(f),[]);assert.deepEqual(errors(f),[]);
 });
 
 test('a failed mark after commit keeps the account and is only logged',async t=>{

@@ -46,11 +46,13 @@ async function data(db){
   `SELECT to_jsonb(t)::text AS row FROM ${nspname}.${relname} t ORDER BY 1`)).rows.map(row=>JSON.parse(row.row));
  return image;
 }
-// Production on 17 November 2026: 1 apple, 1 active beta, 14 guests,
-// 2 expired Sandbox subscriptions owned by the apple user, 1 identity.
+// Production on 17 November 2026: 1 apple, 1 active beta, 6 disabled beta,
+// 14 guests, 2 expired Sandbox subscriptions owned by the apple user,
+// 1 identity and 1 preview claim (only Apple accounts could claim one).
 async function seed(db){
  const key=n=>Buffer.alloc(32,n).toString('base64');
  await db.query("INSERT INTO library_users(id,access_kind) VALUES('apple-1','apple'),('beta-1','beta')");
+ for(let n=1;n<=6;n++)await db.query("INSERT INTO library_users(id,access_kind,disabled) VALUES($1,'beta',true)",['retired-beta-'+n]);
  for(let n=1;n<=14;n++)await db.query("INSERT INTO library_users(id,access_kind) VALUES($1,'guest')",['guest-'+String(n).padStart(2,'0')]);
  await db.query(`INSERT INTO library_tokens(digest,user_id,expires_at,revoked) VALUES
   ('apple-c','apple-1',now()+interval '300 days',false),('apple-old','apple-1',now()+interval '20 days',true),
@@ -70,7 +72,7 @@ async function seed(db){
   ('n-guest','guest','com.hongkuntian.Lyrica',$2,NULL,now()+interval '5 minutes')`,[key(1),key(4)]);
  for(const id of ['2000','2001'])await db.query(`INSERT INTO membership_subscriptions(original_transaction_id,user_id,transaction_id,product_id,tier,environment,
   app_account_token,period_start,expires_at,signed_at) VALUES($1,'apple-1',$1,'com.hongkuntian.Lyrica.pro.monthly','pro','Sandbox',
-  '7b140eca-8ed0-4b17-87f9-a2c7de61ca00','2026-11-01','2026-11-02','2026-11-01')`,[id]);
+  '7b140eca-8ed0-4b17-87f9-a2c7de61ca00','2026-01-01','2026-01-02','2026-01-01')`,[id]);
  await db.query("INSERT INTO membership_preview_claims(user_id,activity_id,recording_id,expires_at) VALUES('apple-1','a','r','2026-11-01'),('guest-02','a','r','2026-11-01')");
  await db.query("INSERT INTO membership_relay_usage(user_id,period_start,request_count) VALUES('apple-1','2026-11-01',40),('guest-03','2026-11-01',7)");
  await db.query("INSERT INTO membership_grants(id,user_id,kind,period_key,allowance) VALUES('11111111-1111-1111-1111-111111111111','apple-1','translation','library-free-v1',3)");
@@ -98,8 +100,8 @@ test('populated upgrade resets the apple account, removes Sign in with Apple and
 
  // Every account owns a distinct appAccountToken; nobody is held.
  const users=rows(after,'library_users');
- assert.equal(users.length,16);
- assert.equal(new Set(users.map(u=>u.app_account_token)).size,16);
+ assert.equal(users.length,22);
+ assert.equal(new Set(users.map(u=>u.app_account_token)).size,22);
  for(const user of users){
   assert.match(user.app_account_token,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   assert.equal(user.free_allowance_held_until,null);
@@ -129,6 +131,9 @@ test('populated upgrade resets the apple account, removes Sign in with Apple and
  // Relay access is prerelease 'everyone'; only members/everyone are valid.
  assert.equal((await db.query('SELECT relay_access FROM membership_settings')).rows[0].relay_access,'everyone');
  await assert.rejects(db.query("UPDATE membership_settings SET relay_access='nobody'"),{code:'23514'});
+ // The cross-account paid-usage count is indexed.
+ assert.equal((await db.query("SELECT indexdef FROM pg_indexes WHERE indexname='membership_grants_period_kind'")).rows[0].indexdef,
+  'CREATE INDEX membership_grants_period_kind ON public.membership_grants USING btree (period_key, kind)');
  // Offer-code purchases have no token.
  assert.equal((await db.query("SELECT is_nullable FROM information_schema.columns WHERE table_name='membership_subscriptions' AND column_name='app_account_token'")).rows[0].is_nullable,'YES');
  // A new account gets its own token by default.
@@ -159,6 +164,18 @@ test('039 refuses atomically, resetting nothing, when an unexpected object depen
  await db.exec('CREATE VIEW public.unexpected_identity_dependent AS SELECT user_id FROM public.account_identities');
  const shape=await catalog(db),image=await data(db);
  await assert.rejects(migrateLibrary(adapter(db)),{code:'2BP01'});
+ assert.deepEqual(await catalog(db),shape);assert.deepEqual(await data(db),image);
+ assert.equal((await db.query("SELECT disabled FROM library_users WHERE id='apple-1'")).rows[0].disabled,false);
+});
+
+for(const [label,environment,expires] of [['a Production',"Production","now()-interval '1 day'"],['an unexpired Sandbox',"Sandbox","now()+interval '1 day'"]])
+test('039 refuses atomically, resetting nothing, when the apple account owns '+label+' subscription',async t=>{
+ const db=await database(t);await migrateThrough(db,prior);await seed(db);
+ await db.query(`INSERT INTO membership_subscriptions(original_transaction_id,user_id,transaction_id,product_id,tier,environment,
+  app_account_token,period_start,expires_at,signed_at) VALUES('3000','apple-1','3000','com.hongkuntian.Lyrica.pro.annual','pro',$1,
+  '7b140eca-8ed0-4b17-87f9-a2c7de61ca00',now()-interval '30 days',${expires},now()-interval '30 days')`,[environment]);
+ const shape=await catalog(db),image=await data(db);
+ await assert.rejects(migrateLibrary(adapter(db)),e=>e.code==='23514'&&/apple_account_live_subscription/.test(e.message));
  assert.deepEqual(await catalog(db),shape);assert.deepEqual(await data(db),image);
  assert.equal((await db.query("SELECT disabled FROM library_users WHERE id='apple-1'")).rows[0].disabled,false);
 });
