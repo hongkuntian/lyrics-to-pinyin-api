@@ -13,6 +13,8 @@ const {values,positionals}=parseArgs({allowPositionals:true,options:{
 }});
 const booleans=['public_access_enabled','purchases_enabled','live_enabled','widgets_enabled','carplay_enabled'];
 const limits=['preview_daily_limit','relay_monthly_limit'];
+// Live Lyrics relay admission: 'everyone' in prerelease, 'members' at launch.
+const choices={relay_access:['members','everyone']};
 let client;
 try {
   const command=positionals[0];
@@ -33,7 +35,7 @@ try {
     try {
       await migrateLibrary({transaction:fn=>fn(client)});
       if((await client.query("SELECT 1 FROM pg_roles WHERE rolname='lyrica_account_v1'")).rowCount)throw new Error('account_role_exists_use_retained_credentials');
-      await writeFile(output,JSON.stringify({LYRICA_ACCOUNT_DATABASE_URL:url.toString(),LYRICA_ACCOUNT_ENCRYPTION_KEY:randomBytes(32).toString('base64')})+'\n',{mode:0o600,flag:'wx'});
+      await writeFile(output,JSON.stringify({LYRICA_ACCOUNT_DATABASE_URL:url.toString()})+'\n',{mode:0o600,flag:'wx'});
       await client.query(`CREATE ROLE lyrica_account_v1 LOGIN PASSWORD ${client.escapeLiteral(password)} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS CONNECTION LIMIT 8`);
       await client.query("ALTER ROLE lyrica_account_v1 SET statement_timeout='10s'");
       await client.query("ALTER ROLE lyrica_account_v1 SET idle_in_transaction_session_timeout='10s'");
@@ -41,16 +43,17 @@ try {
       await replayMembershipRoleGrants(client);
       await client.query('COMMIT');
     }catch(error){await client.query('ROLLBACK');throw error;}
-    console.log('Account role provisioned. Retain the private configuration file; add its two values as production secrets.');
+    console.log('Account role provisioned. Retain the private configuration file; add its value as a production secret.');
   } else if(command==='configure') {
     if(!values.set?.length)throw new Error('explicit_settings_required');
     const assignments=[],parameters=[];
     for(const setting of values.set) {
       const [key,value,...extra]=setting.split('=');
-      if(extra.length||(!booleans.includes(key)&&!limits.includes(key)))throw new Error('invalid_setting');
+      if(extra.length||(!booleans.includes(key)&&!limits.includes(key)&&!Object.hasOwn(choices,key)))throw new Error('invalid_setting');
       if(booleans.includes(key)&&!['true','false'].includes(value))throw new Error('invalid_setting');
+      if(Object.hasOwn(choices,key)&&!choices[key].includes(value))throw new Error('invalid_setting');
       if(limits.includes(key)&&(!/^\d+$/.test(value)||!Number.isSafeInteger(Number(value))||Number(value)>2_000_000_000))throw new Error('invalid_setting');
-      parameters.push(booleans.includes(key)?value==='true':Number(value));assignments.push(`${key}=$${parameters.length}`);
+      parameters.push(booleans.includes(key)?value==='true':limits.includes(key)?Number(value):value);assignments.push(`${key}=$${parameters.length}`);
     }
     await client.query(`UPDATE membership_settings SET ${assignments.join(',')} WHERE id=1`,parameters);
   }

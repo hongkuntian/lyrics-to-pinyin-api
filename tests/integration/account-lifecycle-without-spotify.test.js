@@ -13,8 +13,8 @@ import {digest} from '../../api/utils/song-library/store.js';
 const policy={audience:'test',environment:'development',prefix:'9ESZX68J8U',bundles:['com.hongkuntian.Lyrica']},bundleID=policy.bundles[0];
 const retired=['spotify_connections','spotify_outbox','spotify_snapshot_capabilities','spotify_provider_circuits'];
 const sql=name=>readFile(new URL('../../db/'+name,import.meta.url),'utf8');
-const apple=()=>({authenticate:async()=>({subjectHash:digest('subject'),refreshTokenEncrypted:'encrypted'}),revoke:async()=>{}});
-const appleInput=nonce=>({...nonce,bundleID,identityToken:'fixture',authorizationCode:'fixture'});
+// DeviceCheck is unconfigured here; its behaviour has its own tests.
+const deviceCheck={configured:false};
 function traced(db,trace,{afterQuery}={}){
  const run=(target,text,args)=>args===undefined?target.query(text):target.query(text,args);
  return {query:async(text,args)=>{trace.push(text);return run(db,text,args);},
@@ -29,7 +29,7 @@ async function fixture(t,{legacy=false}={}){
  await f.db.exec(await sql('032-auth-token-row-locks.sql'));
  await f.db.query('UPDATE membership_settings SET public_access_enabled=true');
  const trace=[],db=traced(f.store.db,trace);
- const accounts=new AccountStore(db,{policy,apple:apple(),attestFn:()=>({publicKey:'proof',receipt:Buffer.from('proof')})});
+ const accounts=new AccountStore(db,{policy,deviceCheck,logger:{},attestFn:()=>({publicKey:'proof',receipt:Buffer.from('proof')})});
  const auth=new AppAuthStore(f.store.db,{policy,assertionFn:({assertion})=>Number(assertion.toString())}),bearers=new WeakMap();
  let ordinal=1;
  async function session(credential,keyID,counter=1){
@@ -39,16 +39,11 @@ async function fixture(t,{legacy=false}={}){
  }
  async function guest(){
   const keyID=Buffer.alloc(32,ordinal++).toString('base64'),credential='lyrica_g_'+randomUUID().replaceAll('-','')+'abcdefghijk';
-  const input={purpose:'guest',bundleID,keyID},{challenge}=await accounts.challenge(input,null,'fixture');
+  const input={purpose:'guest',bundleID,keyID},{challenge}=await accounts.challenge(input,'fixture-'+keyID);
   await accounts.guest({...input,challenge,credential,attestation:'cHJvb2Y='});return session(credential,keyID);
  }
- async function appleAccount(){
-  const user=await guest(),nonce=await accounts.challenge({purpose:'apple',bundleID},user);
-  const signed=await accounts.signIn(user,appleInput(nonce),await accounts.prepareWriterAuthentication(bearers.get(user)));
-  return {user,signed,current:await session(signed.credential,user.keyID,2)};
- }
  const one=async(text,args)=>(await f.db.query(text,args)).rows[0];
- return {...f,trace,accounts,auth,session,guest,appleAccount,one,bearer:user=>bearers.get(user)};
+ return {...f,trace,accounts,auth,session,guest,one,bearer:user=>bearers.get(user)};
 }
 async function legacyRows(f,user){
  // Rows the retired observer wrote before this code deployed; returns their exact images.
@@ -64,7 +59,7 @@ const retiredImage=async f=>Object.fromEntries(await Promise.all(retired.map(asy
  [table,(await f.db.query(`SELECT to_jsonb(t)::text AS row FROM ${table} t ORDER BY 1`)).rows.map(row=>row.row)])));
 
 for(const legacy of [false,true])
-test('sign-out, owner change, deletion, key revocation and user disable keep their effects '+(legacy?'and leave legacy Spotify rows for 038':'with no Spotify tables'),async t=>{
+test('deletion, key revocation and user disable keep their effects '+(legacy?'and leave legacy Spotify rows for 038':'with no Spotify tables'),async t=>{
  const f=await fixture(t,{legacy});
  for(const table of retired)assert.equal((await f.one('SELECT to_regclass($1)::text AS name',[table])).name,legacy?table:null);
  const expected=Object.fromEntries(retired.map(table=>[table,[]]));
@@ -74,29 +69,14 @@ test('sign-out, owner change, deletion, key revocation and user disable keep the
   return user;
  };
 
- const signedOut=await guest();
- assert.deepEqual(await f.accounts.signOut(signedOut,await f.accounts.prepareWriterAuthentication(f.bearer(signedOut))),{signedOut:true});
- assert.equal((await f.one('SELECT revoked FROM library_tokens WHERE digest=$1',[signedOut.credentialDigest])).revoked,true);
- await assert.rejects(f.auth.authenticate(f.bearer(signedOut)));
-
- const moving=await guest(),nonce=await f.accounts.challenge({purpose:'apple',bundleID},moving);
- const signed=await f.accounts.signIn(moving,appleInput(nonce),await f.accounts.prepareWriterAuthentication(f.bearer(moving)));
- assert.notEqual(signed.userID,moving.id);assert.match(signed.credential,/^lyrica_a_[A-Za-z0-9_-]{43}$/);
- assert.equal((await f.one('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[moving.keyID])).user_id,signed.userID);
- assert.equal((await f.one('SELECT revoked FROM library_tokens WHERE digest=$1',[moving.credentialDigest])).revoked,true);
- assert.equal((await f.one('SELECT count(*)::int AS n FROM app_auth_sessions WHERE key_id=$1',[moving.keyID])).n,0);
-
- const appleUser=await f.session(signed.credential,moving.keyID,2);
- await f.db.query("INSERT INTO live_lyrics_push_receipts(activity_id,user_id,token_digest,expires_at) VALUES('activity',$1,'push','2099-01-01T00:00:00Z')",[appleUser.id]);
- const deletion=await f.accounts.challenge({purpose:'delete',bundleID},appleUser);
- assert.deepEqual(await f.accounts.delete(appleUser,appleInput(deletion),await f.accounts.prepareWriterAuthentication(f.bearer(appleUser))),{deleted:true});
- assert.equal((await f.one('SELECT disabled FROM library_users WHERE id=$1',[appleUser.id])).disabled,true);
- assert.deepEqual(await f.one('SELECT revoked,public_key FROM app_attest_keys WHERE key_id=$1',[appleUser.keyID]),{revoked:true,public_key:''});
- assert.equal((await f.one('SELECT count(*)::int AS n FROM library_tokens WHERE user_id=$1 AND NOT revoked',[appleUser.id])).n,0);
- assert.deepEqual(await f.one('SELECT refresh_token_encrypted,apple_client_id,deleted_at IS NOT NULL AS deleted FROM account_identities WHERE user_id=$1',[appleUser.id]),
-  {refresh_token_encrypted:null,apple_client_id:null,deleted:true});
- assert.equal((await f.one('SELECT count(*)::int AS n FROM live_lyrics_push_receipts WHERE user_id=$1',[appleUser.id])).n,0);
- await assert.rejects(f.auth.authenticate(f.bearer(appleUser)));
+ const deleted=await guest();
+ await f.db.query("INSERT INTO live_lyrics_push_receipts(activity_id,user_id,token_digest,expires_at) VALUES('activity',$1,'push','2099-01-01T00:00:00Z')",[deleted.id]);
+ assert.deepEqual(await f.accounts.delete(deleted,await f.accounts.prepareWriterAuthentication(f.bearer(deleted))),{deleted:true});
+ assert.equal((await f.one('SELECT disabled FROM library_users WHERE id=$1',[deleted.id])).disabled,true);
+ assert.deepEqual(await f.one('SELECT revoked,public_key FROM app_attest_keys WHERE key_id=$1',[deleted.keyID]),{revoked:true,public_key:''});
+ assert.equal((await f.one('SELECT count(*)::int AS n FROM library_tokens WHERE user_id=$1 AND NOT revoked',[deleted.id])).n,0);
+ assert.equal((await f.one('SELECT count(*)::int AS n FROM live_lyrics_push_receipts WHERE user_id=$1',[deleted.id])).n,0);
+ await assert.rejects(f.auth.authenticate(f.bearer(deleted)));
 
  const keyed=await guest();await revokeKey(f.store.db,keyed.keyID);
  assert.equal((await f.one('SELECT revoked FROM app_attest_keys WHERE key_id=$1',[keyed.keyID])).revoked,true);
@@ -111,13 +91,13 @@ test('sign-out, owner change, deletion, key revocation and user disable keep the
  assert.equal((await f.one('SELECT bool_and(revoked) AS revoked FROM app_auth_sessions WHERE key_id=$1',[disabled.keyID])).revoked,true);
  await assert.rejects(f.auth.authenticate(f.bearer(disabled)));
 
- assert.ok(f.trace.length>40);
+ assert.ok(f.trace.length>30);
  assert.equal(f.trace.some(text=>/spotify_/i.test(text)),false,'no account SQL reads, locks or writes Spotify observer state');
  if(legacy){
   // Every legacy row keeps its exact pre-operation image until 038 drops it.
   const after=await retiredImage(f);
   for(const table of retired)assert.deepEqual([...after[table]].sort(),[...expected[table]].sort(),table);
-  assert.equal(after.spotify_connections.length,4);
+  assert.equal(after.spotify_connections.length,3);
  }
 });
 
@@ -129,19 +109,17 @@ test('admin revocation helpers keep their exact two-argument shape',async()=>{
 });
 
 test('a failed deletion still rolls back every account write and keeps the session live',async t=>{
- const f=await fixture(t),{current}=await f.appleAccount();
- const deletion=await f.accounts.challenge({purpose:'delete',bundleID},current);
+ const f=await fixture(t),current=await f.guest();
  const state=async()=>(await f.db.query(`SELECT
   (SELECT jsonb_agg(to_jsonb(u) ORDER BY u.id) FROM library_users u) AS users,
   (SELECT jsonb_agg(to_jsonb(k) ORDER BY k.key_id) FROM app_attest_keys k) AS keys,
   (SELECT jsonb_agg(to_jsonb(t) ORDER BY t.digest) FROM library_tokens t) AS tokens,
   (SELECT jsonb_agg(to_jsonb(s) ORDER BY s.digest) FROM app_auth_sessions s) AS sessions,
-  (SELECT jsonb_agg(to_jsonb(i) ORDER BY i.user_id) FROM account_identities i) AS identities,
   (SELECT jsonb_agg(to_jsonb(n) ORDER BY n.digest) FROM account_nonces n) AS nonces`)).rows[0];
  const before=await state(),trace=[];let failed=false;
  const db=traced(f.store.db,trace,{afterQuery:async(text,tx)=>{if(!failed&&/^UPDATE correction_reports/.test(text)){failed=true;await tx.query('SELECT 1/0');}}});
- const store=new AccountStore(db,{policy,apple:apple()});
- await assert.rejects(store.delete(current,appleInput(deletion),await store.prepareWriterAuthentication(f.bearer(current))),{code:'22012'});
+ const store=new AccountStore(db,{policy,deviceCheck});
+ await assert.rejects(store.delete(current,await store.prepareWriterAuthentication(f.bearer(current))),{code:'22012'});
  assert.equal(failed,true);assert.deepEqual(await state(),before);
  assert.equal((await f.auth.authenticate(f.bearer(current))).id,current.id);
  assert.equal(trace.some(text=>/spotify_/i.test(text)),false);

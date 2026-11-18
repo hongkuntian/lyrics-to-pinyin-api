@@ -108,7 +108,7 @@ export function createCurrentAuthContext({authStore,environment}={}){
    row.session_audience!==policy.audience||row.key_audience!==policy.audience||
    row.attest_environment!==policy.attestEnvironment||!policy.bundles.includes(row.bundle_id)||
    row.disabled!==false||row.session_revoked!==false||row.key_revoked!==false||row.token_revoked!==false||
-   !['guest','apple','beta'].includes(row.access_kind)||nowMS>=notAfterMS)fail('unauthorized');
+   !['guest','beta'].includes(row.access_kind)||nowMS>=notAfterMS)fail('unauthorized');
   return {sessionExpiresAtMS,credentialExpiresAtMS,notAfterMS};
  }
  function scopesFor(value={}){
@@ -258,7 +258,7 @@ async function freshSession(tx,{expected,policy,id,sessionDeadline,credentialDea
  AND k.user_id=$4 AND t.user_id=$4 AND u.id=$4 AND k.bundle_id=$5
  AND s.audience=$6 AND k.audience=$6 AND k.environment=$7 AND k.bundle_id=ANY($8::text[])
  AND NOT s.revoked AND NOT k.revoked AND NOT t.revoked AND NOT u.disabled
- AND u.access_kind IN ('guest','apple','beta')
+ AND u.access_kind IN ('guest','beta')
  AND s.expires_at=$9::timestamptz AND t.expires_at IS NOT DISTINCT FROM $10::timestamptz
  AND isfinite(s.expires_at) AND s.expires_at>c.at
  AND (t.expires_at IS NULL OR (isfinite(t.expires_at) AND t.expires_at>c.at))) AS authorized,
@@ -300,12 +300,13 @@ export function createWriterAuthContext({authStore,environment}={}){
   }
   return freezePlan(out);
  }
+ // Account deletion is the only writer operation (Lyrica has no sign-in).
  function operationFor(raw){
   if(typeof raw!=='string'||Buffer.byteLength(raw)>2048)fail('invalid_request');
   let value;try{value=JSON.parse(raw);}catch{fail('invalid_request');}
   if(!object(value))fail('invalid_request');
-  const fields=value.kind==='signIn'?['kind','targetPrincipalID','targetCredentialDigest']:['kind'];
-  if(!['signIn','signOut','delete'].includes(value.kind)||Object.keys(value).length!==fields.length||
+  const fields=['kind'];
+  if(value.kind!=='delete'||Object.keys(value).length!==fields.length||
    Object.keys(value).some(k=>!fields.includes(k)))fail('invalid_request');
   // All permitted values are strings. Tokenize complete JSON strings after
   // JSON.parse has validated syntax, so escaped quotes/colons in opaque IDs
@@ -313,7 +314,6 @@ export function createWriterAuthContext({authStore,environment}={}){
   const strings=raw.match(/"(?:[^"\\]|\\.)*"/gs)??[];
   const names=strings.filter((_,i)=>i%2===0).map(s=>JSON.parse(s));
   if(strings.length!==2*fields.length||names.length!==fields.length||new Set(names).size!==fields.length)fail('invalid_request');
-  if(value.kind==='signIn'&&(!userID(value.targetPrincipalID)||!digest(value.targetCredentialDigest)))fail('invalid_request');
   return Object.freeze({...value});
  }
  const query=async(tx,sql,args)=>(await tx.query(sql,args)).rows;
@@ -334,11 +334,12 @@ export function createWriterAuthContext({authStore,environment}={}){
  const map=(rows,field)=>new Map(rows.map(row=>[row[field],Object.freeze({...row})]));
  const identical=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
  const equal=(a,b)=>{if(!identical(a,b))fail('conflict');};
- async function sourceLists(tx,expected,op){
-  const keys=op.kind==='signIn'?[expected.keyID]:bound((await query(tx,
+ // Deletion covers every key and credential of the source owner.
+ async function sourceLists(tx,expected){
+  const keys=bound((await query(tx,
    'SELECT key_id FROM public.app_attest_keys WHERE user_id=$1 ORDER BY key_id COLLATE "C" LIMIT 65',
    [expected.principalID])).map(r=>r.key_id));
-  const tokens=op.kind!=='delete'?[expected.credentialDigest]:bound((await query(tx,
+  const tokens=bound((await query(tx,
    'SELECT digest FROM public.library_tokens WHERE user_id=$1 ORDER BY digest COLLATE "C" LIMIT 65',
    [expected.principalID])).map(r=>r.digest));
   return {keys:sorted(keys),tokens:sorted(tokens)};
@@ -350,9 +351,6 @@ export function createWriterAuthContext({authStore,environment}={}){
   const sessions=bound(await query(tx,sessionsSQL,[plan.keyIDs,expected.sessionDigest]));
   if(users.length!==plan.userIDs.length||tokens.length!==plan.credentialDigests.length||keys.length!==plan.keyIDs.length)fail('conflict');
   return {users,tokens,keys,sessions};
- }
- async function absentTarget(tx,op){
-  if(op.kind==='signIn'&&(await query(tx,'SELECT digest FROM public.library_tokens WHERE digest=$1',[op.targetCredentialDigest])).length)fail('conflict');
  }
  const exactSQL=`WITH auth_clock AS MATERIALIZED (SELECT clock_timestamp() AS at)
  SELECT pg_current_xact_id()::text AS transaction_id,
@@ -374,7 +372,7 @@ export function createWriterAuthContext({authStore,environment}={}){
    r.bundle_id!==expected.bundleID||r.key_audience!==policy.audience||r.session_audience!==policy.audience||
    r.environment!==policy.attestEnvironment||!policy.bundles.includes(r.bundle_id)||
    r.disabled!==false||r.key_revoked!==false||r.token_revoked!==false||r.session_revoked!==false||
-   !['guest','apple','beta'].includes(r.access_kind))fail('unauthorized');
+   !['guest','beta'].includes(r.access_kind))fail('unauthorized');
   return Object.freeze({...r});
  }
  function sameSource(before,after){
@@ -382,58 +380,47 @@ export function createWriterAuthContext({authStore,environment}={}){
    before.access_kind!==after.access_kind)fail('unauthorized');
  }
  async function unchanged(tx,retained){
-  const {plan,expected,op,state,before,lists,source:initial}=retained;
+  const {plan,expected,state,before,lists,source:initial}=retained;
   if(await transactionID(tx)!==state.id)fail();
-  equal(await sourceLists(tx,expected,op),lists);await absentTarget(tx,op);
+  equal(await sourceLists(tx,expected),lists);
   const current=await snapshot(tx,plan,expected);
   sameSource(initial,await source(tx,expected,state.id));
   equal(current,before);
  }
  async function verify(tx,r,notAfterMS){
-  const {plan,expected,op,state,before,lists,source:initial}=r;
+  const {plan,expected,state,before,lists,source:initial}=r;
   if(await transactionID(tx)!==state.id)fail();
-  equal(await sourceLists(tx,expected,op),lists);
+  equal(await sourceLists(tx,expected),lists);
   const after=await snapshot(tx,plan,expected);
   const oldUsers=map(before.users,'id'),oldTokens=map(before.tokens,'digest'),oldKeys=map(before.keys,'key_id');
   for(const row of after.users){
    const old=oldUsers.get(row.id),next={...old};
-   if(op.kind==='delete'&&row.id===expected.principalID)next.disabled=true;
-   if(op.kind==='signIn'&&row.id===op.targetPrincipalID)next.disabled=false;
+   if(row.id===expected.principalID)next.disabled=true;
    equal(row,next);
   }
   for(const row of after.tokens){
    const old=oldTokens.get(row.digest),next={...old};
-   if(row.digest===expected.credentialDigest||op.kind==='delete'&&lists.tokens.includes(row.digest))next.revoked=true;
+   if(row.digest===expected.credentialDigest||lists.tokens.includes(row.digest))next.revoked=true;
    equal(row,next);
   }
   for(const row of after.keys){
    const old=oldKeys.get(row.key_id),next={...old};
-   if(op.kind==='signIn'&&row.key_id===expected.keyID)next.user_id=op.targetPrincipalID;
-   if(op.kind==='delete'&&lists.keys.includes(row.key_id))Object.assign(next,{revoked:true,public_key:'',receipt:''});
+   if(lists.keys.includes(row.key_id))Object.assign(next,{revoked:true,public_key:'',receipt:''});
    equal(row,next);
   }
-  const removed=op.kind==='signIn'?[expected.keyID]:op.kind==='delete'?lists.keys:[];
-  equal(after.sessions,before.sessions.filter(s=>!removed.includes(s.key_id)));
-  let targetDeadline=null;
-  if(op.kind==='signIn'){
-   const target=(await query(tx,tokensSQL,[[op.targetCredentialDigest]]))[0];
-   if(!target||target.user_id!==op.targetPrincipalID||target.revoked!==false||target.finite!==true||target.deadline===null)fail('conflict');
-   targetDeadline=target.deadline;
-  }
+  equal(after.sessions,before.sessions.filter(s=>!lists.keys.includes(s.key_id)));
   // This MUST be the last SQL/IO before the caller returns directly to COMMIT.
   // Captured exact source deadlines remain authoritative after deliberate
-  // source key move/C revocation/S deletion. No unchanged-source test here.
+  // C revocation/S deletion. No unchanged-source test here.
   const clock=(await query(tx,`WITH auth_clock AS MATERIALIZED (SELECT clock_timestamp() AS at)
    SELECT pg_current_xact_id()::text AS transaction_id,
    (isfinite($1::timestamptz) AND $1::timestamptz>c.at AND
-    ($2::timestamptz IS NULL OR (isfinite($2::timestamptz) AND $2::timestamptz>c.at))) AS source_live,
-   ($3::timestamptz IS NULL OR (isfinite($3::timestamptz) AND $3::timestamptz>c.at)) AS target_live${
-    notAfterMS===undefined?'':', ($4::numeric>extract(epoch FROM c.at)*1000) AS privacy_live'}
-   FROM auth_clock c`,[initial.session_deadline,initial.credential_deadline,targetDeadline,
+    ($2::timestamptz IS NULL OR (isfinite($2::timestamptz) AND $2::timestamptz>c.at))) AS source_live${
+    notAfterMS===undefined?'':', ($3::numeric>extract(epoch FROM c.at)*1000) AS privacy_live'}
+   FROM auth_clock c`,[initial.session_deadline,initial.credential_deadline,
     ...(notAfterMS===undefined?[]:[notAfterMS])]))[0];
   if(clock?.transaction_id!==state.id)fail();
   if(clock.source_live!==true)fail('unauthorized');
-  if(clock.target_live!==true)fail('conflict');
   if(notAfterMS!==undefined&&clock.privacy_live!==true)fail('unauthorized');
   return true;
  }
@@ -458,15 +445,14 @@ export function createWriterAuthContext({authStore,environment}={}){
    const id=await transactionID(tx);if(transactions.get(tx)?.id===id)fail();
    const state={id,phase:'discovering'};transactions.set(tx,state);
    try{
-    const initial=await source(tx,expected,id);await absentTarget(tx,op);
-    const lists=await sourceLists(tx,expected,op);
+    const initial=await source(tx,expected,id);
+    const lists=await sourceLists(tx,expected);
     const credentialDigests=bound(sorted([...required.credentialDigests,...lists.tokens,expected.credentialDigest]));
     const keyIDs=bound(sorted([...required.keyIDs,...lists.keys,expected.keyID]));
     const tokens=await query(tx,tokensSQL,[credentialDigests]),keys=await query(tx,keysSQL,[keyIDs]);
     if(tokens.length!==credentialDigests.length||keys.length!==keyIDs.length)fail();
     if(tokens.some(t=>!userID(t.user_id))||keys.some(k=>!userID(k.user_id)))fail();
-    const userIDs=bound(sorted([...required.userIDs,expected.principalID,...tokens.map(t=>t.user_id),...keys.map(k=>k.user_id),
-     ...(op.kind==='signIn'?[op.targetPrincipalID]:[])]));
+    const userIDs=bound(sorted([...required.userIDs,expected.principalID,...tokens.map(t=>t.user_id),...keys.map(k=>k.user_id)]));
     const plan=freezePlan({userIDs,credentialDigests,keyIDs});
     const before=await snapshot(tx,plan,expected);
     equal(before.tokens,tokens);equal(before.keys,keys);
@@ -475,7 +461,6 @@ export function createWriterAuthContext({authStore,environment}={}){
     // All observed owners must be in the precomputed user set; never repair it
     // by appending a newly discovered owner after this point.
     if(before.tokens.some(t=>!userIDs.includes(t.user_id))||before.keys.some(k=>!userIDs.includes(k.user_id)))fail('conflict');
-    if(op.kind==='signIn'&&before.users.find(u=>u.id===op.targetPrincipalID)?.access_kind!=='apple')fail('conflict');
     if(await transactionID(tx)!==id)fail();
     const discovery=Object.freeze({environment});
     const retained={tx,expected,op,plan,before,lists,source:initial,state};
@@ -487,11 +472,11 @@ export function createWriterAuthContext({authStore,environment}={}){
    if(!r||r.tx!==tx||r.state.phase!=='discovered')fail();
    const {state,plan,before,expected}=r;state.phase='locking';
    try{
-    if(await transactionID(tx)!==state.id)fail();await absentTarget(tx,r.op);
+    if(await transactionID(tx)!==state.id)fail();
     for(const id of plan.userIDs)if((await query(tx,'SELECT id FROM public.library_users WHERE id=$1 FOR NO KEY UPDATE',[id])).length!==1)fail('conflict');
     // User anchors now exclude cooperating registration/rotation/owner moves.
     // Recheck the FULL enumeration before tokens, never append extra rows.
-    equal(await sourceLists(tx,expected,r.op),r.lists);
+    equal(await sourceLists(tx,expected),r.lists);
     const oldTokens=map(before.tokens,'digest'),oldKeys=map(before.keys,'key_id');
     for(const id of plan.credentialDigests){
      const row=(await query(tx,'SELECT digest,user_id FROM public.library_tokens WHERE digest=$1 FOR UPDATE',[id]))[0];
@@ -528,7 +513,7 @@ export function createWriterAuthContext({authStore,environment}={}){
       if(state.phase!=='locked')fail();state.phase='verifying';
       try{
        if(again!==tx||notAfterMS!==undefined&&(!Number.isSafeInteger(notAfterMS)||notAfterMS<0))fail();
-       // Negative-only server bound; never substitutes for exact S/C/C2.
+       // Negative-only server bound; never substitutes for exact S/C.
        const result=await verify(tx,r,notAfterMS);state.phase='consumed';return result;}
       catch(error){state.phase='failed';throw error;}
      });}

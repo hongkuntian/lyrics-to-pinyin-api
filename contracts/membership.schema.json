@@ -2,10 +2,10 @@
   "$schema":"https://json-schema.org/draft/2020-12/schema",
   "title":"Lyrica membership snapshot v1",
   "type":"object",
-  "required":["version","account","tier","expiresAt","isBeta","generationUnlimited","allowances","libraryTranslations","preview","capabilities","products"],
+  "required":["version","account","tier","expiresAt","isBeta","generationUnlimited","allowances","libraryTranslations","liveLyricsIncluded","preview","capabilities","products"],
   "properties":{
     "version":{"const":1},
-    "account":{"type":"object","required":["id","kind","appAccountToken"],"properties":{"id":{"type":"string"},"kind":{"enum":["guest","apple","beta"]},"appAccountToken":{"anyOf":[{"type":"string"},{"type":"null"}]}}},
+    "account":{"type":"object","required":["id","kind","appAccountToken"],"properties":{"id":{"type":"string"},"kind":{"enum":["guest","beta"]},"appAccountToken":{"type":"string","pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"}}},
     "tier":{"enum":["free","pro"]},
     "expiresAt":{"anyOf":[{"type":"string"},{"type":"null"}]},
     "isBeta":{"type":"boolean"},"generationUnlimited":{"type":"boolean"},
@@ -14,6 +14,7 @@
       "study":{"type":"object","required":["limit","used","remaining","resetsAt"],"properties":{"limit":{"type":"integer","minimum":0},"used":{"type":"integer","minimum":0},"remaining":{"type":"integer","minimum":0},"resetsAt":{"anyOf":[{"type":"string"},{"type":"null"}]}}}
     }},
     "libraryTranslations":{"type":"object","required":["unlimited","limit","used","remaining","nextAvailableAt"],"properties":{"unlimited":{"type":"boolean"},"limit":{"anyOf":[{"type":"integer","minimum":0},{"type":"null"}]},"used":{"type":"integer","minimum":0},"remaining":{"anyOf":[{"type":"integer","minimum":0},{"type":"null"}]},"nextAvailableAt":{"anyOf":[{"type":"string"},{"type":"null"}]}}},
+    "liveLyricsIncluded":{"type":"boolean"},
     "preview":{"type":"object","required":["available","expiresAt"],"properties":{"available":{"type":"boolean"},"expiresAt":{"anyOf":[{"type":"string"},{"type":"null"}]}}},
     "capabilities":{"type":"object","required":["purchases","liveLyrics","widgets","carPlay"],"properties":{"purchases":{"type":"boolean"},"liveLyrics":{"type":"boolean"},"widgets":{"type":"boolean"},"carPlay":{"type":"boolean"}}},
     "products":{"type":"array","items":{"type":"object","required":["id","tier","period"],"properties":{"id":{"type":"string"},"tier":{"enum":["pro"]},"period":{"enum":["month","year"]}}}}

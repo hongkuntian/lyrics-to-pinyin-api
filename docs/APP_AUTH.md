@@ -1,9 +1,33 @@
-# Lyrica private beta API security
+# Lyrica API security
 
-This is a hard cutover. Every app API call requires a session issued to an
-attested Lyrica installation with valid beta access. Older app builds, raw beta
-credentials and anonymous scripts cannot use the business endpoints. Saved
-content and the bundled practice song continue to work offline.
+Every app API call requires a session issued to an attested Lyrica
+installation holding a valid credential: an anonymous account credential
+(`lyrica_g_…`) or a beta access code. Raw credentials and anonymous scripts
+cannot use the business endpoints. Saved content and the bundled practice song
+continue to work offline.
+
+## Anonymous accounts (no sign-in)
+
+Lyrica has no sign-in. Every installation uses an anonymous account it creates
+itself; Sign in with Apple and sign-out are removed (contract: the Lyrica app
+repo's `docs/ANONYMOUS_ACCOUNTS.md`; accounts and DeviceCheck:
+[memberships](memberships.md); migration: [039 procedure](ANONYMOUS_ACCOUNTS_MIGRATION.md)).
+
+- The phone generates `lyrica_g_<43 base64url>`, saves it in iCloud Keychain and
+  enrolls it once through `POST /api/account` (`challenge` with
+  `purpose:"guest"`, then `guest` with an App Attest attestation and an optional
+  DeviceCheck `deviceToken`). A reinstall and the person's other devices on the
+  same Apple ID reuse that credential; each device registers its own App Attest
+  key through the `register` action below.
+- The credential never expires while in use: each issued session slides a guest
+  credential's expiry to 365 days from now, writing only when fewer than 300
+  days remain. Access-code credentials keep their own (usually unbounded) expiry.
+  The runtime login does this only through the bounded
+  `public.slide_guest_credential_expiry` function; it has no `UPDATE` on
+  `library_tokens`.
+- `POST /api/account` `{action:"delete"}` with the session bearer deletes a guest
+  account (exact-bearer writer authentication); beta accounts get
+  `403 account_not_deletable`.
 
 ## Trust boundary and protocol
 
@@ -72,14 +96,23 @@ Production requires these server variables:
 | `LYRICA_APP_BUNDLE_IDS` | Comma-separated exact bundle allowlist |
 | `LYRICA_LIBRARY_DATABASE_URL` | Restricted runtime role |
 | `LYRICA_LIBRARY_MIGRATE_ON_BUILD` | `0`; migrations are operator-only |
+| `LYRICA_ACCOUNT_DATABASE_URL` | Restricted account role (enrollment, deletion) |
+| `LYRICA_DEVICECHECK_KEY_ID` | DeviceCheck key ID (with `LYRICA_APNS_TEAM_ID`) |
+| `LYRICA_DEVICECHECK_PRIVATE_KEY` | That key's `.p8` PEM text |
+
+Without the two DeviceCheck variables, DeviceCheck is unconfigured and
+enrollment never holds the free allowance. `LYRICA_SIGN_IN_APPLE_KEY_ID`,
+`LYRICA_SIGN_IN_APPLE_PRIVATE_KEY` and `LYRICA_ACCOUNT_ENCRYPTION_KEY` are no
+longer read; delete them after the anonymous-accounts deploy.
 
 Apple Music, OpenAI, Redis, mail, cron and database credentials must be Sensitive,
 production-only Vercel variables. Preview/development receive no production keys,
 database or cache. With no auth policy/database, app endpoints fail closed. Local
 hermetic tests inject fixtures explicitly; there is no runtime test bypass.
 
-The runtime role cannot create schema, rotate credentials, grant unlimited
-access, change budget caps or run migrations. Keep the owner connection outside
+The runtime role cannot create schema, rotate or revoke credentials, set an
+arbitrary credential expiry, grant unlimited access, change budget caps or run
+migrations. Keep the owner connection outside
 Vercel. On the developer Mac, owner and restricted runtime configurations live
 in `~/.config/lyrica/credentials/backend-admin/{migration,runtime}.json` with mode
 0600 inside a 0700 directory. MusicKit credentials stay in the separate private
@@ -126,7 +159,8 @@ App Attest raises the cost of impersonation; it does not make a public URL
 private or prevent abuse by an authorized device. A stolen bearer can be replayed
 until expiry or revocation. This beta deliberately uses 15-minute sessions rather
 than request-by-request assertion signatures. There is no user login system,
-device-count policy, jailbreak detection or Apple receipt risk assessment yet.
+device-count policy, jailbreak detection or Apple receipt risk assessment yet;
+DeviceCheck only limits fresh free allowances and previews per device.
 
 See Apple's [validation guide](https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server)
 and Vercel's [rate limiting guide](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting).

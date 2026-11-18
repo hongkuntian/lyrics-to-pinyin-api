@@ -10,23 +10,29 @@ import {AppAuthStore} from '../../api/utils/app-auth/store.js';
 import {createAccountHandler} from '../../api/account.js';
 import {createMockRes} from '../helpers/mock-http.js';
 import {digest} from '../../api/utils/song-library/store.js';
-import {activateMembership} from '../helpers/membership.js';
 import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.js';
+import {mockDeviceCheck,appleDeviceState,deviceToken} from '../helpers/device-check.js';
+
+// Lyrica has no sign-in: anonymous (guest) enrollment and guest deletion.
+// DeviceCheck is unconfigured unless a test says otherwise; its enrollment
+// rules have their own file (guest-enrollment-device-check.test.js).
 const policy={audience:'test',environment:'production',prefix:'9ESZX68J8U',bundles:['com.test.Lyrica']};
 const bundleID=policy.bundles[0],credential='lyrica_g_'+'a'.repeat(43),keyID=Buffer.alloc(32,3).toString('base64');
+const unconfigured={configured:false};
 async function fixture(t,options={}){
   const f=await libraryDB();t.after(()=>f.db.close());await f.db.query('UPDATE membership_settings SET public_access_enabled=true');
   await f.db.exec(await readFile(new URL('../../db/032-auth-token-row-locks.sql',import.meta.url),'utf8'));
   const db=observedDatabase(f.store.db,options);
-  const apple={authenticate:async()=>({subjectHash:digest('subject'),refreshTokenEncrypted:'encrypted'}),revoke:async()=>{}};
-  const accounts=new AccountStore(db,{policy,apple,attestFn:()=>({publicKey:'proof',receipt:Buffer.from('receipt')})});
+  const accounts=new AccountStore(db,{policy,deviceCheck:options.deviceCheck??unconfigured,logger:{},
+    attestFn:()=>({publicKey:'proof',receipt:Buffer.from('receipt')})});
   const auth=new AppAuthStore(db,{policy,attestFn:()=>({publicKey:'proof',receipt:Buffer.from('receipt')}),assertionFn:({assertion})=>Number(assertion.toString())});
-  return {...f,accounts,auth,apple,sessionByUser:new WeakMap(),observedDB:db};
+  return {...f,accounts,auth,sessionByUser:new WeakMap(),observedDB:db};
 }
-async function guest(f,key=keyID,token=credential){
+let address=1;
+async function guest(f,key=keyID,token=credential,extra={}){
   const input={purpose:'guest',bundleID,keyID:key};
-  const nonce=await f.accounts.challenge(input,null,'127.0.0.1');
-  const body={...input,...nonce,credential:token,attestation:'cHJvb2Y='};
+  const nonce=await f.accounts.challenge(input,'127.0.0.'+(address++%250));
+  const body={bundleID,keyID:key,...nonce,credential:token,attestation:'cHJvb2Y=',...extra};
   await f.accounts.guest(body);return {body,token,key};
 }
 async function session(f,g,counter=1){
@@ -36,8 +42,19 @@ async function session(f,g,counter=1){
   return {user,session:result.token};
 }
 async function authentication(f,user){return f.accounts.prepareWriterAuthentication(f.sessionByUser.get(user));}
-async function login(f,user){const {challenge}=await f.accounts.challenge({purpose:'apple',bundleID},user);
- return f.accounts.signIn(user,{bundleID,challenge,identityToken:'identity',authorizationCode:'code'},await authentication(f,user));}
+async function sibling(f,g){
+  const key=Buffer.alloc(32,77).toString('base64');
+  const {challenge}=await f.auth.challenge(g.token,{keyID:key,bundleID,purpose:'register'});
+  await f.auth.register(g.token,{keyID:key,bundleID,challenge,attestation:'cHJvb2Y='});
+  return session(f,{...g,key});
+}
+async function guestAccount(f){const g=await guest(f);return {g,current:await session(f,g)};}
+// Beta (access code) accounts come from the operator; reader-a holds token-a.
+async function betaAccount(f){return {current:await session(f,{token:'token-a',key:await registerKey(f,'token-a',Buffer.alloc(32,41).toString('base64'))})};}
+async function registerKey(f,token,key){
+  const {challenge}=await f.auth.challenge(token,{keyID:key,bundleID,purpose:'register'});
+  await f.auth.register(token,{keyID:key,bundleID,challenge,attestation:'cHJvb2Y='});return key;
+}
 // Observe and fault real statements; never replace SQL results or the auth factory.
 function observedDatabase(db,{trace=[],beforeQuery=async()=>{},afterQuery=async()=>{}}={}){
  let transactionID=0;
@@ -52,6 +69,16 @@ function observedDatabase(db,{trace=[],beforeQuery=async()=>{},afterQuery=async(
   },error=>{trace.push({event:'ROLLBACK',transactionID:id});throw error;});
  }};
 }
+async function accountState(f){
+ const state={};
+ for(const table of ['library_users','library_tokens','app_attest_keys','app_auth_sessions',
+  'account_nonces','selected_source_access','live_lyrics_push_receipts','correction_reports','membership_grants','membership_usage'])
+  state[table]=(await f.db.query(`SELECT to_jsonb(r) AS value FROM ${table} r ORDER BY to_jsonb(r)::text COLLATE "C"`)).rows;
+ return state;
+}
+const denied={code:'app_access_revoked',status:403};
+const notDeletable={code:'account_not_deletable',status:403};
+
 test('guest enrollment is attested, bounded and retryable without issuing a session',async t=>{
   const f=await fixture(t),g=await guest(f);assert.deepEqual(await f.accounts.guest(g.body),{registered:true});
   const current=await session(f,g);assert.equal((await new MembershipStore(f.store.db).snapshot(current.user.id)).account.kind,'guest');
@@ -61,95 +88,18 @@ test('guest enrollment is attested, bounded and retryable without issuing a sess
   await assert.rejects(f.auth.authenticate(current.session),{code:'session_expired'});
 });
 test('guest nonce binds key and bundle and fails closed when access is disabled',async t=>{
-  const f=await fixture(t),nonce=await f.accounts.challenge({purpose:'guest',bundleID,keyID},null,'test');
+  const f=await fixture(t),nonce=await f.accounts.challenge({purpose:'guest',bundleID,keyID},'test');
   const body={...nonce,bundleID,keyID,credential,attestation:'cHJvb2Y='};
   await assert.rejects(f.accounts.guest({...body,bundleID:'other.app'}),{code:'challenge_expired'});
   await f.db.query('UPDATE membership_settings SET public_access_enabled=false');
   await assert.rejects(f.accounts.guest(body),{code:'public_access_unavailable'});
 });
-test('Apple login migrates only this device and converges on the same account and membership',async t=>{
-  const f=await fixture(t),g=await guest(f),a=await session(f,g),first=await login(f,a.user);
-  await assert.rejects(f.auth.authenticate(a.session),{code:'session_expired'});
-  const appleSession=await session(f,{...g,token:first.credential},2);
-  const members=new MembershipStore(f.store.db);await activateMembership(f.db,first.userID);const snapshot=await members.snapshot(first.userID);
-  assert.equal(snapshot.allowances.translation.remaining,20);
-  const other=await guest(f,Buffer.alloc(32,4).toString('base64'),'lyrica_g_'+'b'.repeat(43));
-  const second=await login(f,(await session(f,other)).user);
-  assert.equal(first.userID,second.userID);assert.equal((await members.snapshot(second.userID)).account.appAccountToken,snapshot.account.appAccountToken);
-  assert.equal((await f.auth.authenticate(appleSession.session)).id,first.userID);
-  assert.equal((await members.snapshot(second.userID)).allowances.translation.limit,20);
-});
-test('account deletion requires matching fresh Apple proof, revokes devices and preserves spent grant identity',async t=>{
-  const f=await fixture(t),g=await guest(f),loginResult=await login(f,(await session(f,g)).user);
-  const signed=await session(f,{...g,token:loginResult.credential},2),members=new MembershipStore(f.store.db);
-  await admitLibraryTranslation(f.store.db,signed.user.id,'opened-song',{unlock:true});
-  const {challenge}=await f.accounts.challenge({purpose:'delete',bundleID},signed.user);
-  const body={challenge,bundleID,identityToken:'identity',authorizationCode:'code'};
-  const authenticate=f.apple.authenticate;f.apple.authenticate=async()=>({subjectHash:'other',refreshTokenEncrypted:'encrypted'});
-  await assert.rejects(f.accounts.delete(signed.user,body,await authentication(f,signed.user)),{code:'apple_identity_invalid'});f.apple.authenticate=authenticate;
-  assert.deepEqual(await f.accounts.delete(signed.user,body,await authentication(f,signed.user)),{deleted:true});
-  await assert.rejects(f.auth.authenticate(signed.session),{code:'session_expired'});
-  const retained=(await f.db.query('SELECT * FROM account_identities')).rows[0];assert.equal(retained.refresh_token_encrypted,null);assert.ok(retained.deleted_at);
-  const returning=await guest(f,Buffer.alloc(32,5).toString('base64'),'lyrica_g_'+'c'.repeat(43));
-  const result=await login(f,(await session(f,returning)).user);assert.equal(result.userID,signed.user.id);
-  assert.equal((await members.snapshot(result.userID)).libraryTranslations.used,1);
-});
-test('deletion of a retained identity revokes the freshly verified active client rather than a stale stored authorization',async t=>{
-  const f=await fixture(t),g=await guest(f),result=await login(f,(await session(f,g)).user);
-  const active=await session(f,{...g,token:result.credential},2);
-  await f.db.query("UPDATE account_identities SET apple_client_id='com.example.RetiredApp',refresh_token_encrypted='retained-ciphertext' WHERE user_id=$1",[active.user.id]);
-  f.apple.authenticate=async()=>({subjectHash:digest('subject'),refreshTokenEncrypted:'freshly-verified-ciphertext'});
-  const revoked=[];f.apple.revoke=async identity=>{revoked.push(identity);};
-  const {challenge}=await f.accounts.challenge({purpose:'delete',bundleID},active.user);
-  assert.deepEqual(await f.accounts.delete(active.user,{bundleID,challenge,identityToken:'fresh-identity',authorizationCode:'fresh-code'},await authentication(f,active.user)),{deleted:true});
-  assert.equal(revoked.length,1);assert.equal(revoked[0].apple_client_id,bundleID);assert.equal(revoked[0].refresh_token_encrypted,'freshly-verified-ciphertext');assert.equal(revoked[0].subject_hash,digest('subject'));
-  const retained=(await f.db.query('SELECT * FROM account_identities WHERE user_id=$1',[active.user.id])).rows[0];
-  assert.equal(retained.apple_client_id,null);assert.equal(retained.refresh_token_encrypted,null);assert.ok(retained.deleted_at);
-});
-
-test('public account HTTP rejects anonymous identity operations, surplus fields and malformed attestations',async t=>{
-  const f=await fixture(t),handler=createAccountHandler({store:f.accounts,authStore:f.auth});
-  for(const [body,status] of [[{action:'signOut'},401],[{action:'challenge',purpose:'apple',bundleID},401],
-    [{action:'challenge',purpose:'guest',bundleID,keyID,admin:true},400],
-    [{action:'guest',bundleID,keyID,credential,challenge:'x'.repeat(43),attestation:'invalid'},400]]){
-    const res=createMockRes();await handler({method:'POST',headers:{},body},res);assert.equal(res.statusCode,status);}
-});
-test('the separate account login can enroll and sign in but cannot change generation budgets or grants',async t=>{
+test('enrollment is the only challenge purpose',async t=>{
   const f=await fixture(t);
-  // This partial-schema fixture must install the guarded anchor before late
-  // role provisioning; replay deliberately refuses an unmigrated database.
-  await f.db.exec(await readFile(new URL('../../db/032-auth-token-row-locks.sql',import.meta.url),'utf8'));
-  await f.db.query('CREATE ROLE lyrica_account_v1');
-  await replayMembershipRoleGrants(f.db);
-  await replayMembershipRoleGrants(f.db); // Late provisioning is idempotent.
-  await f.db.query('SET ROLE lyrica_account_v1');
-  const g=await guest(f);
-  await assert.rejects(f.db.query("UPDATE library_users SET unlimited_generation=true"),e=>e.code==='42501');
-  await assert.rejects(f.db.query("UPDATE membership_settings SET purchases_enabled=true"),e=>e.code==='42501');
-  await assert.rejects(f.db.query("UPDATE library_settings SET enabled=true"),e=>e.code==='42501');
-  await f.db.query('RESET ROLE');
-  const signed=await session(f,g);
-  await f.db.query('SET ROLE lyrica_account_v1');
-  const apple=await login(f,signed.user);assert.match(apple.credential,/^lyrica_a_/);
-  await f.db.query('RESET ROLE');
-  const active=await session(f,{...g,token:apple.credential},2);
-  await f.db.query('SET ROLE lyrica_account_v1');
-  const {challenge}=await f.accounts.challenge({purpose:'delete',bundleID},active.user);
-  assert.deepEqual(await f.accounts.delete(active.user,{bundleID,challenge,identityToken:'i',authorizationCode:'c'},await authentication(f,active.user)),{deleted:true});
-  await f.db.query('RESET ROLE');
-});
-
-for(const loss of ['revoked','expired'])test('Apple sign-in rechecks source credential '+loss+' during external verification',async t=>{
- const f=await fixture(t),g=await guest(f),current=await session(f,g);
- const original=f.apple.authenticate;
- f.apple.authenticate=async input=>{
-  if(loss==='revoked')await f.accounts.signOut(current.user,await authentication(f,current.user));
-  else await f.db.query('UPDATE library_tokens SET expires_at=clock_timestamp() WHERE digest=$1',[current.user.credentialDigest]);
-  return original(input);
- };
- await assert.rejects(login(f,current.user),{code:'app_access_revoked',status:403});
- assert.equal((await f.db.query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[g.key])).rows[0].user_id,current.user.id);
- assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM account_identities')).rows[0].n),0);
+  for(const purpose of ['apple','delete',undefined])
+    await assert.rejects(f.accounts.challenge({purpose,bundleID,keyID},'test'),{code:'invalid_request',status:400});
+  await assert.rejects(f.accounts.challenge({purpose:'guest',bundleID},'test'),{code:'invalid_request'});
+  assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM account_nonces')).rows[0].n),0);
 });
 test('guest credential keeps exact 90-day DB issuance deadline and ACK does not extend it',async t=>{
  const f=await fixture(t),before=(await f.db.query('SELECT clock_timestamp() AS at')).rows[0].at,g=await guest(f);
@@ -160,142 +110,184 @@ test('guest credential keeps exact 90-day DB issuance deadline and ACK does not 
  assert.equal(+(await f.db.query('SELECT expires_at FROM library_tokens WHERE digest=$1',[digest(g.token)])).rows[0].expires_at,+expiry);
 });
 
+test('guest deletion revokes every device of the account, scrubs its data and preserves spent grant identity',async t=>{
+  const f=await fixture(t),{g,current}=await guestAccount(f),other=await sibling(f,g),members=new MembershipStore(f.store.db);
+  await admitLibraryTranslation(f.store.db,current.user.id,'opened-song',{unlock:true});
+  await f.db.query("INSERT INTO live_lyrics_push_receipts(activity_id,user_id,token_digest,expires_at) VALUES('activity',$1,'push','2099-01-01T00:00:00Z')",[current.user.id]);
+  assert.deepEqual(await f.accounts.delete(current.user,await authentication(f,current.user)),{deleted:true});
+  for(const live of [current.session,other.session])await assert.rejects(f.auth.authenticate(live),{code:'session_expired'});
+  const user=(await f.db.query('SELECT * FROM library_users WHERE id=$1',[current.user.id])).rows[0];
+  assert.equal(user.disabled,true);assert.equal(user.access_kind,'guest');
+  assert.deepEqual((await f.db.query('SELECT bool_and(revoked) AS revoked FROM library_tokens WHERE user_id=$1',[current.user.id])).rows[0],{revoked:true});
+  assert.deepEqual((await f.db.query("SELECT bool_and(revoked AND public_key='' AND receipt=''::bytea) AS scrubbed,count(*)::int AS n FROM app_attest_keys WHERE user_id=$1",[current.user.id])).rows[0],{scrubbed:true,n:2});
+  assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM app_auth_sessions s JOIN app_attest_keys k ON k.key_id=s.key_id WHERE k.user_id=$1',[current.user.id])).rows[0].n),0);
+  assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM live_lyrics_push_receipts WHERE user_id=$1',[current.user.id])).rows[0].n),0);
+  // The pseudonymous allowance ledger stays so opened songs and refunds stay consistent.
+  assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM membership_usage WHERE user_id=$1',[current.user.id])).rows[0].n),1);
+  await assert.rejects(members.snapshot(current.user.id),{code:'unauthorized'});
+  // The next use creates a new account with a new credential and key.
+  const fresh=await guest(f,Buffer.alloc(32,5).toString('base64'),'lyrica_g_'+'c'.repeat(43));
+  const next=await session(f,fresh);assert.notEqual(next.user.id,current.user.id);
+});
 
-const denied={code:'app_access_revoked',status:403};
-async function appleInput(f,user,purpose='apple'){
- const {challenge}=await f.accounts.challenge({purpose,bundleID},user);
- return {bundleID,challenge,identityToken:'identity',authorizationCode:'code'};
-}
-async function signedAccount(f){
- const g=await guest(f),source=await session(f,g),result=await login(f,source.user);
- const current=await session(f,{...g,token:result.credential},2);
- return {g:{...g,token:result.credential},current,result};
-}
-async function sibling(f,g){
- const key=Buffer.alloc(32,77).toString('base64');
- const {challenge}=await f.auth.challenge(g.token,{keyID:key,bundleID,purpose:'register'});
- await f.auth.register(g.token,{keyID:key,bundleID,challenge,attestation:'cHJvb2Y='});
- return session(f,{...g,key});
-}
-async function accountState(f){
- const state={};
- for(const table of ['library_users','library_tokens','app_attest_keys','app_auth_sessions','account_identities',
-  'account_nonces','selected_source_access','live_lyrics_push_receipts','correction_reports','membership_grants','membership_usage'])
-  state[table]=(await f.db.query(`SELECT to_jsonb(r) AS value FROM ${table} r ORDER BY to_jsonb(r)::text COLLATE "C"`)).rows;
- return state;
-}
+test('a reinstall after deletion on the same device gets a held allowance',async t=>{
+  const NOW=Date.UTC(2026,10,17),apple=appleDeviceState(()=>NOW),mock=mockDeviceCheck({now:()=>NOW,respond:apple.respond});
+  const f=await fixture(t,{deviceCheck:mock.device});
+  const g=await guest(f,keyID,credential,{deviceToken}),current=await session(f,g);
+  assert.equal((await f.db.query('SELECT free_allowance_held_until FROM library_users WHERE id=$1',[current.user.id])).rows[0].free_allowance_held_until,null);
+  assert.deepEqual(await f.accounts.delete(current.user,await authentication(f,current.user)),{deleted:true});
+  const again=await guest(f,Buffer.alloc(32,6).toString('base64'),'lyrica_g_'+'d'.repeat(43),{deviceToken}),next=await session(f,again);
+  assert.ok((await f.db.query('SELECT free_allowance_held_until FROM library_users WHERE id=$1',[next.user.id])).rows[0].free_allowance_held_until);
+  assert.equal((await new MembershipStore(f.store.db).snapshot(next.user.id)).libraryTranslations.remaining,0);
+});
 
-test('constructors perform no SQL and schema-absent account transitions never query V2 state or new fields',async t=>{
+test('access code (beta) accounts are not deletable and keep every row and session',async t=>{
+  const f=await fixture(t),{current}=await betaAccount(f),before=await accountState(f);
+  assert.equal(current.user.id,'reader-a');
+  await assert.rejects(f.accounts.delete(current.user,await authentication(f,current.user)),notDeletable);
+  assert.deepEqual(await accountState(f),before);
+  assert.equal((await f.auth.authenticate(current.session)).id,'reader-a');
+});
+
+test('an account that becomes beta after the preflight is refused inside the locked transaction',async t=>{
+  let armed=false;
+  const f=await fixture(t,{afterQuery:async({sql,transactionID},raw)=>{
+    if(armed&&transactionID===null&&/^SELECT access_kind FROM library_users/.test(sql)){armed=false;await raw.query("UPDATE library_users SET access_kind='beta' WHERE id LIKE 'guest-%'");}
+  }});
+  const {current}=await guestAccount(f),prepared=await authentication(f,current.user),before=await accountState(f);armed=true;
+  await assert.rejects(f.accounts.delete(current.user,prepared),notDeletable);
+  const after=await accountState(f);
+  assert.deepEqual(after.library_tokens,before.library_tokens);assert.deepEqual(after.app_attest_keys,before.app_attest_keys);
+  assert.deepEqual(after.app_auth_sessions,before.app_auth_sessions);
+});
+
+test('public account HTTP: delete needs a session bearer and exactly {action:"delete"}; removed actions are refused',async t=>{
+  const f=await fixture(t),handler=createAccountHandler({store:f.accounts,authStore:f.auth});
+  const {current}=await guestAccount(f);
+  const call=async(body,token)=>{const res=createMockRes();await handler({method:'POST',headers:token?{authorization:'Bearer '+token}:{},body,socket:{remoteAddress:'10.2.2.2'}},res);return res;};
+  for(const [body,token,status] of [
+    [{action:'delete'},null,401],[{action:'delete'},credential,401],
+    [{action:'delete',bundleID},current.session,400],[{action:'delete',challenge:'x'.repeat(43)},current.session,400],
+    [{action:'signOut'},current.session,400],[{action:'apple',bundleID,challenge:'x'.repeat(43),identityToken:'i',authorizationCode:'c'},current.session,400],
+    [{action:'challenge',purpose:'apple',bundleID,keyID},null,400],[{action:'challenge',purpose:'delete',bundleID,keyID},current.session,400],
+    [{action:'challenge',purpose:'guest',bundleID,keyID,admin:true},null,400],
+    [{action:'guest',bundleID,keyID,credential,challenge:'x'.repeat(43),attestation:'invalid'},null,400]])
+    assert.equal((await call(body,token)).statusCode,status,JSON.stringify(body));
+  assert.equal((await f.auth.authenticate(current.session)).id,current.user.id);
+  const removed=await call({action:'delete'},current.session);
+  assert.equal(removed.statusCode,200);assert.deepEqual(removed.body,{version:1,deleted:true});
+  await assert.rejects(f.auth.authenticate(current.session),{code:'session_expired'});
+  const beta=await betaAccount(f),refused=await call({action:'delete'},beta.current.session);
+  assert.equal(refused.statusCode,403);assert.deepEqual(refused.body,{version:1,code:'account_not_deletable'});
+});
+
+test('HTTP prepares the exact bearer once and maps stale exact evidence to app_access_revoked without leaking it',async t=>{
+  const f=await fixture(t),{g,current}=await guestAccount(f),prepared=[];
+  const prepare=f.accounts.prepareWriterAuthentication.bind(f.accounts);
+  // The source session is replaced right after the handler prepares it.
+  f.accounts.prepareWriterAuthentication=async token=>{prepared.push(token);const handle=await prepare(token);await session(f,g,2);return handle;};
+  const handler=createAccountHandler({store:f.accounts,authStore:f.auth}),res=createMockRes();
+  await handler({method:'POST',headers:{authorization:'Bearer '+current.session},body:{action:'delete'}},res);
+  assert.deepEqual(prepared,[current.session]);
+  assert.equal(res.statusCode,403);assert.deepEqual(res.body,{version:1,code:'app_access_revoked'});
+  for(const secret of [current.session,digest(current.session),current.user.credentialDigest])assert.equal(JSON.stringify(res.body).includes(secret),false);
+  assert.equal((await f.db.query('SELECT disabled FROM library_users WHERE id=$1',[current.user.id])).rows[0].disabled,false);
+});
+
+test('the separate account login can enroll with a hold and delete but cannot change generation budgets or grants',async t=>{
+  const f=await fixture(t,{deviceCheck:mockDeviceCheck().device});
+  await f.db.query('CREATE ROLE lyrica_account_v1');
+  await replayMembershipRoleGrants(f.db);
+  await replayMembershipRoleGrants(f.db); // Late provisioning is idempotent.
+  await f.db.query('SET ROLE lyrica_account_v1');
+  // Configured DeviceCheck without a token holds: the INSERT needs the 039 column grant.
+  const g=await guest(f);
+  await assert.rejects(f.db.query("UPDATE library_users SET unlimited_generation=true"),e=>e.code==='42501');
+  await assert.rejects(f.db.query("UPDATE library_users SET free_allowance_held_until=NULL"),e=>e.code==='42501');
+  await assert.rejects(f.db.query("UPDATE membership_settings SET purchases_enabled=true"),e=>e.code==='42501');
+  await assert.rejects(f.db.query("UPDATE membership_settings SET relay_access='everyone'"),e=>e.code==='42501');
+  await assert.rejects(f.db.query("UPDATE library_settings SET enabled=true"),e=>e.code==='42501');
+  await assert.rejects(f.db.query("SELECT public.slide_guest_credential_expiry('x')"),e=>e.code==='42501');
+  await f.db.query('RESET ROLE');
+  const signed=await session(f,g);
+  assert.ok((await f.db.query('SELECT free_allowance_held_until FROM library_users WHERE id=$1',[signed.user.id])).rows[0].free_allowance_held_until);
+  await f.db.query('SET ROLE lyrica_account_v1');
+  assert.deepEqual(await f.accounts.delete(signed.user,await authentication(f,signed.user)),{deleted:true});
+  await f.db.query('RESET ROLE');
+});
+
+test('constructors perform no SQL and schema-absent deletion never queries V2 state or new fields',async t=>{
  const trace=[],f=await fixture(t,{trace});trace.length=0;
- const store=new AccountStore(f.observedDB,{policy,apple:f.apple});
+ const store=new AccountStore(f.observedDB,{policy,deviceCheck:unconfigured});
  const writer=createWriterAuthContext({authStore:f.auth,environment:'production'});
  assert.equal(typeof writer.prepare,'function');assert.deepEqual(trace,[]);
  for(const table of ['privacy_personas','listening_v2_sessions','listening_v2_outbox'])
   assert.equal((await f.db.query('SELECT to_regclass($1) AS name',[table])).rows[0].name,null);
- assert.equal(Number((await f.db.query(`SELECT count(*) AS n FROM information_schema.columns
-  WHERE column_name IN ('sessions_privacy_epoch','controller_privacy_epoch','private_transfer_from_generation')`)).rows[0].n),0);
- const {g,current}=await signedAccount(f);
- const input=await appleInput(f,current.user,'delete');
- assert.deepEqual(await f.accounts.delete(current.user,input,await authentication(f,current.user)),{deleted:true});
- const other=await guest(f,Buffer.alloc(32,9).toString('base64'),'lyrica_g_'+'z'.repeat(43));
- const active=await session(f,other);
- assert.deepEqual(await f.accounts.signOut(active.user,await authentication(f,active.user)),{signedOut:true});
+ const {g,current}=await guestAccount(f);
+ assert.deepEqual(await f.accounts.delete(current.user,await authentication(f,current.user)),{deleted:true});
  assert.equal(trace.some(row=>/privacy_personas|listening_v2_|sessions_privacy_epoch|controller_privacy_epoch|private_transfer_from_generation/.test(row.sql??'')),false);
  assert.equal((await f.db.query('SELECT revoked FROM library_tokens WHERE digest=$1',[digest(g.token)])).rows[0].revoked,true);
  // The unused second store shares no handles with the first store.
- await assert.rejects(store.signOut(active.user,{}),denied);
+ await assert.rejects(store.delete(current.user,{}),denied);
 });
 
-for(const operation of ['signIn','delete','signOut'])test(operation+' rejects missing, fabricated, serialized and foreign-store handles before Apple IO',async t=>{
- const f=await fixture(t),{current}=await signedAccount(f),input=await appleInput(f,current.user,operation==='delete'?'delete':'apple');
- const own=await authentication(f,current.user),other=new AccountStore(f.observedDB,{policy,apple:f.apple});
+test('delete rejects missing, fabricated, serialized and foreign-store handles before any write',async t=>{
+ const f=await fixture(t),{current}=await guestAccount(f);
+ const own=await authentication(f,current.user),other=new AccountStore(f.observedDB,{policy,deviceCheck:unconfigured});
  const foreign=await other.prepareWriterAuthentication(current.session);
- const factory=createWriterAuthContext({authStore:f.auth,environment:'production'});
- const raw=await factory.prepare(current.session);
- let calls=0;f.apple.authenticate=async()=>{calls++;throw Error('must not call Apple');};f.apple.revoke=async()=>{calls++;};
+ const raw=await createWriterAuthContext({authStore:f.auth,environment:'production'}).prepare(current.session);
  const before=await accountState(f);
- for(const handle of [undefined,null,{},JSON.parse(JSON.stringify(own)),foreign,raw]){
-  if(operation==='signOut')await assert.rejects(f.accounts.signOut(current.user,handle),denied);
-  else await assert.rejects(f.accounts[operation](current.user,input,handle),denied);
- }
+ for(const handle of [undefined,null,{},JSON.parse(JSON.stringify(own)),foreign,raw])
+  await assert.rejects(f.accounts.delete(current.user,handle),denied);
  for(const changed of [{...current.user,id:'reader-a'},{...current.user,keyID:Buffer.alloc(32,19).toString('base64')},
-  {...current.user,bundleID:'other.bundle'}]){
-  if(operation==='signOut')await assert.rejects(f.accounts.signOut(changed,own),denied);
-  else await assert.rejects(f.accounts[operation](changed,input,own),denied);
- }
- assert.equal(calls,0);assert.deepEqual(await accountState(f),before);
+  {...current.user,bundleID:'other.bundle'}])
+  await assert.rejects(f.accounts.delete(changed,own),denied);
+ assert.deepEqual(await accountState(f),before);
  assert.equal(JSON.stringify(own).includes(current.session),false);
  assert.equal(JSON.stringify(own).includes(digest(current.session)),false);
 });
 
-for(const operation of ['signIn','delete'])for(const loss of ['replaced','revoked','deleted','expired'])
-test(operation+' refuses exact source '+loss+' during Apple IO while sibling session remains live',async t=>{
- const f=await fixture(t);
- let g,current;
- if(operation==='delete')({g,current}=await signedAccount(f));
- else {g=await guest(f);current=await session(f,g);}
- const liveSibling=await sibling(f,g),input=await appleInput(f,current.user,operation==='delete'?'delete':'apple');
- const prepared=await authentication(f,current.user),original=f.apple.authenticate;
- let afterExternal,replacement;
- f.apple.authenticate=async value=>{
-  if(loss==='replaced')replacement=await session(f,g,operation==='delete'?3:2);
-  else if(loss==='revoked')await f.db.query('UPDATE app_auth_sessions SET revoked=true WHERE digest=$1',[digest(current.session)]);
-  else if(loss==='deleted')await f.db.query('DELETE FROM app_auth_sessions WHERE digest=$1',[digest(current.session)]);
-  else await f.db.query("UPDATE app_auth_sessions SET expires_at=clock_timestamp()-interval '1 ms' WHERE digest=$1",[digest(current.session)]);
-  assert.equal((await f.auth.authenticate(liveSibling.session)).id,current.user.id);
-  afterExternal=await accountState(f);return original(value);
- };
- await assert.rejects(f.accounts[operation](current.user,input,prepared),denied);
- assert.deepEqual(await accountState(f),afterExternal); // includes nonce, identity, token, key and data rollback
+for(const loss of ['replaced','revoked','deleted','expired'])
+test('delete refuses exact source '+loss+' after prepare while a sibling session remains live',async t=>{
+ const f=await fixture(t),{g,current}=await guestAccount(f),liveSibling=await sibling(f,g);
+ const prepared=await authentication(f,current.user);
+ let replacement;
+ if(loss==='replaced')replacement=await session(f,g,2);
+ else if(loss==='revoked')await f.db.query('UPDATE app_auth_sessions SET revoked=true WHERE digest=$1',[digest(current.session)]);
+ else if(loss==='deleted')await f.db.query('DELETE FROM app_auth_sessions WHERE digest=$1',[digest(current.session)]);
+ else await f.db.query("UPDATE app_auth_sessions SET expires_at=clock_timestamp()-interval '1 ms' WHERE digest=$1",[digest(current.session)]);
+ const before=await accountState(f);
+ await assert.rejects(f.accounts.delete(current.user,prepared),denied);
+ assert.deepEqual(await accountState(f),before);
  assert.equal((await f.auth.authenticate(liveSibling.session)).id,current.user.id);
  if(replacement)assert.equal((await f.auth.authenticate(replacement.session)).keyID,current.user.keyID);
 });
 
-for(const operation of ['signIn','delete'])test(operation+' wins with the exact same source and later sibling revocation cannot undo its commit',async t=>{
- const f=await fixture(t);let g,current;
- if(operation==='delete')({g,current}=await signedAccount(f));else {g=await guest(f);current=await session(f,g);}
- const liveSibling=await sibling(f,g),input=await appleInput(f,current.user,operation==='delete'?'delete':'apple');
- const original=f.apple.authenticate;f.apple.authenticate=async value=>{
-  assert.equal((await f.auth.authenticate(current.session)).keyID,current.user.keyID);
-  assert.equal((await f.auth.authenticate(liveSibling.session)).id,current.user.id);return original(value);
- };
- const result=await f.accounts[operation](current.user,input,await authentication(f,current.user));
+test('delete wins with the exact same source and later sibling revocation cannot undo its commit',async t=>{
+ const f=await fixture(t),{g,current}=await guestAccount(f),liveSibling=await sibling(f,g);
+ assert.deepEqual(await f.accounts.delete(current.user,await authentication(f,current.user)),{deleted:true});
  await f.db.query('UPDATE app_auth_sessions SET revoked=true WHERE digest=$1',[digest(liveSibling.session)]);
  await assert.rejects(f.auth.authenticate(current.session),{code:'session_expired'});
  assert.equal((await f.db.query('SELECT revoked FROM library_tokens WHERE digest=$1',[current.user.credentialDigest])).rows[0].revoked,true);
- if(operation==='signIn'){
-  assert.match(result.credential,/^lyrica_a_[A-Za-z0-9_-]{43}$/);
-  assert.equal((await f.db.query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[g.key])).rows[0].user_id,result.userID);
- }else assert.deepEqual(result,{deleted:true});
 });
 
-test('signOut requires its submitted live session even when another session authenticates the same tuple',async t=>{
- const f=await fixture(t),g=await guest(f),current=await session(f,g),prepared=await authentication(f,current.user);
- const replacement=await session(f,g,2),before=await accountState(f);
- assert.deepEqual(replacement.user,current.user);
- await assert.rejects(f.accounts.signOut(current.user,prepared),denied);
- assert.deepEqual(await accountState(f),before);
- assert.deepEqual(await f.accounts.signOut(replacement.user,await authentication(f,replacement.user)),{signedOut:true});
- await assert.rejects(f.auth.authenticate(replacement.session),{code:'session_expired'});
-});
-
-test('failed delete rolls back consumed nonce and every account write after the last data mutation',async t=>{
+test('failed delete rolls back every account write after the last data mutation',async t=>{
  let armed=false,failed=false;
  const f=await fixture(t,{afterQuery:async({sql},tx)=>{
   if(armed&&/^UPDATE correction_reports/.test(sql)){failed=true;await tx.query('SELECT 1/0');}
  }});
- const {current}=await signedAccount(f),input=await appleInput(f,current.user,'delete'),prepared=await authentication(f,current.user);
+ const {current}=await guestAccount(f),prepared=await authentication(f,current.user);
  const before=await accountState(f);armed=true;
- await assert.rejects(f.accounts.delete(current.user,input,prepared));
+ await assert.rejects(f.accounts.delete(current.user,prepared));
  assert.equal(failed,true);assert.deepEqual(await accountState(f),before);
  assert.equal((await f.auth.authenticate(current.session)).id,current.user.id);
  armed=false;
- assert.deepEqual(await f.accounts.delete(current.user,input,await authentication(f,current.user)),{deleted:true});
+ assert.deepEqual(await f.accounts.delete(current.user,await authentication(f,current.user)),{deleted:true});
 });
 
-for(const operation of ['signIn','signOut','delete'])for(const relation of ['app_auth_sessions','library_tokens'])
-test(operation+' final verification rolls back when captured '+relation+' deadline crosses after intentional mutation',async t=>{
- let armed=false,installed=false,crossed=false,deadline;
+for(const relation of ['app_auth_sessions','library_tokens'])
+test('delete final verification rolls back when captured '+relation+' deadline crosses after intentional mutation',async t=>{
+ let armed=false,installed=false,crossed=false,deadline,current;
  const trace=[],f=await fixture(t,{trace,beforeQuery:async({sql},tx)=>{
   if(armed&&!installed&&/pg_current_xact_id/.test(sql)){
    installed=true;
@@ -304,49 +296,27 @@ test(operation+' final verification rolls back when captured '+relation+' deadli
    deadline=value.deadline;
   }
  },afterQuery:async({sql},tx)=>{
-  const lastMutation=operation==='signIn'?/^DELETE FROM app_auth_sessions/.test(sql):
-   operation==='signOut'?/^UPDATE library_tokens SET revoked=true WHERE digest=/.test(sql):/^UPDATE correction_reports/.test(sql);
-  if(armed&&installed&&!crossed&&lastMutation){
+  if(armed&&installed&&!crossed&&/^UPDATE correction_reports/.test(sql)){
    crossed=true;await setTimeout(350);
    const time=(await tx.query('SELECT clock_timestamp()>=$1::timestamptz AS expired,now()<$1::timestamptz AS stale',[deadline])).rows[0];
    assert.equal(time.expired,true);assert.equal(time.stale,true);
   }
  }});
- let current,g;
- if(operation==='delete')({current,g}=await signedAccount(f));else {g=await guest(f);current=await session(f,g);}
+ ({current}=await guestAccount(f));
  if(relation==='app_auth_sessions')await f.db.query('UPDATE library_tokens SET expires_at=NULL WHERE digest=$1',[current.user.credentialDigest]);
- const input=operation==='signOut'?null:await appleInput(f,current.user,operation==='delete'?'delete':'apple');
  const prepared=await authentication(f,current.user),before=await accountState(f);armed=true;trace.length=0;
- if(operation==='signOut')await assert.rejects(f.accounts.signOut(current.user,prepared),denied);
- else await assert.rejects(f.accounts[operation](current.user,input,prepared),denied);
+ await assert.rejects(f.accounts.delete(current.user,prepared),denied);
  assert.equal(installed,true);assert.equal(crossed,true);assert.deepEqual(await accountState(f),before);
  assert.equal(trace.at(-1).event,'ROLLBACK');
 });
 
-for(const mismatch of ['C2 owner','target key owner'])test('final auth postimage rejects '+mismatch+' mismatch rather than authorizing a different Apple target',async t=>{
- const f=await fixture(t),g=await guest(f),current=await session(f,g),input=await appleInput(f,current.user);
- const prepared=await authentication(f,current.user);
- if(mismatch==='C2 owner')await f.db.exec(`CREATE FUNCTION account_test_wrong_owner() RETURNS trigger LANGUAGE plpgsql AS $$
-  BEGIN IF NEW.user_id LIKE 'apple-%' THEN NEW.user_id='reader-a'; END IF; RETURN NEW; END $$;
-  CREATE TRIGGER account_test_wrong_owner BEFORE INSERT ON library_tokens FOR EACH ROW EXECUTE FUNCTION account_test_wrong_owner()`);
- else await f.db.exec(`CREATE FUNCTION account_test_wrong_owner() RETURNS trigger LANGUAGE plpgsql AS $$
-  BEGIN IF NEW.user_id LIKE 'apple-%' THEN NEW.user_id='reader-a'; END IF; RETURN NEW; END $$;
-  CREATE TRIGGER account_test_wrong_owner BEFORE UPDATE ON app_attest_keys FOR EACH ROW EXECUTE FUNCTION account_test_wrong_owner()`);
- const before=await accountState(f);
- await assert.rejects(f.accounts.signIn(current.user,input,prepared),denied);
- assert.deepEqual(await accountState(f),before);
-});
-
-for(const operation of ['signIn','signOut','delete'])test(operation+' takes one ordered writer pass, locks all required keys before sessions and performs no IO after final auth SQL',async t=>{
- const trace=[],f=await fixture(t,{trace});let current,g;
- if(operation==='delete')({g,current}=await signedAccount(f));else {g=await guest(f);current=await session(f,g);}
- const other=await sibling(f,g),input=operation==='signOut'?null:await appleInput(f,current.user,operation==='delete'?'delete':'apple');
+test('delete takes one ordered writer pass, locks all required keys before sessions and performs no IO after final auth SQL',async t=>{
+ const trace=[],f=await fixture(t,{trace}),{g,current}=await guestAccount(f),other=await sibling(f,g);
  const prepared=await authentication(f,current.user);
  const captured=(await f.db.query(`SELECT s.expires_at::text AS session_deadline,t.expires_at::text AS credential_deadline
   FROM app_auth_sessions s JOIN library_tokens t ON t.digest=s.credential_digest WHERE s.digest=$1`,[digest(current.session)])).rows[0];
- trace.length=0;let outcome;
- if(operation==='signOut')outcome=await f.accounts.signOut(current.user,prepared);
- else outcome=await f.accounts[operation](current.user,input,prepared);
+ trace.length=0;
+ assert.deepEqual(await f.accounts.delete(current.user,prepared),{deleted:true});
  const tx=trace.find(row=>row.event==='BEGIN').transactionID,entries=trace.filter(row=>row.transactionID===tx);
  assert.equal(entries.at(-1).event,'COMMIT');
  const sql=entries.filter(row=>row.sql),locks=sql.filter(row=>/FOR (?:NO KEY )?UPDATE/.test(row.sql));
@@ -364,74 +334,34 @@ for(const operation of ['signIn','signOut','delete'])test(operation+' takes one 
  assert.deepEqual(categories,[...categories].sort((a,b)=>a-b));
  const keyLocks=locks.filter(row=>/FROM (?:public\.)?app_attest_keys/.test(row.sql));
  assert.ok(keyLocks.some(row=>row.args.includes(current.user.keyID)));
- if(operation!=='signIn')assert.ok(keyLocks.some(row=>row.args.includes(other.user.keyID)));
+ assert.ok(keyLocks.some(row=>row.args.includes(other.user.keyID)));
  const sessionLocks=locks.filter(row=>/FROM (?:public\.)?app_auth_sessions/.test(row.sql));
  assert.ok(sessionLocks.some(row=>row.args.some(value=>value===digest(current.session)||Array.isArray(value)&&value.includes(digest(current.session)))));
- // Final auth sampling must be the last statement, followed directly by transaction return/COMMIT.
+ // Final auth sampling must be the last statement, followed directly by COMMIT,
+ // and it checks S and C's captured exact deadlines after deletion removed S.
  assert.match(sql.at(-1).sql,/clock_timestamp\(\)/);
- // The exact S digest was proved in the session lock above. Final auth must
- // still check S's captured exact deadline after signIn/delete removed S.
- assert.equal(sql.at(-1).args[0],captured.session_deadline);
- assert.equal(sql.at(-1).args[1],captured.credential_deadline);
- const targetDeadline=operation==='signIn'?(await f.db.query('SELECT expires_at::text AS deadline FROM library_tokens WHERE digest=$1',
-  [digest(outcome.credential)])).rows[0].deadline:null;
- assert.equal(sql.at(-1).args[2],targetDeadline);
+ assert.deepEqual(sql.at(-1).args,[captured.session_deadline,captured.credential_deadline]);
 });
 
-test('fresh target credential unique failure rolls back identity creation and nonce consumption',async t=>{
- const f=await fixture(t),g=await guest(f),current=await session(f,g),input=await appleInput(f,current.user);
- const prepared=await authentication(f,current.user);
- await f.db.exec(`CREATE FUNCTION account_test_digest_collision() RETURNS trigger LANGUAGE plpgsql AS $$
-  BEGIN IF NEW.user_id LIKE 'apple-%' THEN NEW.digest='${current.user.credentialDigest}'; END IF; RETURN NEW; END $$;
-  CREATE TRIGGER account_test_digest_collision BEFORE INSERT ON library_tokens FOR EACH ROW EXECUTE FUNCTION account_test_digest_collision()`);
+for(const state of ['empty','populated'])test('account deletion refuses '+state+' retained V2 schema before any write',async t=>{
+ const f=await fixture(t),{current}=await guestAccount(f);
+ await f.db.exec('CREATE SCHEMA listening_v2');
+ if(state==='populated')await f.db.exec("CREATE TABLE listening_v2.output_guards(id text PRIMARY KEY, data jsonb); INSERT INTO listening_v2.output_guards VALUES('guard','{\"retained\":true}')");
  const before=await accountState(f);
- await assert.rejects(f.accounts.signIn(current.user,input,prepared),{code:'23505'});
+ await assert.rejects(f.accounts.delete(current.user,await authentication(f,current.user)),{code:'account_data_cleanup_required',status:503});
  assert.deepEqual(await accountState(f),before);
+ if(state==='populated')assert.deepEqual((await f.db.query('SELECT * FROM listening_v2.output_guards')).rows,[{id:'guard',data:{retained:true}}]);
 });
 
-for(const sameOwner of [true,false])test('Apple '+(sameOwner?'A-to-A':'A-to-B')+' preserves opened translations and user data while moving only the exact device',async t=>{
- const f=await fixture(t),{current,g}=await signedAccount(f),members=new MembershipStore(f.store.db);
- await admitLibraryTranslation(f.store.db,current.user.id,'opened-song',{unlock:true});const original=await members.snapshot(current.user.id);
- await f.db.query('UPDATE library_users SET unlimited_generation=true WHERE id=$1',[current.user.id]);
- const other=await sibling(f,g);
- if(!sameOwner)f.apple.authenticate=async()=>({subjectHash:digest('second-subject'),refreshTokenEncrypted:'second-encrypted'});
- const result=await login(f,current.user);
- assert.equal(result.userID===current.user.id,sameOwner);
- const retained=await members.snapshot(current.user.id);
- assert.equal(retained.account.appAccountToken,original.account.appAccountToken);assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM membership_usage WHERE user_id=$1',[current.user.id])).rows[0].n),1);
- assert.equal((await f.db.query('SELECT unlimited_generation FROM library_users WHERE id=$1',[current.user.id])).rows[0].unlimited_generation,true);
- assert.equal((await f.db.query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[other.user.keyID])).rows[0].user_id,current.user.id);
- assert.equal((await f.db.query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[current.user.keyID])).rows[0].user_id,result.userID);
-});
-
-test('HTTP prepares each exact bearer once and preserves V1 Apple, signOut and delete DTOs',async t=>{
- const f=await fixture(t),g=await guest(f),current=await session(f,g),preparedTokens=[];
- const prepare=f.accounts.prepareWriterAuthentication.bind(f.accounts);
- f.accounts.prepareWriterAuthentication=async token=>{preparedTokens.push(token);return prepare(token);};
- const handler=createAccountHandler({store:f.accounts,authStore:f.auth}),request=async(token,body)=>{
-  const res=createMockRes();await handler({method:'POST',headers:{authorization:'Bearer '+token},body},res);return res;
- };
- const challenge=await request(current.session,{action:'challenge',purpose:'apple',bundleID});
- assert.equal(challenge.statusCode,200);assert.deepEqual(preparedTokens,[]);
- const apple=await request(current.session,{action:'apple',bundleID,challenge:challenge.body.challenge,identityToken:'identity',authorizationCode:'code'});
- assert.equal(apple.statusCode,200);assert.deepEqual(Object.keys(apple.body).sort(),['credential','userID','version']);
- const active=await session(f,{...g,token:apple.body.credential},2);
- const deleting=await appleInput(f,active.user,'delete');
- const removed=await request(active.session,{action:'delete',...deleting});
- assert.equal(removed.statusCode,200);assert.deepEqual(removed.body,{version:1,deleted:true});
- const other=await guest(f,Buffer.alloc(32,13).toString('base64'),'lyrica_g_'+'q'.repeat(43)),out=await session(f,other);
- const signedOut=await request(out.session,{action:'signOut'});
- assert.equal(signedOut.statusCode,200);assert.deepEqual(signedOut.body,{version:1,signedOut:true});
- assert.deepEqual(preparedTokens,[current.session,active.session,out.session]);
-});
-
-test('HTTP maps stale exact evidence to existing app_access_revoked and leaks no bearer or digest',async t=>{
- const f=await fixture(t),g=await guest(f),current=await session(f,g),input=await appleInput(f,current.user);
- const original=f.apple.authenticate;f.apple.authenticate=async value=>{await session(f,g,2);return original(value);};
- const handler=createAccountHandler({store:f.accounts,authStore:f.auth}),res=createMockRes();
- await handler({method:'POST',headers:{authorization:'Bearer '+current.session},body:{action:'apple',...input}},res);
- assert.equal(res.statusCode,403);assert.deepEqual(res.body,{version:1,code:'app_access_revoked'});
- for(const secret of [current.session,digest(current.session),current.user.credentialDigest])assert.equal(JSON.stringify(res.body).includes(secret),false);
+test('retained schema appearing after the preflight rolls back every transactional deletion write',async t=>{
+ let armed=false;
+ const f=await fixture(t,{beforeQuery:async({transactionID},raw)=>{
+  if(armed&&transactionID!==null){armed=false;await raw.query('CREATE SCHEMA listening_v2');}
+ }});
+ const {current}=await guestAccount(f),prepared=await authentication(f,current.user),before=await accountState(f);armed=true;
+ await assert.rejects(f.accounts.delete(current.user,prepared),{code:'account_data_cleanup_required',status:503});
+ assert.deepEqual(await accountState(f),before);
+ assert.equal((await f.db.query("SELECT to_regnamespace('listening_v2')::text AS name")).rows[0].name,null);
 });
 
 test('AccountStore construction performs no database work',()=>{
@@ -439,21 +369,10 @@ test('AccountStore construction performs no database work',()=>{
  new AccountStore(db,{policy});
 });
 
-for(const state of ['empty','populated'])test('account deletion refuses '+state+' retained V2 schema before external revocation',async context=>{
- const fixtureData=await fixture(context),{current}=await signedAccount(fixtureData),input=await appleInput(fixtureData,current.user,'delete');
- await fixtureData.db.exec('CREATE SCHEMA listening_v2');
- if(state==='populated')await fixtureData.db.exec("CREATE TABLE listening_v2.output_guards(id text PRIMARY KEY, data jsonb); INSERT INTO listening_v2.output_guards VALUES('guard','{\"retained\":true}')");
- let revocations=0;fixtureData.apple.revoke=async()=>{revocations++;};
- const before=await accountState(fixtureData);
- await assert.rejects(fixtureData.accounts.delete(current.user,input,await authentication(fixtureData,current.user)),{code:'account_data_cleanup_required',status:503});
- assert.equal(revocations,0);assert.deepEqual(await accountState(fixtureData),before);
- if(state==='populated')assert.deepEqual((await fixtureData.db.query('SELECT * FROM listening_v2.output_guards')).rows,[{id:'guard',data:{retained:true}}]);
-});
-
-test('retained schema appearing after preflight rolls back every transactional deletion write',async context=>{
- const fixtureData=await fixture(context),{current}=await signedAccount(fixtureData),input=await appleInput(fixtureData,current.user,'delete');
- fixtureData.apple.revoke=async()=>{await fixtureData.db.exec('CREATE SCHEMA listening_v2');};
- const before=await accountState(fixtureData);
- await assert.rejects(fixtureData.accounts.delete(current.user,input,await authentication(fixtureData,current.user)),{code:'account_data_cleanup_required',status:503});
- assert.deepEqual(await accountState(fixtureData),before);
+test('Sign in with Apple and sign-out are gone from the account store',async t=>{
+ const f=await fixture(t);
+ for(const method of ['signIn','signOut'])assert.equal(f.accounts[method],undefined);
+ const source=await readFile(new URL('../../api/utils/membership/accounts.js',import.meta.url),'utf8')+
+  await readFile(new URL('../../api/account.js',import.meta.url),'utf8');
+ assert.doesNotMatch(source,/apple-identity|identityToken|authorizationCode|account_identities|lyrica_a_/);
 });

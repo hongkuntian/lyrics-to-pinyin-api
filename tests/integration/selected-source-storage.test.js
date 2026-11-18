@@ -217,8 +217,7 @@ test('queued selected dispatch rejects unsupported revisions and invalid persist
 test('account deletion removes only that account selected links and cannot recover old content after reactivation',async t=>{
   const {db,store,doc}=await fixture(t);await store.saveSelectedDocument(doc,'reader-b');await ready(store,doc);
   const explanation=await reserveExplanation(store.db,study(doc,{allowGeneration:true}));
-  await db.query("UPDATE library_users SET access_kind='apple' WHERE id='reader-a'");
-  await db.query("INSERT INTO account_identities(subject_hash,user_id,app_account_token) VALUES('selected-subject','reader-a',$1)",[randomUUID()]);
+  await db.query("UPDATE library_users SET access_kind='guest' WHERE id='reader-a'");
   await db.query('UPDATE membership_settings SET public_access_enabled=true');
   await db.exec(await readFile(new URL('../../db/032-auth-token-row-locks.sql',import.meta.url),'utf8'));
   const policy={audience:'test',environment:'development',prefix:'9ESZX68J8U',bundles:['com.test.Lyrica']},bundleID=policy.bundles[0],keyID=Buffer.alloc(32,31).toString('base64');
@@ -228,10 +227,9 @@ test('account deletion removes only that account selected links and cannot recov
   const challenge=await auth.challenge('token-a',{keyID,bundleID,purpose:'session'});
   const session=await auth.session('token-a',{keyID,bundleID,...challenge,assertion:Buffer.from('1').toString('base64')});
   const user=await auth.authenticate(session.token);
-  const accounts=new AccountStore(store.db,{policy,apple:{authenticate:async()=>({subjectHash:'selected-subject',refreshTokenEncrypted:'proof'}),revoke:async()=>{}}});
-  const input={bundleID,...(await accounts.challenge({purpose:'delete',bundleID},user))};
+  const accounts=new AccountStore(store.db,{policy});
   const authentication=await accounts.prepareWriterAuthentication(session.token);
-  assert.deepEqual(await accounts.delete(user,input,authentication),{deleted:true});
+  assert.deepEqual(await accounts.delete(user,authentication),{deleted:true});
   assert.deepEqual((await db.query('SELECT user_id FROM selected_source_access')).rows.map(x=>x.user_id),['reader-b']);
   await assert.rejects(store.reserve(request(doc)),unavailable);
   await assert.rejects(reserveExplanation(store.db,study(doc)),unavailable);

@@ -30,7 +30,6 @@ const sourcePins={
  "api/utils/lyric-quality.js": "c7ddea52aa758f02d8aa16ad15b645d2f28c0ccda9102bec77dc24f73c983f29",
  "api/utils/lyric-selection.js": "551647dc70180ab363c31a9c4c98519a2e2be5f1ac27c40d1bd5883891d55fd7",
  "api/utils/membership/accounts.js": "15a7fa51080bb68081a193c7e4c7c0bd72126ecf602b796518b21ecc473465ab",
- "api/utils/membership/apple-identity.js": "f7e31baaffb5ad0a684c5f7519fb38e186dd2d4e7a297f14b042681bef31141f",
  "api/utils/membership/policy.js": "a167d7c6bb90b486a5375b1f53c4ae962da50618aea3e78347c20891ad97af11",
  "api/utils/membership/store.js": "cc9d2af0b18e8434b8f0d1706081b98dd2f0e6fe152ec64076ffeb4953941088",
  "api/utils/netease-title-evidence.js": "ec2ded79cb5734d2be40113f3cd7077241b5a41e032750f875d1b82d341d4fae",
@@ -90,7 +89,7 @@ const sourcePins={
 const refreshPinPaths=["api/utils/app-auth/admin.js","api/utils/app-auth/store.js","api/utils/app-auth/auth-context.js","api/utils/app-auth/errors.js","api/utils/membership/accounts.js","api/utils/membership/account-data-privacy.js","api/utils/song-library/store.js","scripts/library-migrations.js","scripts/membership-role-grants.js","db/036-account-data-privacy.sql"];
 const gitRoot=fileURLToPath(new URL('../../',import.meta.url));
 const git=(...args)=>execFileSync('git',args,{cwd:gitRoot,encoding:'utf8',stdio:['ignore','pipe','pipe'],env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}}).trim();
-const correction='036-account-data-privacy.sql',namespace='037-lyrica-namespace.sql',retirement='038-retire-spotify-observer.sql';
+const correction='036-account-data-privacy.sql',namespace='037-lyrica-namespace.sql',retirement='038-retire-spotify-observer.sql',anonymous='039-anonymous-accounts.sql';
 const aclMetadataSHA256='7ee564f93b162fc2b75d6ed791622414c2e44449ff776cc61705644b433e1972';
 const existingTokenFields=['digest','user_id','revoked','created_at','expires_at'];
 const observed={
@@ -150,7 +149,7 @@ async function connect(){
  ({createCurrentAuthContext}=await import('../../api/utils/app-auth/auth-context.js'));
  const registered=await import('../../scripts/library-migrations.js');migrationNames=registered.migrationNames;
  migrateLibrary=async database=>{
-  const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>n!==correction&&n!==namespace&&n!==retirement));
+  const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>![correction,namespace,retirement,anonymous].includes(n)));
   try{return await registered.migrateLibrary(database);}
   finally{migrationNames.splice(0,migrationNames.length,...saved);}
  };
@@ -437,7 +436,7 @@ async function lateReplay(h){
 const cryptoFixtures={attestFn:()=>({publicKey:'external-crypto-fixture',receipt:Buffer.from('fixture')}),
  assertionFn:({assertion})=>Number(assertion.toString())};
 const auth=db=>new AppAuthStore(db,{policy,...cryptoFixtures});
-const accounts=db=>new AccountStore(db,{policy,attestFn:cryptoFixtures.attestFn,apple:Object.freeze({})});
+const accounts=db=>new AccountStore(db,{policy,attestFn:cryptoFixtures.attestFn});
 async function seed(h,label){
  const id='auth-fixture-'+randomUUID(),credential='fixture-'+randomUUID(),key=Buffer.from(sha(id),'hex').toString('base64');
  await h.query("INSERT INTO library_users(id,access_kind) VALUES($1,'guest')",[id]);
@@ -474,7 +473,7 @@ async function authRace(h,order,observerFailure=false){
   if(order==='revocation-first'){
    const writer=accounts(h.db('writer',{role:account,afterSQL:text=>/^UPDATE library_tokens SET revoked/.test(text)?hold.point():undefined}));
    const authentication=await writer.prepareWriterAuthentication(f.bearer);
-   writing=h.outcome(writer.signOut(f.user,authentication));pending.push(writing);
+   writing=h.outcome(writer.delete(f.user,authentication));pending.push(writing);
    await entered(hold,writing);
    reading=h.outcome(current(f,h.db('current',{role:runtime,trace}),()=>authorized++));pending.push(reading);
    await blocked(h,'current',h.pids.get('writer'));
@@ -483,7 +482,7 @@ async function authRace(h,order,observerFailure=false){
    await entered(hold,reading);
    const writer=accounts(h.db('writer',{role:account}));
    const authentication=await writer.prepareWriterAuthentication(f.bearer);
-   writing=h.outcome(writer.signOut(f.user,authentication));pending.push(writing);
+   writing=h.outcome(writer.delete(f.user,authentication));pending.push(writing);
    await blocked(h,'writer',h.pids.get('current'));
   }
   if(observerFailure)throw sentinel;
@@ -495,7 +494,7 @@ async function authRace(h,order,observerFailure=false){
   try{
    assert.ok(reading&&writing,'both actual contenders must start');
    assert.equal((await writing).error,undefined);
-   assert.deepEqual((await writing).value,{signedOut:true});
+   assert.deepEqual((await writing).value,{deleted:true});
    if(order==='revocation-first'){assert.equal((await reading).error?.code,'unauthorized');assert.equal(authorized,0);}
    else{assert.equal((await reading).error,undefined);assert.equal((await reading).value,f.user.id);assert.equal(authorized,1);}
    for(const {text} of trace)assert.doesNotMatch(text,/^\s*(?:INSERT|UPDATE|DELETE|TRUNCATE|ALTER|CREATE)\b/i,'current-auth boundary must execute no reducer/writer SQL');
@@ -555,7 +554,7 @@ async function upgradeAndMethods(h,t){
   await noRoomWrites(h);await quiescent(h);
  });
  for(const order of ['revocation-first','auth-first']){
-  await t.test('actual restricted current-auth frontier versus AccountStore.signOut: '+order,async()=>authRace(h,order));
+  await t.test('actual restricted current-auth frontier versus AccountStore.delete: '+order,async()=>authRace(h,order));
   await t.test('outer-finally drains both contenders after observer failure: '+order,async()=>{
    await assert.rejects(authRace(h,order,true),error=>error.message==='injected lock observer failure');await quiescent(h);
   });

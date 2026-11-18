@@ -120,8 +120,8 @@ before(async()=>{
  await admin.query('CREATE DATABASE '+databaseName);created=true;
  pool=new pg.Pool({...config,database:databaseName,max:6,idleTimeoutMillis:1000});
  pool.on('error',error=>poolErrors.push(error));
- assert.equal(migrationNames.length,32);
- assert.equal(migrationNames.at(-1),'038-retire-spotify-observer.sql');
+ assert.equal(migrationNames.length,33);
+ assert.equal(migrationNames.at(-1),'039-anonymous-accounts.sql');
  await migrateLibrary({transaction:async operation=>{const lease=await acquire();try{await lease.client.query('BEGIN');const result=await operation(lease.client);await lease.client.query('COMMIT');return result;}finally{await rollbackRelease(lease);}}});
 },{timeout:45000});
 
@@ -167,8 +167,7 @@ function database(name,{enter,afterSQL}={}){
 }
 const cryptoFixtures={attestFn:()=>({publicKey:'external-crypto-fixture',receipt:Buffer.from('fixture')}),
  assertionFn:({assertion})=>Number(assertion.toString())};
-const appleFixture={authenticate:async()=>({subjectHash:digest('apple-target'),refreshTokenEncrypted:'fixture-ciphertext'}),revoke:async()=>{}};
-const accounts=(db,apple=appleFixture)=>new AccountStore(db,{policy,...cryptoFixtures,apple});
+const accounts=db=>new AccountStore(db,{policy,...cryptoFixtures});
 const auth=db=>new AppAuthStore(db,{policy,...cryptoFixtures});
 async function seed(){
  await quiescent();pids.clear();
@@ -178,6 +177,8 @@ async function seed(){
  const db=database('seed'),library=new SongLibraryStore(db),a=auth(db);
  await library.createUser('z-reader','credential-z');
  await library.createUser('é-reader','credential-e');
+ // The source is an anonymous (guest) account: deletion is guest-only.
+ await query("UPDATE library_users SET access_kind='guest' WHERE id='z-reader'");
  const key=Buffer.alloc(32,17).toString('base64'),token='credential-z';
  const register=await a.challenge(token,{keyID:key,bundleID,purpose:'register'});
  await a.register(token,{keyID:key,bundleID,...register,attestation:'Zml4dHVyZQ=='});
@@ -192,33 +193,26 @@ async function current(p,db,requiredScopes){return db.transaction(async tx=>{
  const discovery=await p.context.discover({tx,authentication:p.authentication,requiredScopes});
  const scope=await p.context.lock({tx,discovery});await scope.revalidate({tx});return scope.principalID;
 });}
-async function loginInput(f){return {...await accounts(f.db).challenge({purpose:'apple',bundleID},f.user),bundleID,identityToken:'fixture',authorizationCode:'fixture'};}
 
 
 // A closed fixture adapter: capture the actual AppAuth.authenticate result and
 // exact bearer together, prepare ONCE on this SAME AccountStore before invoking
-// any method (and therefore before external Apple IO). No tuple reconstruction,
-// replacement-session lookup or handle borrowing is permitted here.
-async function accountWriter(f,db=f.db,apple=appleFixture){
- const store=accounts(db,apple),user=f.user;
+// deletion, the only account writer. No tuple reconstruction, replacement-session
+// lookup or handle borrowing is permitted here.
+async function accountWriter(f,db=f.db){
+ const store=accounts(db),user=f.user;
  const handle=await store.prepareWriterAuthentication(f.bearer);
- return Object.freeze({signIn:input=>store.signIn(user,input,handle),
-  signOut:()=>store.signOut(user,handle),delete:input=>store.delete(user,input,handle)});
-}
-async function signedAccount(f){
- const signed=await (await accountWriter(f)).signIn(await loginInput(f));f.token=signed.credential;
- const issued=await f.auth.session(f.token,await sessionInput(f));
- f.bearer=issued.token;f.user=await f.auth.authenticate(f.bearer);return f;
+ return Object.freeze({delete:()=>store.delete(user,handle)});
 }
 // Read committed images through a different borrower after the legitimate
 // winner commits and before the loser resumes. PostgreSQL JSON text preserves
 // timestamp/int8 precision. These fixed existing tables cover account nonce,
-// identity/reactivation, source auth, V1 scrub and account data writes;
+// source auth, V1 scrub and account data writes;
 // no successful postimage, auth response or schema is manufactured.
 async function accountWriterState(){
  const state={};
  for(const table of ['library_users','library_tokens','app_attest_keys','app_auth_sessions','app_auth_challenges',
-  'account_identities','account_nonces','account_rate_windows','library_rate_windows','translation_jobs',
+  'account_nonces','account_rate_windows','library_rate_windows','translation_jobs',
   'selected_source_access','live_lyrics_push_receipts','correction_reports'])
   state[table]=(await query(`SELECT to_jsonb(t)::text AS data FROM ${table} t ORDER BY (to_jsonb(t)::text) COLLATE "C"`)).rows.map(r=>r.data);
  return state;
@@ -239,8 +233,8 @@ async function observedRace({barriers,pending,observe,checks}){
  if(errors.length)throw new AggregateError(errors,'observer/contender/drainage failure');
 }
 const userWriterLock=sql=>/^SELECT id FROM (?:public\.)?library_users WHERE id=\$1 FOR NO KEY UPDATE$/.test(sql);
-async function issuanceBeforeWriter(f,writer,input,counter){
- const body=await sessionInput(f,counter),isAccount=['signOut','signIn','delete'].includes(writer);
+async function issuanceBeforeWriter(f,writer,counter){
+ const body=await sessionInput(f,counter),isAccount=writer==='delete';
  let resumed;
  const db=database('writer',{afterSQL:(sql,_,args)=>userWriterLock(sql)&&args[0]===f.user.id?resumed.point():undefined});
  const account=isAccount?await accountWriter(f,db):null;
@@ -249,7 +243,7 @@ async function issuanceBeforeWriter(f,writer,input,counter){
  await observedRace({barriers:[issuerHold,resumed],pending,observe:async()=>{
   issuing=outcome(auth(database('issuer',{afterSQL:sql=>/^UPDATE app_attest_keys SET sign_count/.test(sql)?issuerHold.point():undefined})).session(f.token,body));pending.push(issuing);
   await entered(issuerHold,issuing);
-  writing=outcome(({signOut:()=>account.signOut(),signIn:()=>account.signIn(input),delete:()=>account.delete(input),
+  writing=outcome(({delete:()=>account.delete(),
    disableUser:()=>disableUser(db,f.user.id),
    revokeKey:()=>revokeKey(db,f.key)})[writer]());pending.push(writing);
   await blocked('writer',pids.get('issuer'));
@@ -290,32 +284,23 @@ test('session key -> token FK cycle versus actual current-auth is removed',{time
  assert.equal((await f.auth.authenticate((await issuing).value.token)).id,f.user.id);
 });
 
-for(const writer of ['signOut','disableUser','revokeKey','rotate','signIn','delete'])test(writer+' respects current-auth anchors before later rows',{timeout:10000},async()=>{
- let f=await seed(),input;
- if(writer==='delete'){
-  const signed=await (await accountWriter(f)).signIn(await loginInput(f));f.token=signed.credential;
-  const issued=await f.auth.session(f.token,await sessionInput(f));f.bearer=issued.token;f.user=await f.auth.authenticate(f.bearer);
-  input={...await accounts(f.db).challenge({purpose:'delete',bundleID},f.user),bundleID,identityToken:'fixture',authorizationCode:'fixture'};
- }else if(writer==='signIn')input=await loginInput(f);
+for(const writer of ['disableUser','revokeKey','rotate','delete'])test(writer+' respects current-auth anchors before later rows',{timeout:10000},async()=>{
+ const f=await seed();
  const p=await prepared(f),hold=barrier();
  const reading=outcome(current(p,database('current',{afterSQL:sql=>/public\.library_tokens WHERE digest=\$1 FOR UPDATE/.test(sql)?hold.point():undefined})));
  let writing;
  try{
   await entered(hold,reading);const db=database('writer');
-  const work={signOut:async()=>(await accountWriter(f,db)).signOut(),disableUser:()=>disableUser(db,f.user.id),
+  const work={disableUser:()=>disableUser(db,f.user.id),
    revokeKey:()=>revokeKey(db,f.key),rotate:()=>new SongLibraryStore(db).createUser(f.user.id,'replacement'),
-   signIn:async()=>(await accountWriter(f,db)).signIn(input),delete:async()=>(await accountWriter(f,db)).delete(input)};
+   delete:async()=>(await accountWriter(f,db)).delete()};
   writing=outcome(work[writer]());await blocked('writer',pids.get('current'));
  }finally{hold.release();await reading;if(writing)await writing;}
  assert.equal((await reading).error,undefined);assert.equal((await writing).error,undefined);
  await assert.rejects(f.auth.authenticate(f.bearer),{code:'session_expired'});
 });
 
-test('issuance wins; captured-old-S signOut refuses and preserves new S, C and counter 2',{timeout:10000},async()=>{
- const f=await seed();await issuanceBeforeWriter(f,'signOut',null,2);
-});
-
-for(const first of ['register','revoke'])test('absent-key registration versus exact-source signOut: '+first+' first',{timeout:10000},async()=>{
+for(const first of ['register','revoke'])test('absent-key registration versus exact-source delete: '+first+' first',{timeout:10000},async()=>{
  const f=await seed(),key=Buffer.alloc(32,23).toString('base64');
  const body={keyID:key,bundleID,...await f.auth.challenge(f.token,{keyID:key,bundleID,purpose:'register'}),attestation:'Zml4dHVyZQ=='};
  let hold,resumed;
@@ -328,12 +313,12 @@ for(const first of ['register','revoke'])test('absent-key registration versus ex
   registration=outcome(auth(database('registration',{enter:entry,afterSQL:sql=>first==='register'&&/INSERT INTO app_attest_keys/.test(sql)?hold.point():undefined})).register(f.token,body));pending.push(registration);
   await entered(entry,registration);
   if(first==='register'){
-   entry.release();await entered(hold,registration);revocation=outcome(writer.signOut());pending.push(revocation);
+   entry.release();await entered(hold,registration);revocation=outcome(writer.delete());pending.push(revocation);
    await blocked('revocation',pids.get('registration'));hold.release();
    assert.equal((await registration).error,undefined);await entered(resumed,revocation);
    afterRegistration=await accountWriterState();
   }else{
-   revocation=outcome(writer.signOut());pending.push(revocation);
+   revocation=outcome(writer.delete());pending.push(revocation);
    await entered(hold,revocation);entry.release();await blocked('registration',pids.get('revocation'));
   }
  },checks:[
@@ -343,26 +328,15 @@ for(const first of ['register','revoke'])test('absent-key registration versus ex
    // The new earlier key appeared AFTER discovery. Refuse the whole writer;
    // never append a second auth pass or pretend the captured key set is complete.
    assert.equal((await revocation).error?.code,'app_access_revoked');assert.equal((await revocation).error?.status,403);
-  }else{assert.equal((await revocation).error,undefined);assert.deepEqual((await revocation).value,{signedOut:true});}},
+  }else{assert.equal((await revocation).error,undefined);assert.deepEqual((await revocation).value,{deleted:true});}},
   async()=>{assert.equal(Number((await query('SELECT count(*) AS n FROM app_attest_keys WHERE key_id=$1',[key])).rows[0].n),first==='register'?1:0);
    assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].revoked,first==='revoke');
    if(first==='register'){
-    assert.ok(afterRegistration);assert.deepEqual(await accountWriterState(),afterRegistration,'stale-discovery signOut rolls back without losing registration');
+    assert.ok(afterRegistration);assert.deepEqual(await accountWriterState(),afterRegistration,'stale-discovery delete rolls back without losing registration');
     assert.equal((await f.auth.authenticate(f.bearer)).id,f.user.id);
    }else await assert.rejects(f.auth.authenticate(f.bearer),{code:'session_expired'});},
   quiescent
  ]});
-});
-
-test('completed sibling registration before signOut discovery preserves the key and closes C',{timeout:10000},async()=>{
- const f=await seed(),key=Buffer.alloc(32,23).toString('base64');
- const body={keyID:key,bundleID,...await f.auth.challenge(f.token,{keyID:key,bundleID,purpose:'register'}),attestation:'Zml4dHVyZQ=='};
- assert.deepEqual(await f.auth.register(f.token,body),{registered:true});
- const registered=(await query('SELECT to_jsonb(k)::text AS data FROM app_attest_keys k WHERE key_id=$1',[key])).rows[0].data;
- assert.deepEqual(await (await accountWriter(f)).signOut(),{signedOut:true});
- assert.equal((await query('SELECT to_jsonb(k)::text AS data FROM app_attest_keys k WHERE key_id=$1',[key])).rows[0].data,registered);
- assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].revoked,true);
- await assert.rejects(f.auth.authenticate(f.bearer),{code:'session_expired'});
 });
 
 test('two real counter contenders commit one session, one challenge and no replay',{timeout:10000},async()=>{
@@ -423,54 +397,31 @@ test('bounded cleanup skips a committed expired locked row and recovers next inv
 // A room-holder can insert an actor FK while deletion holds its user anchor.
 // FOR UPDATE on that user would make this a NEW cycle with unchanged V1.
 
-for(const writer of ['disableUser','revokeKey','signIn','delete'])test('issuance precedes '+writer+': '+(['signIn','delete'].includes(writer)?'captured old S refuses; new S survives':'operator authority still closes new S'),{timeout:10000},async()=>{
- const f=await seed();let input,counter=2;
- if(writer==='delete'){
-  await signedAccount(f);counter=3;
-  input={...await accounts(f.db).challenge({purpose:'delete',bundleID},f.user),bundleID,identityToken:'fixture',authorizationCode:'fixture'};
- }else if(writer==='signIn')input=await loginInput(f);
- await issuanceBeforeWriter(f,writer,input,counter);
+for(const writer of ['disableUser','revokeKey','delete'])test('issuance precedes '+writer+': '+(writer==='delete'?'captured old S refuses; new S survives':'operator authority still closes new S'),{timeout:10000},async()=>{
+ const f=await seed();await issuanceBeforeWriter(f,writer,2);
 });
 
-for(const writer of ['signOut','revokeKey','disableUser','signIn'])test(writer+' commits first and current-auth refuses the old bearer',{timeout:10000},async()=>{
- const f=await seed(),p=await prepared(f),input=writer==='signIn'?await loginInput(f):null,hold=barrier();let reading;
+for(const writer of ['delete','revokeKey','disableUser'])test(writer+' commits first and current-auth refuses the old bearer',{timeout:10000},async()=>{
+ const f=await seed(),p=await prepared(f),hold=barrier();let reading;
  const stop=writer==='revokeKey'?/^UPDATE app_attest_keys SET revoked/:/^UPDATE library_tokens SET revoked/;
  const db=database('writer',{afterSQL:sql=>stop.test(sql.trim())?hold.point():undefined});
- const writing=outcome(({signOut:async()=>(await accountWriter(f,db)).signOut(),revokeKey:()=>revokeKey(db,f.key),
-  disableUser:()=>disableUser(db,f.user.id),signIn:async()=>(await accountWriter(f,db)).signIn(input)})[writer]());
+ const writing=outcome(({delete:async()=>(await accountWriter(f,db)).delete(),revokeKey:()=>revokeKey(db,f.key),
+  disableUser:()=>disableUser(db,f.user.id)})[writer]());
  try{await entered(hold,writing);reading=outcome(current(p,database('current')));await blocked('current',pids.get('writer'));}
  finally{hold.release();await writing;if(reading)await reading;}
  assert.equal((await writing).error,undefined);
  assert.ok(['unauthorized','conflict'].includes((await reading).error?.code));
 });
 
-test('owner move captures both existing users in UTF-8 byte order and revalidates final expiry',{timeout:10000},async()=>{
- const f=await seed();await query("UPDATE library_users SET access_kind='apple' WHERE id='é-reader'");
- await query('INSERT INTO account_identities(subject_hash,user_id,app_account_token) VALUES($1,$2,$3)',[digest('apple-target'),'é-reader',randomUUID()]);
- const input=await loginInput(f),seen=[];
- await query("UPDATE library_tokens SET expires_at=clock_timestamp()+interval '1500 milliseconds' WHERE digest=$1",[f.user.credentialDigest]);
- const db=database('owner-move',{afterSQL:async(sql,tx,args)=>{
-  if(/FROM (?:public\.)?library_users WHERE id=\$1 FOR NO KEY UPDATE/.test(sql))seen.push(args[0]);
-  if(/^UPDATE app_attest_keys SET user_id/.test(sql)){
-   assert.equal((await tx.query('SELECT expires_at>clock_timestamp() AS live FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].live,true);
-   await tx.query('SELECT pg_sleep(1.6)');
-  }
- }});
- await assert.rejects((await accountWriter(f,db)).signIn(input),{code:'app_access_revoked'});
- assert.deepEqual(seen,['z-reader','é-reader']);
- assert.equal((await query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[f.key])).rows[0].user_id,f.user.id);
- assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].revoked,false);
-});
-
-test('owner-wide signOut locks keys in byte order including sibling credentials',{timeout:10000},async()=>{
+test('owner-wide delete locks keys in byte order and closes sibling credentials',{timeout:10000},async()=>{
  const f=await seed(),ids=[Buffer.alloc(32,248).toString('base64'),Buffer.alloc(32,255).toString('base64')];
  for(const key of ids){const input={keyID:key,bundleID,...await f.auth.challenge(f.token,{keyID:key,bundleID,purpose:'register'}),attestation:'Zml4dHVyZQ=='};await f.auth.register(f.token,input);}
  await query('INSERT INTO library_tokens(digest,user_id) VALUES($1,$2)',[digest('sibling-credential'),f.user.id]);
  const seen=[];
- await (await accountWriter(f,database('signout-order',{afterSQL:async(sql,_,args)=>{if(/FROM (?:public\.)?app_attest_keys WHERE key_id=\$1 FOR UPDATE/.test(sql))seen.push(args[0]);}}))).signOut();
+ assert.deepEqual(await (await accountWriter(f,database('delete-order',{afterSQL:async(sql,_,args)=>{if(/FROM (?:public\.)?app_attest_keys WHERE key_id=\$1 FOR UPDATE/.test(sql))seen.push(args[0]);}}))).delete(),{deleted:true});
  assert.deepEqual(seen,[f.key,...ids].sort((a,b)=>Buffer.compare(Buffer.from(a),Buffer.from(b))));
  assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].revoked,true);
- assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[digest('sibling-credential')])).rows[0].revoked,false,'sign-out revokes only its own credential');
+ assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[digest('sibling-credential')])).rows[0].revoked,true,'deletion revokes every credential of the owner');
 });
 
 test('standalone ordered session revoke waits for exact current-auth session then invalidates it',{timeout:10000},async()=>{
@@ -485,82 +436,38 @@ test('standalone ordered session revoke waits for exact current-auth session the
  await assert.rejects(f.auth.authenticate(f.bearer),{code:'session_expired'});
 });
 
-test('injected lock-observer failure drains actual current-auth and signOut contenders',{timeout:10000},async()=>{
+test('injected lock-observer failure drains actual current-auth and delete contenders',{timeout:10000},async()=>{
  const f=await seed(),p=await prepared(f),hold=barrier(),sentinel=new Error('observer failed');let writing;
  const reading=outcome(current(p,database('current',{afterSQL:sql=>/public\.library_tokens WHERE digest=\$1 FOR UPDATE/.test(sql)?hold.point():undefined})));
  await assert.rejects((async()=>{
   try{
-   await entered(hold,reading);writing=outcome((await accountWriter(f,database('writer'))).signOut());
+   await entered(hold,reading);writing=outcome((await accountWriter(f,database('writer'))).delete());
    await blocked('writer',pids.get('current'));throw sentinel;
   }finally{hold.release();await reading;if(writing)await writing;}
  })(),e=>e===sentinel);
  assert.equal((await reading).error,undefined);assert.equal((await writing).error,undefined);await quiescent();
 });
 
-
 // Source-authored PostgreSQL additions for the composed exact-bearer consumer.
 // No behavior change is proposed by this fixture-only artifact; these are NOT
 // an observed tests-first red/green or combined PostgreSQL qualification.
-for(const operation of ['signIn','delete'])for(const boundary of operation==='delete'?['authenticate','revoke']:['authenticate'])
-for(const observerFailure of [false,true])test(operation+' exact-S renewal during held Apple '+boundary+' refuses with issuer-only postimage; observer failure='+observerFailure,{timeout:10000},async()=>{
- const f=await seed();let counter=2;
- if(operation==='delete'){await signedAccount(f);counter=3;}
- const input=operation==='delete'?{...await accounts(f.db).challenge({purpose:'delete',bundleID},f.user),bundleID,identityToken:'fixture',authorizationCode:'fixture'}:await loginInput(f);
- const body=await sessionInput(f,counter),appleCalls=[];
- let appleHold,preparations=0,prepared=false;
- const apple={...appleFixture};
- for(const name of ['authenticate','revoke'])apple[name]=async value=>{
-  appleCalls.push(name);assert.equal(preparations,1,'prepare exact S once before every external Apple call');assert.equal(prepared,true);
-  if(name===boundary)await appleHold.point();return appleFixture[name](value);
- };
- const store=accounts(database('apple-writer'),apple),prepare=store.prepareWriterAuthentication.bind(store);
- store.prepareWriterAuthentication=async bearer=>{preparations++;assert.equal(bearer,f.bearer);const handle=await prepare(bearer);prepared=true;return handle;};
- const handle=await store.prepareWriterAuthentication(f.bearer);
- appleHold=barrier();const pending=[],sentinel=new Error('injected Apple-IO observer failure');let writing,issuing,afterIssuer;
- const race=()=>observedRace({barriers:[appleHold],pending,observe:async()=>{
-  writing=outcome(store[operation](f.user,input,handle));pending.push(writing);
-  await entered(appleHold,writing);
-  issuing=outcome(auth(database('apple-renewal')).session(f.token,body));pending.push(issuing);
-  assert.equal((await issuing).error,undefined);
-  await assert.rejects(f.auth.authenticate(f.bearer),{code:'session_expired'});
-  assert.equal((await f.auth.authenticate((await issuing).value.token)).keyID,f.key);
-  afterIssuer=await accountWriterState(); // Capture AFTER real renewal, BEFORE resuming Apple IO.
-  if(observerFailure)throw sentinel;
- },checks:[
-  async()=>{assert.ok(issuing);assert.equal((await issuing).error,undefined);},
-  async()=>{assert.ok(writing);assert.equal((await writing).error?.code,'app_access_revoked');assert.equal((await writing).error?.status,403);},
-  async()=>{assert.ok(afterIssuer);assert.deepEqual(await accountWriterState(),afterIssuer,'loser nonce/identity/auth/scrub writes roll back; issuer changes remain');},
-  async()=>{assert.equal(preparations,1);assert.deepEqual(appleCalls,operation==='delete'?['authenticate','revoke']:['authenticate']);
-   assert.equal((await f.auth.authenticate((await issuing).value.token)).id,f.user.id);
-   assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].revoked,false);
-   assert.equal(Number((await query('SELECT sign_count FROM app_attest_keys WHERE key_id=$1',[f.key])).rows[0].sign_count),counter);
-   assert.equal((await query('SELECT consumed FROM account_nonces WHERE digest=$1',[digest(input.challenge)])).rows[0].consumed,false);},
-  quiescent
- ]});
- if(observerFailure)await assert.rejects(race(),error=>error===sentinel);else await race();
-});
-
-for(const operation of ['signOut','signIn','delete'])for(const observerFailure of [false,true])
-test(operation+' source mutation commits before old-C issuance, which refuses without losing writer state; observer failure='+observerFailure,{timeout:10000},async()=>{
- const f=await seed();let counter=2;
- if(operation==='delete'){await signedAccount(f);counter=3;}
- const input=operation==='signOut'?null:operation==='delete'?{...await accounts(f.db).challenge({purpose:'delete',bundleID},f.user),bundleID,identityToken:'fixture',authorizationCode:'fixture'}:await loginInput(f);
+for(const observerFailure of [false,true])
+test('delete source mutation commits before old-C issuance, which refuses without losing writer state; observer failure='+observerFailure,{timeout:10000},async()=>{
+ const f=await seed(),counter=2;
  const body=await sessionInput(f,counter),priorCounter=counter-1;
- let mutationHold,issuerResumed,prepared=false,preparations=0;
- const apple={...appleFixture,authenticate:async value=>{assert.equal(prepared,true);assert.equal(preparations,1);return appleFixture.authenticate(value);},
-  revoke:async value=>{assert.equal(prepared,true);assert.equal(preparations,1);return appleFixture.revoke(value);}};
- const mutation=operation==='signIn'?/^UPDATE app_attest_keys SET user_id/:operation==='delete'?/^UPDATE library_users SET disabled=true/:/^UPDATE library_tokens SET revoked/;
- const store=accounts(database('source-writer',{afterSQL:sql=>mutation.test(sql)?mutationHold.point():undefined}),apple);
- const handle=await store.prepareWriterAuthentication(f.bearer);preparations++;prepared=true;
+ let mutationHold,issuerResumed,preparations=0;
+ const mutation=/^UPDATE library_users SET disabled=true/;
+ const store=accounts(database('source-writer',{afterSQL:sql=>mutation.test(sql)?mutationHold.point():undefined}));
+ const handle=await store.prepareWriterAuthentication(f.bearer);preparations++;
  const issuerEntry=barrier();mutationHold=barrier();issuerResumed=barrier();
  const pending=[],sentinel=new Error('injected source-first observer failure');let issuing,writing,afterWriter;
  const race=()=>observedRace({barriers:[issuerEntry,mutationHold,issuerResumed],pending,observe:async()=>{
   // Pass issuance's pretransaction quota UPDATE before the writer takes its
   // user. Entry holds it before ANY auth anchor, so the real lock wait below
-  // measures auth order rather than a quota UPDATE or external Apple IO.
+  // measures auth order rather than a quota UPDATE.
   issuing=outcome(auth(database('old-c-issuer',{enter:issuerEntry,afterSQL:(sql,_,args)=>userWriterLock(sql)&&args[0]===f.user.id?issuerResumed.point():undefined})).session(f.token,body));pending.push(issuing);
   await entered(issuerEntry,issuing);
-  writing=outcome(operation==='signOut'?store.signOut(f.user,handle):store[operation](f.user,input,handle));pending.push(writing);
+  writing=outcome(store.delete(f.user,handle));pending.push(writing);
   await entered(mutationHold,writing);issuerEntry.release();
   await blocked('old-c-issuer',pids.get('source-writer'));
   mutationHold.release();assert.equal((await writing).error,undefined);
@@ -569,22 +476,17 @@ test(operation+' source mutation commits before old-C issuance, which refuses wi
   if(observerFailure)throw sentinel;
  },checks:[
   async()=>{assert.ok(writing);assert.equal((await writing).error,undefined);},
-  async()=>{assert.ok(issuing);const refusal=operation==='signIn'?'app_access_revoked':'unauthorized';
-   assert.equal((await issuing).error?.code,refusal);assert.equal((await issuing).error?.status,operation==='signIn'?403:401);},
-  async()=>{assert.ok(afterWriter);assert.deepEqual(await accountWriterState(),afterWriter,'old-C issuance rolls back; committed source closure/move is preserved');},
+  async()=>{assert.ok(issuing);
+   assert.equal((await issuing).error?.code,'unauthorized');assert.equal((await issuing).error?.status,401);},
+  async()=>{assert.ok(afterWriter);assert.deepEqual(await accountWriterState(),afterWriter,'old-C issuance rolls back; committed source deletion is preserved');},
   async()=>{
    assert.equal(preparations,1);await assert.rejects(f.auth.authenticate(f.bearer),{code:'session_expired'});
    assert.equal(Number((await query('SELECT sign_count FROM app_attest_keys WHERE key_id=$1',[f.key])).rows[0].sign_count),priorCounter);
    assert.equal((await query('SELECT consumed FROM app_auth_challenges WHERE digest=$1',[digest(body.challenge)])).rows[0].consumed,false);
    assert.equal((await query('SELECT revoked FROM library_tokens WHERE digest=$1',[f.user.credentialDigest])).rows[0].revoked,true);
-   if(operation==='signIn'){
-    const result=(await writing).value;assert.equal((await f.library.authenticate(result.credential)).id,result.userID);
-    assert.equal((await query('SELECT user_id FROM app_attest_keys WHERE key_id=$1',[f.key])).rows[0].user_id,result.userID);
-   }else assert.deepEqual((await writing).value,operation==='delete'?{deleted:true}:{signedOut:true});
-   if(operation==='delete'){
-    assert.equal((await query('SELECT disabled FROM library_users WHERE id=$1',[f.user.id])).rows[0].disabled,true);
-    assert.equal((await query('SELECT revoked FROM app_attest_keys WHERE key_id=$1',[f.key])).rows[0].revoked,true);
-   }
+   assert.deepEqual((await writing).value,{deleted:true});
+   assert.equal((await query('SELECT disabled FROM library_users WHERE id=$1',[f.user.id])).rows[0].disabled,true);
+   assert.equal((await query('SELECT revoked FROM app_attest_keys WHERE key_id=$1',[f.key])).rows[0].revoked,true);
   },
   quiescent
  ]});

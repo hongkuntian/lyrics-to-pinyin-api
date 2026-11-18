@@ -23,7 +23,7 @@ capabilities remain available.
 - App authentication sessions, exact-bearer authorization, canonical auth writer
   locking and token-row privileges remain security requirements for ordinary
   account and credential operations.
-- Account deletion, sign-out, revocation and credential rotation keep their
+- Account deletion, revocation and credential rotation keep their
   existing data-integrity and provider-security guarantees.
 - Spotify lyric acquisition and recording identity remain in scope. Spotify is
   native-only: the app reads the current track through the App Remote SDK. The

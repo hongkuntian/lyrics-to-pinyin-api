@@ -3,11 +3,17 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
-import {migrateLibrary,migrationNames} from '../../scripts/library-migrations.js';
+import {migrateLibrary as migrateRegistered,migrationNames as registeredNames} from '../../scripts/library-migrations.js';
 
 // Spotify is native-only. 038 destroys the retired server observer's grants and
 // state; everything else in the database must be byte-for-byte unchanged.
 const retirement='038-retire-spotify-observer.sql';
+// 038 is qualified on the manifest through itself; 039 has its own test.
+const migrationNames=registeredNames.slice(0,registeredNames.indexOf(retirement)+1);
+async function migrateLibrary(database,options){
+ const saved=[...registeredNames];registeredNames.splice(0,registeredNames.length,...migrationNames);
+ try{return await migrateRegistered(database,options);}finally{registeredNames.splice(0,registeredNames.length,...saved);}
+}
 const retiredTables=['spotify_outbox','spotify_snapshot_capabilities','spotify_provider_circuits','spotify_connections'];
 const retiredRelations=[...retiredTables,'spotify_connections_owner','spotify_connections_owner_id_key_id_enrollment_id_key',
  'spotify_connections_pkey','spotify_outbox_pending','spotify_outbox_pkey','spotify_provider_circuits_pkey','spotify_snapshot_capabilities_pkey'].sort();
@@ -17,8 +23,8 @@ const adapter=db=>({transaction:fn=>db.transaction(tx=>fn({query:async(text,args
 const system="n.nspname NOT IN ('pg_catalog','information_schema','pg_toast') AND n.nspname NOT LIKE 'pg_temp%' AND n.nspname NOT LIKE 'pg_toast_temp%'";
 
 async function migrateThrough(db,names){
- const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...names);
- try{return await migrateLibrary(adapter(db));}finally{migrationNames.splice(0,migrationNames.length,...saved);}
+ const saved=[...registeredNames];registeredNames.splice(0,registeredNames.length,...names);
+ try{return await migrateRegistered(adapter(db));}finally{registeredNames.splice(0,registeredNames.length,...saved);}
 }
 async function database(t,{roles=true}={}){
  const db=new PGlite();t.after(()=>db.close());
@@ -68,9 +74,9 @@ async function seed(db){
 }
 const present=async(db,name)=>(await db.query('SELECT to_regclass($1)::text AS name',['public.'+name])).rows[0].name;
 
-test('038 is the last registered migration and drops exactly the retired observer tables without CASCADE',async()=>{
- assert.equal(migrationNames.at(-1),retirement);
- assert.equal(migrationNames.filter(name=>name.startsWith('038-')).length,1);
+test('038 is registered once, followed only by 039, and drops exactly the retired observer tables without CASCADE',async()=>{
+ assert.deepEqual(registeredNames.slice(registeredNames.indexOf(retirement)),[retirement,'039-anonymous-accounts.sql']);
+ assert.equal(registeredNames.filter(name=>name.startsWith('038-')).length,1);
  const text=await sql(retirement);
  // The runner strips only a leading BEGIN and trailing COMMIT.
  assert.match(text,/^BEGIN;\n/);assert.match(text,/\nCOMMIT;\n$/);

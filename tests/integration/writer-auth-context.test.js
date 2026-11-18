@@ -1,7 +1,7 @@
 import test,{before,after,beforeEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {randomUUID,createHash} from 'node:crypto';
+import {createHash} from 'node:crypto';
 import {setTimeout} from 'node:timers/promises';
 import {PGlite} from '@electric-sql/pglite';
 import * as contexts from '../../api/utils/app-auth/auth-context.js';
@@ -20,8 +20,8 @@ const sibling=Buffer.alloc(32,2).toString('base64'),foreign=Buffer.alloc(32,3).t
 let db,adapter,auth,source,bearer,trace,intercept;
 before(async()=>{
  db=new PGlite();
- assert.equal(migrationNames.length,32);
- assert.equal(migrationNames.at(-1),'038-retire-spotify-observer.sql');
+ assert.equal(migrationNames.length,33);
+ assert.equal(migrationNames.at(-1),'039-anonymous-accounts.sql');
  assert.ok(migrationNames.every(migrationName=>!/^0(?:29|3[01345])-/.test(migrationName)));
  for(const name of migrationNames)await db.exec(await readFile(new URL('../../db/'+name,import.meta.url),'utf8'));
  adapter={query:(...a)=>db.query(...a),transaction:fn=>db.transaction(fn)};
@@ -31,7 +31,8 @@ beforeEach(async()=>{
  await db.exec('TRUNCATE public.library_users CASCADE');
  const library=new SongLibraryStore(adapter);
  await library.createUser('G','source-token');await library.createUser('A','target-token');await library.createUser('B','foreign-token');
- await db.query("UPDATE public.library_users SET access_kind=CASE WHEN id='G' THEN 'guest' ELSE 'apple' END");
+ // G is the anonymous (guest) source; A and B keep the default beta kind.
+ await db.query("UPDATE public.library_users SET access_kind='guest' WHERE id='G'");
  await db.query("UPDATE public.library_tokens SET expires_at=clock_timestamp()+interval '90 days' WHERE user_id='G'");
  auth=new AppAuthStore(adapter,{policy,attestFn:()=>({publicKey:'external-crypto-fixture',receipt:Buffer.from('receipt')}),
   assertionFn:({assertion})=>Number(assertion.toString())});
@@ -51,8 +52,9 @@ function factory(){
  assert.equal(typeof contexts.createWriterAuthContext,'function','Root negative control: factory absent on exact b88');
  return contexts.createWriterAuthContext({authStore:auth,environment});
 }
-const operation=(kind='signOut',targetPrincipalID='A')=>kind==='signIn'?
- {kind,targetPrincipalID,targetCredentialDigest:hash(randomUUID())}:{kind};
+// Account deletion is the only writer operation (Lyrica has no sign-in).
+const kinds=['delete'];
+const operation=(kind='delete')=>({kind});
 function connection(tx){return {query:async(sql,args=[])=>{
  trace.push({sql,args:structuredClone(args)});
  if(intercept)await intercept(sql,args,tx);
@@ -64,19 +66,12 @@ async function locked(c,a,op,fn,requiredScopes){
   const scope=await c.lock({tx,discovery});return fn(scope,tx,real,discovery);
  });
 }
-async function changed(kind,tx,op){
- if(kind==='signIn'){
-  await tx.query('UPDATE public.app_attest_keys SET user_id=$2 WHERE key_id=$1',[keyID,op.targetPrincipalID]);
-  await tx.query('UPDATE public.library_tokens SET revoked=true WHERE digest=$1',[source.credentialDigest]);
-  await tx.query('DELETE FROM public.app_auth_sessions WHERE key_id=$1',[keyID]);
-  await tx.query("INSERT INTO public.library_tokens(digest,user_id,expires_at) VALUES($1,$2,clock_timestamp()+interval '365 days')",[op.targetCredentialDigest,op.targetPrincipalID]);
- }else if(kind==='signOut')await tx.query('UPDATE public.library_tokens SET revoked=true WHERE digest=$1',[source.credentialDigest]);
- else {
-  await tx.query('UPDATE public.library_users SET disabled=true WHERE id=$1',[source.id]);
-  await tx.query('UPDATE public.library_tokens SET revoked=true WHERE user_id=$1',[source.id]);
-  await tx.query("UPDATE public.app_attest_keys SET revoked=true,public_key='',receipt=''::bytea WHERE user_id=$1",[source.id]);
-  await tx.query('DELETE FROM public.app_auth_sessions WHERE key_id IN (SELECT key_id FROM public.app_attest_keys WHERE user_id=$1)',[source.id]);
- }
+// The intended delete postimage for source owner G.
+async function changed(tx){
+ await tx.query('UPDATE public.library_users SET disabled=true WHERE id=$1',[source.id]);
+ await tx.query('UPDATE public.library_tokens SET revoked=true WHERE user_id=$1',[source.id]);
+ await tx.query("UPDATE public.app_attest_keys SET revoked=true,public_key='',receipt=''::bytea WHERE user_id=$1",[source.id]);
+ await tx.query('DELETE FROM public.app_auth_sessions WHERE key_id IN (SELECT key_id FROM public.app_attest_keys WHERE user_id=$1)',[source.id]);
 }
 async function snapshot(tx=db){return (await tx.query(`SELECT
  (SELECT jsonb_agg(to_jsonb(u) ORDER BY id COLLATE "C") FROM public.library_users u) AS users,
@@ -89,13 +84,13 @@ const reject=(p,code='unauthorized')=>assert.rejects(p,e=>{
 });
 const locks=()=>trace.filter(r=>/FOR (?:NO KEY )?UPDATE/.test(r.sql));
 
-for(const kind of ['signIn','signOut','delete'])test(kind+' checks actual live preimage, intentional postimage and single consumption',async()=>{
+for(const kind of kinds)test(kind+' checks actual live preimage, intentional postimage and single consumption',async()=>{
  const c=factory(),a=await c.prepare(bearer),op=operation(kind),before=await snapshot();
  assert.ok(Object.isFrozen(a));assert.ok(Object.isFrozen(a.evidence));
  assert.doesNotMatch(JSON.stringify(a),new RegExp(bearer+'|'+hash(bearer)+'|'+source.credentialDigest));
  await locked(c,a,op,async(scope,tx)=>{
   assert.equal(await scope.revalidate({tx}),true);assert.equal(await scope.assertFreshSession({tx,maxAgeMS:120000}),true);
-  await changed(kind,tx,op);
+  await changed(tx);
   const n=locks().length;assert.equal(await scope.verifyPostimage({tx}),true);
   assert.match(trace.at(-1).sql,/clock_timestamp\(\)/);assert.doesNotMatch(trace.at(-1).sql,/\bnow\(\)/);
   assert.equal(locks().length,n);
@@ -107,7 +102,7 @@ for(const kind of ['signIn','signOut','delete'])test(kind+' checks actual live p
  assert.equal((await db.query('SELECT revoked FROM public.app_attest_keys WHERE key_id=$1',[foreign])).rows[0].revoked,false);
 });
 
-for(const kind of ['signIn','signOut','delete'])for(const phase of ['before-lock','before-intent','after-intent'])
+for(const kind of kinds)for(const phase of ['before-lock','before-intent','after-intent'])
  test(kind+' exact source deadline crosses real clock '+phase+'; entire transaction rolls back',async()=>{
   const c=factory(),a=await c.prepare(bearer),op=operation(kind),before=await snapshot();
   await reject(db.transaction(async real=>{
@@ -117,47 +112,40 @@ for(const kind of ['signIn','signOut','delete'])for(const phase of ['before-lock
    if(phase==='before-lock')await setTimeout(350);
    const scope=await c.lock({tx,discovery});
    if(phase==='before-intent')await setTimeout(350);
-   await scope.revalidate({tx});await changed(kind,tx,op);
+   await scope.revalidate({tx});await changed(tx);
    if(phase==='after-intent')await setTimeout(350);
    await scope.verifyPostimage({tx});
   }));
   assert.deepEqual(await snapshot(),before);
  });
-for(const kind of ['signIn','signOut','delete'])test(kind+' captured credential deadline survives deliberate revocation and cannot be extended',async()=>{
+for(const kind of kinds)test(kind+' captured credential deadline survives deliberate revocation and cannot be extended',async()=>{
  const c=factory(),a=await c.prepare(bearer),op=operation(kind),before=await snapshot();
  await reject(db.transaction(async real=>{
   await real.query("UPDATE public.library_tokens SET expires_at=clock_timestamp()+interval '300 milliseconds' WHERE digest=$1",[source.credentialDigest]);
   const tx=connection(real),d=await c.discover({tx,authentication:a,operationRawJSON:JSON.stringify(op)}),s=await c.lock({tx,discovery:d});
-  await s.revalidate({tx});await changed(kind,tx,op);await setTimeout(350);await s.verifyPostimage({tx});
+  await s.revalidate({tx});await changed(tx);await setTimeout(350);await s.verifyPostimage({tx});
  }));assert.deepEqual(await snapshot(),before);
 });
-for(const kind of ['signIn','signOut','delete'])test(kind+' nullable existing credential expiry remains valid',async()=>{
+for(const kind of kinds)test(kind+' nullable existing credential expiry remains valid',async()=>{
  await db.query('UPDATE public.library_tokens SET expires_at=NULL WHERE digest=$1',[source.credentialDigest]);
  const c=factory(),a=await c.prepare(bearer),op=operation(kind);
- await locked(c,a,op,async(s,tx)=>{await s.revalidate({tx});await changed(kind,tx,op);assert.equal(await s.verifyPostimage({tx}),true);});
+ await locked(c,a,op,async(s,tx)=>{await s.revalidate({tx});await changed(tx);assert.equal(await s.verifyPostimage({tx}),true);});
 });
 
-for(const kind of ['signIn','signOut','delete'])test(kind+' missing intentional postimage is refused and cannot be retried',async()=>{
+for(const kind of kinds)test(kind+' missing intentional postimage is refused and cannot be retried',async()=>{
  const c=factory(),a=await c.prepare(bearer),op=operation(kind),before=await snapshot();
  await reject(locked(c,a,op,async(s,tx)=>{
   try{await s.verifyPostimage({tx});}catch(e){await reject(s.verifyPostimage({tx}),'unavailable');await reject(s.revalidate({tx}),'unavailable');throw e;}
  }),'conflict');assert.deepEqual(await snapshot(),before);
 });
 for(const [kind,label,sql,args] of [
- ['signOut','removed source session','DELETE FROM public.app_auth_sessions WHERE digest=$1',()=>[hash(bearer)]],
- ['signOut','moved source key','UPDATE public.app_attest_keys SET user_id=\'B\' WHERE key_id=$1',()=>[keyID]],
- ['signOut','disabled source','UPDATE public.library_users SET disabled=true WHERE id=\'G\'',()=>[]],
- ['signIn','wrong target key owner','UPDATE public.app_attest_keys SET user_id=\'B\' WHERE key_id=$1',()=>[keyID]],
- ['signIn','revoked new token','UPDATE public.library_tokens SET revoked=true WHERE digest=$1',op=>[op.targetCredentialDigest]],
- ['signIn','extra old-key session',"INSERT INTO public.app_auth_sessions(digest,key_id,credential_digest,audience,expires_at) VALUES($1,$2,$3,'writer-tests',clock_timestamp()+interval '5 minutes')",()=>[hash('unplanned-session'),keyID,source.credentialDigest]],
- ['signIn','new token wrong owner','UPDATE public.library_tokens SET user_id=\'B\' WHERE digest=$1',op=>[op.targetCredentialDigest]],
  ['delete','unscrubbed key public material',"UPDATE public.app_attest_keys SET public_key='retained' WHERE key_id=$1",()=>[sibling]],
  ['delete','extra source token',"INSERT INTO public.library_tokens(digest,user_id) VALUES($1,'G')",()=>[hash('unplanned-token')]],
  ['delete','key escaped to B',"UPDATE public.app_attest_keys SET user_id='B' WHERE key_id=$1",()=>[sibling]],
  ['delete','source token still live','UPDATE public.library_tokens SET revoked=false WHERE digest=$1',()=>[source.credentialDigest]]
 ])test(kind+' refuses '+label+' postimage with rollback',async()=>{
  const c=factory(),a=await c.prepare(bearer),op=operation(kind),before=await snapshot();
- await reject(locked(c,a,op,async(s,tx)=>{await changed(kind,tx,op);await tx.query(sql,args(op));await s.verifyPostimage({tx});}),'conflict');
+ await reject(locked(c,a,op,async(s,tx)=>{await changed(tx);await tx.query(sql,args(op));await s.verifyPostimage({tx});}),'conflict');
  assert.deepEqual(await snapshot(),before);
 });
 
@@ -170,7 +158,7 @@ test('source S replacement during external IO is not rescued by another live ses
 test('S removed between discovery/lock while a valid sibling survives refuses',async()=>{
  const c=factory(),a=await c.prepare(bearer);
  await reject(db.transaction(async real=>{
-  const tx=connection(real),d=await c.discover({tx,authentication:a,operationRawJSON:'{"kind":"signOut"}'});
+  const tx=connection(real),d=await c.discover({tx,authentication:a,operationRawJSON:'{"kind":"delete"}'});
   await real.query('DELETE FROM public.app_auth_sessions WHERE digest=$1',[hash(bearer)]);
   await c.lock({tx,discovery:d});
  }),'conflict');
@@ -195,17 +183,16 @@ test('complete sorted user/token/key/session union, source allKeys and reader lo
  assert.ok(locks().filter(r=>/library_users/.test(r.sql)).every(r=>/FOR UPDATE/.test(r.sql)&&!/NO KEY/.test(r.sql)));
 });
 
-test('signOut discovers and locks every source key of the owner, not only its credential key',async()=>{
+test('delete discovers and locks every source key of the owner, not only its credential key',async()=>{
  const c=factory(),a=await c.prepare(bearer);
- await locked(c,a,operation(),async(s,tx)=>{await changed('signOut',tx);await s.verifyPostimage({tx});});
+ await locked(c,a,operation(),async(s,tx)=>{await changed(tx);await s.verifyPostimage({tx});});
  assert.deepEqual(locks().filter(r=>/app_attest_keys/.test(r.sql)).map(r=>r.args[0]),[keyID,sibling].sort());
 });
 for(const [kind,label,statement,params] of [
- ['signIn','key owner drift',"UPDATE public.app_attest_keys SET user_id='B' WHERE key_id=$1",[keyID]],
- ['signIn','token owner drift',"UPDATE public.library_tokens SET user_id='B' WHERE digest=$1",[hash('source-token')]],
- ['signOut','extra source key',"INSERT INTO public.app_attest_keys(key_id,user_id,audience,bundle_id,environment,public_key,receipt) VALUES($1,'G','writer-tests','com.lyrica.app','development','fixture','fixture')",[Buffer.alloc(32,9).toString('base64')]],
+ ['delete','key owner drift',"UPDATE public.app_attest_keys SET user_id='B' WHERE key_id=$1",[keyID]],
+ ['delete','token owner drift',"UPDATE public.library_tokens SET user_id='B' WHERE digest=$1",[hash('source-token')]],
  ['delete','extra source key',"INSERT INTO public.app_attest_keys(key_id,user_id,audience,bundle_id,environment,public_key,receipt) VALUES($1,'G','writer-tests','com.lyrica.app','development','fixture','fixture')",[Buffer.alloc(32,9).toString('base64')]],
- ['signIn','target changed kind',"UPDATE public.library_users SET access_kind='guest' WHERE id='A'",[]]
+ ['delete','extra source token',"INSERT INTO public.library_tokens(digest,user_id) VALUES($1,'G')",[hash('extra-source-token')]]
 ])test(kind+' '+label+' after discovery aborts without appending B lock',async()=>{
  const c=factory(),a=await c.prepare(bearer),before=await snapshot();
  await reject(db.transaction(async real=>{
@@ -217,65 +204,24 @@ for(const [kind,label,statement,params] of [
  assert.deepEqual(await snapshot(),before);
 });
 
-test('signIn unrelated sibling insertion after discovery preserves exact-K union and commits intended postimage',async()=>{
- const c=factory(),a=await c.prepare(bearer),op=operation('signIn');
- const added=Buffer.alloc(32,9).toString('base64'),addedSession=hash('added-sibling-session');
- const unrelated=[sibling,added];let before;
- const siblingRows=async tx=>(await tx.query(`SELECT
-  (SELECT jsonb_agg(to_jsonb(k) ORDER BY key_id COLLATE "C") FROM public.app_attest_keys k WHERE key_id=ANY($1::text[])) AS keys,
-  (SELECT jsonb_agg(to_jsonb(s) ORDER BY digest COLLATE "C") FROM public.app_auth_sessions s WHERE key_id=ANY($1::text[])) AS sessions`,[unrelated])).rows;
- await db.transaction(async real=>{
-  const tx=connection(real),d=await c.discover({tx,authentication:a,operationRawJSON:JSON.stringify(op)});
-  // Representative unrelated registration/session rows, inserted after discovery.
-  // Source authentication still comes from actual AppAuth prepare, not a stub.
-  await real.query("INSERT INTO public.app_attest_keys(key_id,user_id,audience,bundle_id,environment,public_key,receipt) VALUES($1,'G','writer-tests','com.lyrica.app','development','fixture','fixture')",[added]);
-  await real.query("INSERT INTO public.app_auth_sessions(digest,key_id,credential_digest,audience,expires_at) VALUES($1,$2,$3,'writer-tests',clock_timestamp()+interval '15 minutes')",[addedSession,added,source.credentialDigest]);
-  before=await siblingRows(real);
-  const s=await c.lock({tx,discovery:d});
-  assert.deepEqual(locks().filter(r=>/library_users/.test(r.sql)).map(r=>r.args[0]),['A','G']);
-  assert.deepEqual(locks().filter(r=>/library_tokens/.test(r.sql)).map(r=>r.args[0]),[source.credentialDigest]);
-  assert.deepEqual(locks().filter(r=>/app_attest_keys/.test(r.sql)).map(r=>r.args[0]),[keyID]);
-  assert.deepEqual(locks().filter(r=>/app_auth_sessions/.test(r.sql)).map(r=>r.args[0]),[hash(bearer)]);
-  assert.equal(await s.revalidate({tx}),true);await changed('signIn',tx,op);
-  assert.equal(await s.verifyPostimage({tx}),true);
-  assert.match(trace.at(-1).sql,/clock_timestamp\(\)/);
-  // No further SQL/IO before this callback returns to COMMIT.
- });
- assert.deepEqual(await siblingRows(db),before);
- assert.equal((await db.query('SELECT user_id FROM public.app_attest_keys WHERE key_id=$1',[keyID])).rows[0].user_id,'A');
- assert.equal((await db.query('SELECT revoked FROM public.library_tokens WHERE digest=$1',[source.credentialDigest])).rows[0].revoked,true);
- assert.equal((await db.query('SELECT digest FROM public.app_auth_sessions WHERE key_id=$1',[keyID])).rows.length,0);
- assert.deepEqual((await db.query('SELECT user_id,revoked,isfinite(expires_at) AND expires_at>clock_timestamp() AS live FROM public.library_tokens WHERE digest=$1',[op.targetCredentialDigest])).rows,[{user_id:'A',revoked:false,live:true}]);
-});
-
-test('new credential negative preimage collision at discovery and after discovery refuses',async()=>{
- const c=factory(),a=await c.prepare(bearer),op=operation('signIn');op.targetCredentialDigest=hash('foreign-token');
- await reject(locked(c,a,op,()=>assert.fail()),'conflict');assert.equal(locks().length,0);
- const fresh=operation('signIn');
- await reject(db.transaction(async real=>{
-  const tx=connection(real),d=await c.discover({tx,authentication:a,operationRawJSON:JSON.stringify(fresh)});
-  await real.query("INSERT INTO public.library_tokens(digest,user_id) VALUES($1,'B')",[fresh.targetCredentialDigest]);
-  await c.lock({tx,discovery:d});
- }),'conflict');
- assert.ok(locks().every(r=>r.args[0]!=='B'));
-});
-
 test('operation is closed raw JSON; scope arrays copied synchronously before first await',async()=>{
  const c=factory(),a=await c.prepare(bearer);
- for(const raw of [{kind:'signOut'},'', '[]','null','{"kind":"delete","ok":true}',
-  '{"kind":"signIn","targetPrincipalID":"A"}', '{"kind":"signOut","kind":"delete"}', ' '.repeat(2049),
-  '{"kind":"signIn","targetPrincipalID":"B","targetCredentialDigest":"bad"}'])
+ // Retired signIn/signOut kinds are refused like any other unknown operation.
+ for(const raw of [{kind:'delete'},'', '[]','null','{"kind":"delete","ok":true}','{"kind":"signOut"}','{"kind":"signIn"}',
+  '{"kind":"signIn","targetPrincipalID":"A"}', '{"kind":"signOut","kind":"delete"}', '{"kind":"delete","kind":"delete"}', ' '.repeat(2049),
+  '{"kind":"signIn","targetPrincipalID":"B","targetCredentialDigest":"'+hash('x')+'"}'])
   await reject(db.transaction(tx=>c.discover({tx:connection(tx),authentication:a,operationRawJSON:raw})),'invalid_request');
- const op=operation('signIn'),options={userIDs:['A']},expected=op.targetCredentialDigest;
+ const options={userIDs:['A']};
  await db.transaction(async real=>{
   const tx=connection(real);let changedInputs=false;
-  intercept=async()=>{if(!changedInputs){changedInputs=true;op.targetPrincipalID='B';op.targetCredentialDigest=hash('foreign-token');options.userIDs[0]='B';}};
-  const d=await c.discover({tx,authentication:{...a},operationRawJSON:JSON.stringify(op),requiredScopes:options});intercept=undefined;
+  intercept=async()=>{if(!changedInputs){changedInputs=true;options.userIDs[0]='B';}};
+  const d=await c.discover({tx,authentication:{...a},operationRawJSON:JSON.stringify(operation()),requiredScopes:options});intercept=undefined;
   const s=await c.lock({tx,discovery:d});
-  await changed('signIn',tx,{kind:'signIn',targetPrincipalID:'A',targetCredentialDigest:expected});
+  await changed(tx);
   assert.equal(await s.verifyPostimage({tx}),true);
  });
  assert.ok(locks().every(r=>r.args[0]!=='B'));
+ assert.ok(locks().some(r=>r.args[0]==='A'),'the synchronously copied scope keeps A');
 });
 
 test('wrong factory/forged auth and opaque plan never fabricate positive authority',async()=>{
@@ -289,13 +235,13 @@ test('plan/scope tied to exact connection/xid, one pass, postfailure cannot be r
  const c=factory(),a=await c.prepare(bearer);let current,old,plan;
  const pooled={query:(...args)=>current.query(...args)};
  await db.transaction(async real=>{
-  current=real;plan=await c.discover({tx:pooled,authentication:a,operationRawJSON:'{"kind":"signOut"}'});
+  current=real;plan=await c.discover({tx:pooled,authentication:a,operationRawJSON:'{"kind":"delete"}'});
   await reject(c.lock({tx:connection(real),discovery:plan}),'unavailable');
   old=await c.lock({tx:pooled,discovery:plan});await reject(c.lock({tx:pooled,discovery:plan}),'unavailable');
-  await reject(c.discover({tx:pooled,authentication:a,operationRawJSON:'{"kind":"signOut"}'}),'unavailable');
+  await reject(c.discover({tx:pooled,authentication:a,operationRawJSON:'{"kind":"delete"}'}),'unavailable');
  });
  await db.transaction(async real=>{current=real;await reject(old.revalidate({tx:pooled}),'unavailable');await reject(old.verifyPostimage({tx:pooled}),'unavailable');});
- await reject(c.discover({tx:db,authentication:a,operationRawJSON:'{"kind":"signOut"}'}),'unavailable');
+ await reject(c.discover({tx:db,authentication:a,operationRawJSON:'{"kind":"delete"}'}),'unavailable');
 });
 // The first three cases discriminate WA-R1-02; verifyPostimage is a retained
 // consumption control expected to refuse reuse even on frozen R1.
@@ -305,7 +251,7 @@ for(const [normal,method] of [[false,'revalidate'],[false,'assertFreshSession'],
   await db.transaction(async real=>{
    const tx=connection(real),other=connection(real);
    assert.notEqual(other,tx); // Same real transaction, different caller facade.
-   const d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"signOut"}'})}),s=await c.lock({tx,discovery:d});
+   const d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"delete"}'})}),s=await c.lock({tx,discovery:d});
    const invoke=(name,client)=>s[name]({tx:client,maxAgeMS:120000}),n=trace.length;
    await reject(invoke(method,other),'unavailable');
    assert.equal(trace.length,n,'wrong-client refusal must occur before SQL');
@@ -337,23 +283,23 @@ for(const normal of [false,true])test((normal?'reader':'writer')+' exact freshne
  await db.query("UPDATE public.app_auth_sessions SET expires_at=clock_timestamp()+interval '779 seconds' WHERE digest=$1",[hash(bearer)]);
  assert.equal((await auth.authenticate(bearer)).id,'G');const before=await snapshot();
  await reject(db.transaction(async real=>{
-  const tx=connection(real),d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"signOut"}'})}),s=await c.lock({tx,discovery:d});
+  const tx=connection(real),d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"delete"}'})}),s=await c.lock({tx,discovery:d});
   assert.equal(await s.revalidate({tx}),true);await s.assertFreshSession({tx,maxAgeMS:120000});
  }),'expired');assert.deepEqual(await snapshot(),before);
 });
 for(const normal of [false,true])test((normal?'reader':'writer')+' freshness rejects unsafe bounds/future issuance and does not acquire locks',async()=>{
  const c=normal?contexts.createCurrentAuthContext({authStore:auth,environment}):factory(),a=await c.prepare(bearer);
  await db.transaction(async real=>{
-  const tx=connection(real),d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"signOut"}'})}),s=await c.lock({tx,discovery:d});
+  const tx=connection(real),d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"delete"}'})}),s=await c.lock({tx,discovery:d});
   const n=locks().length;assert.equal(await s.assertFreshSession({tx,maxAgeMS:120000}),true);assert.equal(locks().length,n);
  });
  for(const maxAgeMS of [-1,900001,0.5,'120000',NaN,Infinity,undefined])await reject(db.transaction(async real=>{
-  const tx=connection(real),d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"signOut"}'})}),s=await c.lock({tx,discovery:d});
+  const tx=connection(real),d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"delete"}'})}),s=await c.lock({tx,discovery:d});
   await s.assertFreshSession({tx,maxAgeMS});
  }),'invalid_request');
  await db.query("UPDATE public.app_auth_sessions SET expires_at=clock_timestamp()+interval '16 minutes' WHERE digest=$1",[hash(bearer)]);
  await reject(db.transaction(async real=>{
-  const tx=connection(real),d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"signOut"}'})}),s=await c.lock({tx,discovery:d});
+  const tx=connection(real),d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"delete"}'})}),s=await c.lock({tx,discovery:d});
   await s.assertFreshSession({tx,maxAgeMS:120000});
  }),'expired');
 });
@@ -383,7 +329,7 @@ test('supplemental exact age predicate vectors preserve microseconds; no actual 
  assert.ok(rows.every(r=>r.ok===r.actual));
 });
 
-for(const kind of ['signIn','signOut','delete'])for(const [name,change,args] of [
+for(const kind of kinds)for(const [name,change,args] of [
  ['disabled user',"UPDATE public.library_users SET disabled=true WHERE id='G'",()=>[]],
  ['revoked C','UPDATE public.library_tokens SET revoked=true WHERE digest=$1',()=>[source.credentialDigest]],
  ['revoked K','UPDATE public.app_attest_keys SET revoked=true WHERE key_id=$1',()=>[keyID]],
@@ -393,26 +339,18 @@ for(const kind of ['signIn','signOut','delete'])for(const [name,change,args] of 
  const c=factory(),a=await c.prepare(bearer);await db.query(change,args());
  await reject(locked(c,a,operation(kind),()=>assert.fail('unauthorized preimage reached consumer')));assert.equal(locks().length,0);
 });
-for(const kind of ['signIn','signOut','delete'])test(kind+' preintent revalidate refuses intentional auth mutation',async()=>{
+for(const kind of kinds)test(kind+' preintent revalidate refuses intentional auth mutation',async()=>{
  const c=factory(),a=await c.prepare(bearer),op=operation(kind),before=await snapshot();
- await reject(locked(c,a,op,async(s,tx)=>{await changed(kind,tx,op);await s.revalidate({tx});}),kind==='signIn'?'conflict':'unauthorized');
+ await reject(locked(c,a,op,async(s,tx)=>{await changed(tx);await s.revalidate({tx});}),'unauthorized');
  assert.deepEqual(await snapshot(),before);
 });
-for(const target of ['G','A'])test('Apple source -> '+target+' preserves other owner scopes and never transfers auth history',async()=>{
+test('a retired apple access kind is refused by the reader and writer before any lock',async()=>{
  await db.query("UPDATE public.library_users SET access_kind='apple' WHERE id='G'");
- const c=factory(),a=await c.prepare(bearer),op=operation('signIn',target);
- const other=(await db.query('SELECT to_jsonb(k) AS row FROM public.app_attest_keys k WHERE key_id=$1',[foreign])).rows;
- await locked(c,a,op,async(s,tx)=>{await s.revalidate({tx});await changed('signIn',tx,op);await s.verifyPostimage({tx});});
- assert.deepEqual((await db.query('SELECT to_jsonb(k) AS row FROM public.app_attest_keys k WHERE key_id=$1',[foreign])).rows,other);
- assert.ok(locks().every(r=>r.args[0]!=='B'&&r.args[0]!==foreign));
-});
-test('verified disabled Apple target may be reenabled only in the bound signIn postimage',async()=>{
- await db.query("UPDATE public.library_users SET disabled=true WHERE id='A'");
- const c=factory(),a=await c.prepare(bearer),op=operation('signIn');
- await locked(c,a,op,async(s,tx)=>{
-  await s.revalidate({tx});await tx.query("UPDATE public.library_users SET disabled=false WHERE id='A'");
-  await changed('signIn',tx,op);assert.equal(await s.verifyPostimage({tx}),true);
- });
+ for(const normal of [false,true]){
+  const c=normal?contexts.createCurrentAuthContext({authStore:auth,environment}):factory(),a=await c.prepare(bearer);
+  await reject(db.transaction(async real=>c.discover({tx:connection(real),authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"delete"}'})})));
+ }
+ assert.equal(locks().length,0);
 });
 test('supplemental live B anchors cannot authorize invalid source S',async()=>{
  const c=factory(),a=await c.prepare(bearer);await db.query('DELETE FROM public.app_auth_sessions WHERE digest=$1',[hash(bearer)]);
@@ -422,38 +360,38 @@ test('supplemental live B anchors cannot authorize invalid source S',async()=>{
 for(const normal of [false,true])test((normal?'reader':'writer')+' unauthorized source yields unauthorized instead of freshness expired',async()=>{
  const c=normal?contexts.createCurrentAuthContext({authStore:auth,environment}):factory(),a=await c.prepare(bearer);
  await reject(db.transaction(async real=>{
-  const tx=connection(real),d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"signOut"}'})}),s=await c.lock({tx,discovery:d});
+  const tx=connection(real),d=await c.discover({tx,authentication:a,...(normal?{}:{operationRawJSON:'{"kind":"delete"}'})}),s=await c.lock({tx,discovery:d});
   await tx.query('UPDATE public.app_auth_sessions SET revoked=true WHERE digest=$1',[hash(bearer)]);
   await s.assertFreshSession({tx,maxAgeMS:0});
  }));
 });
 test('postimage final SQL receives exact fractional source datetime text and precedes no further IO',async()=>{
- const c=factory(),a=await c.prepare(bearer),op=operation('signIn');
+ const c=factory(),a=await c.prepare(bearer),op=operation();
  await db.transaction(async real=>{
   await real.query("UPDATE public.app_auth_sessions SET expires_at=date_trunc('second',clock_timestamp())+interval '10 minutes 0.123456 seconds' WHERE digest=$1",[hash(bearer)]);
   await real.query("UPDATE public.library_tokens SET expires_at=date_trunc('second',clock_timestamp())+interval '1 day 0.654321 seconds' WHERE digest=$1",[source.credentialDigest]);
   const deadlines=(await real.query('SELECT s.expires_at::text AS s,t.expires_at::text AS c FROM public.app_auth_sessions s JOIN public.library_tokens t ON t.digest=s.credential_digest WHERE s.digest=$1',[hash(bearer)])).rows[0];
   const tx=connection(real),d=await c.discover({tx,authentication:a,operationRawJSON:JSON.stringify(op)}),s=await c.lock({tx,discovery:d});
-  await changed('signIn',tx,op);assert.equal(await s.verifyPostimage({tx}),true);
-  assert.deepEqual(trace.at(-1).args.slice(0,2),[deadlines.s,deadlines.c]);
+  await changed(tx);assert.equal(await s.verifyPostimage({tx}),true);
+  assert.deepEqual(trace.at(-1).args,[deadlines.s,deadlines.c]);
   assert.match(deadlines.s,/\.123456/);assert.match(deadlines.c,/\.654321/);
  });
 });
 
 // ACR1-01 narrow companion API: an optional negative bound can only shorten
-// existing exact S/C/C2 authorization. Invalid supplied values retire scope.
+// existing exact S/C authorization. Invalid supplied values retire scope.
 for(const value of [null,-1,1.5,Infinity,'1',Number.MAX_SAFE_INTEGER+1])
  test('final writer cutoff rejects and retires invalid '+String(value),async()=>{
   const c=factory(),a=await c.prepare(bearer),op=operation();
   await locked(c,a,op,async(scope,tx)=>{
-   await changed(op.kind,tx,op);await reject(scope.verifyPostimage({tx,notAfterMS:value}),'unavailable');
+   await changed(tx);await reject(scope.verifyPostimage({tx,notAfterMS:value}),'unavailable');
    await reject(scope.verifyPostimage({tx}),'unavailable');
   });
  });
 test('final writer zero cutoff denies without relaxing exact source authority',async()=>{
  const c=factory(),a=await c.prepare(bearer),op=operation();
  await locked(c,a,op,async(scope,tx)=>{
-  await changed(op.kind,tx,op);await reject(scope.verifyPostimage({tx,notAfterMS:0}),'unauthorized');
+  await changed(tx);await reject(scope.verifyPostimage({tx,notAfterMS:0}),'unauthorized');
   await reject(scope.verifyPostimage({tx}),'unavailable');
  });
 });

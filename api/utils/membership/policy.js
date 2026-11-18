@@ -28,13 +28,14 @@ export function transactionFields(value,{bundleID,environment,now=new Date()}={}
   const product=PRODUCTS[value?.productId];
   if(!product||value.bundleId!==bundleID||value.environment!==environment||value.type!=='Auto-Renewable Subscription'||
      !/^[0-9]{1,40}$/.test(value.originalTransactionId??'')||!/^[0-9]{1,40}$/.test(value.transactionId??'')||
-     !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value.appAccountToken??'')||
+     // Offer-code redemptions carry no appAccountToken; a present one must be a UUID.
+     (value.appAccountToken!=null&&!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value.appAccountToken))||
      ![value.purchaseDate,value.expiresDate,value.signedDate].every(Number.isSafeInteger)||
      (value.originalPurchaseDate!==undefined&&(!Number.isSafeInteger(value.originalPurchaseDate)||value.originalPurchaseDate<0||value.originalPurchaseDate>value.purchaseDate))||
      value.purchaseDate<0||value.purchaseDate>=value.expiresDate||value.signedDate>+now+300000||
      value.inAppOwnershipType!=='PURCHASED')throw new Error('invalid_transaction');
   return {originalID:value.originalTransactionId,transactionID:value.transactionId,productID:value.productId,
-    tier:product.tier,environment,appAccountToken:value.appAccountToken.toLowerCase(),
+    tier:product.tier,environment,appAccountToken:value.appAccountToken?.toLowerCase()??null,
     starts:new Date(value.originalPurchaseDate??value.purchaseDate),expires:new Date(value.expiresDate),signedAt:new Date(value.signedDate),
     revoked:value.revocationDate!=null||value.isUpgraded===true};
 }

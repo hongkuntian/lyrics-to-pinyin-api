@@ -1,4 +1,5 @@
 import {currentRoleSQL} from '../../scripts/namespace-history.js';
+import {withoutRetiredRelations} from '../../scripts/membership-role-grants.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {libraryDB} from '../helpers/library-db.js';
@@ -21,7 +22,8 @@ test('the restricted production role can relay after migration without gaining a
     await db.exec(currentRoleSQL(migration));
     await db.exec(currentRoleSQL(migration)); // The grant is safe to repeat during operator recovery.
     const memberships=await readFile(new URL('../../db/025-memberships.sql',import.meta.url),'utf8');
-    await db.exec(currentRoleSQL(memberships.slice(memberships.indexOf('DO $$ BEGIN'),memberships.lastIndexOf('COMMIT;'))));
+    // 039 dropped account_identities; replay 025's grants the way late provisioning does.
+    await db.exec(withoutRetiredRelations(currentRoleSQL(memberships.slice(memberships.indexOf('DO $$ BEGIN'),memberships.lastIndexOf('COMMIT;')))));
     await db.exec('SET ROLE lyrica_runtime_v1');
     assert.deepEqual(await relay.update('reader-a',validatePush(pushBody(),pushTime)),
       {state:'accepted',sequence:1,timestamp:pushTime/1000});

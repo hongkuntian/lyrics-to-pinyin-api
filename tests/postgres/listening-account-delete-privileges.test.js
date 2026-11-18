@@ -131,7 +131,7 @@ async function seed(h,{retained=true,rate='matching'}={}){
  const credentials=['target-c1','target-c2','other-c'].map(sha),bearers=['lyrica_s_target_exact','lyrica_s_target_sibling','lyrica_s_other'];
  const rooms=[1,2,3,4].map(n=>'00000000-0000-0000-0000-'+String(n).padStart(12,'0'));
  const appToken='11111111-1111-1111-1111-111111111111',grant='22222222-2222-2222-2222-222222222222';
- await h.query("INSERT INTO public.library_users(id,access_kind) VALUES($1,'apple'),($2,'apple')",[id,other]);
+ await h.query("INSERT INTO public.library_users(id,access_kind) VALUES($1,'guest'),($2,'guest')",[id,other]);
  for(let i=0;i<3;i++){
   const owner=i===2?other:id;
   await h.query("INSERT INTO public.library_tokens(digest,user_id,expires_at) VALUES($1,$2,clock_timestamp()+interval '1 hour')",[credentials[i],owner]);
@@ -139,7 +139,6 @@ async function seed(h,{retained=true,rate='matching'}={}){
    VALUES($1,$2,$3,$4,'development','fixture-public-key',$5)`,[keys[i],owner,policy.audience,bundleID,Buffer.from('fixture-receipt')]);
   await h.query("INSERT INTO public.app_auth_sessions(digest,key_id,credential_digest,audience,expires_at) VALUES($1,$2,$3,$4,clock_timestamp()+interval '15 minutes')",[sha(bearers[i]),keys[i],credentials[i],policy.audience]);
  }
- await h.query('INSERT INTO public.account_identities(subject_hash,user_id,app_account_token,apple_client_id,refresh_token_encrypted) VALUES($1,$2,$3,$4,$5)',[sha('apple-subject'),id,appToken,bundleID,'encrypted-Apple-fixture']);
  for(let i=0;i<(retained?4:0);i++){
   const owner=i<2?id:other,members=i===2?[{userID:id,name:'Target',shareName:true,other:'preserved'},{userID:other,name:'Other',shareName:true}]:[{userID:owner,name:'Owner',shareName:true}];
   const data={members,recordings:[{provider:'appleMusic',catalogID:'exact-retained-id'}],unchanged:['opaque',i]};
@@ -160,20 +159,18 @@ async function seed(h,{retained=true,rate='matching'}={}){
  await h.query("INSERT INTO public.membership_usage(operation_id,user_id,grant_id,kind,state) VALUES($1,$2,$3,'translation','consumed')",[randomUUID(),id,grant]);
  await h.query("INSERT INTO public.membership_preview_claims(user_id,activity_id,recording_id,expires_at) VALUES($1,'preview','exact-recording','2099-01-01T00:00:00Z')",[id]);
  await h.query("INSERT INTO public.membership_relay_usage(user_id,period_start,request_count) VALUES($1,'2026-01-01',9)",[id]);
- const challenge='delete-confirmation';
- await h.query("INSERT INTO public.account_nonces(digest,purpose,bundle_id,key_id,user_id,expires_at) VALUES($1,'delete',$2,$3,$4,clock_timestamp()+interval '5 minutes')",[sha(challenge),bundleID,keys[0],id]);
- return {id,other,keys,credentials,bearers,rooms,input:{challenge,bundleID,identityToken:'external-Apple',authorizationCode:'external-Apple'}};
+ return {id,other,keys,credentials,bearers,rooms};
 }
 async function actual(h,f,{owner=false,beforeSQL,afterSQL,trace=[]}={}){
- const effects={appleAuthenticate:0,appleRevoke:0},role=owner?null:account;
+ const role=owner?null:account;
  const db=h.adapter(role,{trace,beforeSQL,afterSQL});
  const auth=new AppAuthStore(db,{policy}); // Actual authenticate SQL; no auth replacement.
  const user=await auth.authenticate(f.bearers[0]);assert.equal(user.id,f.id);
  const count=trace.length;
- const store=new AccountStore(db,{policy,apple:{authenticate:async()=>{effects.appleAuthenticate++;return {subjectHash:sha('apple-subject'),refreshTokenEncrypted:'fresh-encrypted'};},revoke:async()=>{effects.appleRevoke++;}}});
+ const store=new AccountStore(db,{policy});
  assert.equal(trace.length,count,'default-off construction executes no SQL');
  const handle=await store.prepareWriterAuthentication(f.bearers[0]);
- return {effects,trace,run:()=>store.delete(user,f.input,handle)};
+ return {trace,run:()=>store.delete(user,handle)};
 }
 function traceSuccess(trace,role){
  const commit=trace.findLastIndex(e=>e.event==='COMMIT');assert.ok(commit>=0);
@@ -187,7 +184,7 @@ function unchangedExcept(before,after,fields){
 }
 function assertDeleted(before,after,f){
  const target=r=>r.user_id===f.id,other=r=>r.user_id!==f.id;
- for(const table of ['lyric_documents','app_auth_challenges','account_rate_windows','membership_subscriptions','membership_grants','membership_usage','membership_preview_claims','membership_relay_usage','library_schema_migrations'])assert.deepEqual(after[table],before[table],table);
+ for(const table of ['lyric_documents','app_auth_challenges','account_identities','account_nonces','account_rate_windows','membership_subscriptions','membership_grants','membership_usage','membership_preview_claims','membership_relay_usage','library_schema_migrations'])assert.deepEqual(after[table],before[table],table);
  for(const r of before.library_users){const a=after.library_users.find(x=>x.id===r.id);assert.deepEqual(a,r.id===f.id?{...r,disabled:true}:r);}
  // image() orders by PostgreSQL text; normalize both sides for transformations.
  for(const table of ['library_tokens','app_attest_keys']){
@@ -203,8 +200,6 @@ function assertDeleted(before,after,f){
   else assert.deepEqual(row,old);
  }
  for(const table of ['listening_commands','listening_outbox'])assert.deepEqual(after[table],before[table].filter(r=>!f.rooms.slice(0,2).includes(r.room_id)),table+' cascade');
- for(const old of before.account_identities){const row=after.account_identities.find(r=>r.user_id===old.user_id);unchangedExcept(old,row,['deleted_at','refresh_token_encrypted','apple_client_id']);assert.ok(row.deleted_at);assert.equal(row.refresh_token_encrypted,null);assert.equal(row.apple_client_id,null);}
- assert.deepEqual(after.account_nonces,before.account_nonces.map(r=>r.digest===sha(f.input.challenge)?{...r,consumed:true}:r));
  assert.deepEqual(sorted(after.correction_reports),sorted(before.correction_reports.map(r=>target(r)?{...r,detail:'[Account deleted]',assessment:null}:r)));
 }
 async function acl(h){return (await h.query(`SELECT n.nspname,c.relname,'table' AS scope,NULL::text AS column_name,x.grantor,x.grantee,x.privilege_type,x.is_grantable
@@ -263,7 +258,7 @@ async function runCases(caseTest,make){
   const h=await make(t);await schema(h,config);const f=await seed(h,config),before=await image(h),trace=[];
   const a=await actual(h,f,{trace});assert.deepEqual(await a.run(),{deleted:true});
   const after=await image(h);assertDeleted(before,after,f);traceSuccess(trace,account);
-  assert.equal(a.effects.appleRevoke,1);assert.equal(trace.some(e=>/spotify_/.test(e.text??'')),false);
+  assert.equal(trace.some(e=>/spotify_/.test(e.text??'')),false);
   await narrow(h,true);
  });
  for(const rate of ['matching','nonmatching','empty'])await caseTest('historical registry actual restricted delete reaches exact 42501 and populated rollback; '+rate,async t=>{
@@ -272,7 +267,7 @@ async function runCases(caseTest,make){
   await narrow(h,false);await assert.rejects(a.run(),permission);assert.deepEqual(await image(h),before);
   assert.ok(trace.some(e=>e.text?.startsWith('DELETE FROM listening_rooms')));
   assert.ok(trace.some(e=>e.text?.startsWith('UPDATE listening_rooms')));
-  assert.equal(trace.at(-1).event,'ROLLBACK');assert.equal(a.effects.appleRevoke,1);
+  assert.equal(trace.at(-1).event,'ROLLBACK');
   for(const e of trace.filter(e=>e.text))assert.equal(e.currentUser,account);
  });
  await caseTest('original owner positive control remains separate from restricted qualification',async t=>{
@@ -318,7 +313,7 @@ async function runCases(caseTest,make){
   await assert.rejects(a.run(),fault==='last-SQL-failure'?{code:'22012'}:{code:'app_access_revoked'});
   assert.equal(injected,true);assert.ok(trace.some(e=>e.text?.startsWith('DELETE FROM listening_rate_windows')));
   assert.ok(trace.some(e=>e.text?.startsWith('UPDATE correction_reports')));
-  assert.equal(trace.at(-1).event,'ROLLBACK');assert.deepEqual(await image(h),before);assert.equal(a.effects.appleRevoke,1,'external Apple revoke is recorded, never asserted rolled back');
+  assert.equal(trace.at(-1).event,'ROLLBACK');assert.deepEqual(await image(h),before);
 
   // A deadline cannot be extended as an auth recovery claim. Owner fixture
   // renewal here starts a separately prepared attempt after rollback.
@@ -472,7 +467,9 @@ test('manual PostgreSQL restricted account-delete privilege matrix',{timeout:900
  ({AccountStore}=await import('../../api/utils/membership/accounts.js'));
  ({AppAuthStore}=await import('../../api/utils/app-auth/store.js'));
  const registered=await import('../../scripts/library-migrations.js');
- migrationNames=registered.migrationNames.filter(name=>name!=='037-lyrica-namespace.sql');
+ // Historical 036 qualification never applies the later namespace cutover or
+ // 039, whose grants name the post-037 roles. Deletion uses no 039 column.
+ migrationNames=registered.migrationNames.filter(name=>name!=='037-lyrica-namespace.sql'&&name!=='039-anonymous-accounts.sql');
  migrateLibrary=async(database,options)=>{
   const saved=[...registered.migrationNames];registered.migrationNames.splice(0,registered.migrationNames.length,...migrationNames);
   try{return await registered.migrateLibrary(database,options);}

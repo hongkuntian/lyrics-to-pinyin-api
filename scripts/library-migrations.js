@@ -18,6 +18,8 @@ migrationNames.push('036-account-data-privacy.sql');
 migrationNames.push('037-lyrica-namespace.sql');
 // Spotify is native-only: drop the retired server observer's grants and state.
 migrationNames.push('038-retire-spotify-observer.sql');
+// Anonymous accounts: Sign in with Apple removed, DeviceCheck hold, relay access, sliding guest expiry.
+migrationNames.push('039-anonymous-accounts.sql');
 export async function migrateLibrary(database,{expectedPending}={}) {
   return database.transaction(async db=> {
     await db.query("SET LOCAL lock_timeout='5s'");

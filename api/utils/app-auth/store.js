@@ -104,6 +104,11 @@ export class AppAuthStore {
       await db.query('DELETE FROM app_auth_sessions WHERE key_id=$1',[keyID]);
       const row=await first(db,`INSERT INTO app_auth_sessions(digest,key_id,credential_digest,audience,expires_at)
         VALUES($1,$2,$3,$4,clock_timestamp()+interval '15 minutes') RETURNING expires_at`,[digest(value),keyID,user.digest,this.policy.audience]);
+      // A guest credential in use never expires: each session slides it to 365
+      // days, writing only when fewer than 300 remain. The token row is already
+      // locked above; the bounded function is the runtime login's only way to
+      // change an expiry (039). Unbounded and non-guest credentials are unchanged.
+      await db.query('SELECT public.slide_guest_credential_expiry($1)',[user.digest]);
       await this.credential(token,db);
       return {token:value,expiresAt:new Date(row.expires_at).toISOString()};
     });

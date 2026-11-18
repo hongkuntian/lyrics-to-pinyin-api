@@ -5,11 +5,11 @@ import {AppAuthStore,authPolicy} from '../app-auth/store.js';
 import {createWriterAuthContext} from '../app-auth/auth-context.js';
 import {AuthContextError} from '../app-auth/errors.js';
 import {attest} from '../app-auth/verification.js';
-import {AppleIdentityService} from './apple-identity.js';
+import {DeviceCheckError,defaultDeviceCheck,recentlyUpdated,rejectedDeviceToken} from './device-check.js';
 import {first} from './policy.js';
 
 // Guest enrollment keeps its existing credential/key checks and writer locks.
-// Account mutations below use exact-bearer writer authentication instead.
+// Guest deletion uses exact-bearer writer authentication instead.
 async function sourceCredential(db,user,policy) {
   const row=await first(db,`SELECT t.expires_at::text AS deadline FROM library_users u
     JOIN library_tokens t ON t.user_id=u.id JOIN app_attest_keys k ON k.user_id=u.id
@@ -35,8 +35,8 @@ async function writerAuthorization(operation) {
 export class AccountStore {
   #writerAuth;
   #writerAuthentications=new WeakMap();
-  constructor(db,{policy,attestFn=attest,apple=new AppleIdentityService()}={}) {
-    this.db=db;this.policy=policy??authPolicy();this.attest=attestFn;this.apple=apple;
+  constructor(db,{policy,attestFn=attest,deviceCheck=defaultDeviceCheck(),logger=console,now=Date.now}={}) {
+    this.db=db;this.policy=policy??authPolicy();this.attest=attestFn;this.deviceCheck=deviceCheck;this.logger=logger;this.now=now;
     // Pure construction: no SQL or namespace activation.
     this.#writerAuth=createWriterAuthContext({authStore:new AppAuthStore(this.db,{policy:this.policy}),
       environment:this.policy.environment==='production'?'production':'development'});
@@ -57,13 +57,14 @@ export class AccountStore {
     const source=Object.freeze({id:user.id,keyID:user.keyID,bundleID:user.bundleID,credentialDigest:user.credentialDigest});
     return {source,authentication};
   }
-  async #lockWriter(db,user,authentication,operationRawJSON,{userIDs=[user.id],allTokens=false,allKeys=false,additionalDigests=[]}={}) {
+  // Deletion covers every credential and key of the source account.
+  async #lockWriter(db,user,authentication,operationRawJSON) {
     // Nonlocking collection only. The frozen writer owns the sole auth lock
     // pass and refuses changed discovery; never append a former owner/key.
     const tokenIDs=async()=>(await db.query('SELECT digest FROM library_tokens WHERE user_id=$1 ORDER BY digest COLLATE "C" LIMIT 65',[user.id])).rows.map(row=>row.digest);
     const attestIDs=async()=>(await db.query('SELECT key_id FROM app_attest_keys WHERE user_id=$1 ORDER BY key_id COLLATE "C" LIMIT 65',[user.id])).rows.map(row=>row.key_id);
-    const credentialDigests=allTokens?await tokenIDs():[],keyIDs=allKeys?await attestIDs():[];
-    const requiredScopes={userIDs,credentialDigests:[...new Set([user.credentialDigest,...credentialDigests,...additionalDigests])],
+    const credentialDigests=await tokenIDs(),keyIDs=await attestIDs();
+    const requiredScopes={userIDs:[user.id],credentialDigests:[...new Set([user.credentialDigest,...credentialDigests])],
       keyIDs:[...new Set([user.keyID,...keyIDs])]};
     if(Object.values(requiredScopes).some(list=>list.length>64))throw new LibraryError('app_auth_unavailable',503);
     const discovery=await writerAuthorization(()=>this.#writerAuth.discover({tx:db,authentication,operationRawJSON,requiredScopes}));
@@ -72,8 +73,8 @@ export class AccountStore {
       throw new LibraryError('app_access_revoked',403);
     // These are read-only completeness checks under the now-held user anchor.
     // New enrollment/rotation before locking refuses; it never appends a pass.
-    if(allTokens&&JSON.stringify(await tokenIDs())!==JSON.stringify(credentialDigests)||
-      allKeys&&JSON.stringify(await attestIDs())!==JSON.stringify(keyIDs))throw new LibraryError('app_access_revoked',403);
+    if(JSON.stringify(await tokenIDs())!==JSON.stringify(credentialDigests)||
+      JSON.stringify(await attestIDs())!==JSON.stringify(keyIDs))throw new LibraryError('app_access_revoked',403);
     return scope;
   }
   async enabled(db=this.db) {
@@ -86,23 +87,23 @@ export class AccountStore {
       DO UPDATE SET count=account_rate_windows.count+1 RETURNING count`,[scope]);
     if(row.count>limit)throw new LibraryError('rate_limited',429);
   }
-  async challenge({purpose,bundleID,keyID},user,clientAddress) {
+  // Enrollment is the only challenge purpose; it is never authenticated.
+  async challenge({purpose,bundleID,keyID},clientAddress) {
     await this.enabled();
-    if(!this.policy.bundles.includes(bundleID)||!['guest','apple','delete'].includes(purpose)||
-      (purpose==='guest'?(!keyID||user):!user))throw new LibraryError('invalid_request',400);
+    if(!this.policy.bundles.includes(bundleID)||purpose!=='guest'||!keyID)throw new LibraryError('invalid_request',400);
     await this.limit('global',120);
-    await this.limit(user?'user:'+user.id:'ip:'+digest(clientAddress??'unknown'),10);
+    await this.limit('ip:'+digest(clientAddress??'unknown'),10);
     const value=randomBytes(32).toString('base64url');
     await this.db.query('DELETE FROM account_nonces WHERE expires_at<now()');
     await this.db.query("DELETE FROM account_rate_windows WHERE window_start<now()-interval '1 day'");
     await this.db.query(`INSERT INTO account_nonces(digest,purpose,bundle_id,key_id,user_id,expires_at)
-      VALUES($1,$2,$3,$4,$5,now()+interval '5 minutes')`,[digest(value),purpose,bundleID,keyID??user?.keyID??null,user?.id??null]);
+      VALUES($1,$2,$3,$4,NULL,now()+interval '5 minutes')`,[digest(value),purpose,bundleID,keyID]);
     return {challenge:value};
   }
-  async nonce(db,{challenge,bundleID,keyID},purpose,userID=null,consume=false) {
+  async nonce(db,{challenge,bundleID,keyID},consume=false) {
     const row=await first(db,`${consume?'UPDATE account_nonces SET consumed=true':'SELECT * FROM account_nonces'}
-      WHERE digest=$1 AND purpose=$2 AND bundle_id=$3 AND key_id=$4 AND user_id IS NOT DISTINCT FROM $5
-        AND NOT consumed AND expires_at>clock_timestamp()${consume?' RETURNING *':''}`,[digest(challenge),purpose,bundleID,keyID,userID]);
+      WHERE digest=$1 AND purpose='guest' AND bundle_id=$2 AND key_id=$3 AND user_id IS NULL
+        AND NOT consumed AND expires_at>clock_timestamp()${consume?' RETURNING *':''}`,[digest(challenge),bundleID,keyID]);
     if(!row)throw new LibraryError('challenge_expired',401);
     return row;
   }
@@ -125,107 +126,73 @@ export class AccountStore {
       if(!current)throw new LibraryError('app_access_revoked',403);
       return {registered:true};
     });
-    await this.nonce(this.db,input,'guest');
+    await this.nonce(this.db,input);
     let proof;try{proof=this.attest({attestation:Buffer.from(input.attestation,'base64'),challenge:input.challenge,keyId:keyID,bundleID,...this.policy});}
     catch{throw new LibraryError('app_attestation_invalid',403);}
+    // DeviceCheck runs only for a new account, outside the transaction.
+    const device=await this.#enrollmentDeviceCheck(input);
     await this.db.transaction(async db=>{
       await db.query('SELECT id FROM membership_settings WHERE id=1 FOR UPDATE');
-      await this.enabled(db);await this.nonce(db,input,'guest',null,true);
+      await this.enabled(db);await this.nonce(db,input,true);
       if(await first(db,'SELECT 1 FROM app_attest_keys WHERE key_id=$1',[keyID]))throw new LibraryError('app_access_revoked',403);
       const total=await first(db,"SELECT count(*) AS n FROM library_users WHERE access_kind='guest' AND created_at>now()-interval '1 day'");
       if(Number(total.n)>=5000)throw new LibraryError('public_access_temporarily_unavailable',503);
       const id='guest-'+randomUUID();
-      await db.query("INSERT INTO library_users(id,access_kind) VALUES($1,'guest')",[id]);
+      await db.query(`INSERT INTO library_users(id,access_kind,free_allowance_held_until)
+        VALUES($1,'guest',CASE WHEN $2::boolean THEN now()+interval '7 days' END)`,[id,device.hold]);
       await db.query("INSERT INTO library_tokens(digest,user_id,expires_at) VALUES($1,$2,clock_timestamp()+interval '90 days')",[digest(credential),id]);
       await db.query(`INSERT INTO app_attest_keys(key_id,user_id,audience,bundle_id,environment,public_key,receipt)
         VALUES($1,$2,$3,$4,$5,$6,$7)`,[keyID,id,this.policy.audience,bundleID,this.policy.environment,proof.publicKey,proof.receipt]);
       await sourceCredential(db,{id,keyID,bundleID,credentialDigest:digest(credential)},this.policy);
     });
+    // Mark the device only once an account exists, so a refused or failed
+    // enrollment can never hold this device's next attempt.
+    if(device.mark)try{await this.deviceCheck.setBit(input.deviceToken,{bundleID,bit:0});}
+    catch(error){this.#deviceCheckUnavailable(error,'enrollment_mark');}
     return {registered:true};
   }
-  async signIn(user,input,handle) {
-    const prepared=this.#writerAuthentication(user,handle);user=prepared.source;
-    input=Object.freeze({...input,keyID:user.keyID});
-    await this.enabled();
-    await this.nonce(this.db,input,'apple',user.id);
-    const verified=await this.apple.authenticate(input),credential='lyrica_a_'+randomBytes(32).toString('base64url');
-    let userID;
-    await this.db.transaction(async db=>{
-      // Serialize identity creation, deletion and starter claims across devices.
-      await db.query('SELECT id FROM membership_settings WHERE id=1 FOR UPDATE');
-      await this.enabled(db);await this.nonce(db,input,'apple',user.id,true);
-      let identity=await first(db,'SELECT * FROM account_identities WHERE subject_hash=$1 FOR UPDATE',[verified.subjectHash]);
-      if(!identity) {
-        // Fresh random user/identity rows are not visible to any other tx.
-        // Existing source/target users are locked together below, never target
-        // first. The new-row FKs refer only to this transaction's own user.
-        userID='apple-'+randomUUID();
-        await db.query("INSERT INTO library_users(id,access_kind) VALUES($1,'apple')",[userID]);
-        identity=await first(db,`INSERT INTO account_identities(subject_hash,user_id,app_account_token,apple_client_id,refresh_token_encrypted)
-          VALUES($1,$2,$3,$4,$5) RETURNING *`,[verified.subjectHash,userID,randomUUID(),input.bundleID,verified.refreshTokenEncrypted]);
-      } else userID=identity.user_id;
-      // C2 is server minted; capture this closed raw intent once, before
-      // discovery or any subsequent await can observe a different target.
-      const targetCredentialDigest=digest(credential);
-      const operationRawJSON=JSON.stringify({kind:'signIn',targetPrincipalID:userID,targetCredentialDigest});
-      const scope=await this.#lockWriter(db,user,prepared.authentication,operationRawJSON,{userIDs:[user.id,userID]});
-      await writerAuthorization(()=>scope.revalidate({tx:db}));
-      await db.query('UPDATE account_identities SET deleted_at=NULL,apple_client_id=$2,refresh_token_encrypted=$3 WHERE user_id=$1',
-        [userID,input.bundleID,verified.refreshTokenEncrypted]);
-      // Configured target reenable passed permanent-withdrawal refusal above.
-      if(identity.deleted_at)await db.query('UPDATE library_users SET disabled=false WHERE id=$1',[userID]);
-      if(!await first(db,'SELECT id FROM library_users WHERE id=$1 AND NOT disabled',[userID]))throw new LibraryError('app_access_revoked',403);
-      const moved=await first(db,`UPDATE app_attest_keys SET user_id=$2 WHERE key_id=$1 AND user_id=$3 AND NOT revoked RETURNING key_id`,
-        [user.keyID,userID,user.id]);
-      if(!moved)throw new LibraryError('app_access_revoked',403);
-      await db.query('UPDATE library_tokens SET revoked=true WHERE digest=$1',[user.credentialDigest]);
-      await db.query('DELETE FROM app_auth_sessions WHERE key_id=$1',[user.keyID]);
-      // C2 was proved absent by the bound writer intent. Insert only after
-      // the locked preimage check; unique collision still rolls everything back.
-      await db.query("INSERT INTO library_tokens(digest,user_id,expires_at) VALUES($1,$2,clock_timestamp()+interval '365 days')",[targetCredentialDigest,userID]);
-      await writerAuthorization(()=>scope.verifyPostimage({tx:db}));
-      // Return directly to the transaction wrapper's COMMIT; no further IO.
-    });
-    return {credential,userID};
+  #deviceCheckUnavailable(error,stage) {
+    // Never the device token, JWT or Apple's response body.
+    this.logger.warn?.({event:'devicecheck_unavailable',stage,
+      reason:error===null?'unconfigured':error instanceof DeviceCheckError?error.reason:'error'});
   }
-  async signOut(user,handle) {
-    const prepared=this.#writerAuthentication(user,handle);user=prepared.source;
-    const operationRawJSON=JSON.stringify({kind:'signOut'});
-    await this.db.transaction(async db=>{
-      // The writer keeps its owner-wide key lock set; only the credential is revoked.
-      const scope=await this.#lockWriter(db,user,prepared.authentication,operationRawJSON,{allKeys:true});
-      await writerAuthorization(()=>scope.revalidate({tx:db}));
-      await db.query('UPDATE library_tokens SET revoked=true WHERE digest=$1',[user.credentialDigest]);
-      // Exact source deadline SQL, then direct COMMIT.
-      await writerAuthorization(()=>scope.verifyPostimage({tx:db}));
-    });
-    return {signedOut:true};
+  // Hold a new account's free allowance when this device created an account
+  // in the current or previous UTC month, or when a configured service gets
+  // no token (a token Apple rejects on both hosts counts as none).
+  // Unconfigured or failing DeviceCheck never holds.
+  async #enrollmentDeviceCheck({deviceToken,bundleID}) {
+    if(!this.deviceCheck.configured){this.#deviceCheckUnavailable(null,'enrollment');return {hold:false,mark:false};}
+    if(deviceToken===undefined){this.logger.info?.({event:'devicecheck_enrollment',token:false,hold:true});return {hold:true,mark:false};}
+    let bits;
+    try{bits=await this.deviceCheck.query(deviceToken,{bundleID});}
+    catch(error){
+      if(rejectedDeviceToken(error)){this.logger.info?.({event:'devicecheck_enrollment',token:'rejected',hold:true});return {hold:true,mark:false};}
+      this.#deviceCheckUnavailable(error,'enrollment');return {hold:false,mark:false};
+    }
+    const hold=bits.bit0&&recentlyUpdated(bits.lastUpdateTime,this.now());
+    this.logger.info?.({event:'devicecheck_enrollment',token:true,hold});
+    return {hold,mark:true};
   }
-  async delete(user,input,handle) {
+  // Deletes the anonymous (guest) account behind this exact session. Access
+  // code (beta) accounts are operator-managed and are never deleted here.
+  async delete(user,handle) {
     const prepared=this.#writerAuthentication(user,handle);user=prepared.source;
-    input=Object.freeze({...input,keyID:user.keyID});
     const operationRawJSON=JSON.stringify({kind:'delete'});
-    await this.nonce(this.db,input,'delete',user.id);
-    const identity=await first(this.db,'SELECT * FROM account_identities WHERE user_id=$1 AND deleted_at IS NULL',[user.id]);
-    if(!identity)throw new LibraryError('sign_in_required',403);
-    const verified=await this.apple.authenticate(input);
-    if(verified.subjectHash!==identity.subject_hash)throw new LibraryError('apple_identity_invalid',403);
+    const kind=await first(this.db,'SELECT access_kind FROM library_users WHERE id=$1 AND NOT disabled',[user.id]);
+    if(!kind)throw new LibraryError('app_access_revoked',403);
+    if(kind.access_kind!=='guest')throw new LibraryError('account_not_deletable',403);
     await assertRetainedAccountDeletionAvailable(this.db);
-    await this.apple.revoke({...identity,apple_client_id:input.bundleID,refresh_token_encrypted:verified.refreshTokenEncrypted});
     await this.db.transaction(async db=>{
-      await db.query('SELECT id FROM membership_settings WHERE id=1 FOR UPDATE');
-      await this.nonce(db,input,'delete',user.id,true);
-      const currentIdentity=await first(db,'SELECT * FROM account_identities WHERE user_id=$1 FOR UPDATE',[user.id]);
-      if(!currentIdentity||currentIdentity.subject_hash!==verified.subjectHash)throw new LibraryError('apple_identity_invalid',403);
-      const scope=await this.#lockWriter(db,user,prepared.authentication,operationRawJSON,{allTokens:true,allKeys:true});
+      const scope=await this.#lockWriter(db,user,prepared.authentication,operationRawJSON);
       await writerAuthorization(()=>scope.revalidate({tx:db}));
+      // The locked exact source decides; revalidate pinned its access kind.
+      if(scope.accessKind!=='guest')throw new LibraryError('account_not_deletable',403);
       await scrubRetainedAccountData(db,user.id);
       await db.query('UPDATE library_users SET disabled=true WHERE id=$1',[user.id]);
       await db.query('DELETE FROM selected_source_access WHERE user_id=$1',[user.id]);
       await db.query('UPDATE library_tokens SET revoked=true WHERE user_id=$1',[user.id]);
       await db.query("UPDATE app_attest_keys SET revoked=true,receipt=''::bytea,public_key='' WHERE user_id=$1",[user.id]);
       await db.query('DELETE FROM app_auth_sessions WHERE key_id IN (SELECT key_id FROM app_attest_keys WHERE user_id=$1)',[user.id]);
-      await db.query('UPDATE account_identities SET deleted_at=now(),refresh_token_encrypted=NULL,apple_client_id=NULL WHERE user_id=$1',[user.id]);
       await db.query('DELETE FROM live_lyrics_push_receipts WHERE user_id=$1',[user.id]);
       await db.query("UPDATE correction_reports SET detail='[Account deleted]',assessment=NULL WHERE user_id=$1",[user.id]);
       // Exact source session and credential deadlines survive deliberate deletion

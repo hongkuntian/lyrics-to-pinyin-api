@@ -16,9 +16,15 @@ const fixture=()=>({productId:'com.hongkuntian.Lyrica.pro.monthly',bundleId:opti
   signedDate:+now,inAppOwnershipType:'PURCHASED'});
 test('verified transaction claims are still checked against this app, products, account and environment',()=>{
   assert.equal(transactionFields(fixture(),options).tier,'pro');
-  for(const replacement of [{bundleId:'another.app'},{environment:'Sandbox'},{appAccountToken:null},{productId:'unknown'},
+  for(const replacement of [{bundleId:'another.app'},{environment:'Sandbox'},{appAccountToken:'not-a-uuid'},{appAccountToken:''},{productId:'unknown'},
     {productId:'com.hongkuntian.Lyrica.plus.monthly'},{type:'Consumable'},{inAppOwnershipType:'FAMILY_SHARED'},{expiresDate:0},{signedDate:+now+600000}])
     assert.throws(()=>transactionFields({...fixture(),...replacement},options));
   assert.equal(transactionFields({...fixture(),revocationDate:+now},options).revoked,true);
   assert.deepEqual(Object.values(PRODUCTS).map(p=>p.tier),['pro','pro']);
+});
+test('offer-code transactions without an appAccountToken are accepted with a null token',()=>{
+  const {appAccountToken,...offer}=fixture();
+  assert.equal(transactionFields(offer,options).appAccountToken,null);
+  assert.equal(transactionFields({...offer,appAccountToken:null},options).appAccountToken,null);
+  assert.equal(transactionFields({...fixture(),appAccountToken:'7B140ECA-8ED0-4B17-87F9-A2C7DE61CA00'},options).appAccountToken,'7b140eca-8ed0-4b17-87f9-a2c7de61ca00');
 });
