@@ -16,42 +16,43 @@ const sourcePins={
  "api/processors/cantonese.js": "6d509e194a9c7dc49604ce31af42f95cbd87af0b3f4dff968ff5bee806bedfbf",
  "api/processors/chinese.js": "7440066fd424b922a9658df9efe332325c6e6ce34688159fdb0077c12ac2991c",
  "api/processors/index.js": "4bdb6872d4fafb90395ea04d5b481022a0ce3d596922b17aa78137dbd08b2dfb",
- "api/processors/japanese.js": "ccfbe01a77564b0d3c4eb617d1a768c38a608f96786402233e0826130cf96677",
+ "api/processors/japanese.js": "6a987aaa76e9e3a8a5516fc04c6ac61792e0c099b7f9f8b7c7231d7e9b4af28a",
  "api/processors/korean.js": "b2bd8eb25881412f820ad1a042eb2210578f16bf82519b7281235fb207f1f5e0",
  "api/processors/russian.js": "676d886fe13f937416883510a774f6abb37224f05692d409a9eb77802265292b",
  "api/utils/app-auth/admin.js": "c761e922197537e01da90b46021c4a8836275aadb33291e8722d96b2a0e30996",
  "api/utils/app-auth/store.js": "2692755072094fb0907dd0721396c38f0190cf0a595f2c40dd16400f7dbbc6aa",
  "api/utils/app-auth/verification.js": "203e2e2a59706162e8987320b57be12a4dbf98d3784fce5b4298099f0a848995",
- "api/utils/artist-alias-recovery.js": "d57a500e7d7ad94e2873fe7a85fd0438f05b4fc998713b147797f6366819ad10",
+ "api/utils/artist-alias-recovery.js": "3923f42d71751faf06f458674418c4159288865efd9b2ce0ae9d68c23e87cba0",
  "api/utils/language-detection.js": "5f617664f96fdf7b3aa0ce2bad6e33dde5a8b0594b247cd89a21fcfaef986c32",
- "api/utils/lyric-annotations.js": "bd2c25e30b9d15a2f4639126567ce61308d2cd307611d0f889ab384763e4e957",
- "api/utils/lyric-language.js": "e16db0efaf0cded166656b2867b0a3cd734337226e69741843f42b5ca8b9feac",
+ "api/utils/lyric-annotations.js": "ef8dba6edf66b7ff8fff15480501d3f268f86be979799c4b3efefdf16025e9b1",
+ "api/utils/lyric-language.js": "ec0430b309c243d8f29c7a308969168672e726c3401709ef689f77ce5b91ce1d",
  "api/utils/lyric-notices.js": "81a09582bd460a94115518f243e8f964110baec31b13a67df351ec7730e55bde",
  "api/utils/lyric-quality.js": "c7ddea52aa758f02d8aa16ad15b645d2f28c0ccda9102bec77dc24f73c983f29",
- "api/utils/lyric-selection.js": "551647dc70180ab363c31a9c4c98519a2e2be5f1ac27c40d1bd5883891d55fd7",
+ "api/utils/lyric-selection.js": "d0c80e76cd0916779edcb09b49712c5487c65f098399eaa4d331744eafc4048f",
  "api/utils/membership/accounts.js": "15a7fa51080bb68081a193c7e4c7c0bd72126ecf602b796518b21ecc473465ab",
- "api/utils/membership/policy.js": "a167d7c6bb90b486a5375b1f53c4ae962da50618aea3e78347c20891ad97af11",
- "api/utils/membership/store.js": "cc9d2af0b18e8434b8f0d1706081b98dd2f0e6fe152ec64076ffeb4953941088",
+ "api/utils/membership/device-check.js": "54d74516eccb46cb24761f138c4603cdf16d138c63c3f326b9a7466c28a19868",
+ "api/utils/membership/policy.js": "6c1b4108727491797ce9a65156cb9e18ba8e48818aaba477b1b1fa69e25a47c5",
+ "api/utils/membership/store.js": "34e73488f3e8d88b1cd0007a73771c3383318dd02f5c8b500ab300b172a63d9b",
  "api/utils/netease-title-evidence.js": "ec2ded79cb5734d2be40113f3cd7077241b5a41e032750f875d1b82d341d4fae",
- "api/utils/pronunciation-aids.js": "2ee82103873dde14321245df2c49f5c9b04e0259ed22d5843cf03c553e9223a3",
- "api/utils/recording-match.js": "354c8ca1213c9a6b5a6c8863f9b322b9c1a25b161bd2868c79eb2007fb4d9ba2",
+ "api/utils/pronunciation-aids.js": "0f7c0e1fb45010210ad0098f58e52757e6cda8d30eea415d8b3c5c2b58b6b74c",
+ "api/utils/recording-match.js": "f20196665ed00e9469f8f3b681ba2b26f76a8ef0d39b6dc7adebca233ba8179b",
  "api/utils/recording-script.js": "4f505253efcaceb04ba2b63af2df498c9be346f340b9ccbdd54283d8c167a666",
- "api/utils/rejected-lyrics.js": "82c05a3175e9c08866c5c0c43795f6c93e744678fb3cc46fb582aaa24353dd13",
+ "api/utils/rejected-lyrics.js": "01297cb109616c43da5d6381287b7e6111b9cf2a14703c99d2883671b92664f9",
  "api/utils/song-library/apple-vocal-timing.js": "67b5570328fcd6a2954c8a3c2f3e20b630234529a4a4e82e04ef5ca5cd733d24",
- "api/utils/song-library/database.js": "7528363c2bc1c20cbba389fb5bdc7686c13f6b15e3ca3ce540e19140c83e7e3d",
- "api/utils/song-library/languages.js": "8aa53b72471f877aafba100871c51904c3927e72dd550ea2d26a032963eae3d9",
+ "api/utils/song-library/database.js": "e537fc85e5d1f09638c4887a4a1951a3d982220c7a3a0067b378fcfdc044272e",
+ "api/utils/song-library/languages.js": "3489ba02f532998d95896da9f3beec00620d6ac2798a683689de54994ed7fe58",
  "api/utils/song-library/model-context.js": "4de1a67ef866aab10e7b9417a71a8f5904417d9477f7463a60757d77b635a397",
  "api/utils/song-library/model-policy.js": "5dbd33b0cf6a556f11820e962d1cc890fa4103743995748b686bde22dded632c",
  "api/utils/song-library/revisions.js": "809e8132b0813efc4274b41fa7dcf4ed3f698d145fc68a4ee3306fcdaccd8012",
- "api/utils/song-library/selected-source.js": "5f4baf9805a45acd1c84ad927fb6316106582cefdca22eea35be4b00b71f9ae5",
+ "api/utils/song-library/selected-source.js": "fe993072bd8163ceca045e9f68c291f05d9bc8f12a4e8bca299831d7be25ad80",
  "api/utils/song-library/spending.js": "4f392c103c4d63c7fff2d98638c131da0419babd3ea269053765ffc635f3d236",
- "api/utils/song-library/spotify-recording.js": "eb93fd5fe471b5e09c3f4a15c37bc972c2d334f1cbd0900cc726d54763edd2a2",
+ "api/utils/song-library/spotify-recording.js": "ea733865ea2f5ed50dba8c4f5d3f9225eefb8f2d949b0468c33e010fe3b71781",
  "api/utils/song-library/store.js": "1a10a7dfc7a8c5e971047330b7b4211395b2950dbedbd71fd81a75068b6ba618",
  "api/utils/song-library/translation-identity.js": "7bba350b842eb301b970d4858ab8cbca98aadd2820397a3404d7e1448452895e",
  "api/utils/song-library/translation-reuse.js": "32067bf9dbb392f0645727d5380a2e5eadfba98aaee77fe4a448408177533d4a",
  "api/utils/song-library/translation-source.js": "050bdc5035a73aff19efbba73b29d767f798797c7851b6921e65eb121389a95a",
- "api/utils/song-library/translation.js": "7e7ac5bf95260d76af037c03883fdc240111617545e1f1d4fbbf582d28cd09de",
- "api/utils/vocal-timing.js": "3b165f435cfc4fc5f4ba6dea4482be59b2f4163c0aee714ca122f85351be213c",
+ "api/utils/song-library/translation.js": "d7386398269f0cea0f9e8df11adb9c362d6135922ea4ec6b5b04e0e874da87d0",
+ "api/utils/vocal-timing.js": "7bc05fae8cb02f5d406088dc262622fb310d07e602553357eb1c488feb347e81",
  "db/001-song-library.sql": "f1386620cf96a317ccb76f03593f74d5b2fe21150bd7ec8a6858dac853c42fd3",
  "db/002-dashboard-views.sql": "221eba47bf1bf05a90e6d49e6cd64a944c66fca0a13c9bc6318c5be487f1c2a3",
  "db/003-correction-foundation.sql": "ef52d21ef6d6a8c1221c139ff6dbae8c075515637f2ee596534a81891266630e",
@@ -81,6 +82,7 @@ const sourcePins={
  "db/027-spotify-background.sql": "75bf8f52f2dad2fac88fb8af8d2af11e773fc1324e84a7577e92bdd8cf14aae5",
  "db/028-selected-lyrics-learning.sql": "010de0b73bf215dcd53d51b55f69a4e2943483d7aa948a574bbf1318d9f44966",
  "db/032-auth-token-row-locks.sql": "c19650a29438ebeea186203d954fee8e144a65ca6d42ad91bc38c18f1f7e5df6",
+ "db/039-anonymous-accounts.sql": "9d20589ef9be723596db663cd3eee4c3f84b320deffa7dd4a6191e8a2e178ed1",
  "scripts/library-migrations.js": "b2bcfb3ea471555c048f9258b45f745f8ef56cbdfcda08cbbdd2ed0d1e40b422",
  "scripts/membership-role-grants.js": "6c92eaf3fb68a69c66d2d182afacebfce87cdf8ed5d9d98c659c2c9c95dd8117"
 };
@@ -103,8 +105,14 @@ const observed={
 };
 const observedUpdates={library_users:['auth_window','auth_count','refresh_window','refresh_count'],
  library_settings:['enabled','review_enabled'],membership_settings:['id']};
+// 039 grants the runtime login EXECUTE on its bounded expiry slide. 039 names
+// the post-037 role (lyrica_runtime_v1); this pre-037 fixture models that
+// grant for lyra_runtime_v1 once 039 has created the function.
+const observedFunctions=['public.slide_guest_credential_expiry(text)'];
+// Columns 039 adds and the Sign in with Apple relation it drops.
+const anonymousColumns=['library_users.app_account_token','library_users.free_allowance_held_until','membership_settings.relay_access'];
 const policy={audience:'token-lock-pg-test',environment:'development',prefix:'ABCDEFGHIJ',bundles:['test.lyrica']};
-let pg,AppAuthStore,AccountStore,createCurrentAuthContext,migrateLibrary,migrationNames,replayMembershipRoleGrants;
+let pg,AppAuthStore,AccountStore,createCurrentAuthContext,migrateLibrary,migrateWithAnonymous,migrationNames,replayMembershipRoleGrants;
 let admin,adminConnected=false,config,clusterLease=false;
 const ownedRoles=[],databases=new Set();
 const combine=(errors,label)=>errors.length===1?errors[0]:new AggregateError(errors,label);
@@ -148,11 +156,16 @@ async function connect(){
  ({AccountStore}=await import('../../api/utils/membership/accounts.js'));
  ({createCurrentAuthContext}=await import('../../api/utils/app-auth/auth-context.js'));
  const registered=await import('../../scripts/library-migrations.js');migrationNames=registered.migrationNames;
- migrateLibrary=async database=>{
-  const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>![correction,namespace,retirement,anonymous].includes(n)));
+ // The historical 032 prefix (late replay/drift) never applies 036-039. The
+ // restricted-method scenarios add 039, which session issuance now needs
+ // (slide_guest_credential_expiry); 036-038 stay outside this pre-037 fixture.
+ const through=excluded=>async database=>{
+  const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>!excluded.includes(n)));
   try{return await registered.migrateLibrary(database);}
   finally{migrationNames.splice(0,migrationNames.length,...saved);}
  };
+ migrateLibrary=through([correction,namespace,retirement,anonymous]);
+ migrateWithAnonymous=through([correction,namespace,retirement]);
  ({replayMembershipRoleGrants}=await import('../helpers/historical-role-grants.js'));
  config={host:marker.socketDirectory,port:marker.port,user:marker.user,password:'',ssl:false,
   connectionTimeoutMillis:3000,statement_timeout:8000,lock_timeout:3000,idle_in_transaction_session_timeout:15000,
@@ -320,7 +333,7 @@ async function usingDatabase(fn){
 async function baseline(h){
  const saved=[...migrationNames],publicNames=saved.filter(name=>Number(name.slice(0,3))<=28);
  assert.deepEqual(publicNames.map(name=>Number(name.slice(0,3))),Array.from({length:28},(_,i)=>i+1));
- assert.deepEqual(saved,[...publicNames,migration,correction,namespace],'exact current registry; original harness selects only through 032');
+ assert.deepEqual(saved,[...publicNames,migration,correction,namespace,retirement,anonymous],'exact current registry; original harness selects only through 032');
  migrationNames.splice(0,migrationNames.length,...publicNames);
  try{assert.deepEqual(await migrateLibrary(h.db('baseline')),publicNames);}
  finally{migrationNames.splice(0,migrationNames.length,...saved);}
@@ -507,6 +520,13 @@ async function authRace(h,order,observerFailure=false){
  if(errors.length)throw combine(errors,'observer/contender/drainage failure');
  return sentinel;
 }
+async function grantObservedFunctions(h){
+ for(const fn of observedFunctions)await h.query(`GRANT EXECUTE ON FUNCTION ${fn} TO ${runtime}`);
+ for(const fn of observedFunctions){
+  assert.equal((await h.query("SELECT has_function_privilege($1,$2,'EXECUTE') AS ok",[runtime,fn])).rows[0].ok,true);
+  assert.equal((await h.query("SELECT has_function_privilege($1,$2,'EXECUTE') AS ok",[account,fn])).rows[0].ok,false);
+ }
+}
 async function upgradeAndMethods(h,t){
  await baseline(h);await tokenFixture(h);await reconstructObserved(h);await leastPrivilege(h,false);await lockWitness(h,false);
  const before=await tokens(h),prior=await receipts(h),oldACL=await acls(h);
@@ -514,15 +534,19 @@ async function upgradeAndMethods(h,t){
  assert.deepEqual(await receipts(h),prior);assert.deepEqual(await tokens(h),before);assert.deepEqual(await acls(h),oldACL);
  assert.equal((await h.query("SELECT count(*)::int AS n FROM pg_attribute WHERE attrelid='public.library_tokens'::regclass AND attname='auth_lock_anchor' AND NOT attisdropped")).rows[0].n,0);
  const migrationTrace=[];
- assert.deepEqual(await migrateLibrary(h.db('upgrade',{trace:migrationTrace})),[migration]);
+ assert.deepEqual(await migrateWithAnonymous(h.db('upgrade',{trace:migrationTrace})),[migration,anonymous]);
  const timeoutIndex=migrationTrace.findIndex(call=>call.text==="SET LOCAL lock_timeout='5s'");
  assert.ok(timeoutIndex>=0);assert.equal(migrationTrace[timeoutIndex+1].text,"SET LOCAL lock_timeout='3s'");
  assert.equal(migrationTrace[timeoutIndex+2].text,'SELECT pg_advisory_xact_lock(71309,1)');
  await catalog(h);await leastPrivilege(h,true);await lockWitness(h,true);
- assert.deepEqual((await acls(h)).filter(row=>row.attname!=='auth_lock_anchor'),oldACL);
+ // 039 adds columns and drops account_identities; every other ACL is unchanged.
+ assert.deepEqual((await acls(h)).filter(row=>row.attname!=='auth_lock_anchor'&&!anonymousColumns.includes(row.relation+'.'+row.attname)),
+  oldACL.filter(row=>row.relation!=='account_identities'));
  const row=(await receipts(h)).find(row=>row.name===migration);assert.equal(row.sha256,sourcePins['db/'+migration]);
+ assert.equal((await receipts(h)).find(row=>row.name===anonymous).sha256,sourcePins['db/'+anonymous]);
+ await grantObservedFunctions(h);
  t.diagnostic(JSON.stringify({migration,receiptSHA256:row.sha256,actualMethodsUseSETROLE:true,unregistered:['030','031']}));
- const receiptState=await receipts(h);assert.deepEqual(await migrateLibrary(h.db('idempotent-runner')),[]);assert.deepEqual(await receipts(h),receiptState);
+ const receiptState=await receipts(h);assert.deepEqual(await migrateWithAnonymous(h.db('idempotent-runner')),[]);assert.deepEqual(await receipts(h),receiptState);
  const db=h.db('denials',{role:runtime});
  for(const field of existingTokenFields){
   await denied(db.query(`UPDATE public.library_tokens SET ${field}=${field} WHERE false`));
