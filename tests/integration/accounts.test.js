@@ -11,7 +11,7 @@ import {createAccountHandler} from '../../api/account.js';
 import {createMockRes} from '../helpers/mock-http.js';
 import {digest} from '../../api/utils/song-library/store.js';
 import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.js';
-import {mockDeviceCheck,appleDeviceState,deviceToken} from '../helpers/device-check.js';
+import {mockDeviceCheck,appleDeviceState,deviceToken,captureLogger} from '../helpers/device-check.js';
 
 // Lyrica has no sign-in: anonymous (guest) enrollment and guest deletion.
 // DeviceCheck is unconfigured unless a test says otherwise; its enrollment
@@ -110,6 +110,121 @@ test('guest credential keeps exact 90-day DB issuance deadline and ACK does not 
  assert.equal(+(await f.db.query('SELECT expires_at FROM library_tokens WHERE digest=$1',[digest(g.token)])).rows[0].expires_at,+expiry);
 });
 
+// A synced credential reaching a device with no App Attest key (new iPhone,
+// reinstall, restore) must never be inserted again: library_tokens.digest is
+// the primary key, and a unique violation used to answer 503 forever.
+const newKey=Buffer.alloc(32,9).toString('base64');
+async function enrollAttempt(f,key,token,extra={}){
+  const nonce=await f.accounts.challenge({purpose:'guest',bundleID,keyID:key},'127.0.0.'+(address++%250));
+  return {bundleID,keyID:key,...nonce,credential:token,attestation:'cHJvb2Y=',...extra};
+}
+function countAttestations(f){
+  const calls={n:0},attest=f.accounts.attest;f.accounts.attest=(...args)=>(calls.n++,attest(...args));return calls;
+}
+const registered={code:'credential_registered',status:409};
+
+test('a live guest credential on a new key answers credential_registered, consumes nothing, and register adds the key',async t=>{
+  const mock=mockDeviceCheck(),f=await fixture(t,{deviceCheck:mock.device}),g=await guest(f),first=await session(f,g);
+  const attestations=countAttestations(f),body=await enrollAttempt(f,newKey,credential,{deviceToken}),before=await accountState(f);
+  mock.calls.length=0;
+  await assert.rejects(f.accounts.guest(body),registered);
+  // No nonce consumed, no attestation, no DeviceCheck call, no row written.
+  assert.deepEqual(await accountState(f),before);assert.equal(attestations.n,0);assert.deepEqual(mock.calls,[]);
+  // The device then enrolls its key into the existing account.
+  await registerKey(f,credential,newKey);
+  const second=await session(f,{token:credential,key:newKey});assert.equal(second.user.id,first.user.id);
+  // Once the key is enrolled the exact-key retry ACK still answers first.
+  assert.deepEqual(await f.accounts.guest(body),{registered:true});
+  assert.equal(Number((await f.db.query("SELECT count(*) AS n FROM library_users WHERE access_kind='guest'")).rows[0].n),1);
+});
+
+test('a known credential that is revoked, expired, disabled, deleted or not a guest is refused with app_access_revoked',async t=>{
+  const f=await fixture(t),attestations=countAttestations(f);
+  const cases={
+    revoked:(db,c)=>db.query('UPDATE library_tokens SET revoked=true WHERE digest=$1',[digest(c)]),
+    expired:(db,c)=>db.query('UPDATE library_tokens SET expires_at=now() WHERE digest=$1',[digest(c)]),
+    disabled:(db,c)=>db.query('UPDATE library_users SET disabled=true WHERE id=(SELECT user_id FROM library_tokens WHERE digest=$1)',[digest(c)]),
+    deleted:async(db,c,g)=>{const current=await session(f,g);await f.accounts.delete(current.user,await authentication(f,current.user));},
+    beta:(db,c)=>db.query("UPDATE library_users SET access_kind='beta' WHERE id=(SELECT user_id FROM library_tokens WHERE digest=$1)",[digest(c)]),
+    apple:(db,c)=>db.query("UPDATE library_users SET access_kind='apple' WHERE id=(SELECT user_id FROM library_tokens WHERE digest=$1)",[digest(c)])};
+  let n=10;
+  for(const [name,refuse] of Object.entries(cases)){
+    const token='lyrica_g_'+String.fromCharCode(97+n).repeat(43),g=await guest(f,Buffer.alloc(32,n++).toString('base64'),token);
+    await refuse(f.db,token,g);
+    const body=await enrollAttempt(f,Buffer.alloc(32,n++).toString('base64'),token),before=await accountState(f);attestations.n=0;
+    await assert.rejects(f.accounts.guest(body),denied,name);
+    assert.deepEqual(await accountState(f),before,name);assert.equal(attestations.n,0,name);
+    // The original key's retry ACK no longer answers either.
+    await assert.rejects(f.accounts.guest(g.body),denied,name);
+  }
+  // An operator access code that happens to have the guest shape is refused too.
+  const code='lyrica_g_'+'z'.repeat(43);await f.store.createUser('reader-c',code);
+  await assert.rejects(f.accounts.guest(await enrollAttempt(f,newKey,code)),denied);
+});
+
+// The same device's earlier attempt (a retry after a timeout) committing after
+// this call's pre-check, without changing any SQL under test. Inside the
+// transaction the credential answers before the key-exists check, so the
+// device gets register's ACK rather than a terminal app_access_revoked.
+function committedRace(raw,competitor){
+  let armed=true;
+  return {query:(...args)=>raw.query(...args),transaction:async fn=>{if(armed){armed=false;await competitor();}return raw.transaction(fn);}};
+}
+test('a competing enrollment that commits after the pre-check answers credential_registered inside the transaction',async t=>{
+  const f=await fixture(t),body=await enrollAttempt(f,newKey,credential);
+  const racing=new AccountStore(committedRace(f.observedDB,()=>guest(f,newKey)),{policy,deviceCheck:unconfigured,logger:{},
+    attestFn:()=>({publicKey:'proof',receipt:Buffer.from('receipt')})});
+  await assert.rejects(racing.guest(body),registered);
+  // Only the competitor's account exists; this call's nonce is still unconsumed.
+  assert.equal(Number((await f.db.query("SELECT count(*) AS n FROM library_users WHERE access_kind='guest'")).rows[0].n),1);
+  assert.equal((await f.db.query('SELECT consumed FROM account_nonces WHERE digest=$1',[digest(body.challenge)])).rows[0].consumed,false);
+  // register acknowledges the key the earlier attempt enrolled.
+  await registerKey(f,credential,newKey);await session(f,{token:credential,key:newKey});
+});
+
+// Another enrollment of the same credential still in flight when this one
+// inserts it: PostgreSQL makes the insert wait for the competitor's commit,
+// then raises unique_violation. PGlite has one connection, so the competitor's
+// rows provoke the real violation inside this transaction and are committed
+// for real once it has rolled back, before the store sees the error.
+function inFlightRace(raw,competitor){
+  let armed=true,raced=false;
+  const wrap=tx=>({query:async(sql,args)=>{
+    if(armed&&/^INSERT INTO library_tokens/.test(sql.trim())){armed=false;raced=true;await competitor(tx);}
+    return tx.query(sql,args);
+  }});
+  return {raced:()=>raced,query:(...args)=>raw.query(...args),transaction:async fn=>{
+    try{return await raw.transaction(tx=>fn(wrap(tx)));}
+    catch(error){if(raced)await raw.transaction(competitor);throw error;}
+  }};
+}
+for(const [state,expected] of [['live',registered],['revoked',denied]])
+test('a unique violation from a competing in-flight '+state+' enrollment maps to '+expected.code+', never 503',async t=>{
+  const f=await fixture(t),body=await enrollAttempt(f,newKey,credential),usersBefore=(await f.db.query('SELECT id FROM library_users ORDER BY id')).rows;
+  const db=inFlightRace(f.observedDB,async tx=>{
+    await tx.query("INSERT INTO library_users(id,access_kind) VALUES('guest-competitor','guest')");
+    await tx.query("INSERT INTO library_tokens(digest,user_id,expires_at,revoked) VALUES($1,'guest-competitor',clock_timestamp()+interval '90 days',$2)",
+      [digest(credential),state==='revoked']);
+  });
+  const racing=new AccountStore(db,{policy,deviceCheck:unconfigured,logger:{},attestFn:()=>({publicKey:'proof',receipt:Buffer.from('receipt')})});
+  await assert.rejects(racing.guest(body),expected);assert.equal(db.raced(),true);
+  assert.deepEqual((await f.db.query('SELECT id FROM library_users ORDER BY id')).rows,[...usersBefore,{id:'guest-competitor'}].sort((a,b)=>a.id<b.id?-1:1));
+  assert.equal(Number((await f.db.query('SELECT count(*) AS n FROM app_attest_keys WHERE key_id=$1',[newKey])).rows[0].n),0);
+  assert.equal((await f.db.query('SELECT consumed FROM account_nonces WHERE digest=$1',[digest(body.challenge)])).rows[0].consumed,false);
+});
+
+test('account HTTP answers a known credential with 409 credential_registered or 403 app_access_revoked, never 503',async t=>{
+  const f=await fixture(t),{events,logger}=captureLogger(),handler=createAccountHandler({store:f.accounts,authStore:f.auth,logger});
+  await guest(f);
+  const call=async body=>{const res=createMockRes();await handler({method:'POST',headers:{},body:{action:'guest',...body},socket:{remoteAddress:'10.3.3.3'}},res);return res;};
+  const live=await call(await enrollAttempt(f,newKey,credential));
+  assert.equal(live.statusCode,409);assert.deepEqual(live.body,{version:1,code:'credential_registered'});
+  await f.db.query('UPDATE library_tokens SET revoked=true WHERE digest=$1',[digest(credential)]);
+  const revoked=await call(await enrollAttempt(f,newKey,credential));
+  assert.equal(revoked.statusCode,403);assert.deepEqual(revoked.body,{version:1,code:'app_access_revoked'});
+  assert.deepEqual(events,[]);
+});
+
 test('guest deletion revokes every device of the account, scrubs its data and preserves spent grant identity',async t=>{
   const f=await fixture(t),{g,current}=await guestAccount(f),other=await sibling(f,g),members=new MembershipStore(f.store.db);
   await admitLibraryTranslation(f.store.db,current.user.id,'opened-song',{unlock:true});
@@ -202,6 +317,8 @@ test('the separate account login can enroll with a hold and delete but cannot ch
   await f.db.query('SET ROLE lyrica_account_v1');
   // Configured DeviceCheck without a token holds: the INSERT needs the 039 column grant.
   const g=await guest(f);
+  // The known-credential check needs only the login's existing SELECT grants.
+  await assert.rejects(f.accounts.guest(await enrollAttempt(f,newKey,credential)),registered);
   await assert.rejects(f.db.query("UPDATE library_users SET unlimited_generation=true"),e=>e.code==='42501');
   await assert.rejects(f.db.query("UPDATE library_users SET free_allowance_held_until=NULL"),e=>e.code==='42501');
   await assert.rejects(f.db.query("UPDATE membership_settings SET purchases_enabled=true"),e=>e.code==='42501');

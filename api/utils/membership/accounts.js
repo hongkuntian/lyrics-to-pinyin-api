@@ -20,6 +20,17 @@ async function sourceCredential(db,user,policy) {
   if(!row)throw new LibraryError('app_access_revoked',403);
   return row.deadline; // PostgreSQL text preserves sub-ms finite deadline exactly.
 }
+// Enrollment never inserts a credential the server already holds (the digest
+// is library_tokens' primary key). A synced credential reaches a device with
+// no App Attest key; a live guest one belongs to an existing account, so that
+// device adds its key with register. Any other known credential (revoked,
+// expired, disabled or not a guest) is refused for good.
+async function knownCredential(db,credentialDigest) {
+  const row=await first(db,`SELECT NOT t.revoked AND NOT u.disabled AND u.access_kind='guest'
+    AND (t.expires_at IS NULL OR t.expires_at>clock_timestamp()) AS live
+    FROM library_tokens t JOIN library_users u ON u.id=t.user_id WHERE t.digest=$1`,[credentialDigest]);
+  if(row)throw row.live?new LibraryError('credential_registered',409):new LibraryError('app_access_revoked',403);
+}
 // Keep account HTTP's LibraryError mapping. Writer-auth errors never disclose
 // opaque evidence, session/credential digests or a newly selected identity.
 async function writerAuthorization(operation) {
@@ -109,42 +120,51 @@ export class AccountStore {
   }
   async guest(input) {
     await this.enabled();
-    const {credential,keyID,bundleID}=input;
+    const {credential,keyID,bundleID}=input,credentialDigest=digest(credential);
     // A retry can ACK an already-enrolled key only with its original credential.
     // The credential cannot create an API session without a fresh key assertion.
     const existing=await first(this.db,`SELECT k.key_id,k.user_id FROM app_attest_keys k JOIN library_tokens t ON t.user_id=k.user_id
       JOIN library_users u ON u.id=k.user_id WHERE k.key_id=$1 AND t.digest=$2 AND k.bundle_id=$3 AND k.audience=$4
       AND k.environment=$5 AND u.access_kind='guest' AND NOT k.revoked AND NOT t.revoked AND NOT u.disabled
-      AND t.expires_at>clock_timestamp()`,[keyID,digest(credential),bundleID,this.policy.audience,this.policy.environment]);
+      AND t.expires_at>clock_timestamp()`,[keyID,credentialDigest,bundleID,this.policy.audience,this.policy.environment]);
     if(existing)return this.db.transaction(async db=>{
-      await lockAuthWriter(db,{userIDs:[existing.user_id],credentialDigests:[digest(credential)],keyIDs:[keyID]});
+      await lockAuthWriter(db,{userIDs:[existing.user_id],credentialDigests:[credentialDigest],keyIDs:[keyID]});
       const current=await first(db,`SELECT u.id FROM library_users u JOIN library_tokens t ON t.user_id=u.id
         JOIN app_attest_keys k ON k.user_id=u.id WHERE u.id=$1 AND u.access_kind='guest'
         AND t.digest=$2 AND k.key_id=$3 AND k.bundle_id=$4 AND k.audience=$5 AND k.environment=$6
         AND NOT u.disabled AND NOT t.revoked AND NOT k.revoked AND t.expires_at>clock_timestamp()`,
-        [existing.user_id,digest(credential),keyID,bundleID,this.policy.audience,this.policy.environment]);
+        [existing.user_id,credentialDigest,keyID,bundleID,this.policy.audience,this.policy.environment]);
       if(!current)throw new LibraryError('app_access_revoked',403);
       return {registered:true};
     });
+    // Before any nonce, attestation or DeviceCheck work: consume nothing.
+    await knownCredential(this.db,credentialDigest);
     await this.nonce(this.db,input);
     let proof;try{proof=this.attest({attestation:Buffer.from(input.attestation,'base64'),challenge:input.challenge,keyId:keyID,bundleID,...this.policy});}
     catch{throw new LibraryError('app_attestation_invalid',403);}
     // DeviceCheck runs only for a new account, outside the transaction.
     const device=await this.#enrollmentDeviceCheck(input);
-    await this.db.transaction(async db=>{
+    try{await this.db.transaction(async db=>{
       await db.query('SELECT id FROM membership_settings WHERE id=1 FOR UPDATE');
-      await this.enabled(db);await this.nonce(db,input,true);
+      // A competing enrollment of this credential committed since the check.
+      await this.enabled(db);await knownCredential(db,credentialDigest);await this.nonce(db,input,true);
       if(await first(db,'SELECT 1 FROM app_attest_keys WHERE key_id=$1',[keyID]))throw new LibraryError('app_access_revoked',403);
       const total=await first(db,"SELECT count(*) AS n FROM library_users WHERE access_kind='guest' AND created_at>now()-interval '1 day'");
       if(Number(total.n)>=5000)throw new LibraryError('public_access_temporarily_unavailable',503);
       const id='guest-'+randomUUID();
       await db.query(`INSERT INTO library_users(id,access_kind,free_allowance_held_until)
         VALUES($1,'guest',CASE WHEN $2::boolean THEN now()+interval '7 days' END)`,[id,device.hold]);
-      await db.query("INSERT INTO library_tokens(digest,user_id,expires_at) VALUES($1,$2,clock_timestamp()+interval '90 days')",[digest(credential),id]);
+      await db.query("INSERT INTO library_tokens(digest,user_id,expires_at) VALUES($1,$2,clock_timestamp()+interval '90 days')",[credentialDigest,id]);
       await db.query(`INSERT INTO app_attest_keys(key_id,user_id,audience,bundle_id,environment,public_key,receipt)
         VALUES($1,$2,$3,$4,$5,$6,$7)`,[keyID,id,this.policy.audience,bundleID,this.policy.environment,proof.publicKey,proof.receipt]);
-      await sourceCredential(db,{id,keyID,bundleID,credentialDigest:digest(credential)},this.policy);
-    });
+      await sourceCredential(db,{id,keyID,bundleID,credentialDigest},this.policy);
+    });}
+    catch(error){
+      // One still in flight at the insert above wins the primary key once it
+      // commits (unique_violation). Answer as if it had committed first.
+      if(error?.code==='23505')await knownCredential(this.db,credentialDigest);
+      throw error;
+    }
     // Mark the device only once an account exists, so a refused or failed
     // enrollment can never hold this device's next attempt.
     if(device.mark)try{await this.deviceCheck.setBit(input.deviceToken,{bundleID,bit:0});}

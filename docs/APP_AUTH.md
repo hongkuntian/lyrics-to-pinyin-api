@@ -19,6 +19,15 @@ repo's `docs/ANONYMOUS_ACCOUNTS.md`; accounts and DeviceCheck:
   DeviceCheck `deviceToken`). A reinstall and the person's other devices on the
   same Apple ID reuse that credential; each device registers its own App Attest
   key through the `register` action below.
+- `guest` never enrolls a credential the server already holds. After the
+  exact-key retry acknowledgment, and before any nonce, attestation or
+  DeviceCheck work, a live guest credential (not revoked, not expired, account
+  enabled) answers `409 credential_registered`: it belongs to an existing
+  account, so the device enrolls its key with `register`. Any other known
+  credential (revoked, expired, disabled or not a guest) answers
+  `403 app_access_revoked`. Neither consumes or creates anything. A competing
+  enrollment of the same credential that commits first, including a unique
+  violation on the credential insert, gets the same answers, never 503.
 - The credential never expires while in use: each issued session slides a guest
   credential's expiry to 365 days from now, writing only when fewer than 300
   days remain. Access-code credentials keep their own (usually unbounded) expiry.
