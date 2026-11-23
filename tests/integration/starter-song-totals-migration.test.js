@@ -6,6 +6,7 @@ import {PGlite} from '@electric-sql/pglite';
 import {migrateLibrary,migrationNames} from '../../scripts/library-migrations.js';
 import {verifyBuildSchema} from '../../scripts/vercel-library-build.js';
 import {recordStarterEvent} from '../../api/utils/song-library/starter-songs.js';
+import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.js';
 
 // Starter-song totals: shown and picked per pool song, nothing about a person.
 const starters='040-starter-song-totals.sql',table='public.starter_song_totals';
@@ -122,4 +123,23 @@ test('a fresh installation without the runtime role still gets the table, and no
  assert.deepEqual(await migrateLibrary(adapter(db)),migrationNames);
  assert.equal((await db.query("SELECT to_regclass($1)::text AS name",[table])).rows[0].name,'starter_song_totals');
  assert.equal((await db.query(`SELECT relacl::text AS acl FROM pg_class WHERE oid='${table}'::regclass`)).rows[0].acl,null);
+});
+
+test('a runtime login provisioned after 040 gets the same three rights from the role replay',async t=>{
+ const db=await database(t,{withRoles:false});await migrateLibrary(adapter(db));
+ for(const role of roles)await db.exec(`CREATE ROLE ${role} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`);
+ for(const privilege of ['SELECT','INSERT','UPDATE'])assert.equal(await can(db,'lyrica_runtime_v1',privilege),false,privilege);
+ const replay={query:text=>db.exec(text)};
+ await replayMembershipRoleGrants(replay);await replayMembershipRoleGrants(replay);
+ for(const [privilege,allowed] of [['SELECT',true],['INSERT',true],['UPDATE',true],['DELETE',false],['TRUNCATE',false]])
+  assert.equal(await can(db,'lyrica_runtime_v1',privilege),allowed,privilege);
+ for(const privilege of ['SELECT','INSERT','UPDATE','DELETE','TRUNCATE'])assert.equal(await can(db,'lyrica_account_v1',privilege),false,privilege);
+ await db.exec('SET ROLE lyrica_runtime_v1');
+ try{await recordStarterEvent({query:(text,args)=>db.query(text,args)},{ids:['cmn-1'],shown:1,picked:0});}finally{await db.exec('RESET ROLE');}
+ assert.deepEqual(await totals(db),[{song_id:'cmn-1',shown:1,picked:0}]);
+ // Without the runtime role the replay still succeeds and grants nothing here.
+ const plain=await database(t,{withRoles:false});await migrateLibrary(adapter(plain));
+ await plain.exec('CREATE ROLE lyrica_account_v1 NOLOGIN');
+ await replayMembershipRoleGrants({query:text=>plain.exec(text)});
+ assert.equal((await plain.query(`SELECT relacl::text AS acl FROM pg_class WHERE oid='${table}'::regclass`)).rows[0].acl,null);
 });
