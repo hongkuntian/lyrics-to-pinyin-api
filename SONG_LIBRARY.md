@@ -204,6 +204,9 @@ FROM starter_song_totals ORDER BY shown DESC, song_id;
 
 A pool song that was never shown has no row.
 
+Starter songs are free: see [memberships](docs/memberships.md#starter-songs-are-free)
+for the rule and how a starter document is recognised.
+
 Deployment order: apply migration 040 with the owner connection, then deploy.
 The production build refuses to continue without the 040 receipt, and the
 migration only adds a table, so the previous backend keeps working in between.

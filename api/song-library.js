@@ -16,7 +16,7 @@ import {lineSelections,lineKey,lineBody,generateLine,publicLine,LINE_RECIPE} fro
 import {executeTranslationJob} from './utils/song-library/translation-worker.js';
 import {admitLibraryTranslation} from './utils/membership/store.js';
 import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
-import {starterSongs,starterEvent,recordStarterEvent} from './utils/song-library/starter-songs.js';
+import {starterSongs,starterEvent,recordStarterEvent,isStarterDocument} from './utils/song-library/starter-songs.js';
 
 import {TARGETS,canonicalTarget,environmentLanguagePolicy,requireDirection,capabilities} from './utils/song-library/languages.js';
 import {selectionV2,explanationRecipe,selectionFor,explanationBody,explanationKey,generateExplanation} from './utils/song-library/study-explanation.js';
@@ -70,9 +70,12 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       const generationCurrent=doc=>db.isGenerationDocumentCurrent?db.isGenerationDocumentCurrent(doc,selectionRevision):db.isCurrentDocument(doc.id,selectionRevision);
       const policy=languagePolicy??environmentLanguagePolicy();
       if(input.delivery!==undefined&&input.delivery!=='progressive-v1')throw new LibraryError('invalid_request',400);
+      // Starter songs are free: a saved translation opens without membership or
+      // an unlock and never uses a weekly library read (docs/memberships.md).
+      const access=(doc,options)=>isStarterDocument(doc)?'open':translationAccess(db,user.id,doc.id,options);
       const launch=async(job,doc,target)=>{
         // Draft lines are translation content: stream them only to accounts that may read it.
-        if(input.delivery!=='progressive-v1'||await translationAccess(db,user.id,doc.id,{unlock:false})!=='open'){
+        if(input.delivery!=='progressive-v1'||await access(doc,{unlock:false})!=='open'){
           waitUntilFn(execute(db,job.id,doc).catch(()=>logger.error('translation_worker_storage_failure',{jobID:job.id})));return false;
         }
         const observer=translationDelivery(res,doc,target,job);
@@ -170,7 +173,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         const saved=await db.translation(doc.id,target);
         // Reading a shared translation is free for members. A free account opens
         // a new song only through an explicit unlock; reopening it stays free.
-        const readable=async()=>await translationAccess(db,user.id,doc.id,{unlock:!!input.unlock})==='open';
+        const readable=async()=>await access(doc,{unlock:!!input.unlock})==='open';
         const locked=()=>send(200,{state:'locked',target,documentID:doc.id,sourceHash:doc.sourceHash});
         // Revision checks never reserve money, queue generation, or require an OpenAI key.
         if(input.action==='current') {
@@ -279,7 +282,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         const saved=job.state==='ready'?await db.translation(job.documentID,job.target):null;
         const doc=saved?await db.document(job.documentID):null;
         if(saved&&!doc)throw new LibraryError('document_not_found',404);
-        if(saved&&await translationAccess(db,user.id,doc.id,{unlock:false})!=='open')
+        if(saved&&await access(doc,{unlock:false})!=='open')
           return send(200,{state:'locked',job,target:job.target,documentID:doc.id,sourceHash:doc.sourceHash});
         return send(200,{state:job.state,job,...(saved?{translation:publicTranslation(saved,doc)}:{})});
       }

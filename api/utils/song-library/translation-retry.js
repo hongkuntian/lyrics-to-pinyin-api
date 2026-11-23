@@ -6,6 +6,7 @@ import {budget,checkBudget,checkEmergencyBudget} from './spending.js';
 import {reusableTranslation} from './translation-reuse.js';
 import {reserveMemberUsage} from '../membership/store.js';
 import {selectedDocumentFromRow,validateSelectedDocument} from './selected-source.js';
+import {isStarterDocumentRow} from './starter-songs.js';
 const first=async(db,sql,args=[])=>(await db.query(sql,args)).rows[0]??null;
 export async function retryTranslation(database,{jobID,expectedAttempt,requestKey,actor,reason,dryRun=false}) {
   if(typeof jobID!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(jobID)||!Number.isSafeInteger(expectedAttempt)||expectedAttempt<1||
@@ -49,7 +50,8 @@ export async function retryTranslation(database,{jobID,expectedAttempt,requestKe
       checkBudget(settings,await budget(db),amount);
     }
     if(dryRun)return {jobID,attempt:expectedAttempt+1,reservedMicros:amount,model:generationRequest.model,maxOutputTokens:generationRequest.max_output_tokens,dryRun:true};
-    await reserveMemberUsage(db,job.user_id,jobID,'translation');
+    // Starter songs are free: the retried job needs no membership or allowance.
+    if(!isStarterDocumentRow(row))await reserveMemberUsage(db,job.user_id,jobID,'translation');
     await db.query(`UPDATE translation_jobs SET attempt=attempt+1,attempt_id=$2,attempt_created_at=now(),state='queued',
       recipe=$3,generation_request=$4,reserved_micros=$5,accounted_micros=$5,cost_final=false,error_code=NULL,provider_response=NULL,started_at=NULL,finished_at=NULL WHERE id=$1`,
       [jobID,randomUUID(),translationRecipe(job.target),JSON.stringify(generationRequest),amount]);

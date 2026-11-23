@@ -1,9 +1,10 @@
 import {createRequire} from 'node:module';
 import {randomInt} from 'node:crypto';
 import {LibraryError} from './store.js';
+import {catalogRecordingKey} from './document.js';
 
 // First-run starter songs. The pool is fixed, approved data; the server picks
-// the order and counts what was shown and picked.
+// the order, counts what was shown and picked, and keeps these songs free.
 // Contract: SONG_LIBRARY.md, "Starter songs".
 const require=createRequire(import.meta.url);
 const pool=require('../../data/starter-songs.json');
@@ -13,6 +14,7 @@ const songs=Object.values(pool.languages).flat();
 const songIDs=new Set(songs.map(song=>song.id));
 export const STARTER_LANGUAGES=Object.freeze(Object.keys(pool.languages));
 export const STARTER_SONG_IDS=Object.freeze([...songIDs]);
+export const STARTER_CATALOG_IDS=Object.freeze([...new Set(songs.flatMap(song=>song.recordings.map(r=>r.catalog_id)))]);
 const invalid=()=>new LibraryError('invalid_request',400);
 
 // Unbiased Fisher–Yates on a copy. randomIndex(n) returns a uniform integer in
@@ -49,3 +51,16 @@ export async function recordStarterEvent(db,event) {
     ON CONFLICT(song_id) DO UPDATE SET shown=starter_song_totals.shown+EXCLUDED.shown,
       picked=starter_song_totals.picked+EXCLUDED.picked,updated_at=now()`,[event.ids,event.shown,event.picked]);
 }
+
+// Starter songs are free (docs/memberships.md). A starter document is the
+// server's own stored Apple Music document for a pool catalog id in any
+// storefront: the app asks with the listener's storefront, and it is the same
+// recording. The stored recording key is a digest of the catalog id and a
+// storefront that is absent or two lowercase letters (recordingRequest), so
+// every key a pool id can have is known: ids × 677 storefronts, built once.
+const STOREFRONTS=[null,...Array.from({length:676},(_,i)=>String.fromCharCode(97+Math.floor(i/26),97+i%26))];
+let recordingKeys;
+const starterRecordingKeys=()=>recordingKeys??=new Set(STARTER_CATALOG_IDS.flatMap(id=>STOREFRONTS.map(storefront=>catalogRecordingKey(id,storefront))));
+// Spotify and selected-source documents are never starter documents.
+export const isStarterDocumentRow=row=>Boolean(row)&&!row.source_capsule&&!row.selected_source&&starterRecordingKeys().has(row.recording_key);
+export const isStarterDocument=doc=>Boolean(doc)&&!doc.sourceCapsule&&!doc.selectedSourceCapsule&&!doc.selectedSource&&starterRecordingKeys().has(doc.recordingKey);

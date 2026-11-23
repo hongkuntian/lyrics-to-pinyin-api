@@ -103,6 +103,42 @@ Lyrics and pronunciation are free and unlimited. New generation requires members
 
 Free (guest) accounts can read **3 existing shared-library translations per rolling 7 days** (`FREE.libraryTranslationsPerWeek` in `api/utils/membership/policy.js`; change it there, no app update needed). Members, beta and unlimited accounts read every library translation. For a free account, `translate`/`current`/`status` return `{state:'locked',target,documentID,sourceHash}` without content until the song is opened. The app opens it only after an explicit tap by sending `current` with `unlock:true`, which records one idempotent `membership_usage` row per account and document (grant `library-free-v1`). A song stays readable after it is opened; past the limit, unlock returns `403 library_translation_limit`. Draft lines are streamed only to accounts that can read the song. The status snapshot reports `libraryTranslations {unlimited,limit,used,remaining,nextAvailableAt}`. Unused allowance does not roll over. Cached/coalesced generation is free, retries share an operation ID, and failed operations release their allowance reservation. Existing readable content remains available on downgrade or expiry.
 
+### Starter songs are free
+
+The first-run starter songs ([contract](../SONG_LIBRARY.md#starter-songs)) never
+count against the weekly free allowance and never require membership. For a
+starter document:
+
+- A saved translation is always readable. `translate`, `current` and `status`
+  never answer `locked`, `unlock` is not needed, and no weekly library read or
+  `membership_usage` row is written.
+- A new translation, and new word help (`explain`, `explain_line`), start
+  without membership and without `allowGeneration`. They never fail with
+  `membership_required`, `generation_required`, `library_translation_limit` or
+  `membership_allowance_exhausted`, and write no membership grant or usage row.
+  A member's monthly allowance is not used either.
+
+Everything else applies unchanged: the app session, rate limits, the global and
+emergency spending caps, the kill switch, the language-direction policy, one
+piece of work per account at a time, job coalescing and source checks. Beta
+accounts keep their per-account daily and monthly attempt cap
+(`generation_allowance_exhausted`), and starter attempts count toward it. Free
+accounts have no per-account cap on starter generation; the shared caps are the
+bound.
+
+A starter document is the server's own stored Apple Music document whose
+recording has a pool catalog id (48 ids), in any storefront: the app asks for
+lyrics with the listener's storefront, and it is the same recording. The rule
+reads `lyric_documents.recording_key`, which the server wrote at lyrics time as
+a digest of the request's catalog id and storefront. A storefront is absent or
+two lowercase letters, so every key a pool id can have is known in advance.
+Nothing on a `translate` or `explain` request decides it. Spotify recordings and
+selected-source documents are never starter documents. The exception lives in
+`api/utils/song-library/starter-songs.js` (`isStarterDocument`) and is applied
+where each gate sits: the read gate in `api/song-library.js`, translation
+admission in `SongLibraryStore.reserve`, word-help admission in
+`reserveExplanation`, and the operator retry.
+
 Public reads never authorize new provider work. Translation `allowGeneration=true` and Study `allowGeneration:true` mark explicit generation; Study `readOnly:true` returns saved content or `missing`. Opening or revisiting a reader and changing accounts must not silently spend allowance. Concurrent admission locks the account and existing budget rows before reserving.
 
 Live Lyrics relay admission (`admitMemberRelay`): beta or unlimited accounts are admitted; otherwise Live Lyrics must be enabled (`live_lyrics_unavailable`); then `membership_settings.relay_access = 'everyone'` admits any account (prerelease), and `members` needs an active membership or a claimed preview (otherwise `membership_required`). Changing `relay_access` needs no new build: `node scripts/membership-admin.mjs configure ... --set relay_access=members` (the launch setting). Every admission except beta/unlimited counts toward the global monthly budget and the usage ledger. A preview is once per non-beta account and, with DeviceCheck configured, once per device: a claim without a `deviceToken`, with a token Apple rejects, or from a device whose bit 1 is set, is `live_preview_used`; otherwise the claim is recorded and bit 1 is set afterwards. Unconfigured or failing DeviceCheck allows the claim. An account whose Live Lyrics is already included (beta, unlimited, a member, or `relay_access = 'everyone'`) gets `400 invalid_request` without a DeviceCheck call. A preview is bound to one activity and recording, and ends at 10 minutes or 200 admitted relay requests. Defaults cap new previews at 100/day. The operational relay ceiling is 1,000,000 requests/month across public users; failures still count admitted infrastructure work. These are bounded operational safeguards, not advertised paid-user minute quotas. Beta access preserves its existing policy. `sign_in_required`, `purchase_account_unbound` and the `apple_*` error codes no longer exist.

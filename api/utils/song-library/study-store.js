@@ -3,6 +3,7 @@ import {LibraryError,SongLibraryStore} from './store.js';
 import {selectedDocumentFromRow} from './selected-source.js';
 import {budget,checkBudget,checkEmergencyBudget,finishReviewOperation} from './spending.js';
 import {reserveMemberUsage,settleMemberUsage} from '../membership/store.js';
+import {isStarterDocumentRow} from './starter-songs.js';
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??null;
 export const publicExplanation=row=>({id:row.id,documentID:row.document_id,translationID:row.revision_id,sourceID:row.source_id,
   lower:row.lower_offset,upper:row.upper_offset,recipe:row.recipe,...row.content,
@@ -41,7 +42,9 @@ export async function reserveExplanation(database,{key,doc,translation,selection
     if(!settings?.enabled)throw new LibraryError('generation_disabled',503);
     user??=await first(db,'SELECT id,unlimited_generation,access_kind FROM library_users WHERE id=$1 AND NOT disabled FOR UPDATE',[userID]);
     if(!user)throw new LibraryError('unauthorized',401);
-    if(selected?allowGeneration!==true:user.access_kind!=='beta'&&!allowGeneration)throw new LibraryError('generation_required');
+    // Starter songs are free: no Generate tap, membership or allowance (docs/memberships.md).
+    const starter=isStarterDocumentRow(stored);
+    if(!starter&&(selected?allowGeneration!==true:user.access_kind!=='beta'&&!allowGeneration))throw new LibraryError('generation_required');
     if(translation) {
       const head=await first(db,`SELECT h.revision_id FROM translation_heads h JOIN song_translations t ON t.id=h.translation_id
         JOIN translation_document_bindings b ON b.translation_id=t.id WHERE b.document_id=$1 AND t.target=$2 FOR UPDATE OF t`,[doc.id,translation.target??'en']);
@@ -59,7 +62,7 @@ export async function reserveExplanation(database,{key,doc,translation,selection
       checkBudget(settings,await budget(db),amount);
     }
     const id=randomUUID();
-    await reserveMemberUsage(db,userID,id,'study');
+    if(!starter)await reserveMemberUsage(db,userID,id,'study');
     const row=await first(db,`INSERT INTO study_explanations(id,cache_key,document_id,revision_id,source_id,lower_offset,upper_offset,recipe,user_id,state,contract_version,explanation_language,study_text,selection_text_hash,generation_request)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'queued',$10,$11,$12,$13,$14) RETURNING *`,[id,key,doc.id,translation?.id??null,selection.sourceID,selection.lower,selection.upper,recipe,userID,selection.studyText?2:1,explanationLanguage,selection.studyText?JSON.stringify(selection.studyText):null,selection.textHash??null,generationRequest?JSON.stringify(generationRequest):null]);
     await db.query(`INSERT INTO library_spend_operations(id,operation_key,kind,explanation_id,state,reserved_micros,accounted_micros)

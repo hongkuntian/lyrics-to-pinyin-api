@@ -19,6 +19,8 @@ export function recordingRequest(value) {
   return {catalog_id:value.catalog_id,artist:value.artist.trim(),title:value.title.trim(),album:value.album??null,
     duration:value.duration,storefront:value.storefront??null,...(value.account_storefront?{account_storefront:value.account_storefront}:{}),...(value.isrc?{isrc:value.isrc}:{})};
 }
+// An Apple Music recording is its catalog item in one storefront.
+export const catalogRecordingKey=(catalogID,storefront)=>digest({catalogID,storefront});
 export const requestKey=request=>{if(isSpotifyRecording(request))return spotifyRequestHash(request);const {account_storefront,isrc,...identity}=recordingRequest(request);return digest(identity);};
 export function makeDocument(request,response,selectionRevision,labels=isSpotifyRecording(request)?{}:reviewedSpeakerLabels(request.catalog_id)) {
   request=recordingRequest(request);
@@ -61,7 +63,7 @@ export function makeDocument(request,response,selectionRevision,labels=isSpotify
   const structure=normalized??{version:'source-speakers-1',speakers,occurrences};
   // Preserve recording and exact ordered source; local IDs are generated from occurrence position.
   // Provider fetch timestamps and model versions do not expire a durable document.
-  const recordingKey=digest({catalogID:request.catalog_id,storefront:request.storefront});
+  const recordingKey=catalogRecordingKey(request.catalog_id,request.storefront);
   let sourceHash=digest({language:response.song.language,lines:response.lines,structure});
   const resolution=response.metadata.catalog_resolution;
   const accepted=resolution?.accepted_request;
