@@ -1,0 +1,1121 @@
+{
+ "version": 1,
+ "languages": {
+  "cmn": [
+   {
+    "id": "cmn-1817103029",
+    "title": "月亮代表我的心",
+    "artist": "鄧麗君",
+    "year": 1977,
+    "recordings": [
+     {
+      "catalog_id": "1817103029",
+      "storefront": "ca",
+      "artist": "Teresa Teng",
+      "title": "月亮代表我的心",
+      "album": "鄧麗君金曲選 Vol.5",
+      "duration": 211.304
+     },
+     {
+      "catalog_id": "1817103029",
+      "storefront": "tw",
+      "artist": "鄧麗君",
+      "title": "月亮代表我的心",
+      "album": "鄧麗君金曲選 Vol.5",
+      "duration": 211.304
+     }
+    ]
+   },
+   {
+    "id": "cmn-1821474701",
+    "title": "甜蜜蜜",
+    "artist": "鄧麗君",
+    "year": 1979,
+    "recordings": [
+     {
+      "catalog_id": "1821474701",
+      "storefront": "ca",
+      "artist": "Teresa Teng",
+      "title": "甜蜜蜜",
+      "album": "甜蜜蜜",
+      "duration": 211.878
+     },
+     {
+      "catalog_id": "1821474701",
+      "storefront": "tw",
+      "artist": "鄧麗君",
+      "title": "甜蜜蜜",
+      "album": "甜蜜蜜",
+      "duration": 211.878
+     }
+    ]
+   },
+   {
+    "id": "cmn-615959495",
+    "title": "童話",
+    "artist": "光良",
+    "year": 2005,
+    "recordings": [
+     {
+      "catalog_id": "615959495",
+      "storefront": "ca",
+      "artist": "Michael Wong",
+      "title": "童話",
+      "album": "1996-2006 the Greatest Hits",
+      "duration": 246.0
+     },
+     {
+      "catalog_id": "615959495",
+      "storefront": "tw",
+      "artist": "光良",
+      "title": "童話",
+      "album": "十光年精選輯",
+      "duration": 246.0
+     }
+    ]
+   },
+   {
+    "id": "cmn-541857030",
+    "title": "遇見",
+    "artist": "孫燕姿",
+    "year": 2003,
+    "recordings": [
+     {
+      "catalog_id": "541857030",
+      "storefront": "ca",
+      "artist": "Yanzi Sun",
+      "title": "Encounter",
+      "album": "The Moment",
+      "duration": 209.76
+     },
+     {
+      "catalog_id": "541857030",
+      "storefront": "tw",
+      "artist": "孫燕姿",
+      "title": "遇見",
+      "album": "這一刻",
+      "duration": 209.76
+     }
+    ]
+   },
+   {
+    "id": "cmn-1019650261",
+    "title": "小幸運",
+    "artist": "田馥甄",
+    "year": 2015,
+    "recordings": [
+     {
+      "catalog_id": "1019650261",
+      "storefront": "ca",
+      "artist": "Hebe Tien",
+      "title": "A Little Happiness",
+      "album": "A Little Happiness - Single",
+      "duration": 265.522
+     },
+     {
+      "catalog_id": "1017697311",
+      "storefront": "tw",
+      "artist": "田馥甄",
+      "title": "小幸運 (電影《我的少女時代》主題曲)",
+      "album": "小幸運 (電影《我的少女時代》主題曲) - Single",
+      "duration": 265.522
+     }
+    ]
+   },
+   {
+    "id": "cmn-312506680",
+    "title": "情非得已",
+    "artist": "庾澄慶",
+    "year": 2001,
+    "recordings": [
+     {
+      "catalog_id": "312506680",
+      "storefront": "ca",
+      "artist": "Harlem Yu",
+      "title": "情非得已",
+      "album": "海嘯",
+      "duration": 273.96
+     },
+     {
+      "catalog_id": "312506680",
+      "storefront": "tw",
+      "artist": "庾澄慶",
+      "title": "情非得已",
+      "album": "海嘯",
+      "duration": 273.96
+     }
+    ]
+   },
+   {
+    "id": "cmn-651456011",
+    "title": "十年",
+    "artist": "陳奕迅",
+    "year": 2003,
+    "recordings": [
+     {
+      "catalog_id": "651456011",
+      "storefront": "ca",
+      "artist": "Eason Chan",
+      "title": "十年",
+      "album": "Eason Chan Mandarin Collection",
+      "duration": 205.6
+     },
+     {
+      "catalog_id": "651456011",
+      "storefront": "tw",
+      "artist": "陳奕迅",
+      "title": "十年",
+      "album": "陳奕迅 國語精選",
+      "duration": 205.6
+     }
+    ]
+   },
+   {
+    "id": "cmn-1467709699",
+    "title": "吻別",
+    "artist": "張學友",
+    "year": 1993,
+    "recordings": [
+     {
+      "catalog_id": "1467709699",
+      "storefront": "ca",
+      "artist": "Jacky Cheung",
+      "title": "吻別",
+      "album": "一生跟你走: 張學友年度代表作品輯",
+      "duration": 305.067
+     },
+     {
+      "catalog_id": "1467709699",
+      "storefront": "tw",
+      "artist": "張學友",
+      "title": "吻別",
+      "album": "一生跟你走: 張學友年度代表作品輯",
+      "duration": 305.067
+     }
+    ]
+   }
+  ],
+  "yue": [
+   {
+    "id": "yue-1443008646",
+    "title": "千千闕歌",
+    "artist": "陳慧嫻",
+    "year": 1989,
+    "recordings": [
+     {
+      "catalog_id": "1443008646",
+      "storefront": "ca",
+      "artist": "Priscilla Chan",
+      "title": "千千闋歌",
+      "album": "永遠是你的朋友",
+      "duration": 301.0
+     },
+     {
+      "catalog_id": "1443008646",
+      "storefront": "hk",
+      "artist": "陳慧嫻",
+      "title": "千千闋歌",
+      "album": "永遠是你的朋友",
+      "duration": 301.0
+     }
+    ]
+   },
+   {
+    "id": "yue-1443314381",
+    "title": "喜歡妳",
+    "artist": "Beyond",
+    "year": 1988,
+    "recordings": [
+     {
+      "catalog_id": "1443314381",
+      "storefront": "ca",
+      "artist": "Beyond",
+      "title": "喜歡妳",
+      "album": "祕密警察(超越時代紀念版)",
+      "duration": 273.893
+     },
+     {
+      "catalog_id": "1443314381",
+      "storefront": "hk",
+      "artist": "Beyond",
+      "title": "喜歡妳",
+      "album": "祕密警察(超越時代紀念版)",
+      "duration": 273.893
+     }
+    ]
+   },
+   {
+    "id": "yue-1443304352",
+    "title": "月半小夜曲",
+    "artist": "李克勤",
+    "year": 1987,
+    "recordings": [
+     {
+      "catalog_id": "1443304352",
+      "storefront": "ca",
+      "artist": "Hacken Lee",
+      "title": "月半小夜曲",
+      "album": "命運符號",
+      "duration": 290.973
+     },
+     {
+      "catalog_id": "1443304352",
+      "storefront": "hk",
+      "artist": "李克勤",
+      "title": "月半小夜曲",
+      "album": "命運符號",
+      "duration": 290.973
+     }
+    ]
+   },
+   {
+    "id": "yue-1443351801",
+    "title": "朋友",
+    "artist": "譚詠麟",
+    "year": 1985,
+    "recordings": [
+     {
+      "catalog_id": "1443351801",
+      "storefront": "ca",
+      "artist": "Alan Tam",
+      "title": "朋友",
+      "album": "暴風女神Lorelei",
+      "duration": 285.173
+     },
+     {
+      "catalog_id": "1443351801",
+      "storefront": "hk",
+      "artist": "譚詠麟",
+      "title": "朋友",
+      "album": "暴風女神Lorelei",
+      "duration": 285.173
+     }
+    ]
+   },
+   {
+    "id": "yue-1722083721",
+    "title": "海闊天空",
+    "artist": "Beyond",
+    "year": 1993,
+    "recordings": [
+     {
+      "catalog_id": "1722083721",
+      "storefront": "ca",
+      "artist": "Beyond",
+      "title": "海闊天空",
+      "album": "樂與怒",
+      "duration": 324.84
+     },
+     {
+      "catalog_id": "1722083721",
+      "storefront": "hk",
+      "artist": "Beyond",
+      "title": "海闊天空",
+      "album": "樂與怒",
+      "duration": 324.84
+     }
+    ]
+   },
+   {
+    "id": "yue-1443346107",
+    "title": "富士山下",
+    "artist": "陳奕迅",
+    "year": 2006,
+    "recordings": [
+     {
+      "catalog_id": "1443346107",
+      "storefront": "ca",
+      "artist": "Eason Chan",
+      "title": "富士山下",
+      "album": "What's Going On...?",
+      "duration": 259.133
+     },
+     {
+      "catalog_id": "1443346107",
+      "storefront": "hk",
+      "artist": "陳奕迅",
+      "title": "富士山下",
+      "album": "What's Going On...?",
+      "duration": 259.133
+     }
+    ]
+   },
+   {
+    "id": "yue-1443112625",
+    "title": "沉默是金",
+    "artist": "張國榮",
+    "year": 1988,
+    "recordings": [
+     {
+      "catalog_id": "1443112625",
+      "storefront": "ca",
+      "artist": "Leslie Cheung",
+      "title": "沉默是金",
+      "album": "Hot Summer",
+      "duration": 249.667
+     },
+     {
+      "catalog_id": "1443112625",
+      "storefront": "hk",
+      "artist": "張國榮",
+      "title": "沉默是金",
+      "album": "Hot Summer",
+      "duration": 249.667
+     }
+    ]
+   },
+   {
+    "id": "yue-1560826419",
+    "title": "獅子山下",
+    "artist": "羅文",
+    "year": 1979,
+    "recordings": [
+     {
+      "catalog_id": "1560826419",
+      "storefront": "ca",
+      "artist": "Roman Tam",
+      "title": "獅子山下 (香港電台電視劇「獅子山下」主題曲)",
+      "album": "笑傲歌壇 黃霑傳世經典 萬載千秋縱橫特藏",
+      "duration": 227.04
+     },
+     {
+      "catalog_id": "1560826419",
+      "storefront": "hk",
+      "artist": "羅文",
+      "title": "獅子山下 (香港電台電視劇「獅子山下」主題曲)",
+      "album": "笑傲歌壇 黃霑傳世經典 萬載千秋縱橫特藏",
+      "duration": 227.04
+     }
+    ]
+   }
+  ],
+  "ja": [
+   {
+    "id": "ja-1440863574",
+    "title": "チェリー",
+    "artist": "スピッツ",
+    "year": 1996,
+    "recordings": [
+     {
+      "catalog_id": "1440863574",
+      "storefront": "ca",
+      "artist": "Spitz",
+      "title": "Cherry",
+      "album": "Cycle Hit 1991-1997 Spitz Complete Single Collection",
+      "duration": 261.333
+     },
+     {
+      "catalog_id": "1440863574",
+      "storefront": "jp",
+      "artist": "スピッツ",
+      "title": "チェリー",
+      "album": "CYCLE HIT 1991-1997 Spitz Complete Single Collection",
+      "duration": 261.333
+     }
+    ]
+   },
+   {
+    "id": "ja-1537433553",
+    "title": "I LOVE YOU",
+    "artist": "尾崎豊",
+    "year": 1983,
+    "recordings": [
+     {
+      "catalog_id": "1537433553",
+      "storefront": "ca",
+      "artist": "Yutaka Ozaki",
+      "title": "I Love You",
+      "album": "I LOVE YOU - BALLADE BEST",
+      "duration": 259.2
+     },
+     {
+      "catalog_id": "1537433553",
+      "storefront": "jp",
+      "artist": "尾崎豊",
+      "title": "I LOVE YOU",
+      "album": "I LOVE YOU 〜 BALLADE BEST",
+      "duration": 259.2
+     }
+    ]
+   },
+   {
+    "id": "ja-1579439168",
+    "title": "水平線",
+    "artist": "back number",
+    "year": 2021,
+    "recordings": [
+     {
+      "catalog_id": "1579439168",
+      "storefront": "ca",
+      "artist": "back number",
+      "title": "Suiheisen",
+      "album": "Suiheisen - Single",
+      "duration": 285.396
+     },
+     {
+      "catalog_id": "1579439168",
+      "storefront": "jp",
+      "artist": "back number",
+      "title": "水平線",
+      "album": "水平線 - Single",
+      "duration": 285.396
+     }
+    ]
+   },
+   {
+    "id": "ja-1538122206",
+    "title": "アイノカタチ",
+    "artist": "MISIA",
+    "year": 2018,
+    "recordings": [
+     {
+      "catalog_id": "1538122206",
+      "storefront": "ca",
+      "artist": "MISIA",
+      "title": "Ainokatachi (feat. HIDE)",
+      "album": "Ai no Katachi (feat. HIDE) - EP",
+      "duration": 266.333
+     },
+     {
+      "catalog_id": "1538122206",
+      "storefront": "jp",
+      "artist": "MISIA",
+      "title": "アイノカタチ (feat. HIDE)",
+      "album": "アイノカタチ (feat. HIDE) - EP",
+      "duration": 266.333
+     }
+    ]
+   },
+   {
+    "id": "ja-539931527",
+    "title": "愛をこめて花束を",
+    "artist": "Superfly",
+    "year": 2008,
+    "recordings": [
+     {
+      "catalog_id": "539931527",
+      "storefront": "ca",
+      "artist": "Superfly",
+      "title": "Ai Wo Komete Hanatabawo",
+      "album": "Superfly",
+      "duration": 295.6
+     },
+     {
+      "catalog_id": "279691859",
+      "storefront": "jp",
+      "artist": "Superfly",
+      "title": "愛をこめて花束を",
+      "album": "Superfly",
+      "duration": 295.6
+     }
+    ]
+   },
+   {
+    "id": "ja-273169347",
+    "title": "小さな恋のうた",
+    "artist": "MONGOL800",
+    "year": 2001,
+    "recordings": [
+     {
+      "catalog_id": "273169347",
+      "storefront": "ca",
+      "artist": "Mongol800",
+      "title": "Chiisana Koi NO Uta",
+      "album": "MESSAGE",
+      "duration": 222.64
+     },
+     {
+      "catalog_id": "273169347",
+      "storefront": "jp",
+      "artist": "MONGOL800",
+      "title": "小さな恋のうた",
+      "album": "MESSAGE",
+      "duration": 222.64
+     }
+    ]
+   },
+   {
+    "id": "ja-1445055008",
+    "title": "First Love",
+    "artist": "宇多田ヒカル",
+    "year": 1999,
+    "recordings": [
+     {
+      "catalog_id": "1445055008",
+      "storefront": "ca",
+      "artist": "Hikaru Utada",
+      "title": "First Love",
+      "album": "First Love - EP",
+      "duration": 258.627
+     },
+     {
+      "catalog_id": "1445055008",
+      "storefront": "jp",
+      "artist": "宇多田ヒカル",
+      "title": "First Love",
+      "album": "First Love - EP",
+      "duration": 258.627
+     }
+    ]
+   }
+  ],
+  "ko": [
+   {
+    "id": "ko-1488300934",
+    "title": "Love poem",
+    "artist": "아이유",
+    "year": 2019,
+    "recordings": [
+     {
+      "catalog_id": "1488300934",
+      "storefront": "ca",
+      "artist": "IU",
+      "title": "Love Poem",
+      "album": "Love Poem - EP",
+      "duration": 258.239
+     },
+     {
+      "catalog_id": "1488300934",
+      "storefront": "kr",
+      "artist": "아이유",
+      "title": "Love Poem",
+      "album": "Love Poem - EP",
+      "duration": 258.239
+     }
+    ]
+   },
+   {
+    "id": "ko-1004836383",
+    "title": "Hello",
+    "artist": "허각",
+    "year": 2011,
+    "recordings": [
+     {
+      "catalog_id": "1004836383",
+      "storefront": "ca",
+      "artist": "Huh Gak",
+      "title": "Hello",
+      "album": "First Story - EP",
+      "duration": 253.56
+     },
+     {
+      "catalog_id": "1004836383",
+      "storefront": "kr",
+      "artist": "허각",
+      "title": "Hello",
+      "album": "First Story - EP",
+      "duration": 253.56
+     }
+    ]
+   },
+   {
+    "id": "ko-1609042513",
+    "title": "SOFA",
+    "artist": "Crush",
+    "year": 2015,
+    "recordings": [
+     {
+      "catalog_id": "1609042513",
+      "storefront": "ca",
+      "artist": "Crush",
+      "title": "SOFA",
+      "album": "SOFA - Single",
+      "duration": 229.573
+     },
+     {
+      "catalog_id": "1609042513",
+      "storefront": "kr",
+      "artist": "Crush",
+      "title": "SOFA",
+      "album": "SOFA - Single",
+      "duration": 229.573
+     }
+    ]
+   },
+   {
+    "id": "ko-1670828789",
+    "title": "My Love (And)",
+    "artist": "버즈",
+    "year": 2006,
+    "recordings": [
+     {
+      "catalog_id": "1670828789",
+      "storefront": "ca",
+      "artist": "Buzz",
+      "title": "My Love (And)",
+      "album": "Perfect",
+      "duration": 244.693
+     },
+     {
+      "catalog_id": "1670828789",
+      "storefront": "kr",
+      "artist": "버즈",
+      "title": "My Love (And)",
+      "album": "Perfect",
+      "duration": 244.693
+     }
+    ]
+   },
+   {
+    "id": "ko-1345362029",
+    "title": "Wedding Dress",
+    "artist": "태양",
+    "year": 2009,
+    "recordings": [
+     {
+      "catalog_id": "1345362029",
+      "storefront": "ca",
+      "artist": "TAEYANG",
+      "title": "Wedding Dress",
+      "album": "Solar",
+      "duration": 242.747
+     },
+     {
+      "catalog_id": "1345362029",
+      "storefront": "kr",
+      "artist": "태양",
+      "title": "Wedding Dress",
+      "album": "Solar",
+      "duration": 242.747
+     }
+    ]
+   },
+   {
+    "id": "ko-1313176085",
+    "title": "IF YOU",
+    "artist": "BIGBANG",
+    "year": 2015,
+    "recordings": [
+     {
+      "catalog_id": "1313176085",
+      "storefront": "ca",
+      "artist": "BIGBANG",
+      "title": "IF YOU",
+      "album": "MADE",
+      "duration": 264.216
+     },
+     {
+      "catalog_id": "1313176085",
+      "storefront": "kr",
+      "artist": "BIGBANG",
+      "title": "IF YOU",
+      "album": "MADE",
+      "duration": 264.216
+     }
+    ]
+   },
+   {
+    "id": "ko-1726888402",
+    "title": "Love wins all",
+    "artist": "아이유",
+    "year": 2024,
+    "recordings": [
+     {
+      "catalog_id": "1726888402",
+      "storefront": "ca",
+      "artist": "IU",
+      "title": "Love wins all",
+      "album": "Love wins all - Single",
+      "duration": 271.08
+     },
+     {
+      "catalog_id": "1726888402",
+      "storefront": "kr",
+      "artist": "아이유",
+      "title": "Love wins all",
+      "album": "Love wins all - Single",
+      "duration": 271.08
+     }
+    ]
+   },
+   {
+    "id": "ko-1698506946",
+    "title": "Goodbye",
+    "artist": "박효신",
+    "year": 2019,
+    "recordings": [
+     {
+      "catalog_id": "1698506946",
+      "storefront": "ca",
+      "artist": "Park Hyo Shin",
+      "title": "Goodbye",
+      "album": "Goodbye - Single",
+      "duration": 288.253
+     },
+     {
+      "catalog_id": "1698506946",
+      "storefront": "kr",
+      "artist": "박효신",
+      "title": "Goodbye",
+      "album": "Goodbye - Single",
+      "duration": 288.253
+     }
+    ]
+   }
+  ],
+  "es": [
+   {
+    "id": "es-1629786270",
+    "title": "Eres tú",
+    "artist": "Mocedades",
+    "year": 1973,
+    "recordings": [
+     {
+      "catalog_id": "1629786270",
+      "storefront": "ca",
+      "artist": "Mocedades",
+      "title": "Eres Tu",
+      "album": "Super Éxitos De Mocedades",
+      "duration": 210.88
+     },
+     {
+      "catalog_id": "1629786270",
+      "storefront": "es",
+      "artist": "Mocedades",
+      "title": "Eres Tu",
+      "album": "Super Éxitos De Mocedades",
+      "duration": 210.88
+     }
+    ]
+   },
+   {
+    "id": "es-1776907569",
+    "title": "La playa",
+    "artist": "La Oreja de Van Gogh",
+    "year": 2000,
+    "recordings": [
+     {
+      "catalog_id": "1776907569",
+      "storefront": "ca",
+      "artist": "La Oreja de Van Gogh",
+      "title": "La Playa",
+      "album": "El Viaje De Copperpot",
+      "duration": 247.693
+     },
+     {
+      "catalog_id": "1776907569",
+      "storefront": "es",
+      "artist": "La Oreja de Van Gogh",
+      "title": "La Playa",
+      "album": "El Viaje De Copperpot",
+      "duration": 247.693
+     }
+    ]
+   },
+   {
+    "id": "es-1442443569",
+    "title": "Un beso y una flor",
+    "artist": "Nino Bravo",
+    "year": 1972,
+    "recordings": [
+     {
+      "catalog_id": "1442443569",
+      "storefront": "ca",
+      "artist": "Nino Bravo",
+      "title": "Un Beso y una Flor",
+      "album": "Lo Mejor de Nino Bravo",
+      "duration": 268.947
+     },
+     {
+      "catalog_id": "1442443569",
+      "storefront": "es",
+      "artist": "Nino Bravo",
+      "title": "Un Beso y una Flor",
+      "album": "Lo Mejor de Nino Bravo",
+      "duration": 268.947
+     }
+    ]
+   },
+   {
+    "id": "es-280862234",
+    "title": "Rosas",
+    "artist": "La Oreja de Van Gogh",
+    "year": 2003,
+    "recordings": [
+     {
+      "catalog_id": "280862234",
+      "storefront": "ca",
+      "artist": "La Oreja de Van Gogh",
+      "title": "Rosas",
+      "album": "Lo Que Te Conté Mientras Te Hacías la Dormida",
+      "duration": 236.507
+     },
+     {
+      "catalog_id": "280862234",
+      "storefront": "es",
+      "artist": "La Oreja de Van Gogh",
+      "title": "Rosas",
+      "album": "Lo Que Te Conté Mientras Te Hacías la Dormida",
+      "duration": 236.507
+     }
+    ]
+   },
+   {
+    "id": "es-671129674",
+    "title": "Ahora te puedes marchar",
+    "artist": "Luis Miguel",
+    "year": 1987,
+    "recordings": [
+     {
+      "catalog_id": "671129674",
+      "storefront": "ca",
+      "artist": "Luis Miguel",
+      "title": "Ahora Te Puedes Marchar",
+      "album": "Soy Como Quiero Ser",
+      "duration": 191.973
+     },
+     {
+      "catalog_id": "671129674",
+      "storefront": "es",
+      "artist": "Luis Miguel",
+      "title": "Ahora Te Puedes Marchar",
+      "album": "Soy Como Quiero Ser",
+      "duration": 191.973
+     }
+    ]
+   },
+   {
+    "id": "es-273925387",
+    "title": "Vivir así es morir de amor",
+    "artist": "Camilo Sesto",
+    "year": 1978,
+    "recordings": [
+     {
+      "catalog_id": "273925387",
+      "storefront": "ca",
+      "artist": "Camilo Sesto",
+      "title": "Vivir Así Es Morir de Amor",
+      "album": "Sentimientos",
+      "duration": 210.133
+     },
+     {
+      "catalog_id": "273925387",
+      "storefront": "es",
+      "artist": "Camilo Sesto",
+      "title": "Vivir Así Es Morir de Amor",
+      "album": "Sentimientos",
+      "duration": 210.133
+     }
+    ]
+   },
+   {
+    "id": "es-1559885700",
+    "title": "Hijo de la luna",
+    "artist": "Mecano",
+    "year": 1986,
+    "recordings": [
+     {
+      "catalog_id": "1559885700",
+      "storefront": "ca",
+      "artist": "Mecano",
+      "title": "Hijo de la Luna",
+      "album": "Descanso Dominical / Une Femme Avec Une Femme",
+      "duration": 258.387
+     },
+     {
+      "catalog_id": "1559885700",
+      "storefront": "es",
+      "artist": "Mecano",
+      "title": "Hijo de la Luna",
+      "album": "Descanso Dominical / Une Femme Avec Une Femme",
+      "duration": 258.387
+     }
+    ]
+   }
+  ],
+  "fr": [
+   {
+    "id": "fr-269460216",
+    "title": "Tous les garçons et les filles",
+    "artist": "Françoise Hardy",
+    "year": 1962,
+    "recordings": [
+     {
+      "catalog_id": "269460216",
+      "storefront": "ca",
+      "artist": "Françoise Hardy",
+      "title": "Tous les garçons et les filles (Slow)",
+      "album": "Tous les garçons et les filles",
+      "duration": 187.747
+     },
+     {
+      "catalog_id": "269460216",
+      "storefront": "fr",
+      "artist": "Françoise Hardy",
+      "title": "Tous les garçons et les filles (Slow)",
+      "album": "Tous les garçons et les filles",
+      "duration": 187.747
+     }
+    ]
+   },
+   {
+    "id": "fr-1444087654",
+    "title": "Pour un flirt",
+    "artist": "Michel Delpech",
+    "year": 1971,
+    "recordings": [
+     {
+      "catalog_id": "1444087654",
+      "storefront": "ca",
+      "artist": "Michel Delpech",
+      "title": "Pour un flirt",
+      "album": "Michel Delpech",
+      "duration": 204.64
+     },
+     {
+      "catalog_id": "1444087654",
+      "storefront": "fr",
+      "artist": "Michel Delpech",
+      "title": "Pour un flirt",
+      "album": "Michel Delpech",
+      "duration": 204.64
+     }
+    ]
+   },
+   {
+    "id": "fr-212138062",
+    "title": "S'il suffisait d'aimer",
+    "artist": "Céline Dion",
+    "year": 1998,
+    "recordings": [
+     {
+      "catalog_id": "212138062",
+      "storefront": "ca",
+      "artist": "Céline Dion",
+      "title": "S'il suffisait d'aimer",
+      "album": "S'il suffisait d'aimer",
+      "duration": 214.827
+     },
+     {
+      "catalog_id": "212138062",
+      "storefront": "fr",
+      "artist": "Céline Dion",
+      "title": "S'il suffisait d'aimer",
+      "album": "S'il suffisait d'aimer",
+      "duration": 214.827
+     }
+    ]
+   },
+   {
+    "id": "fr-322814101",
+    "title": "Les démons de minuit",
+    "artist": "Images",
+    "year": 1986,
+    "recordings": [
+     {
+      "catalog_id": "322814101",
+      "storefront": "ca",
+      "artist": "Images",
+      "title": "Les démons de minuit",
+      "album": "Les démons de minuit - Single",
+      "duration": 231.41
+     },
+     {
+      "catalog_id": "322814101",
+      "storefront": "fr",
+      "artist": "Images",
+      "title": "Les démons de minuit",
+      "album": "Les démons de minuit - Single",
+      "duration": 231.41
+     }
+    ]
+   },
+   {
+    "id": "fr-1131933949",
+    "title": "Encore un soir",
+    "artist": "Céline Dion",
+    "year": 2016,
+    "recordings": [
+     {
+      "catalog_id": "1131933949",
+      "storefront": "ca",
+      "artist": "Céline Dion",
+      "title": "Encore un soir",
+      "album": "Encore un soir (Deluxe Edition)",
+      "duration": 263.439
+     },
+     {
+      "catalog_id": "1131933949",
+      "storefront": "fr",
+      "artist": "Céline Dion",
+      "title": "Encore un soir",
+      "album": "Encore un soir (Deluxe Edition)",
+      "duration": 263.439
+     }
+    ]
+   },
+   {
+    "id": "fr-1445751267",
+    "title": "Le Festin",
+    "artist": "Camille",
+    "year": 2007,
+    "recordings": [
+     {
+      "catalog_id": "1445751267",
+      "storefront": "ca",
+      "artist": "Camille",
+      "title": "Le Festin",
+      "album": "Disney Box Office Hits",
+      "duration": 170.84
+     },
+     {
+      "catalog_id": "1445751267",
+      "storefront": "fr",
+      "artist": "Camille",
+      "title": "Le Festin",
+      "album": "Disney Box Office Hits",
+      "duration": 170.84
+     }
+    ]
+   },
+   {
+    "id": "fr-1750210171",
+    "title": "Emmenez-moi",
+    "artist": "Charles Aznavour",
+    "year": 1967,
+    "recordings": [
+     {
+      "catalog_id": "1750210171",
+      "storefront": "ca",
+      "artist": "Charles Aznavour",
+      "title": "Emmenez-moi",
+      "album": "Best Of",
+      "duration": 211.983
+     },
+     {
+      "catalog_id": "1750210171",
+      "storefront": "fr",
+      "artist": "Charles Aznavour",
+      "title": "Emmenez-moi",
+      "album": "Best Of",
+      "duration": 211.983
+     }
+    ]
+   },
+   {
+    "id": "fr-543060736",
+    "title": "Ella, elle l'a",
+    "artist": "France Gall",
+    "year": 1987,
+    "recordings": [
+     {
+      "catalog_id": "543060736",
+      "storefront": "ca",
+      "artist": "France Gall",
+      "title": "Ella, elle l'a",
+      "album": "Babacar (Remasterisé)",
+      "duration": 291.4
+     },
+     {
+      "catalog_id": "543060736",
+      "storefront": "fr",
+      "artist": "France Gall",
+      "title": "Ella, elle l'a",
+      "album": "Babacar (Remasterisé)",
+      "duration": 291.4
+     }
+    ]
+   }
+  ]
+ }
+}
