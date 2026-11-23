@@ -31,7 +31,7 @@ const sourcePins={
  "api/utils/lyric-selection.js": "d0c80e76cd0916779edcb09b49712c5487c65f098399eaa4d331744eafc4048f",
  "api/utils/membership/accounts.js": "15a7fa51080bb68081a193c7e4c7c0bd72126ecf602b796518b21ecc473465ab",
  "api/utils/membership/device-check.js": "54d74516eccb46cb24761f138c4603cdf16d138c63c3f326b9a7466c28a19868",
- "api/utils/membership/policy.js": "6c1b4108727491797ce9a65156cb9e18ba8e48818aaba477b1b1fa69e25a47c5",
+ "api/utils/membership/policy.js": "373b64cf75610d28f6d63ed179121281a7f7388c892ee699341cbb85a378b978",
  "api/utils/membership/store.js": "34e73488f3e8d88b1cd0007a73771c3383318dd02f5c8b500ab300b172a63d9b",
  "api/utils/netease-title-evidence.js": "ec2ded79cb5734d2be40113f3cd7077241b5a41e032750f875d1b82d341d4fae",
  "api/utils/pronunciation-aids.js": "0f7c0e1fb45010210ad0098f58e52757e6cda8d30eea415d8b3c5c2b58b6b74c",

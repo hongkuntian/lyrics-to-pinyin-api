@@ -8,7 +8,7 @@ import {reusableTranslation,jobForDocument} from './translation-reuse.js';
 import {reserveMemberUsage,settleMemberUsage} from '../membership/store.js';
 import {hasVocalTiming,bindAppleTimingRequest} from './apple-vocal-timing.js';
 import {selectedDocumentFromRow,validateSelectedDocument,SELECTED_SOURCE_REVISION} from './selected-source.js';
-import {isStarterDocumentRow} from './starter-songs.js';
+import {isStarterDocumentRow,underStarterCap} from './starter-songs.js';
 
 export class LibraryError extends Error {
   constructor(code,status=409) { super(code);this.code=code;this.status=status; }
@@ -306,9 +306,10 @@ export class SongLibraryStore {
         UNION ALL SELECT j.* FROM translation_generation_keys k JOIN translation_jobs j ON j.id=k.job_id
         WHERE k.identity=$3 AND k.target=$2 LIMIT 1`,[documentID,target,identity]);
       if(prior) return {kind:prior.state==='queued'||prior.state==='running'?'pending':prior.state,job:await jobForDocument(db,prior,documentID)};
-      // Starter songs are free: no Generate tap, membership or allowance (docs/memberships.md).
-      const starter=isStarterDocumentRow(sourceRow);
-      if(!starter&&(selected?allowGeneration!==true:user.access_kind!=='beta'&&!allowGeneration))throw new LibraryError('generation_required');
+      // Starter songs are free up to the account's daily cap: no Generate tap,
+      // membership or allowance (docs/memberships.md). The account row is locked.
+      const free=isStarterDocumentRow(sourceRow)&&await underStarterCap(db,userID);
+      if(!free&&(selected?allowGeneration!==true:user.access_kind!=='beta'&&!allowGeneration))throw new LibraryError('generation_required');
       if(!settings.enabled) throw new LibraryError('generation_disabled',503);
       // An uncertain completed attempt retains its spending reservation and can
       // never redispatch, but must not block unrelated learning forever.
@@ -322,7 +323,7 @@ export class SongLibraryStore {
         checkBudget(settings,await budget(db),reservedMicros);
       }
       const id=randomUUID();
-      if(!starter)await reserveMemberUsage(db,userID,id,'translation');
+      if(!free)await reserveMemberUsage(db,userID,id,'translation');
       const row=await first(db,`INSERT INTO translation_jobs(id,document_id,target,recipe,user_id,state,reserved_micros,accounted_micros,generation_request)
         VALUES($1,$2,$3,$4,$5,'queued',$6,$6,$7) RETURNING *`,[id,documentID,target,recipe,userID,reservedMicros,generationRequest?JSON.stringify(generationRequest):null]);
       if(identity)await db.query('INSERT INTO translation_generation_keys(identity,target,job_id) VALUES($1,$2,$3) ON CONFLICT(identity,target) DO NOTHING',[identity,target,row.id]);

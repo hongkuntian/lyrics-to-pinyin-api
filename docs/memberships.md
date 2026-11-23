@@ -113,7 +113,8 @@ starter document:
   never answer `locked`, `unlock` is not needed, and no weekly library read or
   `membership_usage` row is written.
 - A new translation, and new word help (`explain`, `explain_line`), start
-  without membership and without `allowGeneration`. They never fail with
+  without membership and without `allowGeneration` while the account is under
+  the daily cap below. They never fail with
   `membership_required`, `generation_required`, `library_translation_limit` or
   `membership_allowance_exhausted`, and write no membership grant or usage row.
   A member's monthly allowance is not used either.
@@ -122,9 +123,21 @@ Everything else applies unchanged: the app session, rate limits, the global and
 emergency spending caps, the kill switch, the language-direction policy, one
 piece of work per account at a time, job coalescing and source checks. Beta
 accounts keep their per-account daily and monthly attempt cap
-(`generation_allowance_exhausted`), and starter attempts count toward it. Free
-accounts have no per-account cap on starter generation; the shared caps are the
-bound.
+(`generation_allowance_exhausted`), and starter attempts count toward it.
+
+The generation exemption has a per-account cap, `STARTER_FREE` in
+`api/utils/membership/policy.js`: 100 generations in a rolling 24 hours. The
+count is every translation job and every study explanation (one selection or a
+line batch) the account created in that window, whatever the document. It is
+read inside the admission transaction with the account row locked, so one
+account's concurrent requests cannot pass it together. After 100, a starter
+document is admitted exactly like any other until older work leaves the window:
+`generation_required` without `allowGeneration`, then `membership_required` for
+a free account, and a member's work uses the monthly allowance. There is no
+separate error code. Reading a saved starter translation is never capped, an
+answer that is already cached or in progress is not new work, and an operator
+retry is not counted. A free account can only start starter work, so for it
+this is a cap of 100 starter generations a day.
 
 A starter document is the server's own stored Apple Music document whose
 recording has a pool catalog id (48 ids), in any storefront: the app asks for

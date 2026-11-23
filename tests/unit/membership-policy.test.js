@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {monthlyPeriod,transactionFields,PRODUCTS} from '../../api/utils/membership/policy.js';
+import {monthlyPeriod,transactionFields,PRODUCTS,FREE,PRO,STARTER_FREE} from '../../api/utils/membership/policy.js';
 test('annual allowances renew at monthly anniversaries without drifting short months',()=>{
   const anchor='2026-01-31T10:20:30Z';
   assert.equal(monthlyPeriod(anchor,'2026-02-28T10:20:29Z').start.toISOString(),'2026-01-31T10:20:30.000Z');
@@ -27,4 +27,9 @@ test('offer-code transactions without an appAccountToken are accepted with a nul
   assert.equal(transactionFields(offer,options).appAccountToken,null);
   assert.equal(transactionFields({...offer,appAccountToken:null},options).appAccountToken,null);
   assert.equal(transactionFields({...fixture(),appAccountToken:'7B140ECA-8ED0-4B17-87F9-A2C7DE61CA00'},options).appAccountToken,'7b140eca-8ed0-4b17-87f9-a2c7de61ca00');
+});
+test('the policy numbers are fixed values, including the starter-song generation cap',()=>{
+  assert.deepEqual(STARTER_FREE,{generationsPerDay:100,windowHours:24});
+  assert.deepEqual(FREE,{libraryTranslationsPerWeek:3,windowDays:7});assert.deepEqual(PRO,{translation:20,study:80});
+  for(const policy of [STARTER_FREE,FREE,PRO])assert.ok(Object.isFrozen(policy));
 });

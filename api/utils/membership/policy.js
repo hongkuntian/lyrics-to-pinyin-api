@@ -7,6 +7,10 @@ export const PRODUCTS=Object.freeze({
 // translations each rolling week; a song stays readable once opened.
 export const FREE=Object.freeze({libraryTranslationsPerWeek:3,windowDays:7});
 export const PRO=Object.freeze({translation:20,study:80});
+// Starter songs are free to generate for an account's first generations in a
+// rolling window; past that a starter song follows the ordinary rules.
+// Reading a saved starter translation has no cap.
+export const STARTER_FREE=Object.freeze({generationsPerDay:100,windowHours:24});
 export const PREVIEW=Object.freeze({seconds:600,requests:200});
 export const first=async(db,sql,args=[])=>(await db.query(sql,args)).rows[0]??null;
 

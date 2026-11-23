@@ -9,11 +9,13 @@ import {admitLibraryTranslation,MembershipStore} from '../../api/utils/membershi
 import {retryTranslation} from '../../api/utils/song-library/translation-retry.js';
 import {digest} from '../../api/utils/song-library/store.js';
 import {languagePolicy} from '../../api/utils/song-library/languages.js';
+import {STARTER_FREE} from '../../api/utils/membership/policy.js';
 
 // Starter songs are free (docs/memberships.md). Every test asserts the starter
 // document and an ordinary document side by side, so a regression in either
 // direction fails: a starter song that asks for payment, or a free ride for
-// any other song.
+// any other song. The generation exemption has a per-account daily cap; past
+// it a starter song gets exactly the ordinary answers.
 const pool=JSON.parse(await readFile(new URL('../../api/data/starter-songs.json',import.meta.url),'utf8'));
 const poolIDs=new Set(Object.values(pool.languages).flat().flatMap(song=>song.recordings.map(row=>row.catalog_id)));
 const request=(row,storefront)=>({catalog_id:row.catalog_id,artist:row.artist,title:row.title,album:row.album,duration:row.duration,...(storefront?{storefront}:{})});
@@ -40,6 +42,12 @@ const studied=doc=>({explanationLanguage:'en',documentID:doc.id,sourceHash:doc.s
 const selection=(doc,lower,upper)=>({offsetUnit:'grapheme',ranges:[{lower,upper}],textHash:digest([...doc.response.lines[0].original].slice(lower,upper).join(''))});
 const lineHelp=doc=>({action:'explain_line',contractVersion:1,...studied(doc),manifest:[{id:'w0-1',selection:selection(doc,0,1)},{id:'w1-3',selection:selection(doc,1,3)}]});
 const phraseHelp=doc=>({action:'explain',contractVersion:2,...studied(doc),selection:selection(doc,3,5)});
+
+const cap=STARTER_FREE.generationsPerDay;
+// Earlier generations by an account: finished word-help rows on any document.
+let batches=0;
+const seed=(f,userID,documentID,count,age='1 minute')=>f.db.query(`INSERT INTO study_explanations(id,cache_key,document_id,source_id,lower_offset,upper_offset,recipe,user_id,state,created_at)
+  SELECT gen_random_uuid(),'seed:'||$5||':'||n,$2,'L0001',0,1,'seed',$1,'ready',now()-$4::interval FROM generate_series(1,$3::int) AS n`,[userID,documentID,count,age,String(++batches)]);
 
 async function setup(t,options={}) {
   const {db,store}=await libraryDB();t.after(()=>db.close());const pending=[];
@@ -253,4 +261,98 @@ test('an operator can retry a free account\'s failed starter translation; any ot
   assert.equal((await f.store.job(starterJob)).state,'queued');assert.equal((await f.store.job(ordinaryJob)).state,'failed');
   assert.deepEqual(await f.ledger(),{usage:0,grants:0});
   assert.equal(await f.count('membership_usage'),0);
+});
+
+test('the free rule covers an account\'s first 100 generations a day; past that a starter song is an ordinary song',async t=>{
+  assert.deepEqual(STARTER_FREE,{generationsPerDay:100,windowHours:24});
+  const f=await setup(t),s=await f.open(starter),g=await f.open(streamed),o=await f.open(ordinary);
+  // 98 earlier generations count whatever their document.
+  await seed(f,'reader-b',o.doc.id,cap-2);
+  // The 99th is a translation and the 100th is word help: both free.
+  assert.equal((await f.call({action:'translate',...s.ref},'token-b')).code,202);await f.settle();
+  assert.equal((await f.call(lineHelp(s.doc),'token-b')).code,202);await f.settle();
+  assert.deepEqual(await f.ledger(),{usage:0,grants:0});
+  // At the cap every new starter generation gets today's ordinary answers.
+  for(const body of [phraseHelp(s.doc),lineHelp(g.doc),phraseHelp(g.doc),{action:'translate',...g.ref}]) {
+    f.refused(await f.call(body,'token-b'),409,'generation_required');
+    f.refused(await f.call({...body,allowGeneration:true},'token-b'),403,'membership_required');
+  }
+  assert.equal(await f.count('translation_jobs',"user_id='reader-b'"),1);
+  assert.equal(await f.count('study_explanations',"user_id='reader-b'"),cap-1);
+  assert.deepEqual(await f.ledger(),{usage:0,grants:0});
+  // What the account already made stays available: cached answers are not new work.
+  assert.equal((await f.call({action:'current',...s.ref},'token-b')).body.state,'ready');
+  assert.equal((await f.call(lineHelp(s.doc),'token-b')).body.state,'ready');
+  // The cap is per account: another free account still starts starter work.
+  await f.store.createUser('reader-c','token-c');
+  await f.db.query("UPDATE library_users SET access_kind='guest' WHERE id='reader-c'");
+  assert.equal((await f.call({action:'translate',...g.ref},'token-c')).code,202);await f.settle();
+  assert.equal((await f.call(phraseHelp(g.doc),'token-c')).code,202);await f.settle();
+  f.refused(await f.call(phraseHelp(s.doc),'token-b'),409,'generation_required');
+});
+
+test('translations and word help share the one daily count',async t=>{
+  // One short of the cap, a translation takes the last place: word help and another translation are refused.
+  const a=await setup(t),as=await a.open(starter),ag=await a.open(streamed);
+  await seed(a,'reader-b',as.doc.id,cap-1);
+  assert.equal((await a.call({action:'translate',...as.ref},'token-b')).code,202);await a.settle();
+  a.refused(await a.call(lineHelp(as.doc),'token-b'),409,'generation_required');
+  a.refused(await a.call({action:'translate',...ag.ref},'token-b'),409,'generation_required');
+  // One short of the cap, word help takes the last place: a translation and more word help are refused.
+  const b=await setup(t),bs=await b.open(starter);
+  await seed(b,'reader-b',bs.doc.id,cap-1);
+  assert.equal((await b.call(phraseHelp(bs.doc),'token-b')).code,202);await b.settle();
+  b.refused(await b.call({action:'translate',...bs.ref},'token-b'),409,'generation_required');
+  b.refused(await b.call(lineHelp(bs.doc),'token-b'),409,'generation_required');
+  // Two requests racing for the last place: one is admitted, the other sees its row.
+  const c=await setup(t),cs=await c.open(starter),cg=await c.open(streamed);
+  await seed(c,'reader-b',cs.doc.id,cap-1);
+  const raced=await Promise.all([c.call({action:'translate',...cs.ref},'token-b'),c.call({action:'translate',...cg.ref},'token-b')]);
+  await c.settle();
+  assert.deepEqual(raced.map(res=>res.code).sort(),[202,409]);
+  assert.equal(raced.find(res=>res.code===409).body.code,'generation_required');
+  assert.equal(await c.count('translation_jobs',"user_id='reader-b'"),1);
+  for(const f of [a,b,c])assert.deepEqual(await f.ledger(),{usage:0,grants:0});
+});
+
+test('generations older than 24 hours do not count toward the cap',async t=>{
+  const f=await setup(t),s=await f.open(starter),o=await f.open(ordinary);
+  await seed(f,'reader-b',o.doc.id,cap+50,'24 hours 1 minute');
+  assert.equal((await f.call({action:'translate',...s.ref},'token-b')).code,202);await f.settle();
+  // The account's own translation ages out the same way.
+  await f.db.query("UPDATE translation_jobs SET created_at=now()-interval '24 hours 1 minute' WHERE user_id='reader-b'");
+  // Just inside the window they count: 99 of them leave one place.
+  await seed(f,'reader-b',o.doc.id,cap-1,'23 hours 59 minutes');
+  assert.equal((await f.call(lineHelp(s.doc),'token-b')).code,202);await f.settle();
+  f.refused(await f.call(phraseHelp(s.doc),'token-b'),409,'generation_required');
+  f.refused(await f.call({...phraseHelp(s.doc),allowGeneration:true},'token-b'),403,'membership_required');
+  assert.deepEqual(await f.ledger(),{usage:0,grants:0});
+});
+
+test('a member over the cap still generates on a starter song, now against the membership allowance',async t=>{
+  const f=await setup(t),s=await f.open(starter);
+  await activateMembership(f.store.db,'reader-b');
+  const used=async()=>{const {allowances}=await f.membership.snapshot('reader-b');return [allowances.translation.used,allowances.study.used];};
+  await seed(f,'reader-b',s.doc.id,cap);
+  // Like any other song: an explicit Generate tap, then one use of the allowance.
+  f.refused(await f.call({action:'translate',...s.ref},'token-b'),409,'generation_required');
+  f.refused(await f.call(lineHelp(s.doc),'token-b'),409,'generation_required');
+  assert.deepEqual(await used(),[0,0]);
+  assert.equal((await f.call({action:'translate',...s.ref,allowGeneration:true},'token-b')).code,202);await f.settle();
+  assert.equal((await f.call({...lineHelp(s.doc),allowGeneration:true},'token-b')).code,202);await f.settle();
+  assert.equal((await f.call({action:'current',...s.ref},'token-b')).body.state,'ready');
+  assert.deepEqual(await used(),[1,1]);assert.deepEqual(await f.ledger(),{usage:2,grants:2});
+});
+
+test('reading a saved starter translation has no cap',async t=>{
+  const f=await setup(t),s=await f.open(starter),o=await f.open(ordinary);
+  const starterJob=await prepare(f,s.ref),ordinaryJob=await prepare(f,o.ref);
+  await seed(f,'reader-b',o.doc.id,cap*2);
+  for(const body of [{action:'current',...s.ref},{action:'translate',...s.ref},{action:'status',jobID:starterJob}]) {
+    const res=await f.call(body,'token-b');
+    assert.equal(res.code,200);assert.equal(res.body.state,'ready',body.action);assert.equal(res.body.translation.lines[0].text,'Sing it.');
+  }
+  for(const body of [{action:'current',...o.ref},{action:'translate',...o.ref},{action:'status',jobID:ordinaryJob}])
+    assert.equal((await f.call(body,'token-b')).body.state,'locked',body.action);
+  assert.deepEqual(await f.ledger(),{usage:0,grants:0});
 });

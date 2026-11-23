@@ -2,6 +2,7 @@ import {createRequire} from 'node:module';
 import {randomInt} from 'node:crypto';
 import {LibraryError} from './store.js';
 import {catalogRecordingKey} from './document.js';
+import {STARTER_FREE} from '../membership/policy.js';
 
 // First-run starter songs. The pool is fixed, approved data; the server picks
 // the order, counts what was shown and picked, and keeps these songs free.
@@ -64,3 +65,14 @@ const starterRecordingKeys=()=>recordingKeys??=new Set(STARTER_CATALOG_IDS.flatM
 // Spotify and selected-source documents are never starter documents.
 export const isStarterDocumentRow=row=>Boolean(row)&&!row.source_capsule&&!row.selected_source&&starterRecordingKeys().has(row.recording_key);
 export const isStarterDocument=doc=>Boolean(doc)&&!doc.sourceCapsule&&!doc.selectedSourceCapsule&&!doc.selectedSource&&starterRecordingKeys().has(doc.recordingKey);
+// The generation exemption covers an account's first
+// STARTER_FREE.generationsPerDay generations in the rolling window: every
+// translation job and study explanation the account created, whatever the
+// document. Past that a starter document is admitted like any other. Call in
+// the admission transaction with the account row locked, so one account's
+// concurrent requests cannot pass the cap together.
+export async function underStarterCap(db,userID) {
+  const {rows:[{n}]}=await db.query(`SELECT (SELECT count(*) FROM translation_jobs WHERE user_id=$1 AND created_at>now()-$2*interval '1 hour')
+    +(SELECT count(*) FROM study_explanations WHERE user_id=$1 AND created_at>now()-$2*interval '1 hour') AS n`,[userID,STARTER_FREE.windowHours]);
+  return Number(n)<STARTER_FREE.generationsPerDay;
+}
