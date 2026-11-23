@@ -194,8 +194,9 @@ one song, in a single atomic statement. Migration `040-starter-song-totals.sql`
 holds the totals: `starter_song_totals(song_id, shown, picked, updated_at)`, one
 row per song. No account, device, address or per-event time is stored, and
 nothing acts on the totals yet. The runtime login may select, insert and update
-that table and nothing else on it. An operator reads the totals with the owner
-connection:
+that table and nothing else on it; a runtime login created after 040 gets the
+same grant from the role replay (`scripts/membership-role-grants.js`). An
+operator reads the totals with the owner connection:
 
 ```sql
 SELECT song_id, shown, picked, round(picked::numeric / nullif(shown, 0), 3) AS pick_rate, updated_at

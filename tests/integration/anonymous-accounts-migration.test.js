@@ -195,7 +195,8 @@ test('a fresh installation ends with relay_access everyone and no Sign in with A
 });
 
 test('late role provisioning after 039 replays every grant without the dropped relation',async t=>{
- const db=await database(t,{roles:false});await migrateLibrary(adapter(db));
+ // Late provisioning runs on the current manifest: the replay also names 040's table.
+ const db=await database(t,{roles:false});await migrateRegistered(adapter(db));
  await db.exec('CREATE ROLE lyrica_runtime_v1 NOLOGIN; CREATE ROLE lyrica_account_v1 NOLOGIN');
  const replay={query:text=>db.exec(text)};
  await replayMembershipRoleGrants(replay);await replayMembershipRoleGrants(replay);
