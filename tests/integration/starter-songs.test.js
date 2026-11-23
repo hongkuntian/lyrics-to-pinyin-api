@@ -84,9 +84,9 @@ test('shown and picked totals accumulate across calls and accounts, with nothing
   await Promise.all(Array.from({length:8},(_,i)=>recorded({action:'starter_event',shown:i%2?[a,b,d]:[d,b,a]},i%2?'token-a':'token-b')));
   assert.deepEqual((await totals(db)).map(row=>[row.song_id,row.shown]).sort(),[[a,10],[b,10],[c,2],[d,9]].sort());
 
-  // The table has only the song id, the two totals and one row timestamp.
+  // The table has only the song id and the two totals.
   assert.deepEqual((await db.query("SELECT column_name FROM information_schema.columns WHERE table_name='starter_song_totals' ORDER BY ordinal_position")).rows.map(row=>row.column_name),
-    ['song_id','shown','picked','updated_at']);
+    ['song_id','shown','picked']);
   const stored=JSON.stringify((await db.query('SELECT * FROM starter_song_totals')).rows);
   for(const secret of ['reader-a','reader-b','token-a','token-b'])assert.equal(stored.includes(secret),false,secret);
   // One row per song, however many events: no per-event record exists.

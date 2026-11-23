@@ -47,5 +47,5 @@ export async function recordStarterEvent(db,event) {
   await db.query(`INSERT INTO starter_song_totals(song_id,shown,picked)
     SELECT id,$2::bigint,$3::bigint FROM unnest($1::text[]) AS id ORDER BY id
     ON CONFLICT(song_id) DO UPDATE SET shown=starter_song_totals.shown+EXCLUDED.shown,
-      picked=starter_song_totals.picked+EXCLUDED.picked,updated_at=now()`,[event.ids,event.shown,event.picked]);
+      picked=starter_song_totals.picked+EXCLUDED.picked`,[event.ids,event.shown,event.picked]);
 }

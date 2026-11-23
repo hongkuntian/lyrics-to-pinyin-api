@@ -69,7 +69,7 @@ test('upgrade adds only the totals table, with counters that cannot go negative 
  assert.deepEqual(after.functions,before.functions);
  assert.deepEqual(after.relations.filter(added).map(row=>[row.relname,row.relkind]),[['starter_song_totals','r'],['starter_song_totals_pkey','i']]);
  assert.deepEqual(after.columns.filter(row=>row.relname==='starter_song_totals').map(row=>[row.attname,row.type,row.attnotnull]),
-  [['picked','bigint',true],['shown','bigint',true],['song_id','text',true],['updated_at','timestamp with time zone',true]]);
+  [['picked','bigint',true],['shown','bigint',true],['song_id','text',true]]);
  // Checks and the key only (PostgreSQL 18 also catalogs NOT NULL, already asserted per column).
  assert.deepEqual((await db.query(`SELECT conname FROM pg_constraint WHERE conrelid='${table}'::regclass AND contype IN ('c','p','f','u') ORDER BY 1`)).rows.map(row=>row.conname),
   ['starter_song_totals_picked_check','starter_song_totals_pkey','starter_song_totals_shown_check','starter_song_totals_song_id_check']);
