@@ -59,15 +59,19 @@ test('040 is registered last, after 039, so the production build requires its re
   /library_schema_migration_required/);
 });
 
-test('upgrade adds only the totals table, with counters that cannot go negative and no column for a person',async t=>{
+test('upgrade adds only the totals table and the explanations index, with counters that cannot go negative and no column for a person',async t=>{
  const db=await database(t);
  assert.deepEqual(await migrateThrough(db,prior),prior);
  const before=await catalog(db);
  assert.deepEqual(await migrateLibrary(adapter(db),{expectedPending:[{name:starters,sha256:hash(await sql(starters))}]}),[starters]);
- const after=await catalog(db),added=row=>(row.relname??row.relation)?.startsWith('starter_song_totals');
+ // The one other object is the index behind the free starter cap's per-account count.
+ const index='study_explanations_user_period';
+ const after=await catalog(db),added=row=>(row.relname??row.relation)?.startsWith('starter_song_totals')||row.relname===index;
  for(const key of ['relations','columns','constraints'])assert.deepEqual(after[key].filter(row=>!added(row)),before[key],key);
  assert.deepEqual(after.functions,before.functions);
- assert.deepEqual(after.relations.filter(added).map(row=>[row.relname,row.relkind]),[['starter_song_totals','r'],['starter_song_totals_pkey','i']]);
+ assert.deepEqual(after.relations.filter(added).map(row=>[row.relname,row.relkind]),[['starter_song_totals','r'],['starter_song_totals_pkey','i'],[index,'i']]);
+ assert.deepEqual((await db.query(`SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname=$1`,[index])).rows.map(row=>row.indexdef.replace(/\s+/g,' ')),
+  ['CREATE INDEX study_explanations_user_period ON public.study_explanations USING btree (user_id, created_at)']);
  assert.deepEqual(after.columns.filter(row=>row.relname==='starter_song_totals').map(row=>[row.attname,row.type,row.attnotnull]),
   [['picked','bigint',true],['shown','bigint',true],['song_id','text',true],['updated_at','timestamp with time zone',true]]);
  // Checks and the key only (PostgreSQL 18 also catalogs NOT NULL, already asserted per column).

@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS public.starter_song_totals (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Starter songs are free to generate up to a per-account daily cap, which counts
+-- an account's recent translation jobs and study explanations
+-- (docs/memberships.md). Translation jobs already have this index as
+-- translation_user_period; this serves the same lookup on explanations, and the
+-- existing busy and monthly-attempt checks on that table.
+CREATE INDEX IF NOT EXISTS study_explanations_user_period ON public.study_explanations(user_id,created_at);
+
 -- The song-library handler's login adds to the totals with one upsert. It
 -- gets no DELETE or TRUNCATE, and the account login gets nothing.
 DO $$ BEGIN
