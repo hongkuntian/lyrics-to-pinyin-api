@@ -11,3 +11,11 @@ test('both deployed lyric entrypoints explicitly package reviewed catalog eviden
   const registry=JSON.parse(await readFile(new URL('../../'+asset,import.meta.url)));
   assert.ok(registry.recordings.length>0);
 });
+
+test('the song-library entrypoint explicitly packages the starter-song pool',async()=>{
+  const config=JSON.parse(await readFile(new URL('../../scripts/vercel-functions.json',import.meta.url)));
+  const asset='api/data/starter-songs.json';
+  assert.ok(config.entries.find(b=>b.entry==='api/song-library.js')?.includeFiles.includes(asset));
+  assert.deepEqual(config.entries.filter(b=>b.includeFiles.includes(asset)).map(b=>b.entry),['api/song-library.js']);
+  assert.equal(Object.keys(JSON.parse(await readFile(new URL('../../'+asset,import.meta.url))).languages).length,6);
+});

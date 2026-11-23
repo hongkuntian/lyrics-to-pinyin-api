@@ -3,11 +3,17 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
-import {migrateLibrary,migrationNames} from '../../scripts/library-migrations.js';
+import {migrateLibrary as migrateRegistered,migrationNames as registeredNames} from '../../scripts/library-migrations.js';
 import {replayMembershipRoleGrants,withoutRetiredRelations} from '../../scripts/membership-role-grants.js';
 
 // Contract: Lyrica docs/ANONYMOUS_ACCOUNTS.md, "Reset and removal".
 const anonymous='039-anonymous-accounts.sql';
+// 039 is qualified on the manifest through itself; 040 has its own test.
+const migrationNames=registeredNames.slice(0,registeredNames.indexOf(anonymous)+1);
+async function migrateLibrary(database,options){
+ const saved=[...registeredNames];registeredNames.splice(0,registeredNames.length,...migrationNames);
+ try{return await migrateRegistered(database,options);}finally{registeredNames.splice(0,registeredNames.length,...saved);}
+}
 const sql=name=>readFile(new URL('../../db/'+name,import.meta.url),'utf8');
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const adapter=db=>({transaction:fn=>db.transaction(tx=>fn({query:async(text,args)=>args?tx.query(text,args):(await tx.exec(text)).at(-1)}))});
@@ -15,8 +21,8 @@ const system="n.nspname NOT IN ('pg_catalog','information_schema','pg_toast') AN
 const prior=migrationNames.slice(0,migrationNames.indexOf(anonymous));
 
 async function migrateThrough(db,names){
- const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...names);
- try{return await migrateLibrary(adapter(db));}finally{migrationNames.splice(0,migrationNames.length,...saved);}
+ const saved=[...registeredNames];registeredNames.splice(0,registeredNames.length,...names);
+ try{return await migrateRegistered(adapter(db));}finally{registeredNames.splice(0,registeredNames.length,...saved);}
 }
 async function database(t,{roles=true}={}){
  const db=new PGlite();t.after(()=>db.close());
@@ -82,8 +88,9 @@ async function seed(db){
 const rows=(image,table)=>image['public.'+table];
 const without=(row,fields)=>Object.fromEntries(Object.entries(row).filter(([k])=>!fields.includes(k)));
 
-test('039 is registered last, after 038, so the build requires its receipt',async()=>{
- assert.deepEqual(migrationNames.slice(-2),['038-retire-spotify-observer.sql',anonymous]);
+test('039 is registered once, after 038 and followed only by 040',async()=>{
+ assert.deepEqual(registeredNames.slice(registeredNames.indexOf(anonymous)-1),['038-retire-spotify-observer.sql',anonymous,'040-starter-song-totals.sql']);
+ assert.equal(registeredNames.filter(name=>name.startsWith('039-')).length,1);
  const text=await sql(anonymous);
  // The runner strips only a leading BEGIN and trailing COMMIT.
  assert.match(text,/^BEGIN;\n/);assert.match(text,/\nCOMMIT;\n$/);

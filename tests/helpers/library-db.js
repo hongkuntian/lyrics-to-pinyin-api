@@ -43,6 +43,8 @@ export async function libraryDB(path) {
     await db.exec(await readFile(new URL('../../db/025-memberships.sql',import.meta.url),'utf8'));
   if(!(await db.query("SELECT 1 FROM information_schema.columns WHERE table_name='library_users' AND column_name='app_account_token'")).rows.length)
     await db.exec(await readFile(new URL('../../db/039-anonymous-accounts.sql',import.meta.url),'utf8'));
+  if(!(await db.query("SELECT to_regclass('starter_song_totals') AS name")).rows[0].name)
+    await db.exec(await readFile(new URL('../../db/040-starter-song-totals.sql',import.meta.url),'utf8'));
   await store.configure({enabled:true,dailyMicros:1_000_000,monthlyMicros:5_000_000});
   await store.createUser('reader-a','token-a');
   await store.createUser('reader-b','token-b');

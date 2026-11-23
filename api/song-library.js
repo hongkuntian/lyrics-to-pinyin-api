@@ -16,6 +16,7 @@ import {lineSelections,lineKey,lineBody,generateLine,publicLine,LINE_RECIPE} fro
 import {executeTranslationJob} from './utils/song-library/translation-worker.js';
 import {admitLibraryTranslation} from './utils/membership/store.js';
 import {publicDocument,publicTranslation} from './utils/song-library/public-content.js';
+import {starterSongs,starterEvent,recordStarterEvent} from './utils/song-library/starter-songs.js';
 
 import {TARGETS,canonicalTarget,environmentLanguagePolicy,requireDirection,capabilities} from './utils/song-library/languages.js';
 import {selectionV2,explanationRecipe,selectionFor,explanationBody,explanationKey,generateExplanation} from './utils/song-library/study-explanation.js';
@@ -29,7 +30,8 @@ import {shouldRetainLyricDocument} from './utils/song-library/lyric-retention.js
 import {lyricResponseLifetimeMs} from './utils/lyric-selection.js';
 
 export const config={maxDuration:300,supportsResponseStreaming:true};
-const actions={selected_source:['provider','itemID','query','expectedTextHash'],capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly','delivery','unlock'],explain_line:['documentID','sourceHash','contractVersion','studyText','manifest','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],current:['documentID','sourceHash','revisionID','target','unlock'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail']};
+const actions={selected_source:['provider','itemID','query','expectedTextHash'],capabilities:[],pronunciation:['documentID','sourceHash','profileID'],explain:['documentID','sourceHash','translationID','sourceID','lower','upper','contractVersion','studyText','selection','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],lyrics:['recording','refresh'],translate:['documentID','sourceHash','target','allowGeneration','resumeOnly','delivery','unlock'],explain_line:['documentID','sourceHash','contractVersion','studyText','manifest','explanationLanguage','contextTranslation','allowGeneration','readOnly','resumeOnly'],current:['documentID','sourceHash','revisionID','target','unlock'],status:['jobID'],report:['documentID','translationID','sourceID','category','detail'],
+  starters:['languages'],starter_event:['shown','picked']};
 export function lyricLoader(handler=createMusicRomanizeService()) {
   return async (recording,{refresh=false,delivery}={})=> {
     const result={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){this.body=body;return this;}};
@@ -41,7 +43,7 @@ export function lyricLoader(handler=createMusicRomanizeService()) {
 export function createSongLibraryService({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,lineFn=generateLine,apiKey=process.env.OPENAI_API_KEY,
   selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null,pronunciationFn=annotationFor,pronunciationProfiles=enabledProfiles,
   lyricSourceNeedsRefreshFn=lyricSourceNeedsRefresh,loadSelectedSource=createLyricSourceLoader(),selectedSourceTimeoutMs=6000,
-  translationAccess=(store,userID,documentID,options)=>admitLibraryTranslation(store.db,userID,documentID,options)}={}) {
+  translationAccess=(store,userID,documentID,options)=>admitLibraryTranslation(store.db,userID,documentID,options),randomIndex}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
   const execute=(db,id,doc,observer=null)=>executeTranslationJob(db,id,{apiKey,generateFn,doc,observer});
   return withLyricsDelivery(async(req,res)=> {
@@ -97,6 +99,10 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         return send(200,{state:'ready',document:publicDocument(doc)});
       }
       if(input.action==='capabilities')return send(200,{capabilities:{...capabilities(policy),translationDelivery:['progressive-v1'],lineHelp:{contractVersion:1,recipe:LINE_RECIPE,maxSelections:32,languages:Object.keys(TARGETS)},pronunciation:{contractVersion:1,profiles:pronunciationProfiles()}}});
+      // The whole pool per requested language in a fresh order; nothing is written.
+      if(input.action==='starters')return send(200,{starters:starterSongs(input.languages,randomIndex)});
+      // Two running totals per song; nothing about the caller is stored.
+      if(input.action==='starter_event') {await recordStarterEvent(db.db,starterEvent(input));return send(200,{state:'recorded'});}
       if(input.action==='pronunciation') {
         if(typeof input.documentID!=='string'||!/^[a-f0-9]{64}$/.test(input.documentID)||typeof input.sourceHash!=='string'||typeof input.profileID!=='string')throw new LibraryError('invalid_request',400);
         const doc=await db.document(input.documentID);if(!doc)throw new LibraryError('document_not_found',404);

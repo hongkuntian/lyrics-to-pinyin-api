@@ -91,7 +91,7 @@ const sourcePins={
 const refreshPinPaths=["api/utils/app-auth/admin.js","api/utils/app-auth/store.js","api/utils/app-auth/auth-context.js","api/utils/app-auth/errors.js","api/utils/membership/accounts.js","api/utils/membership/account-data-privacy.js","api/utils/song-library/store.js","scripts/library-migrations.js","scripts/membership-role-grants.js","db/036-account-data-privacy.sql"];
 const gitRoot=fileURLToPath(new URL('../../',import.meta.url));
 const git=(...args)=>execFileSync('git',args,{cwd:gitRoot,encoding:'utf8',stdio:['ignore','pipe','pipe'],env:{...process.env,GIT_OPTIONAL_LOCKS:'0'}}).trim();
-const correction='036-account-data-privacy.sql',namespace='037-lyrica-namespace.sql',retirement='038-retire-spotify-observer.sql',anonymous='039-anonymous-accounts.sql';
+const correction='036-account-data-privacy.sql',namespace='037-lyrica-namespace.sql',retirement='038-retire-spotify-observer.sql',anonymous='039-anonymous-accounts.sql',starters='040-starter-song-totals.sql';
 const aclMetadataSHA256='7ee564f93b162fc2b75d6ed791622414c2e44449ff776cc61705644b433e1972';
 const existingTokenFields=['digest','user_id','revoked','created_at','expires_at'];
 const observed={
@@ -156,16 +156,17 @@ async function connect(){
  ({AccountStore}=await import('../../api/utils/membership/accounts.js'));
  ({createCurrentAuthContext}=await import('../../api/utils/app-auth/auth-context.js'));
  const registered=await import('../../scripts/library-migrations.js');migrationNames=registered.migrationNames;
- // The historical 032 prefix (late replay/drift) never applies 036-039. The
+ // The historical 032 prefix (late replay/drift) never applies 036-040. The
  // restricted-method scenarios add 039, which session issuance now needs
- // (slide_guest_credential_expiry); 036-038 stay outside this pre-037 fixture.
+ // (slide_guest_credential_expiry); 036-038 and 040 (starter-song totals,
+ // unused by auth) stay outside this pre-037 fixture.
  const through=excluded=>async database=>{
   const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>!excluded.includes(n)));
   try{return await registered.migrateLibrary(database);}
   finally{migrationNames.splice(0,migrationNames.length,...saved);}
  };
- migrateLibrary=through([correction,namespace,retirement,anonymous]);
- migrateWithAnonymous=through([correction,namespace,retirement]);
+ migrateLibrary=through([correction,namespace,retirement,anonymous,starters]);
+ migrateWithAnonymous=through([correction,namespace,retirement,starters]);
  ({replayMembershipRoleGrants}=await import('../helpers/historical-role-grants.js'));
  config={host:marker.socketDirectory,port:marker.port,user:marker.user,password:'',ssl:false,
   connectionTimeoutMillis:3000,statement_timeout:8000,lock_timeout:3000,idle_in_transaction_session_timeout:15000,
@@ -333,7 +334,7 @@ async function usingDatabase(fn){
 async function baseline(h){
  const saved=[...migrationNames],publicNames=saved.filter(name=>Number(name.slice(0,3))<=28);
  assert.deepEqual(publicNames.map(name=>Number(name.slice(0,3))),Array.from({length:28},(_,i)=>i+1));
- assert.deepEqual(saved,[...publicNames,migration,correction,namespace,retirement,anonymous],'exact current registry; original harness selects only through 032');
+ assert.deepEqual(saved,[...publicNames,migration,correction,namespace,retirement,anonymous,starters],'exact current registry; original harness selects only through 032');
  migrationNames.splice(0,migrationNames.length,...publicNames);
  try{assert.deepEqual(await migrateLibrary(h.db('baseline')),publicNames);}
  finally{migrationNames.splice(0,migrationNames.length,...saved);}

@@ -164,3 +164,55 @@ of the response observer. Disconnect or backpressure detaches the observer;
 it never cancels settlement or submits another generation. Recover using the
 same job's existing status/current/resume-only contracts, not another reservation.
 There is no durable partial replay service.
+
+## Starter songs
+
+The app's first-run flow offers starter songs: for each language the person
+picked, three songs from a fixed pool. `api/data/starter-songs.json` is that
+pool (46 songs under `cmn`, `yue`, `ja`, `ko`, `es`, `fr`). Each song has an
+`id`, display `title`, `artist` and `year`, and `recordings`: lyrics request
+rows (`catalog_id`, `storefront`, `artist`, `title`, `album`, `duration`) that
+were verified to return measured word timing. Both actions need the app session
+and count toward the per-account rate limit like every other action; unknown
+keys are `400 invalid_request`.
+
+| Action | Fields | Result |
+| --- | --- | --- |
+| `starters` | `languages`: 1 to 6 distinct pool language keys | `200 {version:1,starters:[{language,songs:[{id,title,artist,year,recordings:[…]}]}]}` |
+| `starter_event` | exactly one of `shown` (1 to 24 distinct pool song ids) or `picked` (one pool song id) | `200 {version:1,state:"recorded"}` |
+
+`starters` returns one entry per requested language, in request order. Each
+`songs` is that language's whole pool in an order the server chooses, for now a
+uniform shuffle on every call. It counts and writes nothing. The app shows the
+first three songs it can play in the listener's store, sends `shown` with those
+ids, and sends `picked` with the one the person chose. Anything else (an unknown
+language or id, a duplicate, both or neither of `shown` and `picked`, a wrong
+type) is `400 invalid_request` and records nothing.
+
+`starter_event` adds 1 to `shown` for each listed song, or 1 to `picked` for the
+one song, in a single atomic statement. Migration `040-starter-song-totals.sql`
+holds the totals: `starter_song_totals(song_id, shown, picked, updated_at)`, one
+row per song. No account, device, address or per-event time is stored, and
+nothing acts on the totals yet. The runtime login may select, insert and update
+that table and nothing else on it. An operator reads the totals with the owner
+connection:
+
+```sql
+SELECT song_id, shown, picked, round(picked::numeric / nullif(shown, 0), 3) AS pick_rate, updated_at
+FROM starter_song_totals ORDER BY shown DESC, song_id;
+```
+
+A pool song that was never shown has no row.
+
+Deployment order: apply migration 040 with the owner connection, then deploy.
+The production build refuses to continue without the 040 receipt, and the
+migration only adds a table, so the previous backend keeps working in between.
+
+```sh
+node scripts/song-library-admin.js migrate --database-config-file ~/.config/lyrica/credentials/backend-admin/migration.json
+```
+
+```sql
+SELECT name FROM library_schema_migrations WHERE name = '040-starter-song-totals.sql';
+SELECT bool_and(has_table_privilege('lyrica_runtime_v1', 'public.starter_song_totals', p)) FROM unnest(ARRAY['SELECT','INSERT','UPDATE']) AS p; -- true
+```

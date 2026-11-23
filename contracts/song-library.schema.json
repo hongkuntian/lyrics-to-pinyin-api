@@ -1382,6 +1382,120 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "starters"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "starters": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "required": [
+              "language",
+              "songs"
+            ],
+            "properties": {
+              "language": {
+                "type": "string"
+              },
+              "songs": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "title",
+                    "artist",
+                    "year",
+                    "recordings"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "artist": {
+                      "type": "string"
+                    },
+                    "year": {
+                      "type": "integer"
+                    },
+                    "recordings": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "catalog_id",
+                          "storefront",
+                          "artist",
+                          "title",
+                          "album",
+                          "duration"
+                        ],
+                        "properties": {
+                          "catalog_id": {
+                            "type": "string"
+                          },
+                          "storefront": {
+                            "type": "string"
+                          },
+                          "artist": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "album": {
+                            "type": "string"
+                          },
+                          "duration": {
+                            "type": "number"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false,
+      "description": "Starter songs: one entry per requested language in request order, each the language's whole pool in a server-chosen order. A recording is an exact lyrics request row. The app shows the first three it can play, then reports them with starter_event."
+    },
+    {
+      "type": "object",
+      "required": [
+        "version",
+        "state"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "recorded"
+        }
+      },
+      "additionalProperties": false,
+      "description": "A starter_event (shown or picked) was added to the song totals. Nothing about the caller is stored."
     }
   ]
 }

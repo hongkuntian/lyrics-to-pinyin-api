@@ -20,6 +20,8 @@ migrationNames.push('037-lyrica-namespace.sql');
 migrationNames.push('038-retire-spotify-observer.sql');
 // Anonymous accounts: Sign in with Apple removed, DeviceCheck hold, relay access, sliding guest expiry.
 migrationNames.push('039-anonymous-accounts.sql');
+// Starter songs: shown and picked totals per pool song, no account data.
+migrationNames.push('040-starter-song-totals.sql');
 export async function migrateLibrary(database,{expectedPending}={}) {
   return database.transaction(async db=> {
     await db.query("SET LOCAL lock_timeout='5s'");

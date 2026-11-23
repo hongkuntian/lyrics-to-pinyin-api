@@ -35,6 +35,17 @@ test('song library document, job, translation, status, report and error follow t
   assert.deepEqual(status.translation,ready.translation);
   await call({action:'report',documentID:document.id,translationID:ready.translation.id,sourceID:'L0001',category:'translation',detail:'Review the meaning.'});
   await call({action:'invalid'});
+  // Starter songs: the pool in a server-chosen order, then what was shown and picked.
+  const {starters}=await call({action:'starters',languages:['yue','es']});
+  assert.deepEqual(starters.map(entry=>entry.language),['yue','es']);
+  assert.ok(starters.every(entry=>entry.songs.length>=7&&entry.songs.every(song=>song.recordings.length>=1)));
+  assert.deepEqual(await call({action:'starter_event',shown:starters.map(entry=>entry.songs[0].id)}),{version:1,state:'recorded'});
+  assert.deepEqual(await call({action:'starter_event',picked:starters[0].songs[0].id}),{version:1,state:'recorded'});
+  assert.deepEqual(await call({action:'starter_event',picked:'unknown'}),{version:1,code:'invalid_request'});
+  assert.deepEqual((await db.query('SELECT shown::int AS shown,picked::int AS picked FROM starter_song_totals ORDER BY picked DESC')).rows,[{shown:1,picked:1},{shown:1,picked:0}]);
+  for(const malformed of [{version:1,starters:[{language:'yue'}]},{version:1,starters:[{language:'yue',songs:[{...starters[0].songs[0],year:'1977'}]}]},
+    {version:1,starters:[{language:'yue',songs:[{...starters[0].songs[0],recordings:[{catalog_id:1}]}]}]},{version:1,starters:'yue'},{version:1,state:'counted'},{version:2,state:'recorded'}])
+    assert.ok(validateSchema(schema,malformed).length,JSON.stringify(malformed).slice(0,80));
   assert.ok(validateSchema(schema,{...ready,version:2}).length);
   const missingLineText=structuredClone(ready);delete missingLineText.translation.lines[0].text;
   assert.ok(validateSchema(schema,missingLineText).length);

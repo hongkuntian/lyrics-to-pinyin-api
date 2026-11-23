@@ -120,8 +120,8 @@ before(async()=>{
  await admin.query('CREATE DATABASE '+databaseName);created=true;
  pool=new pg.Pool({...config,database:databaseName,max:6,idleTimeoutMillis:1000});
  pool.on('error',error=>poolErrors.push(error));
- assert.equal(migrationNames.length,33);
- assert.equal(migrationNames.at(-1),'039-anonymous-accounts.sql');
+ assert.equal(migrationNames.length,34);
+ assert.equal(migrationNames.at(-1),'040-starter-song-totals.sql');
  await migrateLibrary({transaction:async operation=>{const lease=await acquire();try{await lease.client.query('BEGIN');const result=await operation(lease.client);await lease.client.query('COMMIT');return result;}finally{await rollbackRelease(lease);}}});
 },{timeout:45000});
 

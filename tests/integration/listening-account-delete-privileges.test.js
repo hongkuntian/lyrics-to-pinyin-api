@@ -6,9 +6,10 @@ import {PGlite} from '@electric-sql/pglite';
 import {AccountStore} from '../../api/utils/membership/accounts.js';
 import {AppAuthStore} from '../../api/utils/app-auth/store.js';
 import {migrateLibrary as migrateRegistered,migrationNames as registeredMigrationNames} from '../../scripts/library-migrations.js';
-// Historical 036 qualification never applies the later namespace cutover or
-// 039, whose grants name the post-037 roles. Deletion uses no 039 column.
-const migrationNames=registeredMigrationNames.filter(name=>name!=='037-lyrica-namespace.sql'&&name!=='039-anonymous-accounts.sql');
+// Historical 036 qualification never applies the later namespace cutover,
+// 039 or 040, whose grants name the post-037 roles. Deletion uses no 039
+// column and no 040 table.
+const migrationNames=registeredMigrationNames.filter(name=>name!=='037-lyrica-namespace.sql'&&name!=='039-anonymous-accounts.sql'&&name!=='040-starter-song-totals.sql');
 async function migrateLibrary(database,options) {
  const saved=[...registeredMigrationNames];registeredMigrationNames.splice(0,registeredMigrationNames.length,...migrationNames);
  try{return await migrateRegistered(database,options);}

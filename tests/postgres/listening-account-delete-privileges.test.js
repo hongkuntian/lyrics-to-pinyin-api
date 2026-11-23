@@ -467,9 +467,10 @@ test('manual PostgreSQL restricted account-delete privilege matrix',{timeout:900
  ({AccountStore}=await import('../../api/utils/membership/accounts.js'));
  ({AppAuthStore}=await import('../../api/utils/app-auth/store.js'));
  const registered=await import('../../scripts/library-migrations.js');
- // Historical 036 qualification never applies the later namespace cutover or
- // 039, whose grants name the post-037 roles. Deletion uses no 039 column.
- migrationNames=registered.migrationNames.filter(name=>name!=='037-lyrica-namespace.sql'&&name!=='039-anonymous-accounts.sql');
+ // Historical 036 qualification never applies the later namespace cutover,
+ // 039 or 040, whose grants name the post-037 roles. Deletion uses no 039
+ // column and no 040 table.
+ migrationNames=registered.migrationNames.filter(name=>name!=='037-lyrica-namespace.sql'&&name!=='039-anonymous-accounts.sql'&&name!=='040-starter-song-totals.sql');
  migrateLibrary=async(database,options)=>{
   const saved=[...registered.migrationNames];registered.migrationNames.splice(0,registered.migrationNames.length,...migrationNames);
   try{return await registered.migrateLibrary(database,options);}

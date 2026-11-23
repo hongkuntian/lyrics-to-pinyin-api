@@ -8,7 +8,7 @@ import {migrateLibrary as migrateRegistered,migrationNames as registeredNames} f
 // Spotify is native-only. 038 destroys the retired server observer's grants and
 // state; everything else in the database must be byte-for-byte unchanged.
 const retirement='038-retire-spotify-observer.sql';
-// 038 is qualified on the manifest through itself; 039 has its own test.
+// 038 is qualified on the manifest through itself; 039 and 040 have their own tests.
 const migrationNames=registeredNames.slice(0,registeredNames.indexOf(retirement)+1);
 async function migrateLibrary(database,options){
  const saved=[...registeredNames];registeredNames.splice(0,registeredNames.length,...migrationNames);
@@ -74,8 +74,8 @@ async function seed(db){
 }
 const present=async(db,name)=>(await db.query('SELECT to_regclass($1)::text AS name',['public.'+name])).rows[0].name;
 
-test('038 is registered once, followed only by 039, and drops exactly the retired observer tables without CASCADE',async()=>{
- assert.deepEqual(registeredNames.slice(registeredNames.indexOf(retirement)),[retirement,'039-anonymous-accounts.sql']);
+test('038 is registered once, followed only by 039 and 040, and drops exactly the retired observer tables without CASCADE',async()=>{
+ assert.deepEqual(registeredNames.slice(registeredNames.indexOf(retirement)),[retirement,'039-anonymous-accounts.sql','040-starter-song-totals.sql']);
  assert.equal(registeredNames.filter(name=>name.startsWith('038-')).length,1);
  const text=await sql(retirement);
  // The runner strips only a leading BEGIN and trailing COMMIT.
