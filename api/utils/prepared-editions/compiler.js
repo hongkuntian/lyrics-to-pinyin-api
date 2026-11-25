@@ -12,7 +12,7 @@ export const stableUUID=value=>{const h=digest(canonicalJSON(value));return `${h
 export function translationTasks(doc,policy){
  return Object.keys(TARGETS).filter(target=>doc.response.song.language!==target).map(target=>{
   requireDirection(policy,'translation',doc.response.song.language,target);
-  const body=requestBody(doc,target);return {id:digest({documentID:doc.id,sourceHash:doc.sourceHash,target,body}),kind:'translation',target,body,reservationMicros:reservationMicros(body)};
+  const body=requestBody(doc,target);return {id:digest(canonicalJSON({documentID:doc.id,sourceHash:doc.sourceHash,target,body})),kind:'translation',target,body,reservationMicros:reservationMicros(body)};
  });
 }
 export function acceptedTranslations(doc,results){
@@ -92,7 +92,7 @@ export function studyTasks(doc,translations,manifest,policy){
   requireDirection(policy,'explanation',t?.target??doc.response.song.language,s.explanationLanguage);
   const selected=q.kind==='batch'?lineSelections(doc,s,t):selectionV2(doc,s,t);
   const body=q.kind==='batch'?lineBody(doc,t,selected,{language:s.explanationLanguage}):explanationBody(doc,t,selected,s.explanationLanguage);
-  return {id:digest({documentID:doc.id,sourceHash:doc.sourceHash,...q,body}),...q,body,reservationMicros:reservationMicros(body)};
+  return {id:digest(canonicalJSON({documentID:doc.id,sourceHash:doc.sourceHash,...q,body})),...q,body,reservationMicros:reservationMicros(body)};
  });
 }
 export function studyArtifact(doc,translations,task,result){

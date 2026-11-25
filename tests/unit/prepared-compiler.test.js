@@ -34,3 +34,8 @@ test('native request-only manifests honor hidden identity layers and require com
  assert.throws(()=>inspectorManifest(doc,translations,broken),/inspector_contexts_incomplete/);
  assert.throws(()=>inspectorManifest(doc,translations,{...native,requests:native.requests.filter(q=>q.kind==='translation')}),/inspector_contexts_incomplete/);
 });
+test('equivalent native JSON object key ordering cannot create duplicate paid task identities',()=>{
+ const {doc,translations,manifest}=preparedInputs();
+ const reversed=v=>Array.isArray(v)?v.map(reversed):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).reverse().map(([k,x])=>[k,reversed(x)])):v;
+ assert.deepEqual(studyTasks(doc,translations,manifest,allDirections).map(t=>t.id),studyTasks(doc,translations,reversed(manifest),allDirections).map(t=>t.id));
+});
