@@ -34,3 +34,12 @@ test('publication review flags must be booleans, never truthy imported strings',
  for(const flag of ['timingVerified','listeningVerified']){const b=bundle();b.recordingEvidence[flag]='false';assert.throws(()=>validateBundle(b),/invalid_publication/);}
  const b=bundle();b.coverage.complete='false';assert.throws(()=>validateBundle(b),/invalid_publication/);
 });
+test('publication requires the real native LyricsResponse decoding fields and never fills missing provider metadata',()=>{
+ const rewrite=mutate=>{const b=bundle(),i=b.artifacts.findIndex(a=>a.kind==='document'),a=b.artifacts[i];mutate(a.content);b.artifacts[i]=artifact(a.kind,a.content,a.selector);b.coverage.requiredArtifactIDs=b.artifacts.map(a=>a.id);b.editionID=editionIdentity(b);return b;};
+ const accepted=bundle();assert.equal(validateBundle(accepted),accepted);
+ for(const path of [['response','song','title','romanized'],['response','song','artist','romanized'],['response','song','romanization_system'],['response','metadata','timestamp'],['response','metadata','version']]){
+  const b=rewrite(d=>{let value=d;for(const key of path.slice(0,-1))value=value[key];delete value[path.at(-1)];});
+  assert.throws(()=>validateBundle(b),/invalid_publication/,path.join('.'));
+ }
+ for(const mutate of [d=>{d.response.song.title.romanized=42;},d=>{d.response.metadata.timestamp=null;},d=>{d.response.lines[0].romanized=null;},d=>{d.structure.occurrences[0].sourceText='other';}])assert.throws(()=>validateBundle(rewrite(mutate)),/invalid_publication/);
+});

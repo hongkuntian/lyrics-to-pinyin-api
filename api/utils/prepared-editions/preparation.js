@@ -1,4 +1,6 @@
 // Explicit offline acquisition/preparation. Listener code never imports this module.
+import {validatePreparedDocumentWire} from './document-wire.js';
+import {publicDocument} from '../song-library/public-content.js';
 import {POOL,variantKey,fail,artifact,validateBundle} from './core.js';
 import {makeDocument,recordingRequest} from '../song-library/document.js';
 import {independentProvider,canonicalJSON} from '../song-library/spotify-recording.js';
@@ -28,6 +30,7 @@ export async function acquireEdition(spec,{loadLyrics,selectionRevision}={}){
  const recording=song.recordings.find(r=>r.catalog_id===v.catalogID&&r.storefront===v.storefront);if(!recording)fail('variant_unavailable',403);
  // Metadata is server-owned fixed pool data. Client titles cannot choose a source.
  const request=recordingRequest(recording),response=await loadLyrics(request),doc=makeDocument(request,response,selectionRevision);
+ validatePreparedDocumentWire(publicDocument(doc));
  const provider=independentProvider(response.metadata?.source);
  if(provider!==spec.rights.source.provider||String(response.song.id)!==spec.rights.source.itemID)fail('source_scope_mismatch',409);
  if(spec.expectedSourceHash&&spec.expectedSourceHash!==doc.sourceHash)fail('source_changed',409);

@@ -50,7 +50,7 @@ test('exact mappings, source replacement, generation pin, unknown market and wit
  // Client storefront is NOT permission for a territorial edition, even CA.
  assert.equal((await call({action:'prepared_lookup',variant:b.variants[0],use:'read'})).body.code,'prepared_unavailable');
  assert.deepEqual((await call({action:'prepared_starters',languages:['cmn'],catalogStorefront:'ca'})).body.preparedStarters[0].songs,[]);
- const changed=bundle();changed.artifacts[0].content.readingRevision='new-source';
+ const changed=bundle();changed.artifacts[0].content.readingRevision='c'.repeat(64);
  const {artifact}=await import('../../api/utils/prepared-editions/core.js');changed.artifacts[0]=artifact('document',changed.artifacts[0].content);
  changed.coverage.requiredArtifactIDs=changed.artifacts.map(a=>a.id);changed.editionID=editionIdentity(changed);
  const p3=await preparedStore.publish(changed,{expectedHead:p2.generation});

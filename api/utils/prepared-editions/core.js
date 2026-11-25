@@ -1,4 +1,5 @@
 // Trusted offline publication and untrusted listener reads share identity rules.
+import {validatePreparedDocumentWire} from './document-wire.js';
 import {vocalCoverage,validTimingProvenance} from '../vocal-timing.js';
 import {validateInspectorManifest} from './compiler.js';
 import {lineSelections} from '../song-library/study-line.js';
@@ -36,6 +37,7 @@ export function validateBundle(b){
  const docs=b.artifacts.filter(a=>a.kind==='document'),manifests=b.artifacts.filter(a=>a.kind==='manifest');
  if(docs.length!==1||manifests.length!==1||docs[0].content.id!==b.documentID||docs[0].content.sourceHash!==b.sourceHash||c.nativeManifestHash!==manifests[0].id)bad();
  const d=docs[0].content,p=d.response?.metadata?.lyric_timing;
+ try{validatePreparedDocumentWire(d);}catch{bad();}
  if(d.recordingKey!==digest({catalogID:b.documentVariant.catalogID,storefront:b.documentVariant.storefront})||p?.recordingID!==b.documentVariant.catalogID)bad();
  if(r.source?.provider!==independentProvider(d.response?.metadata?.source)||r.source?.itemID!==String(d.response?.song?.id)||!validTimingProvenance(p)||!vocalCoverage(d.response?.lines,{duration:d.response?.song?.duration,durationResolution:p.durationResolution??0,provenance:true}).complete)bad();
  const m=manifests[0].content;

@@ -23,3 +23,9 @@ test('list omits an older summary whose every exact mapping has been superseded'
  const result=await preparedRequest({action:'prepared_starters',languages:['cmn']},{store:{all:async()=>[current,old]}});
  assert.equal(result.preparedStarters[0].songs.length,1);assert.equal(result.preparedStarters[0].songs[0].editionID,b.editionID);
 });
+test('published document artifact satisfies ordinary music response contract required by native decoding',async()=>{
+ const schema=JSON.parse(await readFile(new URL('../../contracts/music-romanize-success.schema.json',import.meta.url))),b=bundle();
+ const row={bundle:b,generation:'1',state:'published'},document=b.artifacts.find(a=>a.kind==='document');
+ const body=await preparedRequest({action:'prepared_artifact',editionID:b.editionID,generation:'1',use:'read',artifactID:document.id},{store:{edition:async()=>row}});
+ assert.deepEqual(validateSchema(schema,body.artifact.content.response),[]);
+});
