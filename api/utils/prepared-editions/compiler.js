@@ -8,7 +8,7 @@ import {lineSelections,lineBody,LINE_RECIPE,publicLine} from '../song-library/st
 import {publicExplanation} from '../song-library/study-store.js';
 import {publicDocument,publicTranslation} from '../song-library/public-content.js';
 import {artifact,editionIdentity,fail,exact} from './core.js';
-export const stableUUID=value=>{const h=digest(value);return `${h.slice(0,8)}-${h.slice(8,12)}-5${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}`;};
+export const stableUUID=value=>{const h=digest(canonicalJSON(value));return `${h.slice(0,8)}-${h.slice(8,12)}-5${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}`;};
 export function translationTasks(doc,policy){
  return Object.keys(TARGETS).filter(target=>doc.response.song.language!==target).map(target=>{
   requireDirection(policy,'translation',doc.response.song.language,target);

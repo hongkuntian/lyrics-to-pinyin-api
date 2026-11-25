@@ -9,6 +9,7 @@ import {generateExplanation,selectionV2} from '../song-library/study-explanation
 import {planTasks,pricePlan,runPreparationJob} from './jobs.js';
 import {budgetedGenerate,reservePlanBudget,settlePlanBudget} from './budget.js';
 import {translationTasks,acceptedTranslations,inspectorManifest,studyTasks,studyArtifact,assembleBundle} from './compiler.js';
+import {environmentLanguagePolicy} from '../song-library/languages.js';
 import {modelPolicy} from '../song-library/model-policy.js';
 export function poolInventory(){
  const entries=Object.entries(POOL).flatMap(([language,songs])=>songs.map(song=>({language,songID:song.id,variants:song.recordings.map(r=>({provider:'apple',catalogID:r.catalog_id,storefront:r.storefront})),state:'unqualified',costStatus:'unpriced_missing_source_manifest_and_measured_pilot_usage',published:false,gaps:['source_permission','acquisition','timing_listening','five_target_translations','native_inspector_manifest','priced_review','complete_artifacts']})));
@@ -44,9 +45,11 @@ export function priceStage(stage,pilotUsage,{retryAllowance=0}={}){
  const model=[...models][0],rates=modelPolicy(model);if(!rates&&stage.tasks.length)fail('generation_configuration_unavailable',503);
  return {...pricePlan(stage.plan,{pilotUsage,rates:rates??{input:0,output:0},retryAllowance}),stage:stage.stage,documentID:stage.documentID,sourceHash:stage.sourceHash,model:model??null};
 }
-export async function executeStage(acquired,stage,{path,review,database,apiKey,translations=null,generateTranslation=generate,generateBatch=generateLine,generateSingleton=generateExplanation}={}){
+export async function executeStage(acquired,stage,{path,review,database,apiKey,translations=null,generateTranslation=generate,generateBatch=generateLine,generateSingleton=generateExplanation,policy=environmentLanguagePolicy()}={}){
  requirePreparationRights(acquired.spec,acquired.doc.selectionRevision);
  if(stage.acquisitionHash!==acquired.acquisitionHash||stage.documentID!==acquired.doc.id||stage.sourceHash!==acquired.doc.sourceHash)fail('source_changed',409);
+ const expected=stagePlan(acquired,{stage:stage.stage,translations,rows:stage.manifest,policy});
+ if(canonicalJSON(expected)!==canonicalJSON(stage))fail('preparation_plan_changed',409);
  const {plan}=stage;
  if(planTasks(stage.tasks).id!==plan.id||!review?.reviewer||!review.reference||review.planID!==plan.id||review.currency!=='USD'||review.retryAllowance!==0||!Number.isSafeInteger(review.ceilingMicros)||review.ceilingMicros<0||!apiKey)fail('priced_review_required',409);
  if(stage.stage==='study'&&(!stage.manifest||!review.nativeManifestHash||review.nativeManifestHash!==artifact('manifest',stage.manifest).id))fail('native_manifest_required',409);

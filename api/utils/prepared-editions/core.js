@@ -29,8 +29,8 @@ export function validateBundle(b){
  if(!b.variants.some(v=>variantKey(v)===variantKey(b.documentVariant)))bad();
  if(!Array.isArray(b.uses)||!b.uses.includes('read')||b.uses.some(u=>!['read','play'].includes(u)))bad();
  const e=b.recordingEvidence,r=b.rights,c=b.coverage;
- if(e?.documentID!==b.documentID||e?.sourceHash!==b.sourceHash||!Array.isArray(e?.variants)||canonicalJSON(e.variants.map(variantKey).sort())!==canonicalJSON(b.variants.map(variantKey).sort())||!e?.reference||!e.reviewer||!e.timingVerified||!e.listeningVerified||!r?.reference||!r.reviewer||r.acquisition!==true||r.derivatives!==true||r.persistentServing!==true||typeof r.worldwide!=='boolean'||!Array.isArray(r.territories)||r.territories.some(t=>!/^[A-Z]{2}$/.test(t))||!Number.isFinite(Date.parse(r.expiresAt)))bad();
- if(!c?.complete||!c.parityReference||canonicalJSON([...c.targets].sort())!==canonicalJSON(Object.keys(TARGETS).sort())||!Array.isArray(b.artifacts)||!b.artifacts.length||b.artifacts.length>20000)bad();
+ if(e?.documentID!==b.documentID||e?.sourceHash!==b.sourceHash||!Array.isArray(e?.variants)||canonicalJSON(e.variants.map(variantKey).sort())!==canonicalJSON(b.variants.map(variantKey).sort())||!e?.reference||!e.reviewer||e.timingVerified!==true||e.listeningVerified!==true||!r?.reference||!r.reviewer||r.acquisition!==true||r.derivatives!==true||r.persistentServing!==true||typeof r.worldwide!=='boolean'||!Array.isArray(r.territories)||r.territories.some(t=>!/^[A-Z]{2}$/.test(t))||!Number.isFinite(Date.parse(r.expiresAt)))bad();
+ if(c?.complete!==true||!c.parityReference||canonicalJSON([...c.targets].sort())!==canonicalJSON(Object.keys(TARGETS).sort())||!Array.isArray(b.artifacts)||!b.artifacts.length||b.artifacts.length>20000)bad();
  if(Buffer.byteLength(JSON.stringify(b))>20_000_000)bad();
  const ids=new Set();for(const a of b.artifacts){if(!['document','translation','batch','explanation','manifest'].includes(a.kind)||!a.selector||a.id!==artifact(a.kind,a.content,a.selector).id||ids.has(a.id))bad();ids.add(a.id);}
  const docs=b.artifacts.filter(a=>a.kind==='document'),manifests=b.artifacts.filter(a=>a.kind==='manifest');

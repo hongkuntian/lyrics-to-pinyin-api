@@ -19,11 +19,11 @@ test('offline pipeline acquires from server pool, prepares translations then nat
  assert.equal(acquisitions,1);
  const stage=stagePlan(acquired,{stage:'translations',policy:allDirections}),priced=priceStage(stage,{input_tokens:100,output_tokens:100});assert.equal(priced.tasks,4);assert.equal(priced.currency,'USD');
  let calls=0;
- const options={path:join(dir,'translations.json'),review:review(stage,200000),database,apiKey:'test',generateTranslation:async(doc,{target,generationRequest})=>{calls++;assert.equal(generationRequest.model,stage.tasks[0].body.model);return {content:{lines:fixture.translations[target].lines,sourceNotes:[]},actualMicros:1};}};
+ const options={policy:allDirections,path:join(dir,'translations.json'),review:review(stage,200000),database,apiKey:'test',generateTranslation:async(doc,{target,generationRequest})=>{calls++;assert.equal(generationRequest.model,stage.tasks[0].body.model);return {content:{lines:fixture.translations[target].lines,sourceNotes:[]},actualMicros:1};}};
  const checkpoint=await executeStage(acquired,stage,options);assert.equal(checkpoint.state,'ready');assert.equal(calls,4);
  await executeStage(acquired,stage,options);assert.equal(calls,4,'resume must not submit twice');
  const translations=finishTranslations(acquired,stage,checkpoint),study=stagePlan(acquired,{stage:'study',translations,policy:allDirections});
- const studyOptions={path:join(dir,'study.json'),review:review(study,500000),database,apiKey:'test',translations,
+ const studyOptions={policy:allDirections,path:join(dir,'study.json'),review:review(study,500000),database,apiKey:'test',translations,
   generateBatch:async(doc,t,selections)=>({content:{items:selections.map(s=>({id:s.id,meaning:'hello',context:'greeting',grammar:'',uncertainty:'',sourceQuote:s.text}))},actualMicros:1}),
   generateSingleton:async(doc,t,s)=>({content:{meaning:'hello',context:'greeting',grammar:'',uncertainty:'',sourceQuote:s.text},actualMicros:1})};
  const studyResult=await executeStage(acquired,study,studyOptions);assert.equal(studyResult.state,'ready');
@@ -70,4 +70,17 @@ test('lowered emergency budget stops a previously reserved offline task before p
  await db.query('UPDATE library_settings SET emergency_daily_micros=99 WHERE id=1');
  await assert.rejects(budgetedGenerate(database,{planID,task:{id:'task',reservationMicros:10},attempt:1,generate:()=>assert.fail('provider')}),{code:'emergency_budget_exhausted'});
  assert.equal((await db.query('SELECT count(*)::int AS n FROM prepared_generation_attempts')).rows[0].n,0);
+});
+test('reviewed files cannot reduce conservative task reservations or drift body/selector metadata before dispatch',async()=>{
+ const {doc,spec}=preparedInputs(),{planTasks}=await import('../../api/utils/prepared-editions/jobs.js');
+ const acquired={doc,spec:{...spec,acquisitionReview:{reference:'test-only',selectionRevision:'test',allOrdinaryProviderPathsApproved:true}},acquisitionHash:digest('acquisition')};
+ const stage=stagePlan(acquired,{stage:'translations',policy:allDirections});
+ for(const mutate of [
+  s=>{s.tasks.forEach(t=>{t.reservationMicros=0;});},
+  s=>{s.tasks[0].body.instructions='different request';},
+  s=>{s.tasks[0].target='en';}
+ ]){
+  const forged=structuredClone(stage);mutate(forged);forged.plan=planTasks(forged.tasks);
+  await assert.rejects(executeStage(acquired,forged,{review:review(forged,0),policy:allDirections,apiKey:'test',database:{transaction:()=>assert.fail('DB admission')},generateTranslation:()=>assert.fail('provider')}),{code:'preparation_plan_changed'});
+ }
 });

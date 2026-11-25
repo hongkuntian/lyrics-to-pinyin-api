@@ -30,3 +30,7 @@ test('publication rejects empty, blank, mismatched and foreign payloads even whe
  const b=bundle();b.variants.push({...b.variants[0],storefront:'tw'});b.recordingEvidence.variants=b.variants;b.documentVariant=b.variants[1];
  assert.throws(()=>validateBundle(b),/invalid_publication/);
 });
+test('publication review flags must be booleans, never truthy imported strings',()=>{
+ for(const flag of ['timingVerified','listeningVerified']){const b=bundle();b.recordingEvidence[flag]='false';assert.throws(()=>validateBundle(b),/invalid_publication/);}
+ const b=bundle();b.coverage.complete='false';assert.throws(()=>validateBundle(b),/invalid_publication/);
+});
