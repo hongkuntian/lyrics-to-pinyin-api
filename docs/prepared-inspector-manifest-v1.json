@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "documentID": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "sourceHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "requests": [
+    {"kind":"translation","selector":{"target":"en","revisionID":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}},
+    {"kind":"batch","selector":{"contractVersion":1,"recipe":"study-line-1","studyText":{"layer":"original","revisionID":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","occurrenceID":"L0001"},"explanationLanguage":"en","manifest":[{"id":"w0-1","selection":{"offsetUnit":"grapheme","ranges":[{"lower":0,"upper":1}],"textHash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}]}},
+    {"kind":"explanation","selector":{"contractVersion":2,"recipe":"study-text-1","studyText":{"layer":"translation","target":"en","revisionID":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","occurrenceID":"L0001"},"explanationLanguage":"en","selection":{"offsetUnit":"grapheme","ranges":[{"lower":0,"upper":1}],"textHash":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}}}
+  ]
+}
