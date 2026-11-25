@@ -27,7 +27,7 @@ export async function preparedRequest(input,{store,territory=null,now=Date.now()
  }
  if(!hashID(input.editionID)||typeof input.generation!=='string'||!/^[1-9]\d{0,18}$/.test(input.generation)||input.use==='play'&&!input.variant)fail();
  if(action==='prepared_artifact'&&!hashID(input.artifactID))fail();
- const row=await store.edition(input.editionID);
+ const row=await store.edition(input.editionID,{artifactID:action==='prepared_artifact'?input.artifactID:null});
  if(!row)fail('prepared_unavailable',404);
  // Withdrawal takes precedence over a stale generation: callers must close the page.
  const grant=publicationGrant(row,input.use,territory,now,input.variant);

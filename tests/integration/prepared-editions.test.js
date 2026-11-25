@@ -60,7 +60,7 @@ test('exact mappings, source replacement, generation pin, unknown market and wit
 test('list retains all eligible pool candidates in approved order and permits independent read without an Apple store',async t=>{
  const {preparedStore,call}=await setup(t);let head=null;
  for(const song of POOL.cmn.slice(0,4).reverse()){
-  const b=bundle();b.songID=song.id;b.variants=song.recordings.map(r=>({provider:'apple',catalogID:r.catalog_id,storefront:r.storefront}));b.documentVariant=b.variants[0];b.recordingEvidence.variants=b.variants;b.editionID=editionIdentity(b);
+  const b=bundle({song});
   head=(await preparedStore.publish(b,{expectedHead:head})).generation;
  }
  const res=await call({action:'prepared_starters',languages:['cmn']});assert.deepEqual(res.body.preparedStarters[0].songs.map(s=>s.songID),POOL.cmn.slice(0,4).map(s=>s.id));
@@ -91,4 +91,12 @@ test('publication migration and late-role replay grant runtime reads only; no pu
   for(const p of ['INSERT','UPDATE','DELETE','TRUNCATE'])assert.equal((await db.query('SELECT has_table_privilege($1,$2,$3) AS ok',['lyrica_runtime_v1',table,p])).rows[0].ok,false);
  }
  for(const table of ['prepared_generation_runs','prepared_generation_attempts'])for(const p of ['SELECT','INSERT','UPDATE','DELETE','TRUNCATE'])assert.equal((await db.query('SELECT has_table_privilege($1,$2,$3) AS ok',['lyrica_runtime_v1',table,p])).rows[0].ok,false);
+});
+test('runtime DB projections return metadata/descriptors or exactly one requested artifact, never the full corpus for a list',async t=>{
+ const {preparedStore}=await setup(t),b=bundle(),p=await preparedStore.publish(b);
+ const listed=await preparedStore.all();assert.equal(listed[0].bundle.artifacts,undefined);
+ const lookup=await preparedStore.lookup(b.variants[0]);assert.ok(lookup.bundle.artifacts.every(a=>a.content===undefined));
+ const one=await preparedStore.edition(b.editionID,{artifactID:b.artifacts[0].id});assert.equal(one.bundle.artifacts.length,1);assert.deepEqual(one.bundle.artifacts[0],b.artifacts[0]);
+ await preparedStore.withdraw(b.editionID,p.generation);assert.deepEqual(await preparedStore.all(),[]);
+ assert.equal((await preparedStore.lookup(b.variants[0])).state,'withdrawn');
 });

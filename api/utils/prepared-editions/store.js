@@ -1,9 +1,14 @@
 import {validateBundle,variantKey,fail} from './core.js';
 export class PreparedEditionStore{
  constructor(db){this.db=db;}
- async edition(id){return (await this.db.query('SELECT bundle,generation::text,state FROM prepared_editions WHERE edition_id=$1',[id])).rows[0]??null;}
- async lookup(variant){return (await this.db.query(`SELECT e.bundle,e.generation::text,e.state FROM prepared_edition_variants v JOIN prepared_editions e ON e.edition_id=v.edition_id WHERE v.variant_key=$1 ORDER BY e.generation DESC LIMIT 1`,[variantKey(variant)])).rows[0]??null;}
- async all(){return (await this.db.query('SELECT bundle,generation::text,state FROM prepared_editions ORDER BY generation DESC')).rows;}
+ // Summary lists never load protected corpus bodies or historical withdrawn bundles.
+ async edition(id,{artifactID=null}={}){
+  const projection=artifactID?`jsonb_build_object('artifacts',coalesce((SELECT jsonb_agg(a) FROM jsonb_array_elements(e.bundle->'artifacts') a WHERE a->>'id'=$2),'[]'::jsonb))`:
+   `jsonb_build_object('artifacts',coalesce((SELECT jsonb_agg(a - 'content') FROM jsonb_array_elements(e.bundle->'artifacts') a),'[]'::jsonb))`;
+  return (await this.db.query(`SELECT (e.bundle - 'artifacts') || ${projection} AS bundle,e.generation::text,e.state FROM prepared_editions e WHERE edition_id=$1`,artifactID?[id,artifactID]:[id])).rows[0]??null;
+ }
+ async lookup(variant){return (await this.db.query(`SELECT (e.bundle - 'artifacts') || jsonb_build_object('artifacts',coalesce((SELECT jsonb_agg(a - 'content') FROM jsonb_array_elements(e.bundle->'artifacts') a),'[]'::jsonb)) AS bundle,e.generation::text,e.state FROM prepared_edition_variants v JOIN prepared_editions e ON e.edition_id=v.edition_id WHERE v.variant_key=$1 ORDER BY e.generation DESC LIMIT 1`,[variantKey(variant)])).rows[0]??null;}
+ async all(){return (await this.db.query("SELECT bundle - 'artifacts' AS bundle,generation::text,state FROM prepared_editions WHERE state='published' ORDER BY generation DESC")).rows;}
  // Serialized, compare-and-swap publication/withdrawal. Never expose through HTTP.
  async publish(bundle,{expectedGeneration=null,expectedHead=null}={}){
   validateBundle(bundle);

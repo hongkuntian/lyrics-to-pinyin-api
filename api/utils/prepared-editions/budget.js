@@ -1,5 +1,5 @@
 // Offline owner connection only. These tables have no runtime write grants.
-import {checkBudget,budget} from '../song-library/spending.js';
+import {checkBudget,checkEmergencyBudget,budget} from '../song-library/spending.js';
 import {hashID,fail} from './core.js';
 const amount=n=>Number.isSafeInteger(n)&&n>=0;
 export async function reservePlanBudget(database,planID,ceilingMicros){
@@ -18,6 +18,7 @@ export async function budgetedGenerate(database,{planID,task,attempt,generate}){
  const prior=await database.transaction(async db=>{
   const settings=(await db.query('SELECT * FROM library_settings WHERE id=1 FOR UPDATE')).rows[0];
   if(!settings?.enabled)fail('generation_disabled',503);
+  checkEmergencyBudget(settings,await budget(db));
   const run=(await db.query('SELECT * FROM prepared_generation_runs WHERE plan_id=$1 FOR UPDATE',[planID])).rows[0];
   if(!run)fail('budget_not_reserved',409);
   const existing=(await db.query('SELECT * FROM prepared_generation_attempts WHERE plan_id=$1 AND task_id=$2 AND attempt=$3',[planID,task.id,attempt])).rows[0];
@@ -28,17 +29,22 @@ export async function budgetedGenerate(database,{planID,task,attempt,generate}){
   await db.query("INSERT INTO prepared_generation_attempts(plan_id,task_id,attempt,state,accounted_micros) VALUES($1,$2,$3,'submitted',$4)",[planID,task.id,attempt,reservation]);return null;
  });
  if(prior)return prior;
+ let receivedMicros=null;
  try{
   const result=await generate();
+  if(amount(result.actualMicros))receivedMicros=result.actualMicros;
   if(!amount(result.actualMicros)||result.actualMicros>reservation||result.content===undefined)fail('usage_unknown',409);
   await database.query("UPDATE prepared_generation_attempts SET state='ready',accounted_micros=$4,content=$5 WHERE plan_id=$1 AND task_id=$2 AND attempt=$3 AND state='submitted'",[planID,task.id,attempt,result.actualMicros,JSON.stringify(result.content)]);
   return result;
  }catch(error){
-  // Even known failed usage is retained conservatively. No automatic network retries.
+  // Preserve known failed usage and hold unknown outcomes. No automatic network retries.
+  const known=amount(error.actualMicros)?error.actualMicros:receivedMicros,charged=known??reservation;
+  if(known!==null)error.actualMicros=known;
   await database.transaction(async db=>{
    await db.query('SELECT id FROM library_settings WHERE id=1 FOR UPDATE');
-   await db.query("UPDATE prepared_generation_attempts SET state='unknown' WHERE plan_id=$1 AND task_id=$2 AND attempt=$3 AND state='submitted'",[planID,task.id,attempt]);
-   await db.query("UPDATE prepared_generation_runs SET state='unknown' WHERE plan_id=$1",[planID]);
+   await db.query("UPDATE prepared_generation_attempts SET state='unknown',accounted_micros=$4 WHERE plan_id=$1 AND task_id=$2 AND attempt=$3 AND state='submitted'",[planID,task.id,attempt,charged]);
+   await db.query("UPDATE prepared_generation_runs SET state='unknown',accounted_micros=greatest(ceiling_micros,(SELECT coalesce(sum(accounted_micros),0) FROM prepared_generation_attempts WHERE plan_id=$1)) WHERE plan_id=$1",[planID]);
+   if(charged>reservation||error.code==='provider_configuration_changed')await db.query('UPDATE library_settings SET enabled=false,review_enabled=false WHERE id=1');
   });throw error;
  }
 }

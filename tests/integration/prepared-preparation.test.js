@@ -52,3 +52,22 @@ test('offline ceiling shares ordinary/emergency budget and DB claims prevent dup
  await assert.rejects(budgetedGenerate(database,{...params,task:{...task,id:'ambiguous'},generate:()=>assert.fail('retry')}),{code:'provider_outcome_unknown'});
  assert.equal(Number((await db.query('SELECT held FROM library_spend_totals')).rows[0].held),900000);
 });
+test('known usage overrun is fully accounted and disables ordinary generation, including errors carrying usage',async t=>{
+ const {db,database}=await setup(t),planID=digest('overrun');await reservePlanBudget(database,planID,100);
+ await assert.rejects(budgetedGenerate(database,{planID,task:{id:'overrun-task',reservationMicros:100},attempt:1,generate:async()=>({content:{ok:true},actualMicros:101})}),e=>e.actualMicros===101);
+ const totals=(await db.query('SELECT held FROM library_spend_totals')).rows[0];assert.equal(Number(totals.held),101);
+ assert.equal(Number((await db.query('SELECT accounted_micros FROM prepared_generation_attempts')).rows[0].accounted_micros),101);
+ assert.equal((await db.query('SELECT enabled FROM library_settings WHERE id=1')).rows[0].enabled,false);
+ // A provider failure with known usage is preserved as well.
+ await db.query('UPDATE library_settings SET enabled=true WHERE id=1');
+ const p2=digest('known-error');await reservePlanBudget(database,p2,100);
+ await assert.rejects(budgetedGenerate(database,{planID:p2,task:{id:'error-task',reservationMicros:100},attempt:1,generate:async()=>{throw Object.assign(new Error('provider_failed'),{actualMicros:150});}}));
+ assert.equal(Number((await db.query('SELECT accounted_micros FROM prepared_generation_runs WHERE plan_id=$1',[p2])).rows[0].accounted_micros),150);
+ assert.equal((await db.query('SELECT enabled FROM library_settings WHERE id=1')).rows[0].enabled,false);
+});
+test('lowered emergency budget stops a previously reserved offline task before provider submission',async t=>{
+ const {db,database}=await setup(t),planID=digest('emergency');await reservePlanBudget(database,planID,100);
+ await db.query('UPDATE library_settings SET emergency_daily_micros=99 WHERE id=1');
+ await assert.rejects(budgetedGenerate(database,{planID,task:{id:'task',reservationMicros:10},attempt:1,generate:()=>assert.fail('provider')}),{code:'emergency_budget_exhausted'});
+ assert.equal((await db.query('SELECT count(*)::int AS n FROM prepared_generation_attempts')).rows[0].n,0);
+});

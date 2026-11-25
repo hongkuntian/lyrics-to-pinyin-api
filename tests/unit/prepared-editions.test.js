@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {artifact,variantKey,validateBundle,publicationGrant} from '../../api/utils/prepared-editions/core.js';
+import {artifact,variantKey,validateBundle,publicationGrant,editionIdentity} from '../../api/utils/prepared-editions/core.js';
 import {bundle} from '../helpers/prepared-edition.js';
 test('publication binds exact identities and complete artifacts; any missing or foreign content is rejected',()=>{
  const b=bundle();assert.equal(validateBundle(b),b);
@@ -17,4 +17,16 @@ test('grants never imply offline or client-supplied territory and expire at sour
  b.rights.worldwide=false;b.rights.territories=['CA'];
  assert.throws(()=>publicationGrant({bundle:b,generation:'1',state:'published'},'read',null,now),/prepared_unavailable/);
  assert.ok(publicationGrant({bundle:b,generation:'1',state:'published'},'read','CA',now).onlineRequired);
+});
+test('publication rejects empty, blank, mismatched and foreign payloads even when every artifact is rehashed',()=>{
+ const corrupt=mutate=>{const b=bundle();mutate(b);b.coverage.requiredArtifactIDs=b.artifacts.map(a=>a.id);b.editionID=editionIdentity(b);return b;};
+ const change=(kind,fn)=>b=>{const i=b.artifacts.findIndex(a=>a.kind===kind),a=b.artifacts[i];fn(a.content);b.artifacts[i]=artifact(a.kind,a.content,a.selector);};
+ for(const mutate of [
+  change('batch',v=>{v.items=[];}),change('batch',v=>{v.items[0].meaning='  ';}),change('batch',v=>{v.items[0].sourceQuote='Other';}),
+  change('explanation',v=>{v.meaning='';}),change('explanation',v=>{v.sourceQuote='Other';}),
+  change('translation',v=>{v.lines=[];}),change('translation',v=>{v.lines[0].lyricText='';}),
+  b=>{b.artifacts.push(artifact('explanation',{meaning:'foreign'},{}));}
+ ])assert.throws(()=>validateBundle(corrupt(mutate)),/invalid_publication/);
+ const b=bundle();b.variants.push({...b.variants[0],storefront:'tw'});b.recordingEvidence.variants=b.variants;b.documentVariant=b.variants[1];
+ assert.throws(()=>validateBundle(b),/invalid_publication/);
 });

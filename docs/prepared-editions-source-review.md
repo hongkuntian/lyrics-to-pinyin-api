@@ -4,6 +4,8 @@ Reviewed 2026-11-24 against backend `0a448b87734856f266044060ae2d420b8414b6cb` a
 
 ## Result
 
+Owner archive audit reported through Root on 2026-11-24: no agreement exists for any of the 46 pool recordings. Treat the commercial registry as empty; no commercial acquisition, pretranslation, publication or spend is authorized. The reusable source-licensed Mandarin sample is separate and is not admitted by this commercial-pool workflow.
+
 **Pilot authorization is not established by the evidence available in this checkout; bulk authorization is not established either.** Keep commercial editions unpublished and do not start paid pilot/bulk preparation until the affected edition's applicable evidence is supplied and reviewed. This is an evidence gap, not a claim that no separate agreement exists. Availability through a provider, a successful technical fetch, catalog playability, attribution, an open-source client license and an approved pool entry do not establish this new use.
 
 The pool's 小幸運 entry is `cmn-1019650261`: Apple Canada `1019650261` and Taiwan `1017697311`, each 265.522 seconds. These are approved candidate variants, **not yet independently qualified edition mappings**. The checkout contains no accepted provider item, exact source/text/timing revision, listening receipt or source-use grant for this pilot's prepared edition. The same absence applies to a blanket authorization of the 46 approved pool recordings.
