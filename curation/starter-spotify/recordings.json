@@ -1,0 +1,2586 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "starterId": "cmn-1817103029",
+      "status": "held",
+      "checkedOn": "2026-11-24",
+      "version": "Vol. 5 compilation recording sought",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1817103029",
+          "albumId": "1817102815",
+          "url": "https://music.apple.com/ca/album/_/1817102815?i=1817103029",
+          "artist": "Teresa Teng",
+          "title": "月亮代表我的心",
+          "release": "鄧麗君金曲選 Vol.5",
+          "discNumber": 1,
+          "trackNumber": 4,
+          "durationMs": 211304
+        }
+      ],
+      "candidate": {
+        "id": "0yXBaTumSflYfUcDXRVf3k",
+        "url": "https://open.spotify.com/track/0yXBaTumSflYfUcDXRVf3k",
+        "artists": [
+          "Teresa Teng"
+        ],
+        "title": "月亮代表我的心",
+        "release": "難忘的Teresa Teng",
+        "releaseUrl": "https://open.spotify.com/album/1UNr9mYpn6vNAbDBjpP9lv",
+        "trackNumber": 11,
+        "durationMs": 208573,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Apple places the song fourth on the Golden Penguin collection. The Spotify lead is track 11 on a different collection and runs 2.731 seconds shorter. No recording-level link establishes that transfer.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1817102815&entity=song&limit=200",
+        "appleDate": "1970-01-01",
+        "spotifyDate": "1992-03-25",
+        "appleCredit": "℗ 1970 金企鵝唱片音樂帶有限公司",
+        "spotifyCredits": [
+          "© 2010 Universal Music Ltd.",
+          "This Compilation ℗ 2010 Universal Music Ltd."
+        ],
+        "appleTrackCount": 19,
+        "spotifyTrackCount": 15
+      }
+    },
+    {
+      "starterId": "cmn-1821474701",
+      "status": "held",
+      "checkedOn": "2026-11-24",
+      "version": "1979 PolyGram album opener sought",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1821474701",
+          "albumId": "1821474658",
+          "url": "https://music.apple.com/ca/album/_/1821474658?i=1821474701",
+          "artist": "Teresa Teng",
+          "title": "甜蜜蜜",
+          "release": "甜蜜蜜",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 211878
+        }
+      ],
+      "candidate": {
+        "id": "26pN80JkVkvvmN9bPwhXZb",
+        "url": "https://open.spotify.com/track/26pN80JkVkvvmN9bPwhXZb",
+        "artists": [
+          "Teresa Teng"
+        ],
+        "title": "甜蜜蜜",
+        "release": "THE POETESS 鄧麗君70週年特集",
+        "releaseUrl": "https://open.spotify.com/album/2hSjUHBGIFrKTyJI58YHc9",
+        "trackNumber": 16,
+        "durationMs": 211773,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Apple's 12-track album opens with this song. The lead comes from the 70th anniversary collection and runs 105 ms shorter. Other Teresa Teng compilations also have different durations. The master remains unresolved.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1821474658&entity=song&limit=200",
+        "appleDate": "1979-01-01",
+        "spotifyDate": "2023-09-01",
+        "appleCredit": "℗ 1979 PolyGram Records Ltd. Hong Kong",
+        "spotifyCredits": [
+          "© 2023 Universal Music Ltd.",
+          "This Compilation ℗ 2023 Universal Music Ltd."
+        ],
+        "appleTrackCount": 12,
+        "spotifyTrackCount": 70
+      }
+    },
+    {
+      "starterId": "cmn-615959495",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "2006 Rock Records compilation cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "615959495",
+          "albumId": "615959408",
+          "url": "https://music.apple.com/ca/album/_/615959408?i=615959495",
+          "artist": "Michael Wong",
+          "title": "童話",
+          "release": "1996-2006 the Greatest Hits",
+          "discNumber": 1,
+          "trackNumber": 4,
+          "durationMs": 246000
+        }
+      ],
+      "spotify": {
+        "id": "6NCylXeJcHOI908PjZDFcg",
+        "url": "https://open.spotify.com/track/6NCylXeJcHOI908PjZDFcg",
+        "artists": [
+          "Michael Wong"
+        ],
+        "title": "童話",
+        "release": "十光年精選輯",
+        "releaseUrl": "https://open.spotify.com/album/36Z2YriYoWjRLZOiklzgSm",
+        "trackNumber": 4,
+        "durationMs": 246000,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both 28-track Rock Records collections were released on 15 September 2006. The fourth track and its neighbors agree. The recording on the standalone 童話 album runs 4.352 seconds shorter.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=615959408&entity=song&limit=200",
+        "appleDate": "2006-09-15",
+        "spotifyDate": "2006-09-15",
+        "appleCredit": "℗ 2006 Rock Records Co., Ltd.",
+        "spotifyCredits": [
+          "2006 Rock Records Co., Ltd."
+        ],
+        "appleTrackCount": 28,
+        "spotifyTrackCount": 28,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "傷心地鐵",
+          "spotifyTitle": "傷心地鐵",
+          "appleDurationMs": 250027,
+          "spotifyDurationMs": 250026
+        }
+      },
+      "additionalSources": [
+        "https://music.apple.com/tw/song/615959495",
+        "https://open.spotify.com/track/3mYkEkfIIcmQmLWP12uocy"
+      ]
+    },
+    {
+      "starterId": "cmn-541857030",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "The Moment album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "541857030",
+          "albumId": "541856819",
+          "url": "https://music.apple.com/ca/album/_/541856819?i=541857030",
+          "artist": "Yanzi Sun",
+          "title": "Encounter",
+          "release": "The Moment",
+          "discNumber": 1,
+          "trackNumber": 2,
+          "durationMs": 209760
+        }
+      ],
+      "spotify": {
+        "id": "3xJK8ywApYVEYIDhymYMC6",
+        "url": "https://open.spotify.com/track/3xJK8ywApYVEYIDhymYMC6",
+        "artists": [
+          "Stefanie Sun"
+        ],
+        "title": "遇見",
+        "release": "The Moment",
+        "releaseUrl": "https://open.spotify.com/album/6CGJuQoWMkq1rmStrYbRzr",
+        "trackNumber": 2,
+        "durationMs": 209760,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The Moment places the song second on both services. Taiwan lists 孫燕姿 and 遇見. Spotify credits her as Stefanie Sun, and Apple Canada as Yanzi Sun. Both releases credit Warner Music Taiwan.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=541856819&entity=song&limit=200",
+        "appleDate": "2003-08-19",
+        "spotifyDate": "2003-01-01",
+        "appleCredit": "℗ 2003 WARNER MUSIC TAIWAN LIMITED",
+        "spotifyCredits": [
+          "© 2003 WARNER MUSIC TAIWAN LIMITED",
+          "℗ 2003 WARNER MUSIC TAIWAN LIMITED"
+        ],
+        "appleTrackCount": 19,
+        "spotifyTrackCount": 19,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "The Moment",
+          "spotifyTitle": "The moment",
+          "appleDurationMs": 253107,
+          "spotifyDurationMs": 253106
+        }
+      },
+      "additionalSources": [
+        "https://music.apple.com/tw/song/541857030"
+      ]
+    },
+    {
+      "starterId": "cmn-1019650261",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "2015 HIM International film-theme single",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1019650261",
+          "albumId": "1019650250",
+          "url": "https://music.apple.com/ca/album/_/1019650250?i=1019650261",
+          "artist": "Hebe Tien",
+          "title": "A Little Happiness",
+          "release": "A Little Happiness - Single",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 265522
+        },
+        {
+          "storefront": "tw",
+          "id": "1017697311",
+          "albumId": "1017697307",
+          "url": "https://music.apple.com/tw/album/_/1017697307?i=1017697311",
+          "artist": "田馥甄",
+          "title": "小幸運 (電影《我的少女時代》主題曲)",
+          "release": "小幸運 (電影《我的少女時代》主題曲) - Single",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 265522
+        }
+      ],
+      "spotify": {
+        "id": "1ZeVIrCWzEmsJexkrgvjFv",
+        "url": "https://open.spotify.com/track/1ZeVIrCWzEmsJexkrgvjFv",
+        "artists": [
+          "Hebe Tien"
+        ],
+        "title": "小幸運",
+        "release": "小幸運",
+        "releaseUrl": "https://open.spotify.com/album/6PqQY9oiU7zXQEuWUYBZs5",
+        "trackNumber": 1,
+        "durationMs": 265521,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "HIM International issued this one-track single on 10 July 2015. The Taiwanese Apple edition names the film and 田馥甄. Both Apple IDs give 265522 ms and Spotify gives 265521 ms.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1019650250&entity=song&limit=200",
+        "appleDate": "2015-07-10",
+        "spotifyDate": "2015-07-10",
+        "appleCredit": "℗ 2015 HIM International Music Inc.",
+        "spotifyCredits": [
+          "(C) 2015 HIM International Music"
+        ],
+        "appleTrackCount": 1,
+        "spotifyTrackCount": 1
+      }
+    },
+    {
+      "starterId": "cmn-312506680",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "海嘯 album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "312506680",
+          "albumId": "312506621",
+          "url": "https://music.apple.com/ca/album/_/312506621?i=312506680",
+          "artist": "Harlem Yu",
+          "title": "情非得已",
+          "release": "海嘯",
+          "discNumber": 1,
+          "trackNumber": 7,
+          "durationMs": 273960
+        }
+      ],
+      "spotify": {
+        "id": "4KBegMBVyHsfC7fPOztTzV",
+        "url": "https://open.spotify.com/track/4KBegMBVyHsfC7fPOztTzV",
+        "artists": [
+          "Harlem Yu"
+        ],
+        "title": "情非得已",
+        "release": "海嘯",
+        "releaseUrl": "https://open.spotify.com/album/06yEqpc6KFxUZ5BxE7V7TN",
+        "trackNumber": 7,
+        "durationMs": 273960,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both 海嘯 releases place Harlem Yu between 愛到底 and 告別彼得潘的世界. The three durations agree across the catalogs.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=312506621&entity=song&limit=200",
+        "appleDate": "2001-05-10",
+        "spotifyDate": "2001-05-10",
+        "appleCredit": "℗ 2001 Harlem Music Delivery Room",
+        "spotifyCredits": [
+          "(P) 2001 Harlem Music Delivery Room"
+        ],
+        "appleTrackCount": 10,
+        "spotifyTrackCount": 10,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "愛到底",
+          "spotifyTitle": "愛到底",
+          "appleDurationMs": 252800,
+          "spotifyDurationMs": 252800
+        }
+      }
+    },
+    {
+      "starterId": "cmn-651456011",
+      "status": "held",
+      "checkedOn": "2026-11-24",
+      "version": "2013 Mandarin collection, mastering unresolved",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "651456011",
+          "albumId": "651455891",
+          "url": "https://music.apple.com/ca/album/_/651455891?i=651456011",
+          "artist": "Eason Chan",
+          "title": "十年",
+          "release": "Eason Chan Mandarin Collection",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 205600
+        }
+      ],
+      "candidate": {
+        "id": "4kPEkRgth04kvzHGabazUr",
+        "url": "https://open.spotify.com/track/4kPEkRgth04kvzHGabazUr",
+        "artists": [
+          "Eason Chan"
+        ],
+        "title": "十年",
+        "release": "陳奕迅 國語精選 (HQCDII)",
+        "releaseUrl": "https://open.spotify.com/album/7CieAFLGDAivl5saINBuCP",
+        "trackNumber": 1,
+        "durationMs": 205600,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The 17-track Emperor collections open with 十年 and 兄妹 at matching durations. Spotify explicitly labels its edition HQCDII. Apple gives no corresponding mastering designation. Hold for edition evidence or comparison by ear.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=651455891&entity=song&limit=200",
+        "appleDate": "2013-05-22",
+        "spotifyDate": "2013-05-21",
+        "appleCredit": "℗ 英皇娛樂 (Emperor Entertainment Group)",
+        "spotifyCredits": [
+          "2013 英皇娛樂 (Emperor Entertainment Group)"
+        ],
+        "appleTrackCount": 17,
+        "spotifyTrackCount": 17,
+        "adjacent": {
+          "side": "after",
+          "appleTitle": "兄妹",
+          "spotifyTitle": "兄妹",
+          "appleDurationMs": 210000,
+          "spotifyDurationMs": 210000
+        }
+      },
+      "additionalSources": [
+        "https://music.apple.com/tw/song/651456011"
+      ]
+    },
+    {
+      "starterId": "cmn-1467709699",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "一生跟你走 compilation cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1467709699",
+          "albumId": "1467709207",
+          "url": "https://music.apple.com/ca/album/_/1467709207?i=1467709699",
+          "artist": "Jacky Cheung",
+          "title": "吻別",
+          "release": "一生跟你走: 張學友年度代表作品輯",
+          "discNumber": 2,
+          "trackNumber": 7,
+          "durationMs": 305067
+        }
+      ],
+      "spotify": {
+        "id": "4kmfH2GgzDdiYxSMylUkfw",
+        "url": "https://open.spotify.com/track/4kmfH2GgzDdiYxSMylUkfw",
+        "artists": [
+          "Jacky Cheung"
+        ],
+        "title": "吻別",
+        "release": "一生跟你走 - 張學友年度代表作品輯",
+        "releaseUrl": "https://open.spotify.com/album/5MNaLglFN6UO48lNQ0N0yu",
+        "trackNumber": 7,
+        "durationMs": 305066,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both collections place 吻別 seventh on the second disc in the sequence between 忘記他 and 祇想一生跟你走. The adjacent durations agree and the selected track differs by 1 ms.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1467709207&entity=song&limit=200",
+        "appleDate": "1994-01-01",
+        "spotifyDate": "1994-01-01",
+        "appleCredit": "This Compilation ℗ 1994 PolyGram Records Ltd. Hong Kong",
+        "spotifyCredits": [
+          "© 1994 PolyGram Records Ltd. Hong Kong",
+          "This Compilation ℗ 1994 PolyGram Records Ltd. Hong Kong"
+        ],
+        "appleTrackCount": 24,
+        "spotifyTrackCount": 24,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "忘記他",
+          "spotifyTitle": "忘記他",
+          "appleDurationMs": 263773,
+          "spotifyDurationMs": 263773
+        }
+      }
+    },
+    {
+      "starterId": "yue-1443008646",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "1989 永遠是你的朋友 album opener",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1443008646",
+          "albumId": "1443008630",
+          "url": "https://music.apple.com/ca/album/_/1443008630?i=1443008646",
+          "artist": "Priscilla Chan",
+          "title": "千千闋歌",
+          "release": "永遠是你的朋友",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 301000
+        }
+      ],
+      "spotify": {
+        "id": "42suymP38HAIBl0wiDfpst",
+        "url": "https://open.spotify.com/track/42suymP38HAIBl0wiDfpst",
+        "artists": [
+          "Priscilla Chan"
+        ],
+        "title": "千千闋歌",
+        "release": "永遠是你的朋友",
+        "releaseUrl": "https://open.spotify.com/album/5nlHzn91AzD35tIroeTt01",
+        "trackNumber": 1,
+        "durationMs": 301000,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The original album opens with 千千闋歌 and 最後的纏綿 on both services. The selected track is exactly 301 seconds. Priscilla's 30th anniversary collection lists a shorter cut.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1443008630&entity=song&limit=200",
+        "appleDate": "1989-01-01",
+        "spotifyDate": "1989-01-01",
+        "appleCredit": "℗ 1989 Universal Music Ltd.",
+        "spotifyCredits": [
+          "© 2015 Universal Music Ltd.",
+          "℗ 1989 Universal Music Ltd."
+        ],
+        "appleTrackCount": 11,
+        "spotifyTrackCount": 11,
+        "adjacent": {
+          "side": "after",
+          "appleTitle": "最後的纏綿",
+          "spotifyTitle": "最後的纏綿",
+          "appleDurationMs": 281560,
+          "spotifyDurationMs": 281560
+        }
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/3RAkw1txjOqUCxb3WNmkNo"
+      ]
+    },
+    {
+      "starterId": "yue-1443314381",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "超越時代紀念版 anniversary edition",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1443314381",
+          "albumId": "1443314170",
+          "url": "https://music.apple.com/ca/album/_/1443314170?i=1443314381",
+          "artist": "Beyond",
+          "title": "喜歡妳",
+          "release": "祕密警察(超越時代紀念版)",
+          "discNumber": 1,
+          "trackNumber": 7,
+          "durationMs": 273893
+        }
+      ],
+      "spotify": {
+        "id": "7Fc4XnRaVH3MX9AA16fI5T",
+        "url": "https://open.spotify.com/track/7Fc4XnRaVH3MX9AA16fI5T",
+        "artists": [
+          "Beyond"
+        ],
+        "title": "喜歡妳",
+        "release": "BEYOND祕密警察(超越時代紀念版)",
+        "releaseUrl": "https://open.spotify.com/album/18gjKkz2loy3bITyXyUmDt",
+        "trackNumber": 7,
+        "durationMs": 273893,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both services explicitly identify the anniversary edition. The selected seventh track shares its duration and sits between 大地 and 每段路 on both albums.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1443314170&entity=song&limit=200",
+        "appleDate": "2014-01-01",
+        "spotifyDate": "2014-01-01",
+        "appleCredit": "This Compilation ℗ 2014 Universal Music Ltd.",
+        "spotifyCredits": [
+          "© 2014 Universal Music Ltd.",
+          "This Compilation ℗ 2014 Universal Music Ltd."
+        ],
+        "appleTrackCount": 24,
+        "spotifyTrackCount": 24,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "大地",
+          "spotifyTitle": "大地",
+          "appleDurationMs": 260520,
+          "spotifyDurationMs": 260519
+        }
+      }
+    },
+    {
+      "starterId": "yue-1443304352",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "命運符號 album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1443304352",
+          "albumId": "1443304226",
+          "url": "https://music.apple.com/ca/album/_/1443304226?i=1443304352",
+          "artist": "Hacken Lee",
+          "title": "月半小夜曲",
+          "release": "命運符號",
+          "discNumber": 1,
+          "trackNumber": 7,
+          "durationMs": 290973
+        }
+      ],
+      "spotify": {
+        "id": "7jFNX9aTdcQfhIgUVE02hi",
+        "url": "https://open.spotify.com/track/7jFNX9aTdcQfhIgUVE02hi",
+        "artists": [
+          "Hacken Lee"
+        ],
+        "title": "月半小夜曲",
+        "release": "命運符號",
+        "releaseUrl": "https://open.spotify.com/album/6N7KjUaxeZOJBr4S21H6Qa",
+        "trackNumber": 7,
+        "durationMs": 290973,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both 13-track releases place the song seventh between 誰願分手 and 製造渺茫. The artist's 真經典 compilation has a different duration.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1443304226&entity=song&limit=200",
+        "appleDate": "1988-01-01",
+        "spotifyDate": "1988-01-01",
+        "appleCredit": "℗ 1988 PolyGram Records Ltd. Hong Kong",
+        "spotifyCredits": [
+          "© 1988 PolyGram Records Ltd. Hong Kong",
+          "℗ 1988 PolyGram Records Ltd. Hong Kong"
+        ],
+        "appleTrackCount": 13,
+        "spotifyTrackCount": 13,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "誰願分手",
+          "spotifyTitle": "誰願分手",
+          "appleDurationMs": 259827,
+          "spotifyDurationMs": 259826
+        }
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/06F5Ndjq9ffxlTXoVVYKUw"
+      ]
+    },
+    {
+      "starterId": "yue-1443351801",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "暴風女神LORELEI album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1443351801",
+          "albumId": "1443350939",
+          "url": "https://music.apple.com/ca/album/_/1443350939?i=1443351801",
+          "artist": "Alan Tam",
+          "title": "朋友",
+          "release": "暴風女神Lorelei",
+          "discNumber": 1,
+          "trackNumber": 11,
+          "durationMs": 285173
+        }
+      ],
+      "spotify": {
+        "id": "4mM7gB6GUqYmnECWhYPEfc",
+        "url": "https://open.spotify.com/track/4mM7gB6GUqYmnECWhYPEfc",
+        "artists": [
+          "Alan Tam"
+        ],
+        "title": "朋友 - 電影《龍兄虎弟》歌曲",
+        "release": "暴風女神LORELEI",
+        "releaseUrl": "https://open.spotify.com/album/44XLeeHkJ223IuAZUgowax",
+        "trackNumber": 11,
+        "durationMs": 285173,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both services place 朋友 after 冬之寒號 at the end of the album. Spotify's title adds the film credit for 龍兄虎弟. The recording and its preceding song have identical durations.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1443350939&entity=song&limit=200",
+        "appleDate": "1985-01-01",
+        "spotifyDate": "1985-01-01",
+        "appleCredit": "℗ 1985 PolyGram Records Ltd. Hong Kong",
+        "spotifyCredits": [
+          "© 1985 PolyGram Records Ltd. Hong Kong",
+          "℗ 1985 PolyGram Records Ltd. Hong Kong"
+        ],
+        "appleTrackCount": 11,
+        "spotifyTrackCount": 11,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "冬之寒號",
+          "spotifyTitle": "冬之寒號",
+          "appleDurationMs": 233240,
+          "spotifyDurationMs": 233240
+        }
+      }
+    },
+    {
+      "starterId": "yue-1722083721",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "樂與怒 album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1722083721",
+          "albumId": "1722083311",
+          "url": "https://music.apple.com/ca/album/_/1722083311?i=1722083721",
+          "artist": "Beyond",
+          "title": "海闊天空",
+          "release": "樂與怒",
+          "discNumber": 1,
+          "trackNumber": 6,
+          "durationMs": 324840
+        }
+      ],
+      "spotify": {
+        "id": "2EDzX68tdOFkzRNaxwWwC5",
+        "url": "https://open.spotify.com/track/2EDzX68tdOFkzRNaxwWwC5",
+        "artists": [
+          "Beyond"
+        ],
+        "title": "海闊天空",
+        "release": "樂與怒",
+        "releaseUrl": "https://open.spotify.com/album/4hD4kHqbij41tqhVMS7q9l",
+        "trackNumber": 6,
+        "durationMs": 324840,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The Spotify track is sixth in the same 12-song release between 全是愛 and 狂人山莊. The three durations agree.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1722083311&entity=song&limit=200",
+        "appleDate": "1993-10-30",
+        "spotifyDate": "1993-10-30",
+        "appleCredit": "℗ 1993 AMUSE INC. & FUN HOUSE INC.",
+        "spotifyCredits": [
+          "1993 AMUSE INC. & FUN HOUSE INC."
+        ],
+        "appleTrackCount": 12,
+        "spotifyTrackCount": 12,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "全是愛",
+          "spotifyTitle": "全是愛",
+          "appleDurationMs": 280000,
+          "spotifyDurationMs": 280000
+        }
+      }
+    },
+    {
+      "starterId": "yue-1443346107",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "What's Going On...? album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1443346107",
+          "albumId": "1443345687",
+          "url": "https://music.apple.com/ca/album/_/1443345687?i=1443346107",
+          "artist": "Eason Chan",
+          "title": "富士山下",
+          "release": "What's Going On...?",
+          "discNumber": 1,
+          "trackNumber": 5,
+          "durationMs": 259133
+        }
+      ],
+      "spotify": {
+        "id": "3cthRwQ2X0SNTaauD7tjn5",
+        "url": "https://open.spotify.com/track/3cthRwQ2X0SNTaauD7tjn5",
+        "artists": [
+          "Eason Chan"
+        ],
+        "title": "富士山下",
+        "release": "What's Going On...?",
+        "releaseUrl": "https://open.spotify.com/album/1dtg7IOdq2Q6zA4nIJ5Qsk",
+        "trackNumber": 5,
+        "durationMs": 259133,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The ten-song album places this track fifth between 黑擇明 and 不如不見. The 2019 remaster carries a distinct title and runs 7.973 seconds longer.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1443345687&entity=song&limit=200",
+        "appleDate": "2006-01-01",
+        "spotifyDate": "2006-01-01",
+        "appleCredit": "℗ 2006 Cinepoly Records Co. Ltd.",
+        "spotifyCredits": [
+          "© 2006 Cinepoly Records Co. Ltd.",
+          "℗ 2006 Cinepoly Records Co. Ltd."
+        ],
+        "appleTrackCount": 10,
+        "spotifyTrackCount": 10,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "黑擇明",
+          "spotifyTitle": "黑擇明",
+          "appleDurationMs": 274480,
+          "spotifyDurationMs": 274480
+        }
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/7HQT2O80CCKp21UWD56xzh"
+      ]
+    },
+    {
+      "starterId": "yue-1443112625",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Hot Summer solo recording",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1443112625",
+          "albumId": "1443112143",
+          "url": "https://music.apple.com/ca/album/_/1443112143?i=1443112625",
+          "artist": "Leslie Cheung",
+          "title": "沉默是金",
+          "release": "Hot Summer",
+          "discNumber": 1,
+          "trackNumber": 6,
+          "durationMs": 249667
+        }
+      ],
+      "spotify": {
+        "id": "5ezpe0WxjrTXSp82nJDnsM",
+        "url": "https://open.spotify.com/track/5ezpe0WxjrTXSp82nJDnsM",
+        "artists": [
+          "Leslie Cheung"
+        ],
+        "title": "沉默是金",
+        "release": "Hot Summer",
+        "releaseUrl": "https://open.spotify.com/album/1e3xezRdT9FNnweZf3XgbP",
+        "trackNumber": 6,
+        "durationMs": 249666,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both ten-track Hot Summer releases credit Leslie Cheung alone on track six. The expanded 正東 collection also includes a separate duet with Sam Hui.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1443112143&entity=song&limit=200",
+        "appleDate": "1989-07-29",
+        "spotifyDate": "1988-01-01",
+        "appleCredit": "℗ 1989 Cinepoly Records Co. Ltd.",
+        "spotifyCredits": [
+          "© 1989 Cinepoly Records Co. Ltd.",
+          "℗ 1989 Cinepoly Records Co. Ltd."
+        ],
+        "appleTrackCount": 10,
+        "spotifyTrackCount": 10,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Hey!不要玩",
+          "spotifyTitle": "HEY! 不要玩",
+          "appleDurationMs": 218547,
+          "spotifyDurationMs": 218546
+        }
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/2lX16GN5YgY3g1CJTiximj"
+      ]
+    },
+    {
+      "starterId": "yue-1560826419",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "TV theme on the 黃霑 anthology",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1560826419",
+          "albumId": "1560825875",
+          "url": "https://music.apple.com/ca/album/_/1560825875?i=1560826419",
+          "artist": "Roman Tam",
+          "title": "獅子山下 (香港電台電視劇「獅子山下」主題曲)",
+          "release": "笑傲歌壇 黃霑傳世經典 萬載千秋縱橫特藏",
+          "discNumber": 1,
+          "trackNumber": 10,
+          "durationMs": 227040
+        }
+      ],
+      "spotify": {
+        "id": "2P7D7FaO7XeLgf3eZAagLB",
+        "url": "https://open.spotify.com/track/2P7D7FaO7XeLgf3eZAagLB",
+        "artists": [
+          "Roman Tam"
+        ],
+        "title": "獅子山下 - 香港電台電視劇「獅子山下」主題曲",
+        "release": "笑傲歌壇 黃霑傳世經典 萬載千秋縱橫特藏",
+        "releaseUrl": "https://open.spotify.com/album/7Jdj6a4X2Fj5ZYtw0ijIGB",
+        "trackNumber": 10,
+        "durationMs": 227040,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both listings give the Hong Kong television theme credit, Roman Tam, track ten and 227040 ms on the same anthology. The two adjacent TV themes also agree.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1560825875&entity=song&limit=200",
+        "appleDate": "2014-01-01",
+        "spotifyDate": "2014-01-01",
+        "appleCredit": "This Compilation ℗ 2014 Universal Music Ltd.",
+        "spotifyCredits": [
+          "© 2014 Universal Music Ltd.",
+          "This Compilation ℗ 2014 Universal Music Ltd."
+        ],
+        "appleTrackCount": 33,
+        "spotifyTrackCount": 33,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "不可以逃避 (電影《追趕跑跳碰》插曲)",
+          "spotifyTitle": "不可以逃避 - 電影《追趕跑跳碰》插曲",
+          "appleDurationMs": 194800,
+          "spotifyDurationMs": 194800
+        }
+      }
+    },
+    {
+      "starterId": "ja-1440863574",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "CYCLE HIT 1991–1997 compilation cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1440863574",
+          "albumId": "1440863443",
+          "url": "https://music.apple.com/ca/album/_/1440863443?i=1440863574",
+          "artist": "Spitz",
+          "title": "Cherry",
+          "release": "Cycle Hit 1991-1997 Spitz Complete Single Collection",
+          "discNumber": 1,
+          "trackNumber": 13,
+          "durationMs": 261333
+        }
+      ],
+      "spotify": {
+        "id": "5Tj1wsJ6wE3Mf1MD0uKGnu",
+        "url": "https://open.spotify.com/track/5Tj1wsJ6wE3Mf1MD0uKGnu",
+        "artists": [
+          "SPITZ"
+        ],
+        "title": "チェリー",
+        "release": "CYCLE HIT 1991-1997 Spitz Complete Single Collection",
+        "releaseUrl": "https://open.spotify.com/album/3NeCEuCl6zGwSVrM7X5JVZ",
+        "trackNumber": 13,
+        "durationMs": 261333,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both editions place Cherry between 涙がキラリ☆ and 渚, thirteenth in this 15-track collection. Durations for all three positions agree.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1440863443&entity=song&limit=200",
+        "appleDate": "2006-03-25",
+        "spotifyDate": "2006-03-25",
+        "appleCredit": "This Compilation ℗ 2017 UNIVERSAL J, a division of UNIVERSAL MUSIC LLC",
+        "spotifyCredits": [
+          "© 2006 UNIVERSAL J, a division of UNIVERSAL MUSIC LLC",
+          "This Compilation ℗ 2017 UNIVERSAL J, a division of UNIVERSAL MUSIC LLC"
+        ],
+        "appleTrackCount": 15,
+        "spotifyTrackCount": 15,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Namidaga Kirari",
+          "spotifyTitle": "涙がキラリ☆",
+          "appleDurationMs": 239240,
+          "spotifyDurationMs": 239240
+        }
+      }
+    },
+    {
+      "starterId": "ja-1537433553",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "BALLADE BEST compilation cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1537433553",
+          "albumId": "1537433549",
+          "url": "https://music.apple.com/ca/album/_/1537433549?i=1537433553",
+          "artist": "Yutaka Ozaki",
+          "title": "I Love You",
+          "release": "I LOVE YOU - BALLADE BEST",
+          "discNumber": 1,
+          "trackNumber": 4,
+          "durationMs": 259200
+        }
+      ],
+      "spotify": {
+        "id": "1F07MCWeeRxulU0G3u58We",
+        "url": "https://open.spotify.com/track/1F07MCWeeRxulU0G3u58We",
+        "artists": [
+          "Yutaka Ozaki"
+        ],
+        "title": "I LOVE YOU",
+        "release": "I LOVE YOU 〜BALLADE BEST",
+        "releaseUrl": "https://open.spotify.com/album/1TRu7espzS9qz6ap9uVuhO",
+        "trackNumber": 4,
+        "durationMs": 259200,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The 15-track ballad collection places I LOVE YOU fourth after Donuts Shop. The ALL TIME BEST recording is 1.013 seconds longer.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1537433549&entity=song&limit=200",
+        "appleDate": "2011-04-06",
+        "spotifyDate": "1985-01-01",
+        "appleCredit": "℗ 1985 Sony Music Entertainment (Japan) Inc.",
+        "spotifyCredits": [
+          "(P)1985 Sony Music Entertainment (Japan) Inc."
+        ],
+        "appleTrackCount": 15,
+        "spotifyTrackCount": 15,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Donuts Shop",
+          "spotifyTitle": "ドーナツ・ショップ",
+          "appleDurationMs": 343053,
+          "spotifyDurationMs": 343053
+        }
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/30JE1S6DEeDGboH1PTqCUY"
+      ]
+    },
+    {
+      "starterId": "ja-1579439168",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "2021 digital single",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1579439168",
+          "albumId": "1579439167",
+          "url": "https://music.apple.com/ca/album/_/1579439167?i=1579439168",
+          "artist": "back number",
+          "title": "Suiheisen",
+          "release": "Suiheisen - Single",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 285396
+        }
+      ],
+      "spotify": {
+        "id": "5m1i6hq7dmRlp3c1utE48L",
+        "url": "https://open.spotify.com/track/5m1i6hq7dmRlp3c1utE48L",
+        "artists": [
+          "back number"
+        ],
+        "title": "水平線",
+        "release": "水平線",
+        "releaseUrl": "https://open.spotify.com/album/4Z7pjeWlxxT8EXXlxW5i4y",
+        "trackNumber": 1,
+        "durationMs": 285396,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The artist's release announcement directs listeners to the single through a distributor page linking both album IDs. Both list one track, 285396 ms, dated 13 August 2021.",
+      "additionalSources": [
+        "https://backnumber.info/news/detail/104360",
+        "https://backnumber.lnk.to/suiheisen"
+      ],
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1579439167&entity=song&limit=200",
+        "appleDate": "2021-08-13",
+        "spotifyDate": "2021-08-13",
+        "appleCredit": "A UNIVERSAL SIGMA release; ℗ 2021 UNIVERSAL MUSIC LLC",
+        "spotifyCredits": [
+          "© 2021 UNIVERSAL MUSIC LLC",
+          "℗ 2021 UNIVERSAL MUSIC LLC"
+        ],
+        "appleTrackCount": 1,
+        "spotifyTrackCount": 1
+      }
+    },
+    {
+      "starterId": "ja-1538122206",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "2018 full-length featured vocal",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1538122206",
+          "albumId": "1538122052",
+          "url": "https://music.apple.com/ca/album/_/1538122052?i=1538122206",
+          "artist": "MISIA",
+          "title": "Ainokatachi (feat. HIDE)",
+          "release": "Ai no Katachi (feat. HIDE) - EP",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 266333
+        }
+      ],
+      "spotify": {
+        "id": "4LRBXXClbsNmlT99hXeWdi",
+        "url": "https://open.spotify.com/track/4LRBXXClbsNmlT99hXeWdi",
+        "artists": [
+          "MISIA",
+          "HIDE (GReeeeN)"
+        ],
+        "title": "アイノカタチ",
+        "release": "アイノカタチ",
+        "releaseUrl": "https://open.spotify.com/album/2Fu9fzEyqMHMp6clFYuhXQ",
+        "trackNumber": 1,
+        "durationMs": 266333,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both Sony Music Japan releases list the HIDE vocal first, followed by LADY FUNKY. Both have five tracks, including separate TV-size and instrumental versions. The artist's discography also credits HIDE on the single.",
+      "additionalSources": [
+        "https://www.misia.jp/musiclist/11973"
+      ],
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1538122052&entity=song&limit=200",
+        "appleDate": "2018-08-22",
+        "spotifyDate": "2018-08-22",
+        "appleCredit": "℗ 2018 Sony Music Entertainment (Japan) Inc.",
+        "spotifyCredits": [
+          "(P)2018 Sony Music Entertainment (Japan) Inc."
+        ],
+        "appleTrackCount": 5,
+        "spotifyTrackCount": 5,
+        "adjacent": {
+          "side": "after",
+          "appleTitle": "LADY FUNKY",
+          "spotifyTitle": "LADY FUNKY",
+          "appleDurationMs": 284320,
+          "spotifyDurationMs": 284320
+        }
+      }
+    },
+    {
+      "starterId": "ja-539931527",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Superfly album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "539931527",
+          "albumId": "539931518",
+          "url": "https://music.apple.com/ca/album/_/539931518?i=539931527",
+          "artist": "Superfly",
+          "title": "Ai Wo Komete Hanatabawo",
+          "release": "Superfly",
+          "discNumber": 1,
+          "trackNumber": 4,
+          "durationMs": 295600
+        },
+        {
+          "storefront": "jp",
+          "id": "279691859",
+          "albumId": "279691838",
+          "url": "https://music.apple.com/jp/album/_/279691838?i=279691859",
+          "artist": "Superfly",
+          "title": "愛をこめて花束を",
+          "release": "Superfly",
+          "discNumber": 1,
+          "trackNumber": 4,
+          "durationMs": 295600
+        }
+      ],
+      "spotify": {
+        "id": "7CmWXD3w1xOO53AAO4LRVQ",
+        "url": "https://open.spotify.com/track/7CmWXD3w1xOO53AAO4LRVQ",
+        "artists": [
+          "Superfly"
+        ],
+        "title": "愛をこめて花束を",
+        "release": "Superfly",
+        "releaseUrl": "https://open.spotify.com/album/15oB8OFgucQsUUIdafLHAw",
+        "trackNumber": 4,
+        "durationMs": 295600,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The CA and JP Apple releases both place the song fourth between 1969 and Ain't No Crybaby. The Spotify track matches this sequence and duration. The JP release has an additional track.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=539931518&entity=song&limit=200",
+        "appleDate": "2008-05-14",
+        "spotifyDate": "2007-04-04",
+        "appleCredit": "℗ 2008 WARNER MUSIC JAPAN INC.",
+        "spotifyCredits": [
+          "© 2008 WARNER MUSIC JAPAN INC.",
+          "℗ 2008 WARNER MUSIC JAPAN INC."
+        ],
+        "appleTrackCount": 13,
+        "spotifyTrackCount": 13,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "1969",
+          "spotifyTitle": "1969",
+          "appleDurationMs": 196493,
+          "spotifyDurationMs": 196493
+        }
+      }
+    },
+    {
+      "starterId": "ja-273169347",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "MESSAGE album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "273169347",
+          "albumId": "273169161",
+          "url": "https://music.apple.com/ca/album/_/273169161?i=273169347",
+          "artist": "Mongol800",
+          "title": "Chiisana Koi NO Uta",
+          "release": "MESSAGE",
+          "discNumber": 1,
+          "trackNumber": 3,
+          "durationMs": 222640
+        }
+      ],
+      "spotify": {
+        "id": "23atyJacJVHvB9RHBNhr35",
+        "url": "https://open.spotify.com/track/23atyJacJVHvB9RHBNhr35",
+        "artists": [
+          "MONGOL800"
+        ],
+        "title": "小さな恋のうた",
+        "release": "MESSAGE",
+        "releaseUrl": "https://open.spotify.com/album/2an2zDcyPnHZgodDzgxZj2",
+        "trackNumber": 3,
+        "durationMs": 222640,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both releases place the band third in the same sequence on MESSAGE, between Song for You and Melody. All three durations agree.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=273169161&entity=song&limit=200",
+        "appleDate": "2001-09-16",
+        "spotifyDate": "2001-09-16",
+        "appleCredit": "℗ 2001 HIGH WAVE CO.,LTD.",
+        "spotifyCredits": [
+          "-",
+          "2001 HIGH WAVE"
+        ],
+        "appleTrackCount": 15,
+        "spotifyTrackCount": 15,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Song for You",
+          "spotifyTitle": "Song for you",
+          "appleDurationMs": 210893,
+          "spotifyDurationMs": 210893
+        }
+      }
+    },
+    {
+      "starterId": "ja-1445055008",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "First Love EP lead vocal",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1445055008",
+          "albumId": "1445054986",
+          "url": "https://music.apple.com/ca/album/_/1445054986?i=1445055008",
+          "artist": "Hikaru Utada",
+          "title": "First Love",
+          "release": "First Love - EP",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 258627
+        }
+      ],
+      "spotify": {
+        "id": "7icurlp1v5PnN5YgmOJ6e7",
+        "url": "https://open.spotify.com/track/7icurlp1v5PnN5YgmOJ6e7",
+        "artists": [
+          "Hikaru Utada"
+        ],
+        "title": "First Love",
+        "release": "First Love",
+        "releaseUrl": "https://open.spotify.com/album/062smDUG4SqXp7f5SRd5c2",
+        "trackNumber": 1,
+        "durationMs": 258626,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "On the four-track EP the solo recording comes first and the David Sanborn feature comes second. The full-length album has First Love in a different position and with a different duration.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1445054986&entity=song&limit=200",
+        "appleDate": "1999-04-28",
+        "spotifyDate": "1999-04-28",
+        "appleCredit": "A Virgin Music release; ℗ 1999 UNIVERSAL MUSIC LLC",
+        "spotifyCredits": [
+          "© 1999 UNIVERSAL MUSIC LLC",
+          "℗ 1999 UNIVERSAL MUSIC LLC"
+        ],
+        "appleTrackCount": 4,
+        "spotifyTrackCount": 4,
+        "adjacent": {
+          "side": "after",
+          "appleTitle": "First Love (feat. David Sanborn)",
+          "spotifyTitle": "First Love",
+          "appleDurationMs": 257240,
+          "spotifyDurationMs": 257240
+        }
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/5EmYHlVzCH0tEdMwwxM5NA",
+        "https://open.spotify.com/track/7tPjWFHyp0csjVuba7CgQ9"
+      ]
+    },
+    {
+      "starterId": "ko-1488300934",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Love Poem EP closing track",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1488300934",
+          "albumId": "1488300927",
+          "url": "https://music.apple.com/ca/album/_/1488300927?i=1488300934",
+          "artist": "IU",
+          "title": "Love Poem",
+          "release": "Love Poem - EP",
+          "discNumber": 1,
+          "trackNumber": 6,
+          "durationMs": 258239
+        }
+      ],
+      "spotify": {
+        "id": "7HrE6HtYNBbGqp5GmHbFV0",
+        "url": "https://open.spotify.com/track/7HrE6HtYNBbGqp5GmHbFV0",
+        "artists": [
+          "IU"
+        ],
+        "title": "Love poem",
+        "release": "Love poem",
+        "releaseUrl": "https://open.spotify.com/album/2xEH7SRzJq7LgA0fCtTlxH",
+        "trackNumber": 6,
+        "durationMs": 258238,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The EP ends with Lullaby followed by the title song. The six-track release and sequence identify the November 2019 EP recording.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1488300927&entity=song&limit=200",
+        "appleDate": "2019-11-18",
+        "spotifyDate": "2019-11-18",
+        "appleCredit": "℗ 2019 Kakao Entertainment,under license to Kakao Entertainment",
+        "spotifyCredits": [
+          "2019 Kakao Entertainment,under license to Kakao Entertainment"
+        ],
+        "appleTrackCount": 6,
+        "spotifyTrackCount": 6,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Lullaby",
+          "spotifyTitle": "Lullaby",
+          "appleDurationMs": 261720,
+          "spotifyDurationMs": 261720
+        }
+      }
+    },
+    {
+      "starterId": "ko-1004836383",
+      "status": "held",
+      "checkedOn": "2026-11-24",
+      "version": "First Story original vocal, edit unresolved",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1004836383",
+          "albumId": "1004836380",
+          "url": "https://music.apple.com/ca/album/_/1004836380?i=1004836383",
+          "artist": "Huh Gak",
+          "title": "Hello",
+          "release": "First Story - EP",
+          "discNumber": 1,
+          "trackNumber": 2,
+          "durationMs": 253560
+        }
+      ],
+      "candidate": {
+        "id": "0SOnbGVEf5q0YqL0FO2qu0",
+        "url": "https://open.spotify.com/track/0SOnbGVEf5q0YqL0FO2qu0",
+        "artists": [
+          "Huh Gak"
+        ],
+        "title": "Hello",
+        "release": "LIKE 1st MINI ALBUM “First Story”",
+        "releaseUrl": "https://open.spotify.com/album/6CPFjcggq3c0YHNEhzRjWC",
+        "trackNumber": 2,
+        "durationMs": 251611,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Each six-track EP puts Hello second and a piano version last. The Spotify vocal is 1.949 seconds shorter. Hold until the original digital editions or their audio establish this cut.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1004836380&entity=song&limit=200",
+        "appleDate": "2011-09-16",
+        "spotifyDate": "2011-09-16",
+        "appleCredit": "℗ 에이큐브 엔터테인먼트(A CUBE ENTERTAINMENT INC),under license to Kakao M Corp.",
+        "spotifyCredits": [
+          "2011 Above Music,under license to Kakao Entertainment"
+        ],
+        "appleTrackCount": 6,
+        "spotifyTrackCount": 6,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "In 忍",
+          "spotifyTitle": "In Hold",
+          "appleDurationMs": 42667,
+          "spotifyDurationMs": 42553
+        }
+      }
+    },
+    {
+      "starterId": "ko-1609042513",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "SOFA single vocal",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1609042513",
+          "albumId": "1609042509",
+          "url": "https://music.apple.com/ca/album/_/1609042509?i=1609042513",
+          "artist": "Crush",
+          "title": "SOFA",
+          "release": "SOFA - Single",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 229573
+        }
+      ],
+      "spotify": {
+        "id": "3dbyyPqdnNZkvPr7PptIRJ",
+        "url": "https://open.spotify.com/track/3dbyyPqdnNZkvPr7PptIRJ",
+        "artists": [
+          "Crush"
+        ],
+        "title": "SOFA",
+        "release": "SOFA",
+        "releaseUrl": "https://open.spotify.com/album/7krvtQD2rv7PGdRaLLPW3P",
+        "trackNumber": 1,
+        "durationMs": 229573,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The two-track single places the vocal first and SOFA (Instrumental) second. Both durations agree across the catalogs.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1609042509&entity=song&limit=200",
+        "appleDate": "2014-10-30",
+        "spotifyDate": "2014-10-30",
+        "appleCredit": "℗ 2014 Amoeba Culture",
+        "spotifyCredits": [
+          "2018 Amoeba Culture"
+        ],
+        "appleTrackCount": 2,
+        "spotifyTrackCount": 2,
+        "adjacent": {
+          "side": "after",
+          "appleTitle": "SOFA (Instrumental)",
+          "spotifyTitle": "SOFA - Instrumental",
+          "appleDurationMs": 229600,
+          "spotifyDurationMs": 229600
+        }
+      }
+    },
+    {
+      "starterId": "ko-1670828789",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Perfect album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1670828789",
+          "albumId": "1670828782",
+          "url": "https://music.apple.com/ca/album/_/1670828782?i=1670828789",
+          "artist": "Buzz",
+          "title": "My Love (And)",
+          "release": "Perfect",
+          "discNumber": 1,
+          "trackNumber": 3,
+          "durationMs": 244693
+        }
+      ],
+      "spotify": {
+        "id": "3mdLDMt3BmNpVBd0Tc7iAn",
+        "url": "https://open.spotify.com/track/3mdLDMt3BmNpVBd0Tc7iAn",
+        "artists": [
+          "BUZZ"
+        ],
+        "title": "My Love (And)",
+        "release": "Perfect",
+        "releaseUrl": "https://open.spotify.com/album/3REFgNSvxgTma5ABhy3u4W",
+        "trackNumber": 3,
+        "durationMs": 244693,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both releases place My Love (And) third, after My Darling (End) and before 은인. The three track durations agree.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1670828782&entity=song&limit=200",
+        "appleDate": "2006-04-24",
+        "spotifyDate": "2006-04-24",
+        "appleCredit": "℗ 2006 예전미디어",
+        "spotifyCredits": [
+          "2006 예전미디어"
+        ],
+        "appleTrackCount": 12,
+        "spotifyTrackCount": 12,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "My Darling (End)",
+          "spotifyTitle": "My Darling (End)",
+          "appleDurationMs": 288280,
+          "spotifyDurationMs": 288280
+        }
+      }
+    },
+    {
+      "starterId": "ko-1345362029",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Solar album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1345362029",
+          "albumId": "1345362019",
+          "url": "https://music.apple.com/ca/album/_/1345362019?i=1345362029",
+          "artist": "TAEYANG",
+          "title": "Wedding Dress",
+          "release": "Solar",
+          "discNumber": 1,
+          "trackNumber": 10,
+          "durationMs": 242747
+        }
+      ],
+      "spotify": {
+        "id": "2NO4CA2TFvhGeg7XMz8PmT",
+        "url": "https://open.spotify.com/track/2NO4CA2TFvhGeg7XMz8PmT",
+        "artists": [
+          "TAEYANG"
+        ],
+        "title": "Wedding Dress",
+        "release": "Solar",
+        "releaseUrl": "https://open.spotify.com/album/2rV8MCYJTfvuvXHZsBH12Z",
+        "trackNumber": 10,
+        "durationMs": 242746,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both eleven-track Solar releases place Wedding Dress tenth between Where U At and Take It Slow. The chosen track carries the unqualified album title. Spotify also lists a separately labeled English Version elsewhere.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1345362019&entity=song&limit=200",
+        "appleDate": "2010-07-01",
+        "spotifyDate": "2010-07-01",
+        "appleCredit": "℗ 2010 YG Entertainment",
+        "spotifyCredits": [
+          "YG Entertainment",
+          "YG Entertainment, under license to YG PLUS"
+        ],
+        "appleTrackCount": 11,
+        "spotifyTrackCount": 11,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Where U At",
+          "spotifyTitle": "Where U At",
+          "appleDurationMs": 229373,
+          "spotifyDurationMs": 229373
+        }
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/5r6LzsarhC4Ygt8mFzSgYV"
+      ]
+    },
+    {
+      "starterId": "ko-1313176085",
+      "status": "held",
+      "checkedOn": "2026-11-24",
+      "version": "MADE album track nine, regional edition unresolved",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1313176085",
+          "albumId": "1313175579",
+          "url": "https://music.apple.com/ca/album/_/1313175579?i=1313176085",
+          "artist": "BIGBANG",
+          "title": "IF YOU",
+          "release": "MADE",
+          "discNumber": 1,
+          "trackNumber": 9,
+          "durationMs": 264216
+        }
+      ],
+      "candidate": {
+        "id": "2a24kpQaTvwSMhgu0sDnTm",
+        "url": "https://open.spotify.com/track/2a24kpQaTvwSMhgu0sDnTm",
+        "artists": [
+          "BIGBANG"
+        ],
+        "title": "IF YOU",
+        "release": "MADE",
+        "releaseUrl": "https://open.spotify.com/album/407pN41bJq9wAWvauVVGa2",
+        "trackNumber": 9,
+        "durationMs": 264280,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "unconfirmed"
+        }
+      },
+      "review": "The 11-track release places IF YOU ninth and lists Korean release companions SOBER and ZUTTER. The observed duration differs by 64 ms and the track page supplies no CA market listing. Other MADE releases contain Japanese and explicitly KR-labeled variants at other positions. Hold for audio or stronger regional recording evidence.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1313175579&entity=song&limit=200",
+        "appleDate": "2016-12-13",
+        "spotifyDate": "2016-12-13",
+        "appleCredit": "℗ 2016 YG Entertainment",
+        "spotifyCredits": [
+          "2016 YG Entertainment"
+        ],
+        "appleTrackCount": 11,
+        "spotifyTrackCount": 11,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "SOBER",
+          "spotifyTitle": "SOBER",
+          "appleDurationMs": 237513,
+          "spotifyDurationMs": 237583
+        }
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/2dzHftdJ1t5B05TXb1GgM2",
+        "https://open.spotify.com/track/6saTELyNTjW9WmoCWpjsk"
+      ]
+    },
+    {
+      "starterId": "ko-1726888402",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "2024 EDAM single",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1726888402",
+          "albumId": "1726888401",
+          "url": "https://music.apple.com/ca/album/_/1726888401?i=1726888402",
+          "artist": "IU",
+          "title": "Love wins all",
+          "release": "Love wins all - Single",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 271080
+        }
+      ],
+      "spotify": {
+        "id": "0djkJ3iAARXRCbfbwwVc3o",
+        "url": "https://open.spotify.com/track/0djkJ3iAARXRCbfbwwVc3o",
+        "artists": [
+          "IU"
+        ],
+        "title": "Love wins all",
+        "release": "Love wins all",
+        "releaseUrl": "https://open.spotify.com/album/2bwwRhKbLeD3LvNDXauV2T",
+        "trackNumber": 1,
+        "durationMs": 271080,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both catalog pages credit EDAM and Kakao for the one-track release on 24 January 2024. The single is 271080 ms on both.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1726888401&entity=song&limit=200",
+        "appleDate": "2024-01-24",
+        "spotifyDate": "2024-01-24",
+        "appleCredit": "℗ 2024 EDAM Entertainment,under license to Kakao Entertainment",
+        "spotifyCredits": [
+          "2024 EDAM Entertainment,under license to Kakao Entertainment"
+        ],
+        "appleTrackCount": 1,
+        "spotifyTrackCount": 1
+      }
+    },
+    {
+      "starterId": "ko-1698506946",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "2019 Goodbye single",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1698506946",
+          "albumId": "1698506936",
+          "url": "https://music.apple.com/ca/album/_/1698506936?i=1698506946",
+          "artist": "Park Hyo Shin",
+          "title": "Goodbye",
+          "release": "Goodbye - Single",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 288253
+        }
+      ],
+      "spotify": {
+        "id": "3QQyaBhRNcDmqpWRssT7dh",
+        "url": "https://open.spotify.com/track/3QQyaBhRNcDmqpWRssT7dh",
+        "artists": [
+          "Park Hyo Shin"
+        ],
+        "title": "Goodbye",
+        "release": "Goodbye",
+        "releaseUrl": "https://open.spotify.com/album/7AVPWq0bdemQcflSSHMfBx",
+        "trackNumber": 1,
+        "durationMs": 288253,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both services credit Glove Entertainment and Dreamus on the one-track single of 6 May 2019. The durations agree to the millisecond.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1698506936&entity=song&limit=200",
+        "appleDate": "2019-05-06",
+        "spotifyDate": "2019-05-06",
+        "appleCredit": "℗ 2019 (주)글러브엔터테인먼트, under license to Dreamus",
+        "spotifyCredits": [
+          "2019 (주)글러브엔터테인먼트",
+          "2019 Dreamus"
+        ],
+        "appleTrackCount": 1,
+        "spotifyTrackCount": 1
+      }
+    },
+    {
+      "starterId": "es-1629786270",
+      "status": "held",
+      "checkedOn": "2026-11-24",
+      "version": "Coco Records Super Éxitos recording sought",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1629786270",
+          "albumId": "1629786261",
+          "url": "https://music.apple.com/ca/album/_/1629786261?i=1629786270",
+          "artist": "Mocedades",
+          "title": "Eres Tu",
+          "release": "Super Éxitos De Mocedades",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 210880
+        }
+      ],
+      "candidate": {
+        "id": "0KZLBDwDnzv7HzxLh8HfPN",
+        "url": "https://open.spotify.com/track/0KZLBDwDnzv7HzxLh8HfPN",
+        "artists": [
+          "Mocedades"
+        ],
+        "title": "Eres Tú",
+        "release": "Por Amor A México",
+        "releaseUrl": "https://open.spotify.com/album/6EHM8eB3PTm9hVHAJtJlPj",
+        "trackNumber": 13,
+        "durationMs": 203840,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "The approved release opens with Eres Tu and Adiós Amor. Por Amor A México places Eres Tú thirteenth and runs 7.040 seconds shorter. A separate Spotify duet credits Plácido Domingo.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1629786261&entity=song&limit=200",
+        "appleDate": "1977-05-17",
+        "spotifyDate": "2018-01-26",
+        "appleCredit": "℗ 1977 © Coco Records™ a subsidiary of Audio Fidelity™ a division of 43 North Broadway, LLC. WARNING: All Rights Reserved. Unauthorized duplication is a violation of applicable laws.",
+        "spotifyCredits": [
+          "© 2017 Universal Music Mexico S.A. de C.V.",
+          "℗ 2017 Universal Music Mexico S.A. de C.V."
+        ],
+        "appleTrackCount": 10,
+        "spotifyTrackCount": 15
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/1mLr5khvdryd35013loaj0"
+      ]
+    },
+    {
+      "starterId": "es-1776907569",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "El Viaje de Copperpot album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1776907569",
+          "albumId": "1776907553",
+          "url": "https://music.apple.com/ca/album/_/1776907553?i=1776907569",
+          "artist": "La Oreja de Van Gogh",
+          "title": "La Playa",
+          "release": "El Viaje De Copperpot",
+          "discNumber": 1,
+          "trackNumber": 4,
+          "durationMs": 247693
+        }
+      ],
+      "spotify": {
+        "id": "2DNyZP4Py6f4zMASLBnIu6",
+        "url": "https://open.spotify.com/track/2DNyZP4Py6f4zMASLBnIu6",
+        "artists": [
+          "La Oreja de Van Gogh"
+        ],
+        "title": "La Playa",
+        "release": "El Viaje de Copperpot",
+        "releaseUrl": "https://open.spotify.com/album/3HnSOodhuufrSTBnGZQ3fu",
+        "trackNumber": 4,
+        "durationMs": 247693,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both releases place La Playa fourth between Paris and Pop. Apple lists one extra item on the album. The selected track and its two neighbors agree within 1 ms.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1776907553&entity=song&limit=200",
+        "appleDate": "2000-09-07",
+        "spotifyDate": "2000-09-07",
+        "appleCredit": "℗ 2000 Sony Music Entertainment España, S.L.",
+        "spotifyCredits": [
+          "(P) 2000 Sony Music Entertainment España, S.L."
+        ],
+        "appleTrackCount": 13,
+        "spotifyTrackCount": 12,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Paris",
+          "spotifyTitle": "Paris",
+          "appleDurationMs": 226800,
+          "spotifyDurationMs": 226800
+        }
+      }
+    },
+    {
+      "starterId": "es-1442443569",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Lo Mejor de Nino Bravo compilation cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1442443569",
+          "albumId": "1442443431",
+          "url": "https://music.apple.com/ca/album/_/1442443431?i=1442443569",
+          "artist": "Nino Bravo",
+          "title": "Un Beso y una Flor",
+          "release": "Lo Mejor de Nino Bravo",
+          "discNumber": 1,
+          "trackNumber": 3,
+          "durationMs": 268947
+        }
+      ],
+      "spotify": {
+        "id": "4ZqWyZ9QgeNb846MwEfhFb",
+        "url": "https://open.spotify.com/track/4ZqWyZ9QgeNb846MwEfhFb",
+        "artists": [
+          "Nino Bravo"
+        ],
+        "title": "Un Beso Y Una Flor",
+        "release": "Lo Mejor De Nino Bravo",
+        "releaseUrl": "https://open.spotify.com/album/2ybU9oU6DoblpoeV9g1GqB",
+        "trackNumber": 3,
+        "durationMs": 268946,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both 15-track compilations put the song third, between Te Quiero, Te Quiero and Puerta de Amor. The selected track differs by 1 ms.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1442443431&entity=song&limit=200",
+        "appleDate": "2013-01-01",
+        "spotifyDate": "2013-01-01",
+        "appleCredit": "This Compilation ℗ 2013 Universal Music Spain, S.L.",
+        "spotifyCredits": [
+          "© 2013 Universal Music Spain, S.L.",
+          "This Compilation ℗ 2013 Universal Music Spain, S.L."
+        ],
+        "appleTrackCount": 15,
+        "spotifyTrackCount": 15,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Te Quiero, Te Quiero",
+          "spotifyTitle": "Te Quiero, Te Quiero",
+          "appleDurationMs": 170027,
+          "spotifyDurationMs": 170026
+        }
+      }
+    },
+    {
+      "starterId": "es-280862234",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "2003 studio album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "280862234",
+          "albumId": "280862182",
+          "url": "https://music.apple.com/ca/album/_/280862182?i=280862234",
+          "artist": "La Oreja de Van Gogh",
+          "title": "Rosas",
+          "release": "Lo Que Te Conté Mientras Te Hacías la Dormida",
+          "discNumber": 1,
+          "trackNumber": 3,
+          "durationMs": 236507
+        }
+      ],
+      "spotify": {
+        "id": "4waqcUQWdj0yH26STWl2Rq",
+        "url": "https://open.spotify.com/track/4waqcUQWdj0yH26STWl2Rq",
+        "artists": [
+          "La Oreja de Van Gogh"
+        ],
+        "title": "Rosas",
+        "release": "Lo Que Te Conte Mientras Te Hacias La Dormida",
+        "releaseUrl": "https://open.spotify.com/album/1Atbkyir7YdfpFYWCnRTFp",
+        "trackNumber": 3,
+        "durationMs": 236506,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both releases put Rosas third, after 20 de Enero and before Deseos de Cosas Imposibles. Both adjacent tracks have identical durations on the two services.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=280862182&entity=song&limit=200",
+        "appleDate": "2003-04-29",
+        "spotifyDate": "2003-01-01",
+        "appleCredit": "℗ 2003 Sony Music Entertainment (Spain) S.A.",
+        "spotifyCredits": [
+          "(P) 2003 Sony Music Entertainment (Spain) S.A."
+        ],
+        "appleTrackCount": 15,
+        "spotifyTrackCount": 15,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "20 de Enero",
+          "spotifyTitle": "20 de Enero",
+          "appleDurationMs": 223000,
+          "spotifyDurationMs": 223000
+        }
+      }
+    },
+    {
+      "starterId": "es-671129674",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Soy Como Quiero Ser album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "671129674",
+          "albumId": "671129332",
+          "url": "https://music.apple.com/ca/album/_/671129332?i=671129674",
+          "artist": "Luis Miguel",
+          "title": "Ahora Te Puedes Marchar",
+          "release": "Soy Como Quiero Ser",
+          "discNumber": 1,
+          "trackNumber": 3,
+          "durationMs": 191973
+        }
+      ],
+      "spotify": {
+        "id": "1uKjQoh8JZj9ryuYRhpd7E",
+        "url": "https://open.spotify.com/track/1uKjQoh8JZj9ryuYRhpd7E",
+        "artists": [
+          "Luis Miguel"
+        ],
+        "title": "Ahora Te Puedes Marchar",
+        "release": "Soy Como Quiero Ser",
+        "releaseUrl": "https://open.spotify.com/album/2dJCC5WZDKqQbXmUJeLe9Z",
+        "trackNumber": 3,
+        "durationMs": 191973,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both catalogs place this recording third on the 11-track album, between Sin Hablar and Yo Que No Vivo Sin Ti. Its duration agrees exactly.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=671129332&entity=song&limit=200",
+        "appleDate": "1987-07-15",
+        "spotifyDate": "1987-07-15",
+        "appleCredit": "℗ 1987 WEA Latina",
+        "spotifyCredits": [
+          "© 1987 WEA Latina",
+          "℗ 1987 WEA Latina"
+        ],
+        "appleTrackCount": 11,
+        "spotifyTrackCount": 11,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Sin Hablar",
+          "spotifyTitle": "Sin Hablar",
+          "appleDurationMs": 269627,
+          "spotifyDurationMs": 269626
+        }
+      }
+    },
+    {
+      "starterId": "es-273925387",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Sentimientos album opener",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "273925387",
+          "albumId": "273925385",
+          "url": "https://music.apple.com/ca/album/_/273925385?i=273925387",
+          "artist": "Camilo Sesto",
+          "title": "Vivir Así Es Morir de Amor",
+          "release": "Sentimientos",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 210133
+        }
+      ],
+      "spotify": {
+        "id": "3yzHIAzk3zVE1WgspS8W21",
+        "url": "https://open.spotify.com/track/3yzHIAzk3zVE1WgspS8W21",
+        "artists": [
+          "Camilo Sesto"
+        ],
+        "title": "Vivir Así Es Morir de Amor",
+        "release": "Sentimientos",
+        "releaseUrl": "https://open.spotify.com/album/4jaAmmz5L8AlfaLpZJ7Mf3",
+        "trackNumber": 1,
+        "durationMs": 210133,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both albums open with Vivir Así Es Morir de Amor followed by Recuérdame. Both track durations agree across the catalogs.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=273925385&entity=song&limit=200",
+        "appleDate": "1978-01-01",
+        "spotifyDate": "1978-01-02",
+        "appleCredit": "℗ 1978 Sony Music Entertainment España, S.L.",
+        "spotifyCredits": [
+          "(P) 1978 Sony Music Entertainment España, S.L."
+        ],
+        "appleTrackCount": 10,
+        "spotifyTrackCount": 10,
+        "adjacent": {
+          "side": "after",
+          "appleTitle": "Recuerdame",
+          "spotifyTitle": "Recuérdame",
+          "appleDurationMs": 229133,
+          "spotifyDurationMs": 229133
+        }
+      }
+    },
+    {
+      "starterId": "es-1559885700",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Opening track on the bilingual compilation",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1559885700",
+          "albumId": "1559885699",
+          "url": "https://music.apple.com/ca/album/_/1559885699?i=1559885700",
+          "artist": "Mecano",
+          "title": "Hijo de la Luna",
+          "release": "Descanso Dominical / Une Femme Avec Une Femme",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 258387
+        }
+      ],
+      "spotify": {
+        "id": "2mXgdVc2ICeK1axz0PcPbt",
+        "url": "https://open.spotify.com/track/2mXgdVc2ICeK1axz0PcPbt",
+        "artists": [
+          "Mecano"
+        ],
+        "title": "Hijo de la Luna",
+        "release": "Descanso Dominical / Une Femme Avec Une Femme",
+        "releaseUrl": "https://open.spotify.com/album/3ddhOdEVme7tbJqHnUBx2J",
+        "trackNumber": 1,
+        "durationMs": 258385,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both releases of Descanso Dominical / Une Femme Avec Une Femme open with the Spanish-titled Hijo de la Luna followed by the live La Fuerza del Destino. Both credit BMG for 1988. The selected durations differ by 2 ms.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1559885699&entity=song&limit=200",
+        "appleDate": "1987-01-01",
+        "spotifyDate": "1988-01-01",
+        "appleCredit": "℗ 1988 BMG Rights Management and Administration (Spain) S.L.U",
+        "spotifyCredits": [
+          "1990 BMG Rights Management and Administration (Spain) S.L.U",
+          "1988 BMG Rights Management and Administration (Spain) S.L.U"
+        ],
+        "appleTrackCount": 12,
+        "spotifyTrackCount": 12,
+        "adjacent": {
+          "side": "after",
+          "appleTitle": "La Fuerza del Destino (Live)",
+          "spotifyTitle": "La Fuerza del Destino - Live",
+          "appleDurationMs": 310347,
+          "spotifyDurationMs": 310346
+        }
+      }
+    },
+    {
+      "starterId": "fr-269460216",
+      "status": "held",
+      "checkedOn": "2026-11-24",
+      "version": "1962 album, stereo mix unresolved",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "269460216",
+          "albumId": "269460209",
+          "url": "https://music.apple.com/ca/album/_/269460209?i=269460216",
+          "artist": "Françoise Hardy",
+          "title": "Tous les garçons et les filles (Slow)",
+          "release": "Tous les garçons et les filles",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 187747
+        }
+      ],
+      "candidate": {
+        "id": "0Yg1hSAUgd2AAneReFOVzS",
+        "url": "https://open.spotify.com/track/0Yg1hSAUgd2AAneReFOVzS",
+        "artists": [
+          "Françoise Hardy"
+        ],
+        "title": "Tous les garçons et les filles - Stereo Mix",
+        "release": "Tous les garçons et les filles",
+        "releaseUrl": "https://open.spotify.com/album/0TcP4beTgxQmREuHJ7BBY2",
+        "trackNumber": 1,
+        "durationMs": 187746,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both 12-track albums and the first two durations line up. Spotify explicitly labels the track and its neighbors Stereo Mix. Apple labels the first song Slow. The mix requires additional evidence and a listening comparison.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=269460209&entity=song&limit=200",
+        "appleDate": "1962-11-01",
+        "spotifyDate": "1962-06-30",
+        "appleCredit": "℗ 1962 Disques Vogue SA",
+        "spotifyCredits": [
+          "(P) 1962 Disques Vogue SA"
+        ],
+        "appleTrackCount": 12,
+        "spotifyTrackCount": 12,
+        "adjacent": {
+          "side": "after",
+          "appleTitle": "Ça a raté",
+          "spotifyTitle": "Ça a raté - Stereo Mix",
+          "appleDurationMs": 119867,
+          "spotifyDurationMs": 119866
+        }
+      }
+    },
+    {
+      "starterId": "fr-1444087654",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "2001 Capitol Music France compilation cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1444087654",
+          "albumId": "1444087434",
+          "url": "https://music.apple.com/ca/album/_/1444087434?i=1444087654",
+          "artist": "Michel Delpech",
+          "title": "Pour un flirt",
+          "release": "Michel Delpech",
+          "discNumber": 1,
+          "trackNumber": 21,
+          "durationMs": 204640
+        }
+      ],
+      "spotify": {
+        "id": "10TsFYqusA7KKiUC1IhPDw",
+        "url": "https://open.spotify.com/track/10TsFYqusA7KKiUC1IhPDw",
+        "artists": [
+          "Michel Delpech"
+        ],
+        "title": "Pour un flirt",
+        "release": "CD Story",
+        "releaseUrl": "https://open.spotify.com/album/3vlu5v98oGi4Qgj1XvwEgH",
+        "trackNumber": 21,
+        "durationMs": 204640,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Apple calls the collection Michel Delpech. Spotify and Qobuz call it CD Story. Both primary pages credit the 2001 Capitol Music France compilation and end with Chez Laurette followed by Pour un flirt at identical durations.",
+      "additionalSources": [
+        "https://www.qobuz.com/be-fr/album/cd-story-michel-delpech/0073145497942"
+      ],
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1444087434&entity=song&limit=200",
+        "appleDate": "1974-01-01",
+        "spotifyDate": "2001-01-01",
+        "appleCredit": "This Compilation ℗ 2001 Capitol Music France",
+        "spotifyCredits": [
+          "© 2001 Capitol Music France",
+          "This Compilation ℗ 2001 Capitol Music France"
+        ],
+        "appleTrackCount": 21,
+        "spotifyTrackCount": 21,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Chez Laurette",
+          "spotifyTitle": "Chez Laurette",
+          "appleDurationMs": 209253,
+          "spotifyDurationMs": 209253
+        }
+      }
+    },
+    {
+      "starterId": "fr-212138062",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "1998 French studio album closer",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "212138062",
+          "albumId": "212137941",
+          "url": "https://music.apple.com/ca/album/_/212137941?i=212138062",
+          "artist": "Céline Dion",
+          "title": "S'il suffisait d'aimer",
+          "release": "S'il suffisait d'aimer",
+          "discNumber": 1,
+          "trackNumber": 12,
+          "durationMs": 214827
+        }
+      ],
+      "spotify": {
+        "id": "5zvrDC409YAzhLjgMiDTy4",
+        "url": "https://open.spotify.com/track/5zvrDC409YAzhLjgMiDTy4",
+        "artists": [
+          "Céline Dion"
+        ],
+        "title": "S'il suffisait d'aimer",
+        "release": "S'il suffisait d'aimer",
+        "releaseUrl": "https://open.spotify.com/album/14GKp6GNpP9jL7g98QTxsY",
+        "trackNumber": 12,
+        "durationMs": 214826,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both 12-track albums end with Tous les blues sont écrits pour toi followed by the title song. The selected track runs 214826 ms on Spotify. The Stade de France live release has a separate recording.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=212137941&entity=song&limit=200",
+        "appleDate": "1998-08-31",
+        "spotifyDate": "1998-09-07",
+        "appleCredit": "℗ 1998 Sony Music Entertainment (Canada) Inc.",
+        "spotifyCredits": [
+          "1998 Sony Music Entertainment (Canada) Inc."
+        ],
+        "appleTrackCount": 12,
+        "spotifyTrackCount": 12,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Tous les blues sont écrits pour toi",
+          "spotifyTitle": "Tous les blues sont écrits pour toi",
+          "appleDurationMs": 288440,
+          "spotifyDurationMs": 288440
+        }
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/2xwzMjHJyAzTteuggB72SA"
+      ]
+    },
+    {
+      "starterId": "fr-322814101",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Three-track Flarenasch single lead",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "322814101",
+          "albumId": "322814100",
+          "url": "https://music.apple.com/ca/album/_/322814100?i=322814101",
+          "artist": "Images",
+          "title": "Les démons de minuit",
+          "release": "Les démons de minuit - Single",
+          "discNumber": 1,
+          "trackNumber": 1,
+          "durationMs": 231410
+        }
+      ],
+      "spotify": {
+        "id": "2ne2QYNb5DjByvKPOtzQaM",
+        "url": "https://open.spotify.com/track/2ne2QYNb5DjByvKPOtzQaM",
+        "artists": [
+          "Images"
+        ],
+        "title": "Les démons de minuit",
+        "release": "Les démons de minuit",
+        "releaseUrl": "https://open.spotify.com/album/6hOGy2ogj9tbIIpfQ5aQOO",
+        "trackNumber": 1,
+        "durationMs": 231410,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both three-track singles lead with the 231410 ms recording and list the extended version second. Another Spotify single with the same name opens with a recording 19.545 seconds shorter.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=322814100&entity=song&limit=200",
+        "appleDate": "1986-01-01",
+        "spotifyDate": "1986-01-01",
+        "appleCredit": "℗ 1990 Flarenasch",
+        "spotifyCredits": [
+          "1990 Flarenasch"
+        ],
+        "appleTrackCount": 3,
+        "spotifyTrackCount": 3,
+        "adjacent": {
+          "side": "after",
+          "appleTitle": "Les démons de minuit (version longue)",
+          "spotifyTitle": "Les démons de minuit - Version longue",
+          "appleDurationMs": 365600,
+          "spotifyDurationMs": 365600
+        }
+      },
+      "additionalSources": [
+        "https://open.spotify.com/track/2ShTk16F2cHvhQtHGlxTR7"
+      ]
+    },
+    {
+      "starterId": "fr-1131933949",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "2016 deluxe album cut",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1131933949",
+          "albumId": "1131933732",
+          "url": "https://music.apple.com/ca/album/_/1131933732?i=1131933949",
+          "artist": "Céline Dion",
+          "title": "Encore un soir",
+          "release": "Encore un soir (Deluxe Edition)",
+          "discNumber": 1,
+          "trackNumber": 4,
+          "durationMs": 263439
+        }
+      ],
+      "spotify": {
+        "id": "51yjUe42smRbgWvg9i9pFa",
+        "url": "https://open.spotify.com/track/51yjUe42smRbgWvg9i9pFa",
+        "artists": [
+          "Céline Dion"
+        ],
+        "title": "Encore un soir",
+        "release": "Encore un soir",
+        "releaseUrl": "https://open.spotify.com/album/34ojCO0ZiLZwJlUFXuGx9R",
+        "trackNumber": 4,
+        "durationMs": 263438,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Spotify omits Deluxe Edition from the album title. Both list the 15-song program and the same 26 August 2016 Sony Music Entertainment Canada release. The title song sits between Ma faille and Je nous veux.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1131933732&entity=song&limit=200",
+        "appleDate": "2016-08-26",
+        "spotifyDate": "2016-08-26",
+        "appleCredit": "℗ 2016 Sony Music Entertainment Canada Inc.",
+        "spotifyCredits": [
+          "(P) 2016 Sony Music Entertainment Canada Inc."
+        ],
+        "appleTrackCount": 15,
+        "spotifyTrackCount": 15,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Ma faille",
+          "spotifyTitle": "Ma faille",
+          "appleDurationMs": 230964,
+          "spotifyDurationMs": 230963
+        }
+      }
+    },
+    {
+      "starterId": "fr-1445751267",
+      "status": "verified",
+      "checkedOn": "2026-11-24",
+      "version": "Ratatouille soundtrack cut on Disney Box Office Hits",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1445751267",
+          "albumId": "1445751151",
+          "url": "https://music.apple.com/ca/album/_/1445751151?i=1445751267",
+          "artist": "Camille",
+          "title": "Le Festin",
+          "release": "Disney Box Office Hits",
+          "discNumber": 1,
+          "trackNumber": 13,
+          "durationMs": 170840
+        }
+      ],
+      "spotify": {
+        "id": "0hZz7Obn3PoiqfnkrMH4Oc",
+        "url": "https://open.spotify.com/track/0hZz7Obn3PoiqfnkrMH4Oc",
+        "artists": [
+          "Camille",
+          "Michael Giacchino"
+        ],
+        "title": "Le Festin - Original Version",
+        "release": "Disney Box Office Hits",
+        "releaseUrl": "https://open.spotify.com/album/1t5Y7Q0ZSSwMSek0kbuFYt",
+        "trackNumber": 13,
+        "durationMs": 170840,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both catalogs list track 13 on Walt Disney Records' 2008 compilation with the same duration and neighbors. Spotify credits Camille and Michael Giacchino and calls this Original Version. Apple credits Camille.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1445751151&entity=song&limit=200",
+        "appleDate": "2008-01-01",
+        "spotifyDate": "2008-01-01",
+        "appleCredit": "This Compilation ℗ 2008 Walt Disney Records",
+        "spotifyCredits": [
+          "© 2008 Disney",
+          "This Compilation ℗ 2008 Walt Disney Records"
+        ],
+        "appleTrackCount": 15,
+        "spotifyTrackCount": 15,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "Where Is Your Heart At?",
+          "spotifyTitle": "Where is Your Heart At? - Soundtrack",
+          "appleDurationMs": 143093,
+          "spotifyDurationMs": 143093
+        }
+      }
+    },
+    {
+      "starterId": "fr-1750210171",
+      "status": "held",
+      "checkedOn": "2026-11-24",
+      "version": "2024 Best Of compilation recording sought",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "1750210171",
+          "albumId": "1750209569",
+          "url": "https://music.apple.com/ca/album/_/1750209569?i=1750210171",
+          "artist": "Charles Aznavour",
+          "title": "Emmenez-moi",
+          "release": "Best Of",
+          "discNumber": 1,
+          "trackNumber": 4,
+          "durationMs": 211983
+        }
+      ],
+      "candidate": {
+        "id": "6kjDLNGtvnbYIXAMsc6iiu",
+        "url": "https://open.spotify.com/track/6kjDLNGtvnbYIXAMsc6iiu",
+        "artists": [
+          "Charles Aznavour"
+        ],
+        "title": "Emmenez-moi",
+        "release": "Entre deux rêves",
+        "releaseUrl": "https://open.spotify.com/album/5jm1jHoCMuMh3SElNY9R81",
+        "trackNumber": 1,
+        "durationMs": 212653,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Apple lists Emmenez-moi fourth on the 17-track 2024 compilation. The Entre deux rêves candidate opens a different release and runs 670 ms longer. The exact compilation transfer has not been established.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=1750209569&entity=song&limit=200",
+        "appleDate": "2024-06-07",
+        "spotifyDate": "1967-01-01",
+        "appleCredit": "This Compilation ℗ 2024 Universal Music B.V.",
+        "spotifyCredits": [
+          "© 2024 Barclay",
+          "℗ 1967 Universal Music B.V."
+        ],
+        "appleTrackCount": 17,
+        "spotifyTrackCount": 12
+      }
+    },
+    {
+      "starterId": "fr-543060736",
+      "status": "held",
+      "checkedOn": "2026-11-24",
+      "version": "Babacar remaster, mastering review pending",
+      "apple": [
+        {
+          "storefront": "ca",
+          "id": "543060736",
+          "albumId": "543060730",
+          "url": "https://music.apple.com/ca/album/_/543060730?i=543060736",
+          "artist": "France Gall",
+          "title": "Ella, elle l'a",
+          "release": "Babacar (Remasterisé)",
+          "discNumber": 1,
+          "trackNumber": 5,
+          "durationMs": 291400
+        }
+      ],
+      "candidate": {
+        "id": "67CfbIKKTCKFqmQLJwUftX",
+        "url": "https://open.spotify.com/track/67CfbIKKTCKFqmQLJwUftX",
+        "artists": [
+          "France Gall"
+        ],
+        "title": "Ella, elle l'a - Remasterisé en 2004",
+        "release": "Babacar (Remasterisé en 2004)",
+        "releaseUrl": "https://open.spotify.com/album/4vYag01Wn4UHjtlWbz0Nn0",
+        "trackNumber": 5,
+        "durationMs": 291400,
+        "marketCheck": {
+          "country": "CA",
+          "pageListing": "listed"
+        }
+      },
+      "review": "Both releases put the song fifth, with identical duration. Apple credits Warner Music France for 1987 and 2004. Spotify explicitly labels the 2004 remaster. Hold until the required remaster listening comparison is recorded.",
+      "releaseEvidence": {
+        "appleLookup": "https://itunes.apple.com/lookup?country=ca&id=543060730&entity=song&limit=200",
+        "appleDate": "1987-04-03",
+        "spotifyDate": "1987-01-01",
+        "appleCredit": "℗ 1987, 2004 Warner Music France",
+        "spotifyCredits": [
+          "© 1987, 2004 Warner Music France",
+          "℗ 1987, 2004 Warner Music France"
+        ],
+        "appleTrackCount": 9,
+        "spotifyTrackCount": 9,
+        "adjacent": {
+          "side": "before",
+          "appleTitle": "J'irai où tu iras",
+          "spotifyTitle": "J'irai où tu iras - Remasterisé en 2004",
+          "appleDurationMs": 231307,
+          "spotifyDurationMs": 231306
+        }
+      }
+    }
+  ]
+}
