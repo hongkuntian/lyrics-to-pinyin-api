@@ -3,7 +3,11 @@ import {annotationFor,profileFor,pronunciationKey} from '../pronunciation-aids.j
 import {LibraryError} from '../song-library/store.js';
 import {canonicalJSON} from '../song-library/spotify-recording.js';
 const requirements=Object.freeze({ja:['ja-hepburn','ja-kana'],ko:['ko-revised']});
-export const requiredReadingProfiles=doc=>requirements[doc.response?.song?.language]??[];
+export function requiredReadingProfiles(doc){
+ const language=doc.response?.song?.language;let canonical;try{canonical=Intl.getCanonicalLocales(language)[0]?.split('-')[0];}catch{}
+ if(['ja','ko'].includes(canonical)&&language!==canonical)fail('unsupported_prepared_source_language');
+ return requirements[language]??[];
+}
 const hash=v=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v);
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const exact=(v,keys)=>object(v)&&Object.keys(v).sort().join()===keys.sort().join();

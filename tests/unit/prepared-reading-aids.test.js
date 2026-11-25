@@ -31,3 +31,6 @@ test('checked profile metadata and deterministic verification reject shape-consi
  }
  validateReadingAids(d);await assert.rejects(verifyReadingAids(d),/prepared_reading_aids_changed/);
 });
+test('noncanonical JA/KO aliases cannot bypass required profile qualification',()=>{
+ for(const language of ['ja-JP','ko-KR','JA','jpn','kor']){const doc=document('ja');doc.response.song.language=language;assert.throws(()=>validateReadingAids(doc),/unsupported_prepared_source_language/);}
+});

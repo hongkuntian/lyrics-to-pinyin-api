@@ -73,13 +73,18 @@ export async function executeStage(acquired,stage,{path,review,database,apiKey,t
  if(checkpoint.state==='ready')await settlePlanBudget(database,plan.id,plan.tasks.map(t=>t.id));
  return checkpoint;
 }
+function assertStageDocument(acquired,stage){
+ if(stage.documentID!==acquired.doc.id||stage.sourceHash!==acquired.doc.sourceHash||stage.acquisitionHash!==acquired.acquisitionHash||stage.documentArtifactID!==artifact('document',publicDocument(acquired.doc)).id)fail('preparation_plan_changed',409);
+}
 export function finishTranslations(acquired,stage,checkpoint){
  if(checkpoint.state!=='ready'||checkpoint.planID!==stage.plan.id)fail('preparation_incomplete',409);
+ assertStageDocument(acquired,stage);
  return acceptedTranslations(acquired.doc,stage.tasks.map(t=>({target:t.target,content:checkpoint.tasks.find(r=>r.id===t.id)?.content})));
 }
 export function finishEdition(acquired,stage,checkpoint,translations){
  if(!stage.manifest||Object.hasOwn(stage.manifest,'rows'))fail('native_manifest_required',409);
  if(checkpoint.state!=='ready'||checkpoint.planID!==stage.plan.id)fail('preparation_incomplete',409);
+ assertStageDocument(acquired,stage);
  const studyArtifacts=stage.tasks.map(t=>studyArtifact(acquired.doc,translations,t,{content:checkpoint.tasks.find(r=>r.id===t.id)?.content}));
  const b=assembleBundle({doc:acquired.doc,translations,manifest:stage.manifest,studyArtifacts,spec:acquired.spec});return validateBundle(b);
 }

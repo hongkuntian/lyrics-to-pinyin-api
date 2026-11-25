@@ -56,3 +56,12 @@ test('JA/KO publication fails closed without aids or on forged deterministic out
  await assert.rejects(store.publish(b),/prepared_reading_aids_changed/);
  assert.equal((await database.query('SELECT count(*)::int AS n FROM prepared_editions')).rows[0].n,0);
 });
+test('saved completion cannot finalize after reading context/document artifact changes under the same source IDs',async()=>{
+ const f=await readingInputs('ja'),acquired={doc:f.doc,spec:f.spec,acquisitionHash:digest('context')};
+ const translationStage=stagePlan(acquired,{stage:'translations',policy:allDirections}),studyStage=stagePlan(acquired,{stage:'study',translations:f.translations,rows:f.manifest,policy:allDirections});
+ const changed=structuredClone(acquired);changed.doc.response.song.title.original='Revised synthetic context';
+ const prepared=await prepareAcquiredReadingAids(changed);
+ assert.equal(prepared.doc.id,acquired.doc.id);assert.equal(prepared.doc.sourceHash,acquired.doc.sourceHash);
+ assert.notEqual(artifact('document',(await nativeExporterInput(prepared,f.translations)).document).id,studyStage.documentArtifactID);
+ for(const [stage,finish] of [[translationStage,(a,s,c)=>finishTranslations(a,s,c)],[studyStage,(a,s,c)=>finishEdition(a,s,c,f.translations)]])assert.throws(()=>finish(prepared,stage,{state:'ready',planID:stage.plan.id,tasks:[]}),{code:'preparation_plan_changed'});
+});
