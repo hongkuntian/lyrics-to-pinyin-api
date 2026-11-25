@@ -3,13 +3,19 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
-import {migrateLibrary,migrationNames} from '../../scripts/library-migrations.js';
+import {migrateLibrary as migrateRegistered,migrationNames as registeredNames} from '../../scripts/library-migrations.js';
 import {verifyBuildSchema} from '../../scripts/vercel-library-build.js';
 import {recordStarterEvent} from '../../api/utils/song-library/starter-songs.js';
 import {replayMembershipRoleGrants} from '../../scripts/membership-role-grants.js';
 
 // Starter-song totals: shown and picked per pool song, nothing about a person.
 const starters='040-starter-song-totals.sql',table='public.starter_song_totals';
+// Isolate historical 040 behavior; the current build gate follows the full registry.
+const migrationNames=registeredNames.slice(0,registeredNames.indexOf(starters)+1);
+async function migrateLibrary(db,options){
+ const saved=[...registeredNames];registeredNames.splice(0,registeredNames.length,...migrationNames);
+ try{return await migrateRegistered(db,options);}finally{registeredNames.splice(0,registeredNames.length,...saved);}
+}
 const sql=name=>readFile(new URL('../../db/'+name,import.meta.url),'utf8');
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const adapter=db=>({transaction:fn=>db.transaction(tx=>fn({query:async(text,args)=>args?tx.query(text,args):(await tx.exec(text)).at(-1)}))});
@@ -42,7 +48,7 @@ async function catalog(db){
 const can=async(db,role,privilege)=>(await db.query('SELECT has_table_privilege($1,$2,$3) AS ok',[role,table,privilege])).rows[0].ok;
 const totals=async db=>(await db.query('SELECT song_id,shown::int AS shown,picked::int AS picked FROM starter_song_totals ORDER BY song_id')).rows;
 
-test('040 is registered last, after 039, so the production build requires its receipt',async()=>{
+test('040 follows 039 and the production build requires the latest registered receipt',async()=>{
  assert.deepEqual(migrationNames.slice(-2),['039-anonymous-accounts.sql',starters]);
  assert.equal(migrationNames.filter(name=>name.startsWith('040-')).length,1);
  const text=await sql(starters);
@@ -53,9 +59,9 @@ test('040 is registered last, after 039, so the production build requires its re
  assert.doesNotMatch(statements,/\b(CASCADE|DROP|DELETE|TRUNCATE|ALTER|UPDATE(?! ON))\b/);
  const asked=[],production={VERCEL:'1',VERCEL_ENV:'production'};
  await verifyBuildSchema({env:production,open:()=>({query:async(_,args)=>{asked.push(args[0]);return {rows:[{name:args[0]}]};},close:async()=>{}}),log:()=>{}});
- assert.deepEqual(asked,[starters]);
+ assert.deepEqual(asked,[registeredNames.at(-1)]);
  // A database migrated only through 039 does not pass the build.
- await assert.rejects(verifyBuildSchema({env:production,open:()=>({query:async(_,args)=>({rows:args[0]===starters?[]:[{name:args[0]}]}),close:async()=>{}}),log:()=>{}}),
+ await assert.rejects(verifyBuildSchema({env:production,open:()=>({query:async(_,args)=>({rows:args[0]===registeredNames.at(-1)?[]:[{name:args[0]}]}),close:async()=>{}}),log:()=>{}}),
   /library_schema_migration_required/);
 });
 

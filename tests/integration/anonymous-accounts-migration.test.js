@@ -88,8 +88,8 @@ async function seed(db){
 const rows=(image,table)=>image['public.'+table];
 const without=(row,fields)=>Object.fromEntries(Object.entries(row).filter(([k])=>!fields.includes(k)));
 
-test('039 is registered once, after 038 and followed only by 040',async()=>{
- assert.deepEqual(registeredNames.slice(registeredNames.indexOf(anonymous)-1),['038-retire-spotify-observer.sql',anonymous,'040-starter-song-totals.sql']);
+test('039 is registered once, after 038 and followed by 040 and 041',async()=>{
+ assert.deepEqual(registeredNames.slice(registeredNames.indexOf(anonymous)-1),['038-retire-spotify-observer.sql',anonymous,'040-starter-song-totals.sql','041-prepared-editions.sql']);
  assert.equal(registeredNames.filter(name=>name.startsWith('039-')).length,1);
  const text=await sql(anonymous);
  // The runner strips only a leading BEGIN and trailing COMMIT.

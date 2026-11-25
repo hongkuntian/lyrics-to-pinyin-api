@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "prepared_starters"
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "variant": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "const": "apple"
+            },
+            "catalogID": {
+              "type": "string"
+            },
+            "storefront": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider",
+            "catalogID",
+            "storefront"
+          ],
+          "additionalProperties": false
+        },
+        "catalogStorefront": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "languages"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "prepared_lookup"
+        },
+        "variant": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "const": "apple"
+            },
+            "catalogID": {
+              "type": "string"
+            },
+            "storefront": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider",
+            "catalogID",
+            "storefront"
+          ],
+          "additionalProperties": false
+        },
+        "use": {
+          "enum": [
+            "read",
+            "play"
+          ]
+        }
+      },
+      "required": [
+        "action",
+        "variant",
+        "use"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "prepared_grant"
+        },
+        "editionID": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "string"
+        },
+        "use": {
+          "enum": [
+            "read",
+            "play"
+          ]
+        },
+        "variant": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "const": "apple"
+            },
+            "catalogID": {
+              "type": "string"
+            },
+            "storefront": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider",
+            "catalogID",
+            "storefront"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "action",
+        "editionID",
+        "generation",
+        "use"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "const": "prepared_artifact"
+        },
+        "editionID": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "string"
+        },
+        "use": {
+          "enum": [
+            "read",
+            "play"
+          ]
+        },
+        "artifactID": {
+          "type": "string"
+        },
+        "variant": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "const": "apple"
+            },
+            "catalogID": {
+              "type": "string"
+            },
+            "storefront": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider",
+            "catalogID",
+            "storefront"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "action",
+        "editionID",
+        "generation",
+        "use",
+        "artifactID"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

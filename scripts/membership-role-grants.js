@@ -41,5 +41,11 @@ export async function replayMembershipRoleGrants(db) {
     .filter(match=>match[1].includes('pg_roles')&&match[1].includes('GRANT '));
   if(starterMatches.length!==1)throw new Error('membership_privilege_block_mismatch');
   blocks.push(starterMatches[0][1]+';');
+  // Prepared content: read-only tables, relation-guarded for historical fixtures.
+  const preparedSQL=await readFile(new URL('../db/041-prepared-editions.sql',import.meta.url),'utf8');
+  const preparedMatches=[...preparedSQL.matchAll(/DO \$\$ (BEGIN[\s\S]*?END) \$\$;/g)]
+    .filter(match=>match[1].includes('pg_roles')&&match[1].includes('GRANT '));
+  if(preparedMatches.length!==1)throw new Error('membership_privilege_block_mismatch');
+  blocks.push(preparedMatches[0][1]+';');
   await db.query('DO $membership_role_replay$\nBEGIN\n'+blocks.join('\n')+'\nEND $membership_role_replay$;');
 }

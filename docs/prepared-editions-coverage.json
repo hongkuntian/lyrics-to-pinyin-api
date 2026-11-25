@@ -1,0 +1,1294 @@
+{
+  "version": 1,
+  "recordings": 46,
+  "entries": [
+    {
+      "language": "cmn",
+      "songID": "cmn-1817103029",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1817103029",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1817103029",
+          "storefront": "tw"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "cmn",
+      "songID": "cmn-1821474701",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1821474701",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1821474701",
+          "storefront": "tw"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "cmn",
+      "songID": "cmn-615959495",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "615959495",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "615959495",
+          "storefront": "tw"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "cmn",
+      "songID": "cmn-541857030",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "541857030",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "541857030",
+          "storefront": "tw"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "cmn",
+      "songID": "cmn-1019650261",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1019650261",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1017697311",
+          "storefront": "tw"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "cmn",
+      "songID": "cmn-312506680",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "312506680",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "312506680",
+          "storefront": "tw"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "cmn",
+      "songID": "cmn-651456011",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "651456011",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "651456011",
+          "storefront": "tw"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "cmn",
+      "songID": "cmn-1467709699",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1467709699",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1467709699",
+          "storefront": "tw"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "yue",
+      "songID": "yue-1443008646",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1443008646",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1443008646",
+          "storefront": "hk"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "yue",
+      "songID": "yue-1443314381",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1443314381",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1443314381",
+          "storefront": "hk"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "yue",
+      "songID": "yue-1443304352",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1443304352",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1443304352",
+          "storefront": "hk"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "yue",
+      "songID": "yue-1443351801",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1443351801",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1443351801",
+          "storefront": "hk"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "yue",
+      "songID": "yue-1722083721",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1722083721",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1722083721",
+          "storefront": "hk"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "yue",
+      "songID": "yue-1443346107",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1443346107",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1443346107",
+          "storefront": "hk"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "yue",
+      "songID": "yue-1443112625",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1443112625",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1443112625",
+          "storefront": "hk"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "yue",
+      "songID": "yue-1560826419",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1560826419",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1560826419",
+          "storefront": "hk"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ja",
+      "songID": "ja-1440863574",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1440863574",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1440863574",
+          "storefront": "jp"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ja",
+      "songID": "ja-1537433553",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1537433553",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1537433553",
+          "storefront": "jp"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ja",
+      "songID": "ja-1579439168",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1579439168",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1579439168",
+          "storefront": "jp"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ja",
+      "songID": "ja-1538122206",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1538122206",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1538122206",
+          "storefront": "jp"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ja",
+      "songID": "ja-539931527",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "539931527",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "279691859",
+          "storefront": "jp"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ja",
+      "songID": "ja-273169347",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "273169347",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "273169347",
+          "storefront": "jp"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ja",
+      "songID": "ja-1445055008",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1445055008",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1445055008",
+          "storefront": "jp"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ko",
+      "songID": "ko-1488300934",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1488300934",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1488300934",
+          "storefront": "kr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ko",
+      "songID": "ko-1004836383",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1004836383",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1004836383",
+          "storefront": "kr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ko",
+      "songID": "ko-1609042513",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1609042513",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1609042513",
+          "storefront": "kr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ko",
+      "songID": "ko-1670828789",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1670828789",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1670828789",
+          "storefront": "kr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ko",
+      "songID": "ko-1345362029",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1345362029",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1345362029",
+          "storefront": "kr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ko",
+      "songID": "ko-1313176085",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1313176085",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1313176085",
+          "storefront": "kr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ko",
+      "songID": "ko-1726888402",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1726888402",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1726888402",
+          "storefront": "kr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "ko",
+      "songID": "ko-1698506946",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1698506946",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1698506946",
+          "storefront": "kr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "es",
+      "songID": "es-1629786270",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1629786270",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1629786270",
+          "storefront": "es"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "es",
+      "songID": "es-1776907569",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1776907569",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1776907569",
+          "storefront": "es"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "es",
+      "songID": "es-1442443569",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1442443569",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1442443569",
+          "storefront": "es"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "es",
+      "songID": "es-280862234",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "280862234",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "280862234",
+          "storefront": "es"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "es",
+      "songID": "es-671129674",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "671129674",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "671129674",
+          "storefront": "es"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "es",
+      "songID": "es-273925387",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "273925387",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "273925387",
+          "storefront": "es"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "es",
+      "songID": "es-1559885700",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1559885700",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1559885700",
+          "storefront": "es"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "fr",
+      "songID": "fr-269460216",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "269460216",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "269460216",
+          "storefront": "fr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "fr",
+      "songID": "fr-1444087654",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1444087654",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1444087654",
+          "storefront": "fr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "fr",
+      "songID": "fr-212138062",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "212138062",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "212138062",
+          "storefront": "fr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "fr",
+      "songID": "fr-322814101",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "322814101",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "322814101",
+          "storefront": "fr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "fr",
+      "songID": "fr-1131933949",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1131933949",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1131933949",
+          "storefront": "fr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "fr",
+      "songID": "fr-1445751267",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1445751267",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1445751267",
+          "storefront": "fr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "fr",
+      "songID": "fr-1750210171",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "1750210171",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "1750210171",
+          "storefront": "fr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    },
+    {
+      "language": "fr",
+      "songID": "fr-543060736",
+      "variants": [
+        {
+          "provider": "apple",
+          "catalogID": "543060736",
+          "storefront": "ca"
+        },
+        {
+          "provider": "apple",
+          "catalogID": "543060736",
+          "storefront": "fr"
+        }
+      ],
+      "state": "unqualified",
+      "costStatus": "unpriced_missing_source_manifest_and_measured_pilot_usage",
+      "published": false,
+      "gaps": [
+        "source_permission",
+        "acquisition",
+        "timing_listening",
+        "five_target_translations",
+        "native_inspector_manifest",
+        "priced_review",
+        "complete_artifacts"
+      ]
+    }
+  ]
+}

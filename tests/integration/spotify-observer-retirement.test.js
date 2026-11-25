@@ -74,8 +74,8 @@ async function seed(db){
 }
 const present=async(db,name)=>(await db.query('SELECT to_regclass($1)::text AS name',['public.'+name])).rows[0].name;
 
-test('038 is registered once, followed only by 039 and 040, and drops exactly the retired observer tables without CASCADE',async()=>{
- assert.deepEqual(registeredNames.slice(registeredNames.indexOf(retirement)),[retirement,'039-anonymous-accounts.sql','040-starter-song-totals.sql']);
+test('038 is registered once, followed by 039 through 041, and drops exactly the retired observer tables without CASCADE',async()=>{
+ assert.deepEqual(registeredNames.slice(registeredNames.indexOf(retirement)),[retirement,'039-anonymous-accounts.sql','040-starter-song-totals.sql','041-prepared-editions.sql']);
  assert.equal(registeredNames.filter(name=>name.startsWith('038-')).length,1);
  const text=await sql(retirement);
  // The runner strips only a leading BEGIN and trailing COMMIT.

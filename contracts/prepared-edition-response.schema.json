@@ -1,0 +1,525 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "unprepared"
+        }
+      },
+      "required": [
+        "version",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "code": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "preparedStarters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "language": {
+                "type": "string"
+              },
+              "songs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "language": {
+                      "type": "string"
+                    },
+                    "songID": {
+                      "type": "string"
+                    },
+                    "editionID": {
+                      "type": "string"
+                    },
+                    "generation": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "artist": {
+                      "type": "string"
+                    },
+                    "duration": {
+                      "type": "number"
+                    },
+                    "documentVariant": {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "const": "apple"
+                        },
+                        "catalogID": {
+                          "type": "string"
+                        },
+                        "storefront": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "catalogID",
+                        "storefront"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "variants": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider": {
+                            "const": "apple"
+                          },
+                          "catalogID": {
+                            "type": "string"
+                          },
+                          "storefront": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "provider",
+                          "catalogID",
+                          "storefront"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "uses": {
+                      "type": "array",
+                      "items": {
+                        "enum": [
+                          "read",
+                          "play"
+                        ]
+                      }
+                    },
+                    "documentID": {
+                      "type": "string"
+                    },
+                    "sourceHash": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "language",
+                    "songID",
+                    "editionID",
+                    "generation",
+                    "title",
+                    "artist",
+                    "duration",
+                    "documentVariant",
+                    "variants",
+                    "uses",
+                    "documentID",
+                    "sourceHash"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "language",
+              "songs"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "version",
+        "preparedStarters"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "ready"
+        },
+        "grant": {
+          "type": "object",
+          "properties": {
+            "editionID": {
+              "type": "string"
+            },
+            "generation": {
+              "type": "string"
+            },
+            "documentID": {
+              "type": "string"
+            },
+            "sourceHash": {
+              "type": "string"
+            },
+            "use": {
+              "enum": [
+                "read",
+                "play"
+              ]
+            },
+            "onlineRequired": {
+              "const": true
+            },
+            "expiresAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "editionID",
+            "generation",
+            "documentID",
+            "sourceHash",
+            "use",
+            "onlineRequired",
+            "expiresAt"
+          ],
+          "additionalProperties": false
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "document",
+                  "translation",
+                  "manifest",
+                  "batch",
+                  "explanation"
+                ]
+              },
+              "selector": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "selector"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "version",
+        "state",
+        "grant",
+        "artifacts"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "ready"
+        },
+        "edition": {
+          "type": "object",
+          "properties": {
+            "language": {
+              "type": "string"
+            },
+            "songID": {
+              "type": "string"
+            },
+            "editionID": {
+              "type": "string"
+            },
+            "generation": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "artist": {
+              "type": "string"
+            },
+            "duration": {
+              "type": "number"
+            },
+            "documentVariant": {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "const": "apple"
+                },
+                "catalogID": {
+                  "type": "string"
+                },
+                "storefront": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "provider",
+                "catalogID",
+                "storefront"
+              ],
+              "additionalProperties": false
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "const": "apple"
+                  },
+                  "catalogID": {
+                    "type": "string"
+                  },
+                  "storefront": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "provider",
+                  "catalogID",
+                  "storefront"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "uses": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "read",
+                  "play"
+                ]
+              }
+            },
+            "documentID": {
+              "type": "string"
+            },
+            "sourceHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "language",
+            "songID",
+            "editionID",
+            "generation",
+            "title",
+            "artist",
+            "duration",
+            "documentVariant",
+            "variants",
+            "uses",
+            "documentID",
+            "sourceHash"
+          ],
+          "additionalProperties": false
+        },
+        "grant": {
+          "type": "object",
+          "properties": {
+            "editionID": {
+              "type": "string"
+            },
+            "generation": {
+              "type": "string"
+            },
+            "documentID": {
+              "type": "string"
+            },
+            "sourceHash": {
+              "type": "string"
+            },
+            "use": {
+              "enum": [
+                "read",
+                "play"
+              ]
+            },
+            "onlineRequired": {
+              "const": true
+            },
+            "expiresAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "editionID",
+            "generation",
+            "documentID",
+            "sourceHash",
+            "use",
+            "onlineRequired",
+            "expiresAt"
+          ],
+          "additionalProperties": false
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "document",
+                  "translation",
+                  "manifest",
+                  "batch",
+                  "explanation"
+                ]
+              },
+              "selector": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "selector"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "version",
+        "state",
+        "edition",
+        "grant",
+        "artifacts"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "state": {
+          "const": "ready"
+        },
+        "grant": {
+          "type": "object",
+          "properties": {
+            "editionID": {
+              "type": "string"
+            },
+            "generation": {
+              "type": "string"
+            },
+            "documentID": {
+              "type": "string"
+            },
+            "sourceHash": {
+              "type": "string"
+            },
+            "use": {
+              "enum": [
+                "read",
+                "play"
+              ]
+            },
+            "onlineRequired": {
+              "const": true
+            },
+            "expiresAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "editionID",
+            "generation",
+            "documentID",
+            "sourceHash",
+            "use",
+            "onlineRequired",
+            "expiresAt"
+          ],
+          "additionalProperties": false
+        },
+        "artifact": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "document",
+                "translation",
+                "manifest",
+                "batch",
+                "explanation"
+              ]
+            },
+            "selector": {
+              "type": "object"
+            },
+            "content": {}
+          },
+          "required": [
+            "id",
+            "kind",
+            "selector",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "version",
+        "state",
+        "grant",
+        "artifact"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

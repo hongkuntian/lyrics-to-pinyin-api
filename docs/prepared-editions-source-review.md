@@ -1,0 +1,45 @@
+# Prepared editions: source-use evidence review
+
+Reviewed 2026-11-24 against backend `0a448b87734856f266044060ae2d420b8414b6cb` and the approved Lyrica design at `bdc9bc84de589664a3bab18dacbc1a8b8f5290f3:docs/design/onboarding-second-milestone.md`. Scope is the **new use**: advance generation and persistent shared serving of lyric translations and contextual explanations. This does not change or qualify the ordinary song-page policy.
+
+## Result
+
+**Pilot authorization is not established by the evidence available in this checkout; bulk authorization is not established either.** Keep commercial editions unpublished and do not start paid pilot/bulk preparation until the affected edition's applicable evidence is supplied and reviewed. This is an evidence gap, not a claim that no separate agreement exists. Availability through a provider, a successful technical fetch, catalog playability, attribution, an open-source client license and an approved pool entry do not establish this new use.
+
+The pool's 小幸運 entry is `cmn-1019650261`: Apple Canada `1019650261` and Taiwan `1017697311`, each 265.522 seconds. These are approved candidate variants, **not yet independently qualified edition mappings**. The checkout contains no accepted provider item, exact source/text/timing revision, listening receipt or source-use grant for this pilot's prepared edition. The same absence applies to a blanket authorization of the 46 approved pool recordings.
+
+## Existing implementation evidence
+
+- `api/music-apis/index.js` routes ordinary automatic acquisition through NetEase, QQ, Kugou and LRCLIB. Language/provider order is technical selection policy.
+- `api/utils/lyric-search.js` provides independent fixed-origin LRCLIB, NetEase and Kugou lookup. Its provider-ID and source-text checks are identity/integrity controls. The NetEase adapter uses a third-party API proxy; neither proxy access nor its software license is a content sublicense.
+- `api/utils/song-library/document.js` persists recording-bound immutable documents, exact occurrences and independent text/timing/reading revisions. `api/utils/lyric-selection.js` uses 5-minute or 24-hour technical response-cache lifetimes. Those lifetimes are freshness controls, **not documented retention permission or a commercial offline grant**.
+- `THIRD_PARTY_NOTICES.md` concerns software/data dependencies and does not supply a pool-song lyric/derivative license. No edition-specific source-use agreement, territorial grant or derivative authorization was found in the inspected source/docs. This review did not inspect private commercial agreements outside the assigned checkout.
+
+## Primary public evidence
+
+| Provider | Evidence checked | Consequence for this new use |
+| --- | --- | --- |
+| QQ Music | [QQ Music service license agreement](https://y.qq.com/i/user_terms.html), published 2025-12-15, effective 2025-12-22; §§3.6.3–3.6.6, 5.1.1(10)–(12), 6.4 | Terms reserve copying/derivative uses, restrict automated content/data acquisition without prior written permission and restrict public content display subject to stated exceptions. No Lyrica-specific permission was present. Do not infer permission for advance shared derivatives from the ordinary adapter's success. |
+| Kugou | [Kugou user service agreement](https://m.kugou.com/html/agreement.html), §6.1(3), (5), (6); [membership agreement](https://h5.kugou.com/voo/v-a019d10d/index.html), updated/effective 2026-06-29, §§3.11–3.14 | Restrictions address unauthorized resource/commercial reuse; membership content can be device/platform, territory and time limited and withdrawn. Membership availability supplies no general Lyrica derivative grant. No separate applicable permission was present. |
+| LRCLIB | [Official site](https://lrclib.net/), [API documentation](https://lrclib.net/docs), [machine-readable documentation](https://lrclib.net/docs.md) | Public API and database access are described; technical publishing and copyright-violation reporting exist. The inspected pages did not supply an edition-specific underlying lyric license for advance translation/explanation and persistent shared serving. “Free and open” access does not resolve that missing scope. |
+| NetEase | Official terms URLs attempted: [current terms](https://st.music.163.com/official-terms/service) and [legacy service page](https://music.163.com/html/web2/service.html) | Both official URLs were inaccessible through the research tool (`non-retryable error`). Current authoritative wording and any applicable separate permission remain unverified. Third-party copies were found but were not accepted as authoritative authorization. This is a concrete dependency for any edition acquired there. |
+
+This table records what was and was not established; it does not assert a new license, worldwide availability, or a legal exception. A provider's license from a rightsholder, or a contributor's grant to that provider, is not automatically a sublicense to this service. Obtain applicable evidence rather than marking every provider permanently unavailable.
+
+## Edition acquisition and qualification receipt
+
+The offline workflow should produce a receipt before publication with:
+
+1. **Exact identity:** approved pool ID, every independently verified provider/catalog variant, storefront, album/version, duration and evidence tying that variant to the tested performance. Do not promote title/artist similarity or a client-supplied ID into a grant. Preserve each provider's recording/timing identity; a CA/TW mapping is explicit and does not admit a German variant.
+2. **Actual acquisition:** use the existing production acquisition/normalization path against the allowlisted provider; record provider item, checked time, source and timing revisions and exact source hash. Persist bounded private output for preparation, not lyric text in public Git. Reject source corrections, incomplete text and unbound timing. Reacquire and compare before publication where policy requires freshness.
+3. **Applicable source-use evidence:** stable reference to the actual terms/permission, review date/version, affected source item/edition and authorization for advance generation, provider processing, persistent shared derivative serving, original lyric display and retention. Record attribution, sharing rules, permitted uses (timed playback versus independent reading), territories, expiry and withdrawal procedure. An unresolved scope remains a visible gap. A bounded source lookup is not authorization to send lyric text to a model.
+4. **Territory:** use a territory signal accepted by that source policy. A curator's Spotify checked market, app language, unverified client territory or Apple catalog ID is insufficient. With no applicable verified territory, admit only an edition explicitly authorized worldwide. Do not invent worldwide status from an absent territory list.
+5. **Timing/listening:** require complete word timing from the exact retained source, valid grapheme/cue coverage and an identified listening review for alignment against each admitted performance. Metadata equality and synthetic fixture tests do not prove audible alignment.
+6. **Coverage and pricing:** enumerate the real inspector's occurrence/range/layer/context/target/recipe actions, all five app output languages, finite character and whole-line actions, and accepted translation revisions. Original help has one source-only context per occurrence/range and output language; translated help has its exact target/revision and no optional second translation. Missing language directions are reported to the content-language owner. Before bulk, price that exact manifest from pilot usage and configured rates, include bounded retries and review a total ceiling within the existing generation budget.
+7. **Publication:** atomically publish only complete accepted material. The current edition-specific generation/grant is required online before cached commercial content opens, and for foreground/expiry/protected fetch renewal. No offline permission was established by this review. Withdrawals and source replacement invalidate the prior grant and cannot start generation or unlock/charge a listener. Keep guest/session/read-rate controls.
+
+## Concrete dependencies and allowed progress
+
+The API, empty publication store, resumable trusted-job machinery, manifest enumeration, hermetic qualification tests and zero-spend dry runs can proceed. A working production-source acquisition command should retain failures and report gaps; a supplied fixture alone is not a qualified pilot.
+
+For a live prepared 小幸運 edition, obtain and review the actual selected source's new-use evidence and accepted territorial/retention conditions, acquire the exact source and mapped variants, and complete listening/coverage receipts. Then run a bounded priced pilot under the existing budget controls. No bulk generation is authorized by this review; its priced manifest requires review before execution. Spotify counterpart curation and the app's product-wide Spotify synchronization release decision remain with their designated owners.

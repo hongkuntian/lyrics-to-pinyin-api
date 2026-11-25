@@ -11,10 +11,10 @@ import {replayMembershipRoleGrants} from '../helpers/historical-role-grants.js';
 // actual public migrations plus a synthetic NOLOGIN role with SELECT(tokens)
 // and no token UPDATE. No account/auth service, V2 schema or live pool is used.
 const name='032-auth-token-row-locks.sql',anchor='auth_lock_anchor';
-const correction='036-account-data-privacy.sql',namespace='037-lyrica-namespace.sql',retirement='038-retire-spotify-observer.sql',anonymous='039-anonymous-accounts.sql',starters='040-starter-song-totals.sql';
+const correction='036-account-data-privacy.sql',namespace='037-lyrica-namespace.sql',retirement='038-retire-spotify-observer.sql',anonymous='039-anonymous-accounts.sql',starters='040-starter-song-totals.sql',prepared='041-prepared-editions.sql';
 // Preserve every historical 032 assertion on its exact registered prefix.
 async function migrateLibrary(database){
- const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>![correction,namespace,retirement,anonymous,starters].includes(n)));
+ const saved=[...migrationNames];migrationNames.splice(0,migrationNames.length,...saved.filter(n=>![correction,namespace,retirement,anonymous,starters,prepared].includes(n)));
  try{return await migrateRegistered(database);}
  finally{migrationNames.splice(0,migrationNames.length,...saved);}
 }
@@ -108,7 +108,7 @@ async function privilegeSnapshot(db){
 }
 
 test('manifest retains public auth and account privacy without registering retired feature migrations',()=>{
- assert.deepEqual(migrationNames,[...publicNames,name,correction,namespace,retirement,anonymous,starters]);
+ assert.deepEqual(migrationNames,[...publicNames,name,correction,namespace,retirement,anonymous,starters,prepared]);
 });
 
 test('minimal observed-role fixture reproduces 42501 before 032 and admits real row locks afterwards',async t=>{
