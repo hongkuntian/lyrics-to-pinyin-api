@@ -18,3 +18,8 @@ test('additive prepared wire matches explicit request/response contracts and ord
  }
  assert.deepEqual(validateSchema(response,{version:1,...await preparedRequest({action:'prepared_lookup',variant:b.variants[0],use:'read'},{store:{lookup:async()=>null}})}),[]);
 });
+test('list omits an older summary whose every exact mapping has been superseded',async()=>{
+ const b=bundle(),old={bundle:{...b,editionID:'a'.repeat(64)},generation:'1',state:'published'},current={bundle:b,generation:'2',state:'published'};
+ const result=await preparedRequest({action:'prepared_starters',languages:['cmn']},{store:{all:async()=>[current,old]}});
+ assert.equal(result.preparedStarters[0].songs.length,1);assert.equal(result.preparedStarters[0].songs[0].editionID,b.editionID);
+});

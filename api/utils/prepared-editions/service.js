@@ -12,7 +12,7 @@ export async function preparedRequest(input,{store,territory=null,now=Date.now()
   for(const row of rows){
    try{publicationGrant(row,'read',territory,now);}catch{continue;}
    const variants=row.bundle.variants.filter(v=>latest.get(variantKey(v))===row&&(!input.variant||variantKey(v)===variantKey(input.variant))&&(!input.catalogStorefront||v.storefront===input.catalogStorefront));
-   if((input.variant||input.catalogStorefront)&&!variants.length)continue;
+   if(!variants.length)continue;
    ready.push({...summary(row),variants});
   }
   return {preparedStarters:input.languages.map(language=>({language,songs:POOL[language].flatMap(song=>ready.filter(s=>s.songID===song.id))}))};
