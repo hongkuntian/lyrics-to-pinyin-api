@@ -1,3 +1,4 @@
+import {verifyReadingAids} from './reading-aids.js';
 import {validateBundle,variantKey,fail} from './core.js';
 export class PreparedEditionStore{
  constructor(db){this.db=db;}
@@ -12,6 +13,7 @@ export class PreparedEditionStore{
  // Serialized, compare-and-swap publication/withdrawal. Never expose through HTTP.
  async publish(bundle,{expectedGeneration=null,expectedHead=null}={}){
   validateBundle(bundle);
+  await verifyReadingAids(bundle.artifacts.find(a=>a.kind==='document').content);
   if(Date.parse(bundle.rights.expiresAt)<=Date.now())fail('rights_expired',409);
   return this.db.transaction(async db=>{
    await db.query('SELECT pg_advisory_xact_lock(71309,41)');

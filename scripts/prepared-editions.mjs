@@ -6,7 +6,8 @@ import {parseArgs} from 'node:util';
 import {createHash} from 'node:crypto';
 import {database} from '../api/utils/song-library/database.js';
 import {environmentLanguagePolicy} from '../api/utils/song-library/languages.js';
-import {poolInventory,acquireEdition,stagePlan,priceStage,executeStage,finishTranslations,finishEdition} from '../api/utils/prepared-editions/preparation.js';
+import {prepareAcquiredReadingAids,nativeExporterInput,poolInventory,acquireEdition,stagePlan,priceStage,executeStage,finishTranslations,finishEdition} from '../api/utils/prepared-editions/preparation.js';
+import {verifyReadingAids} from '../api/utils/prepared-editions/reading-aids.js';
 import {PreparedEditionStore} from '../api/utils/prepared-editions/store.js';
 import {validateBundle} from '../api/utils/prepared-editions/core.js';
 import {migrateLibrary,migrationNames} from './library-migrations.js';
@@ -22,6 +23,8 @@ async function openDB(){
 }
 try{
  if(command==='inventory')await output(poolInventory());
+ else if(command==='reading-aids')await output(await prepareAcquiredReadingAids(await read(v.input)));
+ else if(command==='native-input')await output(await nativeExporterInput(await read(v.input),await read(v.translations)));
  else if(command==='acquire'){
   // Import the ordinary recording loader only for this explicit network command.
   const {lyricLoader}=await import('../api/song-library.js'),{SELECTION_REVISION}=await import('../api/music-romanize.js');
@@ -40,7 +43,7 @@ try{
  }else if(command==='finish-translations')await output(finishTranslations(await read(v.spec),await read(v.input),await read(v.job)));
  else if(command==='finish-edition')await output(finishEdition(await read(v.spec),await read(v.input),await read(v.job),await read(v.translations)));
  else if(command==='validate'){
-  const b=validateBundle(await read(v.input));await output({editionID:b.editionID,artifacts:b.artifacts.length,complete:true});
+  const b=validateBundle(await read(v.input));await verifyReadingAids(b.artifacts.find(a=>a.kind==='document').content);await output({editionID:b.editionID,artifacts:b.artifacts.length,complete:true});
  }else if(command==='publish'){
   const b=validateBundle(await read(v.input)),store=new PreparedEditionStore(await openDB());
   await output(await store.publish(b,{expectedGeneration:v['expected-generation']??null,expectedHead:v['expected-head']??null}));

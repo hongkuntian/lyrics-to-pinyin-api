@@ -1,6 +1,7 @@
 // Explicit offline acquisition/preparation. Listener code never imports this module.
+import {prepareReadingAids,validateReadingAids,verifyReadingAids} from './reading-aids.js';
 import {validatePreparedDocumentWire} from './document-wire.js';
-import {publicDocument} from '../song-library/public-content.js';
+import {publicDocument,publicTranslation} from '../song-library/public-content.js';
 import {POOL,variantKey,fail,artifact,validateBundle} from './core.js';
 import {makeDocument,recordingRequest} from '../song-library/document.js';
 import {independentProvider,canonicalJSON} from '../song-library/spotify-recording.js';
@@ -34,14 +35,15 @@ export async function acquireEdition(spec,{loadLyrics,selectionRevision}={}){
  const provider=independentProvider(response.metadata?.source);
  if(provider!==spec.rights.source.provider||String(response.song.id)!==spec.rights.source.itemID)fail('source_scope_mismatch',409);
  if(spec.expectedSourceHash&&spec.expectedSourceHash!==doc.sourceHash)fail('source_changed',409);
- return {version:1,spec,doc,acquiredAt:new Date().toISOString(),acquisitionHash:digest({request,documentID:doc.id,sourceHash:doc.sourceHash,selectionRevision})};
+ return {version:1,spec,doc:await prepareReadingAids(doc),acquiredAt:new Date().toISOString(),acquisitionHash:digest({request,documentID:doc.id,sourceHash:doc.sourceHash,selectionRevision})};
 }
 export function stagePlan(acquired,{stage,translations=null,rows=null,policy}){
- const {doc}=acquired;
+ const {doc}=acquired;validateReadingAids(publicDocument(doc));
+ const documentArtifactID=artifact('document',publicDocument(doc)).id;
  const manifest=stage==='study'?inspectorManifest(doc,translations,rows??undefined):null;
  const tasks=stage==='translations'?translationTasks(doc,policy):stage==='study'?studyTasks(doc,translations,manifest,policy):fail('invalid_stage');
  const plan=planTasks(tasks);
- return {version:1,stage,documentID:doc.id,sourceHash:doc.sourceHash,acquisitionHash:acquired.acquisitionHash,manifest,tasks,plan};
+ return {version:1,stage,documentID:doc.id,sourceHash:doc.sourceHash,documentArtifactID,acquisitionHash:acquired.acquisitionHash,manifest,tasks,plan};
 }
 export function priceStage(stage,pilotUsage,{retryAllowance=0}={}){
  const models=new Set(stage.tasks.map(t=>t.body.model));if(models.size>1)fail('mixed_model_plan',422);
@@ -50,6 +52,7 @@ export function priceStage(stage,pilotUsage,{retryAllowance=0}={}){
 }
 export async function executeStage(acquired,stage,{path,review,database,apiKey,translations=null,generateTranslation=generate,generateBatch=generateLine,generateSingleton=generateExplanation,policy=environmentLanguagePolicy()}={}){
  requirePreparationRights(acquired.spec,acquired.doc.selectionRevision);
+ await verifyReadingAids(publicDocument(acquired.doc));
  if(stage.acquisitionHash!==acquired.acquisitionHash||stage.documentID!==acquired.doc.id||stage.sourceHash!==acquired.doc.sourceHash)fail('source_changed',409);
  if(stage.stage==='study'&&(!stage.manifest||Object.hasOwn(stage.manifest,'rows')))fail('native_manifest_required',409);
  const expected=stagePlan(acquired,{stage:stage.stage,translations,rows:stage.manifest,policy});
@@ -79,4 +82,15 @@ export function finishEdition(acquired,stage,checkpoint,translations){
  if(checkpoint.state!=='ready'||checkpoint.planID!==stage.plan.id)fail('preparation_incomplete',409);
  const studyArtifacts=stage.tasks.map(t=>studyArtifact(acquired.doc,translations,t,{content:checkpoint.tasks.find(r=>r.id===t.id)?.content}));
  const b=assembleBundle({doc:acquired.doc,translations,manifest:stage.manifest,studyArtifacts,spec:acquired.spec});return validateBundle(b);
+}
+
+export async function prepareAcquiredReadingAids(acquired){
+ const doc=await prepareReadingAids(acquired.doc);validatePreparedDocumentWire(publicDocument(doc));return {...acquired,doc};
+}
+export async function nativeExporterInput(acquired,translations){
+ const doc=acquired.doc,document=publicDocument(doc);validatePreparedDocumentWire(document);await verifyReadingAids(document);
+ // The public serializer retains exactly this top-level map in the served artifact.
+ const {spec}=acquired,v=spec.documentVariant;
+ return {document,recording:{id:v.catalogID,catalogID:v.catalogID,storefront:v.storefront,title:spec.display.title,artist:spec.display.artist,duration:spec.display.duration},
+  translations:Object.values(translations).map(t=>publicTranslation(t,doc))};
 }

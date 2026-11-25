@@ -1,4 +1,5 @@
 // Trusted offline publication and untrusted listener reads share identity rules.
+import {validateReadingAids} from './reading-aids.js';
 import {validatePreparedDocumentWire} from './document-wire.js';
 import {vocalCoverage,validTimingProvenance} from '../vocal-timing.js';
 import {validateInspectorManifest} from './compiler.js';
@@ -37,7 +38,7 @@ export function validateBundle(b){
  const docs=b.artifacts.filter(a=>a.kind==='document'),manifests=b.artifacts.filter(a=>a.kind==='manifest');
  if(docs.length!==1||manifests.length!==1||docs[0].content.id!==b.documentID||docs[0].content.sourceHash!==b.sourceHash||c.nativeManifestHash!==manifests[0].id)bad();
  const d=docs[0].content,p=d.response?.metadata?.lyric_timing;
- try{validatePreparedDocumentWire(d);}catch{bad();}
+ try{validatePreparedDocumentWire(d);validateReadingAids(d);}catch{bad();}
  if(d.response.song.duration!=null&&Math.abs(b.display.duration-d.response.song.duration)>3)bad();
  const match=d.response.metadata.recording_match,resolution=d.response.metadata.catalog_resolution;
  if(match&&(match.catalog_id!==b.documentVariant.catalogID||Math.abs(b.display.duration-match.duration)>3))bad();

@@ -1,0 +1,16 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Prepared SongLibraryDocument",
+  "description":"Additive public document artifact. JA requires exact preparedReadingAids keys ja-hepburn and ja-kana; KO ko-revised. Other pool languages omit the map or use an empty object. Runtime validation additionally checks source, profile, ranges and deterministic output before publication.",
+  "type":"object",
+  "required":["id","recordingKey","sourceHash","selectionRevision","response","structure"],
+  "properties":{
+    "id":{"type":"string"},
+    "recordingKey":{"type":"string"},
+    "sourceHash":{"type":"string"},
+    "selectionRevision":{"type":"string"},
+    "response":{"$ref":"music-romanize-success.schema.json"},
+    "structure":{"type":"object"},
+    "preparedReadingAids":{"type":"object","additionalProperties":{"$ref":"pronunciation-aid.schema.json"}}
+  }
+}
