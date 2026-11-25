@@ -10,7 +10,7 @@ import {poolInventory,acquireEdition,stagePlan,priceStage,executeStage,finishTra
 import {PreparedEditionStore} from '../api/utils/prepared-editions/store.js';
 import {validateBundle} from '../api/utils/prepared-editions/core.js';
 import {migrateLibrary,migrationNames} from './library-migrations.js';
-const {values:v,positionals:[command]}=parseArgs({allowPositionals:true,options:Object.fromEntries(['input','output','spec','stage','translations','native-rows','pilot-usage','review','job','database-config-file','edition-id','generation','expected-head','expected-generation','migration-plan'].map(k=>[k,{type:'string'}]))});
+const {values:v,positionals:[command]}=parseArgs({allowPositionals:true,options:Object.fromEntries(['input','output','spec','stage','translations','native-rows','native-manifest','pilot-usage','review','job','database-config-file','edition-id','generation','expected-head','expected-generation','migration-plan'].map(k=>[k,{type:'string'}]).concat([['provisional',{type:'boolean'}]]))});
 const read=async path=>JSON.parse(await readFile(path,'utf8'));
 const output=async value=>{if(v.output){await mkdir(dirname(v.output),{recursive:true});await writeFile(v.output,JSON.stringify(value,null,2)+'\n',{mode:0o600,flag:'wx'});}else console.log(JSON.stringify(value,null,2));};
 let db;
@@ -27,7 +27,10 @@ try{
   const {lyricLoader}=await import('../api/song-library.js'),{SELECTION_REVISION}=await import('../api/music-romanize.js');
   await output(await acquireEdition(await read(v.spec),{loadLyrics:lyricLoader(),selectionRevision:SELECTION_REVISION}));
  }else if(command==='plan'){
-  const acquired=await read(v.input),translations=v.translations?await read(v.translations):null,rows=v['native-rows']?await read(v['native-rows']):null;
+  const acquired=await read(v.input),translations=v.translations?await read(v.translations):null,rows=v['native-manifest']?await read(v['native-manifest']):v['native-rows']?await read(v['native-rows']):null;
+  if(v.stage==='study'&&!rows&&!v.provisional)throw new Error('native_manifest_required');
+  if(v.stage==='study'&&rows&&Array.isArray(rows)&&!v.provisional)throw new Error('native_manifest_required');
+  if(v['native-manifest']&&(!rows||Array.isArray(rows)||!Array.isArray(rows.requests)))throw new Error('invalid_manifest');
   await output(stagePlan(acquired,{stage:v.stage,translations,rows,policy:environmentLanguagePolicy()}));
  }else if(command==='price')await output(priceStage(await read(v.input),await read(v['pilot-usage'])));
  else if(command==='run'){

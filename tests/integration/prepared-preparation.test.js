@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {libraryDB} from '../helpers/library-db.js';
 import {preparedInputs,allDirections} from '../helpers/prepared-edition.js';
+import {inspectorManifest} from '../../api/utils/prepared-editions/compiler.js';
 import {artifact} from '../../api/utils/prepared-editions/core.js';
 import {poolInventory,acquireEdition,stagePlan,priceStage,executeStage,finishTranslations,finishEdition} from '../../api/utils/prepared-editions/preparation.js';
 import {reservePlanBudget,budgetedGenerate} from '../../api/utils/prepared-editions/budget.js';
@@ -22,7 +23,8 @@ test('offline pipeline acquires from server pool, prepares translations then nat
  const options={policy:allDirections,path:join(dir,'translations.json'),review:review(stage,200000),database,apiKey:'test',generateTranslation:async(doc,{target,generationRequest})=>{calls++;assert.equal(generationRequest.model,stage.tasks[0].body.model);return {content:{lines:fixture.translations[target].lines,sourceNotes:[]},actualMicros:1};}};
  const checkpoint=await executeStage(acquired,stage,options);assert.equal(checkpoint.state,'ready');assert.equal(calls,4);
  await executeStage(acquired,stage,options);assert.equal(calls,4,'resume must not submit twice');
- const translations=finishTranslations(acquired,stage,checkpoint),study=stagePlan(acquired,{stage:'study',translations,policy:allDirections});
+ const translations=finishTranslations(acquired,stage,checkpoint),{rows:ignored,...exported}=inspectorManifest(acquired.doc,translations);
+ const native=JSON.parse(JSON.stringify(exported)),study=stagePlan(acquired,{stage:'study',translations,rows:native,policy:allDirections});
  const studyOptions={policy:allDirections,path:join(dir,'study.json'),review:review(study,500000),database,apiKey:'test',translations,
   generateBatch:async(doc,t,selections)=>({content:{items:selections.map(s=>({id:s.id,meaning:'hello',context:'greeting',grammar:'',uncertainty:'',sourceQuote:s.text}))},actualMicros:1}),
   generateSingleton:async(doc,t,s)=>({content:{meaning:'hello',context:'greeting',grammar:'',uncertainty:'',sourceQuote:s.text},actualMicros:1})};
@@ -83,4 +85,19 @@ test('reviewed files cannot reduce conservative task reservations or drift body/
   const forged=structuredClone(stage);mutate(forged);forged.plan=planTasks(forged.tasks);
   await assert.rejects(executeStage(acquired,forged,{review:review(forged,0),policy:allDirections,apiKey:'test',database:{transaction:()=>assert.fail('DB admission')},generateTranslation:()=>assert.fail('provider')}),{code:'preparation_plan_changed'});
  }
+});
+test('native exported-shaped manifest is an explicit CLI input; provisional enumeration is estimate-only',async t=>{
+ const {doc,spec,translations,manifest}=preparedInputs(),dir=await mkdtemp(join(tmpdir(),'prepared-native-cli-'));t.after(()=>rm(dir,{recursive:true,force:true}));
+ const {writeFile}=await import('node:fs/promises'),{execFile}=await import('node:child_process'),{promisify}=await import('node:util'),exec=promisify(execFile);
+ const acquired={version:1,doc,spec:{...spec,acquisitionReview:{reference:'test-only',selectionRevision:'test',allOrdinaryProviderPathsApproved:true}},acquisitionHash:digest('native-cli')};
+ for(const [name,value] of [['acquired',acquired],['translations',translations],['native',manifest]])await writeFile(join(dir,name+'.json'),JSON.stringify(value));
+ const env={...process.env,LYRICA_TRANSLATION_DIRECTIONS:JSON.stringify(allDirections.translation),LYRICA_EXPLANATION_DIRECTIONS:JSON.stringify(allDirections.explanation)};
+ const args=['scripts/prepared-editions.mjs','plan','--input',join(dir,'acquired.json'),'--stage','study','--translations',join(dir,'translations.json')];
+ const native=JSON.parse((await exec(process.execPath,[...args,'--native-manifest',join(dir,'native.json')],{env,maxBuffer:10_000_000})).stdout);
+ assert.deepEqual(native.manifest,manifest);assert.equal(Object.hasOwn(native.manifest,'rows'),false);
+ const legacy=JSON.parse((await exec(process.execPath,[...args,'--native-rows',join(dir,'native.json')],{env,maxBuffer:10_000_000})).stdout);assert.equal(legacy.plan.id,native.plan.id);
+ await assert.rejects(exec(process.execPath,args,{env}),e=>e.stderr.includes('native_manifest_required'));
+ const provisional=JSON.parse((await exec(process.execPath,[...args,'--provisional'],{env,maxBuffer:10_000_000})).stdout);assert.ok(provisional.manifest.rows);
+ await assert.rejects(executeStage(acquired,provisional,{review:review(provisional,0),policy:allDirections,apiKey:'test',translations,database:{transaction:()=>assert.fail('budget')},generateBatch:()=>assert.fail('provider')}),{code:'native_manifest_required'});
+ await assert.rejects(async()=>finishEdition(acquired,provisional,{state:'ready',planID:provisional.plan.id},translations),{code:'native_manifest_required'});
 });

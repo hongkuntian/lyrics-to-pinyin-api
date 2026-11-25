@@ -46,11 +46,12 @@ export function stagePlan(acquired,{stage,translations=null,rows=null,policy}){
 export function priceStage(stage,pilotUsage,{retryAllowance=0}={}){
  const models=new Set(stage.tasks.map(t=>t.body.model));if(models.size>1)fail('mixed_model_plan',422);
  const model=[...models][0],rates=modelPolicy(model);if(!rates&&stage.tasks.length)fail('generation_configuration_unavailable',503);
- return {...pricePlan(stage.plan,{pilotUsage,rates:rates??{input:0,output:0},retryAllowance}),stage:stage.stage,documentID:stage.documentID,sourceHash:stage.sourceHash,model:model??null};
+ return {estimateOnly:Boolean(stage.manifest?.rows),...pricePlan(stage.plan,{pilotUsage,rates:rates??{input:0,output:0},retryAllowance}),stage:stage.stage,documentID:stage.documentID,sourceHash:stage.sourceHash,model:model??null};
 }
 export async function executeStage(acquired,stage,{path,review,database,apiKey,translations=null,generateTranslation=generate,generateBatch=generateLine,generateSingleton=generateExplanation,policy=environmentLanguagePolicy()}={}){
  requirePreparationRights(acquired.spec,acquired.doc.selectionRevision);
  if(stage.acquisitionHash!==acquired.acquisitionHash||stage.documentID!==acquired.doc.id||stage.sourceHash!==acquired.doc.sourceHash)fail('source_changed',409);
+ if(stage.stage==='study'&&(!stage.manifest||Object.hasOwn(stage.manifest,'rows')))fail('native_manifest_required',409);
  const expected=stagePlan(acquired,{stage:stage.stage,translations,rows:stage.manifest,policy});
  if(canonicalJSON(expected)!==canonicalJSON(stage))fail('preparation_plan_changed',409);
  const {plan}=stage;
@@ -74,6 +75,7 @@ export function finishTranslations(acquired,stage,checkpoint){
  return acceptedTranslations(acquired.doc,stage.tasks.map(t=>({target:t.target,content:checkpoint.tasks.find(r=>r.id===t.id)?.content})));
 }
 export function finishEdition(acquired,stage,checkpoint,translations){
+ if(!stage.manifest||Object.hasOwn(stage.manifest,'rows'))fail('native_manifest_required',409);
  if(checkpoint.state!=='ready'||checkpoint.planID!==stage.plan.id)fail('preparation_incomplete',409);
  const studyArtifacts=stage.tasks.map(t=>studyArtifact(acquired.doc,translations,t,{content:checkpoint.tasks.find(r=>r.id===t.id)?.content}));
  const b=assembleBundle({doc:acquired.doc,translations,manifest:stage.manifest,studyArtifacts,spec:acquired.spec});return validateBundle(b);

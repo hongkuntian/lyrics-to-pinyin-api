@@ -23,7 +23,7 @@ test('exact same-language original serves as translation; unsupported directions
  assert.throws(()=>acceptedTranslations(doc,[]),/translation_incomplete/);
  const {translations,manifest}=preparedInputs();assert.equal(translations.en.identity,true);assert.equal(translations.en.lines[0].lyricText,'Hi');
  assert.throws(()=>studyTasks(doc,translations,manifest,languagePolicy()),/unsupported_direction/);
- assert.throws(()=>inspectorManifest(doc,translations,manifest.rows.slice(1)),/inspector_rows_incomplete/);
+ assert.throws(()=>inspectorManifest(doc,translations,inspectorManifest(doc,translations).rows.slice(1)),/inspector_rows_incomplete/);
 });
 test('native request-only manifests honor hidden identity layers and require complete offered language contexts',()=>{
  const {doc,translations,manifest}=preparedInputs();

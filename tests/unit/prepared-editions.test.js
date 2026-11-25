@@ -43,3 +43,20 @@ test('publication requires the real native LyricsResponse decoding fields and ne
  }
  for(const mutate of [d=>{d.response.song.title.romanized=42;},d=>{d.response.metadata.timestamp=null;},d=>{d.response.lines[0].romanized=null;},d=>{d.structure.occurrences[0].sourceText='other';}])assert.throws(()=>validateBundle(rewrite(mutate)),/invalid_publication/);
 });
+test('present optional native DTOs are validated, and valid recording metadata is retained',()=>{
+ const rewrite=mutate=>{const b=bundle(),a=b.artifacts[0];mutate(a.content);b.artifacts[0]=artifact(a.kind,a.content,a.selector);b.coverage.requiredArtifactIDs=b.artifacts.map(a=>a.id);b.editionID=editionIdentity(b);return b;};
+ for(const field of ['recording_match','catalog_resolution','language_details','timing_quality','timing_correction'])assert.throws(()=>validateBundle(rewrite(d=>{d.response.metadata[field]={};})),/invalid_publication/,field);
+ for(const field of ['song_details','provider_translation','lyric_structure'])assert.throws(()=>validateBundle(rewrite(d=>{d.response[field]={};})),/invalid_publication/,field);
+ const b=rewrite(d=>{
+  d.response.metadata.recording_match={method:'catalog_id',catalog_id:'1817103029',artist:'Test',title:'Test',duration:10};
+  d.response.metadata.language_details={version:1,primary:'en',languages:['en'],scripts:['Latn'],mixed:false,confidence:'high',pronunciation_basis:'source',lines:[]};
+  d.response.song_details={source_id:'1',source:'QQMusicAPI',credits:[{role:'composer',contributors:['Test'],source:'QQMusicAPI'}]};
+  d.response.provider_translation={language:'en',source:'QQMusicAPI',kind:'provider',lines:[{sourceID:'L0001',sourceText:'Hi',text:'Hi',original:'Hi'}]};
+ });assert.equal(validateBundle(b),b);
+});
+test('trusted translation imports match native speaker turns, prefix text and source-note evidence',()=>{
+ const b=bundle({speaker:true});assert.equal(validateBundle(b),b);
+ const rewrite=mutate=>{const x=structuredClone(b),i=x.artifacts.findIndex(a=>a.kind==='translation'&&a.selector.target==='fr'),a=x.artifacts[i];mutate(a.content);x.artifacts[i]=artifact(a.kind,a.content,a.selector);x.coverage.requiredArtifactIDs=x.artifacts.map(a=>a.id);x.editionID=editionIdentity(x);return x;};
+ const withNote=rewrite(v=>{v.sourceNotes=[{sourceID:'L0001',sourceQuote:'Hi',kind:'ambiguous_reading',explanation:'A greeting.'}];});assert.equal(validateBundle(withNote),withNote);
+ for(const mutate of [v=>{v.lines[0].startsTurn=false;},v=>{v.lines[0].text='Hi';},v=>{v.lines[0].text='Bob: Hi';},v=>{v.sourceNotes=[{}];},v=>{v.sourceNotes=[{sourceID:'L0001',sourceQuote:'Other',kind:'ambiguous_reading',explanation:'A greeting.'}];}])assert.throws(()=>validateBundle(rewrite(mutate)),/invalid_publication/);
+});

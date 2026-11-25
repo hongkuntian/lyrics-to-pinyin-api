@@ -38,10 +38,14 @@ export function validateBundle(b){
  if(docs.length!==1||manifests.length!==1||docs[0].content.id!==b.documentID||docs[0].content.sourceHash!==b.sourceHash||c.nativeManifestHash!==manifests[0].id)bad();
  const d=docs[0].content,p=d.response?.metadata?.lyric_timing;
  try{validatePreparedDocumentWire(d);}catch{bad();}
+ if(d.response.song.duration!=null&&Math.abs(b.display.duration-d.response.song.duration)>3)bad();
+ const match=d.response.metadata.recording_match,resolution=d.response.metadata.catalog_resolution;
+ if(match&&(match.catalog_id!==b.documentVariant.catalogID||Math.abs(b.display.duration-match.duration)>3))bad();
+ if(resolution&&(resolution.version!=='catalog-recording-1'||!['same_catalog_id','catalog_equivalent','reviewed_alias'].includes(resolution.method)||resolution.requested.catalog_id!==b.documentVariant.catalogID||resolution.requested.storefront!==b.documentVariant.storefront||!/^apple:\d{1,20}$/.test(resolution.canonical_recording_id)||!resolution.catalog_items.length||resolution.catalog_items.length>24||!resolution.catalog_items.some(i=>i.catalog_id===b.documentVariant.catalogID)||resolution.catalog_items.some(i=>!/^\d{1,20}$/.test(i.catalog_id)||!/^[a-z]{2}$/.test(i.storefront))))bad();
  if(d.recordingKey!==digest({catalogID:b.documentVariant.catalogID,storefront:b.documentVariant.storefront})||p?.recordingID!==b.documentVariant.catalogID)bad();
  if(r.source?.provider!==independentProvider(d.response?.metadata?.source)||r.source?.itemID!==String(d.response?.song?.id)||!validTimingProvenance(p)||!vocalCoverage(d.response?.lines,{duration:d.response?.song?.duration,durationResolution:p.durationResolution??0,provenance:true}).complete)bad();
  const m=manifests[0].content;
- if(m.version!==1||m.documentID!==b.documentID||m.sourceHash!==b.sourceHash||!Array.isArray(m.requests)||!m.requests.length||m.requests.length>20000)bad();
+ if(!exact(m,['version','documentID','sourceHash','requests'])||m.version!==1||m.documentID!==b.documentID||m.sourceHash!==b.sourceHash||!Array.isArray(m.requests)||!m.requests.length||m.requests.length>20000)bad();
  // Required coverage is derived from the exact manifest, not a boolean supplied by a publisher.
  const requests=m.requests.map(q=>canonicalJSON({kind:q.kind,selector:q.selector}));
  if(new Set(requests).size!==requests.length)bad();
@@ -55,9 +59,12 @@ export function validateBundle(b){
   const v=a.content;
   if(a.kind==='translation'){
    if(v.recipe!==translationRecipe(v.target)||v.sourceHash!==b.sourceHash||v.notesLanguage!==v.target||!Array.isArray(v.sourceNotes)||!Array.isArray(v.lines)||v.lines.length!==d.structure.occurrences.length)bad();
-   for(const [i,line] of v.lines.entries()){const o=d.structure.occurrences[i];if(line.sourceID!==o.sourceID||typeof line.lyricText!=='string'||!line.lyricText.trim()||line.lyricText.length>4000||/[\r\n\v\f\u0085\u2028\u2029]/.test(line.lyricText)||typeof line.text!=='string'||line.speakerID!==o.speakerID||typeof line.startsTurn!=='boolean')bad();
+   for(const [i,line] of v.lines.entries()){const o=d.structure.occurrences[i];if(line.sourceID!==o.sourceID||typeof line.lyricText!=='string'||!line.lyricText.trim()||line.lyricText.length>4000||/[\r\n\v\f\u0085\u2028\u2029]/.test(line.lyricText)||typeof line.text!=='string'||line.speakerID!==o.speakerID||line.startsTurn!==o.startsTurn)bad();
+    const speaker=d.structure.speakers.find(s=>s.id===o.speakerID),expectedText=o.startsTurn?`${speaker?.displayName??''}: ${line.lyricText}`:line.lyricText;
+    if(line.text!==expectedText||line.text.length>12000)bad();
     if((v.identity||v.target===d.response.song.language)&&(v.target!==d.response.song.language||v.identity!==true||line.lyricText!==o.lyricText))bad();
    }
+   for(const note of v.sourceNotes){const o=d.structure.occurrences.find(o=>o.sourceID===note?.sourceID);if(!exact(note,['sourceID','sourceQuote','kind','explanation'])||!o||typeof note.sourceQuote!=='string'||!note.sourceQuote||!o.sourceText.includes(note.sourceQuote)||!['uncertain_source','ambiguous_reading'].includes(note.kind)||typeof note.explanation!=='string'||!note.explanation||note.explanation.length>4000)bad();}
   }
   if(a.kind==='batch'&&(a.content.recipe!==a.selector.recipe||canonicalJSON(a.content.studyText)!==canonicalJSON(a.selector.studyText)||canonicalJSON(a.content.manifest)!==canonicalJSON(a.selector.manifest)||a.content.explanationLanguage!==a.selector.explanationLanguage))bad();
   if(['batch','explanation'].includes(a.kind)){
