@@ -180,21 +180,22 @@ function matchesTitleLabel(value,song) {
  const award=/^(.+?)\s*(?:\([0-9]{1,3}届格莱美获奖歌曲\)|（[0-9]{1,3}届格莱美获奖歌曲）)$/u.exec(value);
  return !!award&&matchesCoreTitle(award[1].trim(),song);
 }
-function matchesSheetTitle(value,song,context) {
+function matchesSheetTitle(value,song,context,sourceOnly=false) {
  if(matchesTitleLabel(value,song))return true;
- // This source-owned label agrees with an explicit request classification.
- // Only a fresh exact catalog admission can authorize it for this source;
- // serialized DTO fields cannot grant permission or change catalog matching.
- if(!explicitSheets.has(song)||context.explicit!==true||song.explicit===false||!compatible(song,context))return false;
+ // A source-only preview may trust an explicit flag from freshly read exact
+ // QQ details. Automatic matching still requires the original catalog proof.
+ const allowsCaption=sourceOnly?song.explicit===true
+  :explicitSheets.has(song)&&context.explicit===true&&song.explicit!==false&&compatible(song,context);
+ if(!allowsCaption)return false;
  const label=/^(.+?)\s*(?:\(Explicit\)|（Explicit）)$/u.exec(value);
  return !!label&&matchesCoreTitle(label[1].trim(),song);
 }
-function validateHeaders(raw,song,context) {
+function validateHeaders(raw,song,context,sourceOnly) {
  const labels=[];
  for(const match of raw.matchAll(/^\s*\[(ar|al|ti):([^\]\r\n]*)\]\s*$/gim)) {
   const kind=match[1].toLowerCase(),value=match[2].trim();if(!value)continue;
   if(!scalar(value,kind==='ar'?2048:1000)||labels.length>=32)throw mismatch();
-  if(kind==='ar'&&!matchesArtistLabel(value,song)||kind==='ti'&&!matchesSheetTitle(value,song,context))throw mismatch();
+  if(kind==='ar'&&!matchesArtistLabel(value,song)||kind==='ti'&&!matchesSheetTitle(value,song,context,sourceOnly))throw mismatch();
   // Sheet release labels are informational and never replace song.album.
   labels.push({kind,value:match[2]});
  }
@@ -235,17 +236,17 @@ function checkedLyric(response,song,qrc) {
 async function lyricPayload(song,qrc,context) {
  return checkedLyric(await service('music.musichallSong.PlayLyricInfo','GetPlayLyricInfo',lyricParam(song.id,qrc),context),song,qrc);
 }
-async function fetchLyrics(song,context,initialResponse) {
+async function fetchLyrics(song,context,initialResponse,sourceOnly=false) {
  try {
   const hex=initialResponse===undefined?await lyricPayload(song,1,context):checkedLyric(initialResponse,song,1);
   if(hex) {
-   const raw=decryptQRC(hex),body=qrcBody(raw),labels=body===null?[]:validateHeaders(body,song,context);
+   const raw=decryptQRC(hex),body=qrcBody(raw),labels=body===null?[]:validateHeaders(body,song,context,sourceOnly);
    const parsed=parseQRC(raw,{songId:song.id,duration:song.duration,durationResolution:1});
    if(parsed){const result=clean({...parsed,providerLyricLabels:labels},song);if(result?.lines.length)return result;}
   }
  }catch(error){if(error.name==='AbortError'||context.signal?.aborted||error.code==='recording_mismatch')throw error;}
  cancelled(context.signal);const hex=await lyricPayload(song,0,context);if(!hex)return null;
- let raw;try{raw=decryptQRC(hex);}catch{throw providerError();}const labels=validateHeaders(raw,song,context),lines=parseLRC(raw);
+ let raw;try{raw=decryptQRC(hex);}catch{throw providerError();}const labels=validateHeaders(raw,song,context,sourceOnly),lines=parseLRC(raw);
  if(lines.length>250||lines.some(l=>!scalar(l.text,2000)||l.timestamp!==null&&(!Number.isFinite(l.timestamp)||l.timestamp<0||l.timestamp>song.duration)))throw mismatch();
  const result=clean({source:'qq',songId:song.id,lines,providerLyricLabels:labels},song);return result?.lines.length?result:null;
 }
@@ -423,7 +424,7 @@ export class QQMusicAPI extends BaseMusicAPI {
   const {song,lyric}=await readSongAndLyric(value,context);
   if(song?.id!==value)return null;
   try {
-   const lyrics=await fetchLyrics(song,context,lyric);
+   const lyrics=await fetchLyrics(song,context,lyric,true);
    return lyrics?{song,lyrics}:null;
   }catch(error){
    if(error.code==='recording_mismatch')return null;

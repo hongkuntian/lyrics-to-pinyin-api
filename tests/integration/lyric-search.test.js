@@ -89,6 +89,25 @@ test('QQ preview preserves source cues without trusting the playback hints or a 
   assert.equal(wrong.statusCode,404);
 });
 
+test('manual results retain each provider’s best candidate within the ranked limit',async()=>{
+  const service=fixture({
+    searchLRCLIB:async()=>Array.from({length:22},(_,i)=>({...record,id:i+1,duration:280})),
+    searchNetEase:async()=>[{id:40,name:'Alternate name',artists:[{name:'Another performer'}],duration:287000}],
+    searchKugou:async()=>[{id:'41',title:'Alternate name',artist:'Another performer',duration:290}],
+    searchQQ:async()=>[{id:'42',title:'Alternate name',artist:'Another performer',duration:300},
+      {id:'43',title:'父親 (Live)',artist:'筷子兄弟',duration:300}]
+  });
+  const request={action:'search_lyrics',query:'父亲',hints};
+  const recovery=await call(service,{...request,providers:['lrclib','netease','kugou']});
+  assert.equal(recovery.body.candidates.length,20);
+  assert.ok(recovery.body.candidates.every(candidate=>candidate.provider==='lrclib'));
+  const manual=await call(service,{...request,providers:['lrclib','netease','kugou','qq']});
+  assert.equal(manual.body.candidates.length,20);
+  assert.deepEqual(manual.body.candidates.filter(candidate=>candidate.provider==='lrclib').map(candidate=>candidate.itemID),
+    Array.from({length:17},(_,i)=>String(i+1)));
+  assert.deepEqual(manual.body.candidates.slice(17).map(candidate=>candidate.itemID),['43','40','41']);
+});
+
 test('Kugou preview reacquires the exact provider item using an untrusted discovery query',async()=>{
   let captured;
   const service=fixture({previewKugou:async(id,signal,context)=>{

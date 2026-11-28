@@ -113,6 +113,19 @@ async function previewQQ(id,signal) {
   return candidate&&lines?{...candidate,lines,...sourceEvidence(raw.lyrics,lines)}:null;
 }
 
+function limitSearchResults(ranked,providers) {
+  const limit=20;
+  if(!providers.includes('qq')||ranked.length<=limit)return ranked.slice(0,limit);
+  // The QQ opt-in serves manual comparison. Keep each returning source
+  // visible in the provider filter even when one provider dominates the rank.
+  const retained=new Set(providers.map(provider=>ranked.find(candidate=>candidate.provider===provider)).filter(Boolean));
+  for(const candidate of ranked) {
+    if(retained.size===limit)break;
+    retained.add(candidate);
+  }
+  return ranked.filter(candidate=>retained.has(candidate));
+}
+
 /// Shared by explicit learning-source admission and the independent preview API.
 /// Returned words/labels come from fixed providers, never caller supplied text.
 export function createLyricSourceLoader(dependencies={}) {
@@ -158,7 +171,8 @@ export function createLyricSearchService(dependencies={}) {
       if(unavailable.length===pages.length)return res.status(502).json({version:1,code:'provider_unavailable'});
       const unique=new Map();
       for(const candidate of pages.flatMap(p=>p.candidates))unique.set(candidate.provider+':'+candidate.itemID,rank(candidate,body.hints));
-      const candidates=[...unique.values()].sort((a,b)=>Number(b.namesMatch)-Number(a.namesMatch)||b.score-a.score||a.provider.localeCompare(b.provider)||a.itemID.localeCompare(b.itemID,'en',{numeric:true})).slice(0,20);
+      const ranked=[...unique.values()].sort((a,b)=>Number(b.namesMatch)-Number(a.namesMatch)||b.score-a.score||a.provider.localeCompare(b.provider)||a.itemID.localeCompare(b.itemID,'en',{numeric:true}));
+      const candidates=limitSearchResults(ranked,providers);
       // Keep metadata choices even when several complete transcriptions exceed
       // the transport budget; those words can be requested explicitly later.
       let bytes=0;for(const c of candidates){bytes+=Buffer.byteLength(JSON.stringify(c));if(bytes>500000){delete c.lines;delete c.lyricStructure;}}

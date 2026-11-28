@@ -81,6 +81,19 @@ test('QQ manual preview resolves the exact ID and preserves measured cues indepe
  assert.equal(await api.previewLyrics('123',wrongLyrics),null);
 });
 
+test('QQ manual preview accepts an explicit caption only with a matching explicit source',async()=>{
+ const api=new QQMusicAPI();
+ for(const explicit of [true,false,undefined]) {
+  const lyrics={123:{hex:explicitQRC.ascii}};
+  const ctx=context([candidate('123',explicit===undefined?{}:{explicit})],lyrics,{explicit:true});
+  const preview=await api.previewLyrics('123',ctx);
+  assert.equal(preview?.lyrics.timingSource.source,explicit===true?'qq:123:qrc':undefined);
+  assert.equal(ctx.calls.length,1);
+ }
+ const ctx=context([candidate('123',{explicit:true})],{123:{hex:explicitQRC.live}});
+ assert.equal(await api.previewLyrics('123',ctx),null);
+});
+
 test('QQ soundtrack square brackets recover the unchanged measured sheet through search and fresh source IDs',async()=>{
  const row=candidate(),plain=context([row],{}, {fastRows:[row]});
  const expected=(await search(plain)).lyricsData;
