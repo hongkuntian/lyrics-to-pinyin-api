@@ -65,27 +65,33 @@ export async function claimReviewOperation(database,id) {
       WHERE id=$1 AND kind<>'generation' AND state='reserved' RETURNING *`,[id]);
   });
 }
-export async function finishReviewOperation(database,id,{actualMicros,providerID=null,errorCode=null}) {
+// The caller holds the library settings lock. Study also commits its output
+// and settles the learner's allowance in this transaction.
+export async function settleSubmittedOperation(db,id,{actualMicros,providerID=null,errorCode=null}) {
   if(actualMicros!==null&&(!Number.isSafeInteger(actualMicros)||actualMicros<0)||
     providerID!==null&&(typeof providerID!=='string'||providerID.length>200)||errorCode!==null&&(typeof errorCode!=='string'||errorCode.length>100))
     throw new LibraryError('invalid_usage',400);
+  const op=await first(db,"SELECT * FROM library_spend_operations WHERE id=$1 AND kind<>'generation' FOR UPDATE",[id]);
+  if(!op) throw new LibraryError('operation_not_found',404);
+  if(op.state==='settled') {
+    if(Number(op.accounted_micros)!==actualMicros||op.provider_id!==providerID) throw new LibraryError('operation_settlement_conflict');
+    return op.error_code;
+  }
+  if(!['submitted','unknown'].includes(op.state)) throw new LibraryError('operation_not_submitted');
+  const charged=actualMicros??Number(op.reserved_micros);
+  if(charged>Number(op.reserved_micros)||errorCode==='provider_configuration_changed') {
+    await db.query('UPDATE library_settings SET enabled=false,review_enabled=false WHERE id=1');
+    if(charged>Number(op.reserved_micros)) errorCode='cost_reservation_exceeded';
+  }
+  await db.query(`UPDATE library_spend_operations SET state=$2,accounted_micros=$3,provider_id=$4,error_code=$5,
+    settled_at=CASE WHEN $2='settled' THEN now() ELSE NULL END WHERE id=$1`,
+    [id,actualMicros===null?'unknown':'settled',charged,providerID,errorCode]);
+  return errorCode;
+}
+export async function finishReviewOperation(database,id,result) {
   return database.transaction(async db=> {
     await db.query('SELECT id FROM library_settings WHERE id=1 FOR UPDATE');
-    const op=await first(db,"SELECT * FROM library_spend_operations WHERE id=$1 AND kind<>'generation' FOR UPDATE",[id]);
-    if(!op) throw new LibraryError('operation_not_found',404);
-    if(op.state==='settled') {
-      if(Number(op.accounted_micros)!==actualMicros||op.provider_id!==providerID) throw new LibraryError('operation_settlement_conflict');
-      return;
-    }
-    if(!['submitted','unknown'].includes(op.state)) throw new LibraryError('operation_not_submitted');
-    const charged=actualMicros??Number(op.reserved_micros);
-    if(charged>Number(op.reserved_micros)||errorCode==='provider_configuration_changed') {
-      await db.query('UPDATE library_settings SET enabled=false,review_enabled=false WHERE id=1');
-      if(charged>Number(op.reserved_micros)) errorCode='cost_reservation_exceeded';
-    }
-    await db.query(`UPDATE library_spend_operations SET state=$2,accounted_micros=$3,provider_id=$4,error_code=$5,
-      settled_at=CASE WHEN $2='settled' THEN now() ELSE NULL END WHERE id=$1`,
-      [id,actualMicros===null?'unknown':'settled',charged,providerID,errorCode]);
+    await settleSubmittedOperation(db,id,result);
   });
 }
 export async function releaseReviewOperation(database,id) {

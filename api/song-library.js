@@ -266,11 +266,15 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
         if(row.state==='queued'&&!apiKey)throw new LibraryError('generation_not_configured',503);
         if(row.state==='queued')waitUntilFn((async()=>{
           if(!await claimExplanation(db.db,row.id))return;
+          let result;
           try {
             if(batch&&!row.generation_request)throw new LibraryError('generation_configuration_unavailable');
-            const result=await (batch?lineFn:explainFn)(doc,saved,batch?selections:selection,{apiKey,explanationLanguage:row.explanation_language,
-            generationRequest:row.generation_request??explanationBody(doc,saved,selection,'en',{model:LEGACY_MODEL})});await finishExplanation(db.db,row.id,result); }
-          catch(error) { await finishExplanation(db.db,row.id,{actualMicros:error.actualMicros??null,response:error.providerResponse??null,errorCode:error.code??'worker_interrupted'}); }
+            result=await (batch?lineFn:explainFn)(doc,saved,batch?selections:selection,{apiKey,explanationLanguage:row.explanation_language,
+              generationRequest:row.generation_request??explanationBody(doc,saved,selection,'en',{model:LEGACY_MODEL})});
+          }catch(error) {
+            result={actualMicros:error.actualMicros??null,response:error.providerResponse??null,errorCode:error.code??'worker_interrupted'};
+          }
+          await finishExplanation(db.db,row.id,result);
         })().catch(()=>logger.error('study_worker_storage_failure',{jobID:row.id})));
         res.setHeader('Retry-After','3');return send(202,{state:'preparing',phase:row.state});
       }

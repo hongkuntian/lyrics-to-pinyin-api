@@ -76,6 +76,41 @@ test('interrupted Study stops waiting, restores membership allowance and never r
  release();await Promise.all(f.pending);
  assert.equal((await f.call({...f.request,readOnly:true})).body.state,'unknown');
  assert.equal((await membership.snapshot('reader-a')).allowances.study.remaining,80);
+ const spend=(await f.db.query("SELECT state,accounted_micros FROM library_spend_operations WHERE kind='study_explanation'")).rows[0];
+ assert.equal(spend.state,'settled');assert.equal(Number(spend.accounted_micros),2000);
+});
+test('a failed Study output write rolls back provider spend and allowance settlement together',async t=>{
+ const f=await fixture(t);
+ await f.db.query("UPDATE library_users SET access_kind='guest' WHERE id='reader-a'");
+ await activateMembership(f.store.db,'reader-a');
+ await f.db.exec(`CREATE FUNCTION fail_study_write() RETURNS trigger LANGUAGE plpgsql AS $$
+   BEGIN RAISE EXCEPTION 'injected Study storage failure'; END $$;
+   CREATE TRIGGER fail_study_write BEFORE UPDATE ON study_explanations
+   FOR EACH ROW WHEN (NEW.state='ready') EXECUTE FUNCTION fail_study_write();`);
+ assert.equal((await f.call({...f.request,allowGeneration:true})).code,202);
+ await Promise.all(f.pending);
+ const inspect=async()=> (await f.db.query(`SELECT e.state AS study,s.state AS spend,u.state AS allowance,e.content
+   FROM study_explanations e JOIN library_spend_operations s ON s.id=e.id JOIN membership_usage u ON u.operation_id=e.id`)).rows[0];
+ assert.deepEqual(await inspect(),{study:'running',spend:'submitted',allowance:'reserved',content:null});
+ await f.db.query("UPDATE library_spend_operations SET submitted_at=now()-interval '7 minutes' WHERE kind='study_explanation'");
+ const reads=await Promise.all([f.call({...f.request,readOnly:true}),f.call({...f.request,readOnly:true})]);
+ assert.ok(reads.every(read=>read.body.state==='unknown'));
+ assert.deepEqual(await inspect(),{study:'unknown',spend:'unknown',allowance:'released',content:null});
+ assert.equal(f.calls(),1);
+});
+test('Study retains the provider charge and releases the allowance when spend exceeds its reservation',async t=>{
+ const f=await fixture(t,{explainFn:async()=>({content,actualMicros:5_000_000,response:{id:'over-budget'}})});
+ await f.db.query("UPDATE library_users SET access_kind='guest' WHERE id='reader-a'");
+ await activateMembership(f.store.db,'reader-a');
+ assert.equal((await f.call({...f.request,allowGeneration:true})).code,202);
+ await Promise.all(f.pending);
+ const cached=await f.call({...f.request,readOnly:true});
+ assert.equal(cached.body.state,'failed');assert.equal(cached.body.code,'cost_reservation_exceeded');
+ const row=(await f.db.query(`SELECT e.content,o.accounted_micros,u.state AS allowance,l.enabled
+   FROM study_explanations e JOIN library_spend_operations o ON o.id=e.id
+   JOIN membership_usage u ON u.operation_id=e.id CROSS JOIN library_settings l`)).rows[0];
+ assert.equal(Number(row.accounted_micros),5_000_000);assert.equal(row.content,null);
+ assert.equal(row.allowance,'released');assert.equal(row.enabled,false);
 });
 test('authorization, stale revisions and invalid selections issue no explanation request',async t=>{
  const f=await fixture(t);

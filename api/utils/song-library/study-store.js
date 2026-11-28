@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {LibraryError,SongLibraryStore} from './store.js';
 import {selectedDocumentFromRow} from './selected-source.js';
-import {budget,checkBudget,checkEmergencyBudget,finishReviewOperation} from './spending.js';
+import {budget,checkBudget,checkEmergencyBudget,settleSubmittedOperation} from './spending.js';
 import {reserveMemberUsage,settleMemberUsage} from '../membership/store.js';
 const first=async(db,sql,args=[])=> (await db.query(sql,args)).rows[0]??null;
 export const publicExplanation=row=>({id:row.id,documentID:row.document_id,translationID:row.revision_id,sourceID:row.source_id,
@@ -86,12 +86,18 @@ export async function claimExplanation(database,id) {
   });
 }
 export async function finishExplanation(database,id,{content=null,actualMicros=null,response=null,errorCode=null}) {
-  // Settlement remains durable even if the later content write is interrupted.
-  // Re-entering cannot issue another paid provider request.
-  await finishReviewOperation(database,id,{actualMicros,providerID:response?.id??null,errorCode});
   await database.transaction(async db=>{
-    const row=await first(db,`UPDATE study_explanations SET state=$2,content=$3,error_code=$4 WHERE id=$1 AND state='running' RETURNING state`,
-      [id,content?'ready':actualMicros===null?'unknown':'failed',content?JSON.stringify(content):null,errorCode]);
-    if(row)await settleMemberUsage(db,id,row.state==='ready');
+    await db.query('SELECT id FROM library_settings WHERE id=1 FOR UPDATE');
+    // Recovery locks the Study row before touching spend. A late completion
+    // can reconcile a provider charge, while its published state stays final.
+    const row=await first(db,'SELECT state FROM study_explanations WHERE id=$1 FOR UPDATE',[id]);
+    if(!row)throw new LibraryError('operation_not_found',404);
+    const settledError=await settleSubmittedOperation(db,id,{actualMicros,providerID:response?.id??null,errorCode});
+    if(row.state!=='running')return;
+    const ready=content!==null&&actualMicros!==null&&settledError===null;
+    const state=ready?'ready':actualMicros===null?'unknown':'failed';
+    await db.query('UPDATE study_explanations SET state=$2,content=$3,error_code=$4 WHERE id=$1',
+      [id,state,ready?JSON.stringify(content):null,settledError]);
+    await settleMemberUsage(db,id,ready);
   });
 }
