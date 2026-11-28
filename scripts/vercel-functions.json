@@ -50,6 +50,10 @@
       ]
     },
     {
+      "entry": "api/shared-prepared-content.js",
+      "includeFiles": ["api/data/starter-songs.json"]
+    },
+    {
       "entry": "api/review-reports.js",
       "maxDuration": 300,
       "includeFiles": [
@@ -110,6 +114,10 @@
     {
       "src": "/api/song-library",
       "dest": "/api/song-library"
+    },
+    {
+      "src": "/api/shared-prepared-content",
+      "dest": "/api/shared-prepared-content"
     },
     {
       "src": "/api/review-reports",

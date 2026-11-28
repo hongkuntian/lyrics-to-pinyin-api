@@ -27,9 +27,9 @@ test('billing gateway retains membership authentication and notification signatu
  const member=createMockRes();await gateway({method:'POST',headers:{},body:{action:'status'},query:{_lyrica_endpoint:'membership'}},member);assert.equal(member.statusCode,401);
  const notification=createMockRes();await gateway({method:'POST',headers:{},body:{},query:{_lyrica_endpoint:'store-notifications'}},notification);assert.equal(notification.statusCode,400);
 });
-test('deployment retains eight functions, the daily reporting cron and no private queue consumers',()=>{
- assert.equal(manifest.entries.length,8);assert.equal(manifest.routes.length,9);
- assert.deepEqual(manifest.entries.map(e=>e.entry),['api/romanize.js','api/music-romanize.js','api/song-library.js','api/review-reports.js',
+test('deployment retains nine functions, the daily reporting cron and no private queue consumers',()=>{
+ assert.equal(manifest.entries.length,9);assert.equal(manifest.routes.length,10);
+ assert.deepEqual(manifest.entries.map(e=>e.entry),['api/romanize.js','api/music-romanize.js','api/song-library.js','api/shared-prepared-content.js','api/review-reports.js',
   'api/app-auth.js','api/live-lyrics.js','api/account.js','api/billing-gateway.js']);
  assert.deepEqual(manifest.entries.filter(e=>e.experimentalTriggers),[]);
  assert.deepEqual(manifest.crons,[{path:'/api/review-reports',schedule:'0 8 * * *'}]);

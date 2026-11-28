@@ -100,3 +100,31 @@ test('runtime DB projections return metadata/descriptors or exactly one requeste
  await preparedStore.withdraw(b.editionID,p.generation);assert.deepEqual(await preparedStore.all(),[]);
  assert.equal((await preparedStore.lookup(b.variants[0])).state,'withdrawn');
 });
+
+test('authenticated Sandbox readers reuse only live published content without generation or production identity access',async t=>{
+ const {db,store,preparedStore}=await setup(t),b=bundle(),p=await preparedStore.publish(b);
+ const token='a'.repeat(64),url='https://published.example/api/shared-prepared-content';
+ const {createSharedPreparedHandler}=await import('../../api/shared-prepared-content.js');
+ const {sharedPreparedReader}=await import('../../api/utils/prepared-editions/shared.js');
+ const publisher=createSharedPreparedHandler({env:{LYRICA_SHARED_PREPARED_TOKEN:token},store:preparedStore});
+ let calls=0;
+ const reader=sharedPreparedReader({LYRICA_STORE_ENVIRONMENT:'Sandbox',LYRICA_SHARED_PREPARED_TOKEN:token,LYRICA_SHARED_PREPARED_URL:url},async(input,options)=>{
+  calls++;assert.equal(input,url);
+  const r=reply();
+  await publisher({method:options.method,headers:{authorization:options.headers.Authorization},body:JSON.parse(options.body)},r);
+  return Response.json(r.body,{status:r.code});
+ });
+ const qa=createSongLibraryHandler({store,preparedStore:{all:async()=>[],lookup:async()=>null,edition:async()=>null},preparedReader:reader,
+  authStore:{authenticate:async()=>({id:'reader-a',isGuest:true})},generateFn:()=>assert.fail('unexpected generation'),
+  lineFn:()=>assert.fail('unexpected Study generation'),logger:{error(){}}});
+ const call=async(body,authorized=true)=>{const r=reply();await qa({method:'POST',headers:authorized?{authorization:'Bearer lyrica_s_test'}:{},body},r);return r;};
+ const before=await ledger(db),artifact={action:'prepared_artifact',...pinned(b,p),artifactID:b.artifacts[0].id};
+ assert.equal((await call(artifact,false)).code,401);
+ assert.equal(calls,0);
+ assert.equal((await call({action:'prepared_lookup',variant:b.variants[0],use:'read'})).body.edition.editionID,b.editionID);
+ const served=await call(artifact);
+ assert.equal(served.code,200);assert.deepEqual(served.body.artifact,b.artifacts[0]);
+ assert.deepEqual(await ledger(db),before);
+ await preparedStore.withdraw(b.editionID,p.generation);
+ assert.equal((await call(artifact)).body.code,'prepared_unavailable');
+});

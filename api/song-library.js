@@ -1,5 +1,6 @@
 import {PreparedEditionStore} from './utils/prepared-editions/store.js';
-import {preparedActions,preparedRequest} from './utils/prepared-editions/service.js';
+import {preparedActions} from './utils/prepared-editions/service.js';
+import {readPreparedContent,sharedPreparedReader} from './utils/prepared-editions/shared.js';
 import {withLyricsDelivery} from './utils/lyrics-delivery.js';
 import {isSpotifyRecording,spotifyBinding} from './utils/song-library/spotify-recording.js';
 import {withAppAuth} from './utils/app-auth/http.js';
@@ -45,7 +46,7 @@ export function lyricLoader(handler=createMusicRomanizeService()) {
 export function createSongLibraryService({store,loadLyrics=lyricLoader(),generateFn=generate,explainFn=generateExplanation,lineFn=generateLine,apiKey=process.env.OPENAI_API_KEY,
   selectionRevision=SELECTION_REVISION,waitUntilFn=waitUntil,logger=console,languagePolicy=null,pronunciationFn=annotationFor,pronunciationProfiles=enabledProfiles,
   lyricSourceNeedsRefreshFn=lyricSourceNeedsRefresh,loadSelectedSource=createLyricSourceLoader(),selectedSourceTimeoutMs=6000,
-  preparedStore,verifiedTerritory=async()=>null,
+  preparedStore,verifiedTerritory=async()=>null,preparedReader,
   translationAccess=(store,userID,documentID,options)=>admitLibraryTranslation(store.db,userID,documentID,options),randomIndex}={}) {
   const getStore=()=>store??new SongLibraryStore(database());
   const execute=(db,id,doc,observer=null)=>executeTranslationJob(db,id,{apiKey,generateFn,doc,observer});
@@ -71,7 +72,7 @@ export function createSongLibraryService({store,loadLyrics=lyricLoader(),generat
       if(input.allowGeneration&&(input.readOnly||input.resumeOnly)||input.readOnly&&input.resumeOnly)throw new LibraryError('invalid_request',400);
       const checkAccess=async doc=>{if(doc.selectedSourceCapsule||doc.selectedSource)await db.assertDocumentAccess(user.id,doc);};
       const generationCurrent=doc=>db.isGenerationDocumentCurrent?db.isGenerationDocumentCurrent(doc,selectionRevision):db.isCurrentDocument(doc.id,selectionRevision);
-      if(Object.hasOwn(preparedActions,input.action))return send(200,await preparedRequest(input,{store:preparedStore??new PreparedEditionStore(db.db),territory:await verifiedTerritory(user)}));
+      if(Object.hasOwn(preparedActions,input.action))return send(200,await readPreparedContent(input,{store:preparedStore??new PreparedEditionStore(db.db),territory:await verifiedTerritory(user),read:preparedReader??sharedPreparedReader()}));
       const policy=languagePolicy??environmentLanguagePolicy();
       if(input.delivery!==undefined&&input.delivery!=='progressive-v1')throw new LibraryError('invalid_request',400);
       const launch=async(job,doc,target)=>{

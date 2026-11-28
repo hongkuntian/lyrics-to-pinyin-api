@@ -18,7 +18,7 @@ async function sources(directory){
 }
 
 test('packaging routes no Spotify gateway and subscribes no private consumers',()=>{
- assert.equal(manifest.entries.length,8);assert.equal(manifest.routes.length,9);
+ assert.equal(manifest.entries.length,9);assert.equal(manifest.routes.length,10);
  assert.deepEqual(manifest.crons,[{path:'/api/review-reports',schedule:'0 8 * * *'}]);
  assert.equal(manifest.entries.flatMap(x=>x.experimentalTriggers??[]).length,0);
  assert.equal(manifest.entries.find(x=>x.entry==='api/song-library.js').maxDuration,300);
