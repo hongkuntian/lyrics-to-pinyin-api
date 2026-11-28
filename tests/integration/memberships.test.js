@@ -36,6 +36,36 @@ test('free accounts cannot generate; a guest without membership needs one, never
   assert.equal(Number((await db.query('SELECT count(*) AS n FROM membership_grants')).rows[0].n),0);
 });
 
+test('production excludes existing sandbox subscriptions from every Pro admission',async t=>{
+  const {db,member,appToken}=await fixture(t);
+  const input={activityID:'activity',state:{recordingID:'recording'}};
+  await db.query('UPDATE membership_settings SET live_enabled=true');
+  await member.recordTransaction('reader-a',transaction(appToken));
+  await db.query("UPDATE membership_subscriptions SET environment='Sandbox' WHERE user_id='reader-a'");
+  const snapshot=await member.snapshot('reader-a');
+  assert.equal(snapshot.tier,'free');
+  assert.equal(snapshot.allowances.study.remaining,0);
+  assert.equal(snapshot.libraryTranslations.unlimited,false);
+  assert.equal(snapshot.liveLyricsIncluded,false);
+  assert.equal(snapshot.preview.available,true);
+  await assert.rejects(db.transaction(tx=>reserveMemberUsage(tx,'reader-a',randomUUID(),'study')),{code:'membership_required'});
+  assert.equal(await admitLibraryTranslation(db,'reader-a','test-document'),'locked');
+  await assert.rejects(admitMemberRelay(db,'reader-a',input),{code:'membership_required'});
+});
+
+test('sandbox purchase, restore and notification cannot change an existing production subscription',async t=>{
+  const {db,member,appToken}=await fixture(t);
+  const production=transaction(appToken);
+  await member.recordTransaction('reader-a',production);
+  const sandbox={...production,environment:'Sandbox',revoked:true};
+  await assert.rejects(member.recordTransaction('reader-a',sandbox),{code:'purchase_environment_mismatch'});
+  await assert.rejects(member.recordTransaction('reader-b',sandbox,{restore:true}),{code:'purchase_environment_mismatch'});
+  await assert.rejects(member.applyNotification(randomUUID(),sandbox),{code:'purchase_environment_mismatch'});
+  assert.equal(await owner(db,production),'reader-a');
+  assert.equal((await member.snapshot('reader-a')).tier,'pro');
+  assert.equal((await member.snapshot('reader-b')).tier,'free');
+});
+
 test('every account has its own appAccountToken in the snapshot',async t=>{
   const {member,tokens}=await fixture(t);
   const a=await member.snapshot('reader-a'),b=await member.snapshot('reader-b');
@@ -156,7 +186,7 @@ test('Restore moves ownership but stale signed data never overwrites newer state
   await member.recordTransaction('reader-b',value,{restore:true});
   assert.equal(await owner(db,value),'reader-b');
   assert.equal((await db.query('SELECT revoked FROM membership_subscriptions WHERE original_transaction_id=$1',[value.originalID])).rows[0].revoked,true);
-  await assert.rejects(member.recordTransaction('reader-a',{...value,environment:'Sandbox'},{restore:true}),mismatch);
+  await assert.rejects(member.recordTransaction('reader-a',{...value,environment:'Sandbox'},{restore:true}),{code:'purchase_environment_mismatch'});
   assert.equal(await owner(db,value),'reader-b');
 });
 

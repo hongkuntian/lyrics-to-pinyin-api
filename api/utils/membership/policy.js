@@ -10,6 +10,14 @@ export const PRO=Object.freeze({translation:20,study:80});
 export const PREVIEW=Object.freeze({seconds:600,requests:200});
 export const first=async(db,sql,args=[])=>(await db.query(sql,args)).rows[0]??null;
 
+// Sandbox is a deployment choice for isolated billing QA. The old dual-mode flag
+// cannot change which environment has authority over accounts and allowances.
+export function storeEnvironment(env=process.env) {
+  const environment=env.LYRICA_STORE_ENVIRONMENT??'Production';
+  if(environment!=='Production'&&environment!=='Sandbox')throw new Error('invalid_store_environment');
+  return environment;
+}
+
 // Monthly anniversaries retain the original day, including Jan 31 -> Feb 28 -> Mar 31.
 export function monthlyPeriod(anchor,now) {
   anchor=new Date(anchor);now=new Date(now);

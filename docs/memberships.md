@@ -89,9 +89,22 @@ The official Apple App Store Server Library verifies certificate chains, signed 
 - Not yet recorded: it is recorded for this account when its `appAccountToken` is this account's, is absent (offer codes), belongs to no current (enabled) account, or `restore` is set. Otherwise `403 purchase_account_mismatch`.
 - Recorded for another account: it moves to this account only with `restore`; otherwise `purchase_account_mismatch`. A different environment is always a mismatch.
 
-The app's automatic sync sends `currentEntitlements` without `restore`; the Restore purchases button runs `AppStore.sync()` and sends them with `restore`. A paid period's allowance belongs to the subscription, so moving it never refills the allowance. Old signed data cannot replace a newer state (including a revocation), though Restore still moves ownership. `POST /api/store-notifications` verifies V2 notifications and their nested transaction independently and finds the owner by `original_transaction_id` first, then by `library_users.app_account_token`; a notification never moves a purchase, and one with no owner is answered `409 purchase_account_not_found` so Apple retries. Notification IDs deduplicate delivery, including refunds received after account deletion. Configure both production and sandbox notification URLs to this endpoint.
+The app's automatic sync sends `currentEntitlements` without `restore`; the Restore purchases button runs `AppStore.sync()` and sends them with `restore`. A paid period's allowance belongs to the subscription, so moving it never refills the allowance. Old signed data cannot replace a newer state (including a revocation), though Restore still moves ownership. `POST /api/store-notifications` verifies V2 notifications and their nested transaction independently and finds the owner by `original_transaction_id` first, then by `library_users.app_account_token`; a notification never moves a purchase, and one with no owner is answered `409 purchase_account_not_found` so Apple retries. Notification IDs deduplicate delivery, including refunds received after account deletion. Configure the notification route on each matching deployment.
 
-Required verification settings: `LYRICA_STORE_BUNDLE_ID`, `LYRICA_STORE_APP_APPLE_ID`; set `LYRICA_STORE_ALLOW_SANDBOX=true` for Apple-signed sandbox/TestFlight transactions. Unsigned Xcode StoreKit fixtures are never accepted by the deployed verifier. Family sharing and multiseat purchases are unsupported by the account-bound model and must remain disabled. Purchases pass `.appAccountToken(snapshot.account.appAccountToken)`.
+Required verification settings are `LYRICA_STORE_BUNDLE_ID` and
+`LYRICA_STORE_APP_APPLE_ID`. The production backend uses `Production` as its
+StoreKit environment. The old `LYRICA_STORE_ALLOW_SANDBOX` setting has no effect.
+Verification, existing entitlement reads, Restore, notifications and all
+subscription-backed admission use a single environment. A verified transaction
+from a different environment returns `403 purchase_environment_mismatch`.
+
+For billing QA only, set `LYRICA_STORE_ENVIRONMENT=Sandbox` on the isolated QA
+deployment. Give it separate database roles and data, dedicated QA accounts and
+its own sandbox notification URL. Keep the production notification URL on the
+production deployment. Never point the QA deployment at production data.
+Unsigned Xcode fixtures are rejected by the deployed verifier. Family sharing
+and multiseat purchases remain unsupported. Purchases pass
+`.appAccountToken(snapshot.account.appAccountToken)`.
 
 Disable Streamlined Purchasing before offering purchases outside the app. App Store Connect requires a **latest approved binary** with the required StoreKit purchase-intent support before it allows that setting to be turned off. An implementation or development build alone does not satisfy Apple's prerequisite. Until approval, leave promoted purchases, win-back offers, and contingent pricing unconfigured; the app completes purchases with the account token. See [Apple's Streamlined Purchasing requirements](https://developer.apple.com/help/app-store-connect/manage-subscriptions/manage-streamlined-purchasing).
 

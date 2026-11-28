@@ -1,6 +1,6 @@
 import {randomUUID,createHash} from 'node:crypto';
 import {LibraryError} from '../song-library/store.js';
-import {first,monthlyPeriod,PRODUCTS,FREE,PRO,PREVIEW} from './policy.js';
+import {first,monthlyPeriod,PRODUCTS,FREE,PRO,PREVIEW,storeEnvironment} from './policy.js';
 import {DeviceCheckError,defaultDeviceCheck,rejectedDeviceToken,validDeviceToken} from './device-check.js';
 
 async function account(db,userID,{lock=false,includeDisabled=false}={}) {
@@ -10,7 +10,7 @@ async function account(db,userID,{lock=false,includeDisabled=false}={}) {
 }
 async function entitlement(db,userID,now) {
   return first(db,`SELECT * FROM membership_subscriptions WHERE user_id=$1 AND NOT revoked AND tier='pro'
-    AND period_start<=$2 AND expires_at>$2 ORDER BY expires_at DESC LIMIT 1`,[userID,now]);
+    AND period_start<=$2 AND expires_at>$2 AND environment=$3 ORDER BY expires_at DESC LIMIT 1`,[userID,now,storeEnvironment()]);
 }
 function grantDescription(sub,kind,now) {
   if(!sub)return null;
@@ -133,6 +133,7 @@ export class MembershipStore {
   // (offer codes) or no current account's, or on Restore. A purchase recorded
   // for another account moves here only on Restore.
   async recordTransaction(userID,value,{restore=false,serverNotification=false}={}) {
+    if(value.environment!==storeEnvironment())throw new LibraryError('purchase_environment_mismatch',403);
     await this.db.transaction(async db=>{
       const user=await account(db,userID,{lock:true,includeDisabled:serverNotification});
       const previous=await first(db,'SELECT * FROM membership_subscriptions WHERE original_transaction_id=$1 FOR UPDATE',[value.originalID]);
@@ -154,18 +155,20 @@ export class MembershipStore {
           user_id=CASE WHEN $12::boolean THEN EXCLUDED.user_id ELSE membership_subscriptions.user_id END,
           transaction_id=$3,product_id=$4,tier=$5,environment=$6,
           period_start=$8,expires_at=$9,revoked=$10,signed_at=$11,verified_at=now()
+        WHERE membership_subscriptions.environment=EXCLUDED.environment
         RETURNING user_id`,
         [value.originalID,userID,value.transactionID,value.productID,value.tier,value.environment,value.appAccountToken,value.starts,value.expires,value.revoked,value.signedAt,
           restore&&!serverNotification]);
-      if(recorded.user_id!==userID)throw new LibraryError('purchase_account_mismatch',403);
+      if(recorded?.user_id!==userID)throw new LibraryError('purchase_account_mismatch',403);
     });
     return serverNotification?null:this.snapshot(userID);
   }
   // Server notifications never move a purchase: the recorded owner wins, then
   // the account whose appAccountToken the purchase carries.
   async applyNotification(id,value) {
+    if(value.environment!==storeEnvironment())throw new LibraryError('purchase_environment_mismatch',403);
     if(await first(this.db,'SELECT 1 FROM membership_notifications WHERE id=$1',[id]))return;
-    const owner=await first(this.db,'SELECT user_id FROM membership_subscriptions WHERE original_transaction_id=$1',[value.originalID])??
+    const owner=await first(this.db,'SELECT user_id FROM membership_subscriptions WHERE original_transaction_id=$1 AND environment=$2',[value.originalID,value.environment])??
       (value.appAccountToken==null?null:await first(this.db,'SELECT id AS user_id FROM library_users WHERE app_account_token=$1',[value.appAccountToken]));
     if(!owner)throw new LibraryError('purchase_account_not_found',409);
     await this.recordTransaction(owner.user_id,value,{serverNotification:true});
