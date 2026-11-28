@@ -137,6 +137,19 @@ limit, optional language diagnostics give way before measured cues. See
 
 Explicit production-credit lines and instrumental placeholder prose are excluded from vocal lyrics. Invalid or out-of-duration timestamps become untimed text. A credit-only synced field can fall back to a usable plain transcription. Only an explicit provider instrumental flag (including NetEase's fixed full “纯音乐，请欣赏” marker) with no vocal text yields `quality.instrumental: true`, `quality.synced: false`, and `lines: []`. Do not count these as lyric coverage.
 
+When Apple reports lyrics for the exact catalog ID without conflicting
+storefront evidence, an instrumental-only provider match leaves time to
+check other verified catalog spellings within the existing deadline. A
+provider's instrumental flag can supply a zero-line result for the current
+automatic request. Automatic lookup does not cache that response or reuse
+an earlier instrumental response. Catalog evidence of no available lyrics
+can still be reused, and the verified request spelling takes precedence
+when that evidence is negative or conflicting. Otherwise, an instrumental
+result makes the catalog context refresh on the next request. Fresh catalog
+resolution bypasses the Apple adapter's song cache, and a warm backend
+checks shared catalog context after a lyric-cache miss. Final instrumental
+responses omit lyric structure.
+
 ## Recording-bound timing correction
 
 Apple catalog 966805806, Faye Wong / 王菲, 匆匆那年, 241 seconds has a reviewed source correction. The rejected 30-line timestamp fingerprint was confirmed in the reported phone cache. It is late against multiple alternative source tracks; this is not an application clock-offset repair. LRCLIB 38130197 supplies a replacement timeline, guarded by a content/timing hash and the recording metadata. The correction has its own bounded fetch budget inside the provider deadline. If the source changes or cannot be fetched, known-bad timing becomes readable untimed text while another provider can still win. This temporary degraded response omits cache eligibility revision and is not stored in server or native caches, so a later request can retry the replacement.
@@ -186,7 +199,7 @@ Discovery aliases are separate from completeness evidence. When current Apple te
 
 LRCLIB checks fuller plain text alongside an abbreviated synced field and continues its existing bounded search for suspicious exact matches. Cross-provider discovery uses at most two concurrent lookups and a fixed, nonrenewing completeness window within the existing request/provider deadlines. Suspicious progressive snapshots wait for that decision; exhaustion, timeout or upstream failure retains the original readable fallback without falsely marking it partial. Known timing quarantines remain in force even when their untimed text supplies the fuller transcription.
 
-Plain, partial and unresolved early-cutoff results expire after five minutes in server response caches; ordinary full timed and instrumental results retain the normal one-day lifetime. Reading Redis or disk preserves the original remaining freshness. Optional catalog localizations can upgrade plain lyrics within the existing bounded lookup; unavailable upgrades preserve readable words. The `corroborated-completeness-1` capability invalidates response, canonical and verified-context selection caches without changing API response version `2.5.0`, selection revision `lyrics-selection-2026-09-30-storefront-1`, or the public response shape.
+Plain, partial and unresolved early-cutoff results expire after five minutes in server response caches; ordinary full timed and cacheable instrumental results retain the normal one-day lifetime. Reading Redis or disk preserves the original remaining freshness. Optional catalog localizations can upgrade plain lyrics within the existing bounded lookup; unavailable upgrades preserve readable words. The `corroborated-completeness-1` capability invalidates response, canonical and verified-context selection caches without changing API response version `2.5.0`, selection revision `lyrics-selection-2026-09-30-storefront-1`, or the public response shape.
 
 Automatic durable-library heads use this same freshness policy, using the playback request duration even when the source response omits it. A stale early-cutoff positive rechecks with `refresh:true`; an upstream outage retains the readable stored edition. The whole-document retention comparison also applies corroborated completeness before protecting timing: a verified fuller untimed edition can replace a timed excerpt, and a subsequent timed excerpt cannot regress the fuller head. Apple comparisons require matching server-bound request keys; localized source names additionally need the same validated canonical recording. Spotify comparisons retain the admitted candidate evidence stored with the source. Refresh creates or selects an immutable edition rather than rewriting the old source, its hash or existing learning/translation records. Exact-text timing-donor attachments remain separate and cannot append missing verses.
 

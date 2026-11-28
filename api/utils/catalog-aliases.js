@@ -27,6 +27,8 @@ async function mapBounded(values,work,{deadline,signal}={}) {
  return results;
 }
 const key=song=>JSON.stringify([normalizeRecordingText(song.artist),normalizeRecordingText(song.title),normalizedAlbum(song.album??'')]);
+export const matchesLiteralCatalogTarget=(target,request,catalogID=request.catalog_id)=>
+ target.catalog_id===catalogID&&target.artist===request.artist&&target.title===request.title&&(target.album??null)===(request.album??null);
 const searchFields=(song,explicit)=>({catalog_id:song.catalog_id,title:song.title,artist:song.artist,album:song.album,duration:song.duration,
  ...(typeof explicit==='boolean'?{explicit}:{}),
  ...(song.artist_entities?.length?{artist_entities:song.artist_entities}:{})});
@@ -46,7 +48,14 @@ function finish(request,songs,catalogID,method,reviewedSearches=[]) {
  // Keep canonical queries and the same bounded set of trusted candidates.
  const localized=!ordered.some(s=>sameRecordingNames(s,request))
   ? complete.find(s=>recordingNames(s,entities).title===expected.title):null;
- const candidates=[...(localized?[localized]:[]),...reviewedSearches,...complete,...complete.flatMap(s=>artists.map(a=>({...s,artist:a.artist})))];
+ const lyricAvailability=[...new Set(ordered.filter(s=>s.catalog_id===catalogID&&s.provenance==='apple_music')
+  .map(s=>s.has_lyrics).filter(value=>typeof value==='boolean'))];
+ const catalogHasLyrics=lyricAvailability.length===1?lyricAvailability[0]:lyricAvailability.length===2?null:undefined;
+ // Preserve the verified literal spelling before normalization deduplicates
+ // album suffixes. It must remain in range of the provider search limit.
+ const literal=catalogHasLyrics===false||catalogHasLyrics===null
+  ? complete.find(s=>matchesLiteralCatalogTarget(s,request,catalogID)):null;
+ const candidates=[...(literal?[literal]:[]),...(localized?[localized]:[]),...reviewedSearches,...complete,...complete.flatMap(s=>artists.map(a=>({...s,artist:a.artist})))];
  const seen=new Set(),searches=candidates.filter(s=>{const k=key(s);if(seen.has(k))return false;seen.add(k);return true;}).map(s=>searchFields(s,explicit)).slice(0,8);
  const canonical=ordered.find(s=>s.storefront==='us')??ordered[0];
  const aliases=searches.filter(song=>key(song)!==key(request));
@@ -54,7 +63,8 @@ function finish(request,songs,catalogID,method,reviewedSearches=[]) {
   canonical_recording_id:'apple:'+ordered.map(s=>s.catalog_id).sort((a,b)=>BigInt(a)<BigInt(b)?-1:BigInt(a)>BigInt(b)?1:0)[0],canonical_context:{title:canonical.title,artist:canonical.artist},
   accepted_request:{catalog_id:request.catalog_id??catalogID,artist:request.artist,title:request.title,album:request.album??null,duration:request.duration},
   catalog_items:[...new Map(ordered.map(s=>[s.storefront+':'+s.catalog_id,{catalog_id:s.catalog_id,storefront:s.storefront,provenance:s.provenance}])).values()],
-  isrc:ordered.find(s=>s.isrc)?.isrc??null,...(typeof explicit==='boolean'?{explicit}:{}),...(entities.length?{artist_entities:entities}:{}),genres:[...new Set(ordered.flatMap(s=>s.genres??[]))],searches};
+  isrc:ordered.find(s=>s.isrc)?.isrc??null,...(catalogHasLyrics!==undefined?{catalog_has_lyrics:catalogHasLyrics}:{}),
+  ...(typeof explicit==='boolean'?{explicit}:{}),...(entities.length?{artist_entities:entities}:{}),genres:[...new Set(ordered.flatMap(s=>s.genres??[]))],searches};
  Object.defineProperty(aliases,'resolution',{value:resolution});return aliases;
 }
 export async function resolveCatalogAliases(request,context={}) {

@@ -24,6 +24,28 @@ test('an older held Redis read cannot replace or return ahead of a newer local a
  const read=cache.read(request);await ready;cache.save(newer);release();
  assert.equal((await read).metadata.acquisition_started_at,20);assert.equal((await cache.read(request)).metadata.acquisition_started_at,20);assert.equal(older.metadata.acquisition_started_at,10);
 });
+test('a later source hint cannot renew catalog proof or displace its refresh marker',async()=>{
+ const disk=new Map(),pending=[],redis={get:async key=>disk.get(key),
+  eval:async(_,keys,[raw,start,,marker])=>{
+   const current=disk.get(keys[0]),currentStart=current?.metadata.acquisition_started_at;
+   if(currentStart>start||(currentStart===start&&current.catalogRefreshRequired===true&&marker!=='1'))return 0;
+   disk.set(keys[0],JSON.parse(raw));return 1;
+  }},
+  deps={redis,waitUntilFn:p=>pending.push(p),now:()=>1000};
+ const a=createVerifiedContextCache(deps),b=createVerifiedContextCache(deps);
+ const base=a.catalog(request,aliases(),10);
+ a.save(base);await Promise.all(pending);
+ const warm=await b.read(request);
+ a.requireCatalogRefresh(base,10);await Promise.all(pending);
+ const hint=b.hint(warm,{song:{id:42,artist:'Artist',title:'Song',album:'Album',duration:240},
+  api:{name:'LRCAPI'},target:request},20);
+ assert.equal(hint.metadata.acquisition_started_at,10);
+ b.save(hint);await Promise.all(pending);
+ assert.equal(await b.read(request),null);
+ assert.equal(await createVerifiedContextCache(deps).read(request),null);
+ a.save(a.catalog(request,aliases(),30));await Promise.all(pending);
+ assert.equal((await b.read(request)).metadata.acquisition_started_at,30);
+});
 test('malformed optional context is a nonthrowing miss',async()=>{
  let stored;const deps={redis:{},getFn:async()=>stored,setFn:async()=>{},now:()=>1000,ttlMs:100,policy:{selection:'a',normalization:'b',response:'c'}};
  const base=createVerifiedContextCache(deps).catalog(request,aliases(),10);

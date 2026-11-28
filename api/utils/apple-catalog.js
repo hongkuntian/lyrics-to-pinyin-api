@@ -37,6 +37,7 @@ export function createAppleCatalog({teamID,keyID,privateKey,fetchFn,now=Date.now
   const a=song.attributes,artists=song.relationships?.artists?.data??[];
   if(song.type!=='songs' || !/^\d{1,20}$/.test(song.id) || !a?.name || !a.artistName || !Number.isFinite(a.durationInMillis)) return null;
   return {catalog_id:song.id,title:a.name,artist:a.artistName,album:a.albumName,duration:a.durationInMillis/1000,storefront,
+   ...(typeof a.hasLyrics==='boolean'?{has_lyrics:a.hasLyrics}:{}),
    ...(a.artwork?.url?{artworkURL:a.artwork.url.replace('{w}','360').replace('{h}','360').replace('{f}','jpg')}:{}),
    isrc:a.isrc??null,artist_ids:artists.filter(s=>s.type==='artists').map(s=>s.id),artist_entities:artists.filter(s=>s.type==='artists' && /^\d{1,20}$/.test(s.id) && typeof s.attributes?.name==='string' && s.attributes.name.trim()).slice(0,24).map(s=>({id:s.id,name:s.attributes.name})),genres:a.genreNames??[],content_rating:a.contentRating??null,provenance:'apple_music'};
  };
@@ -59,7 +60,7 @@ export function createAppleCatalog({teamID,keyID,privateKey,fetchFn,now=Date.now
     return (page.data??[]).map(song=>item(song,storefront)).filter(Boolean);
    } catch(error){if(context.signal?.aborted)throw error;return [];}
   }));
-  return [...new Map(pages.flat().map(song=>[JSON.stringify([song.catalog_id,song.title,song.artist,song.album]),song])).values()];
+  return [...new Map(pages.flat().map(song=>[JSON.stringify([song.catalog_id,song.title,song.artist,song.album,song.has_lyrics]),song])).values()];
  };
  return {
   async search(term,storefront,context={}) {
@@ -67,7 +68,7 @@ export function createAppleCatalog({teamID,keyID,privateKey,fetchFn,now=Date.now
    return (page.results?.songs?.data??[]).map(song=>item(song,storefront)).filter(Boolean);
   },
   async lookup(id,storefront,context={}) {
-   const key=storefront+':'+id,cached=cache.get(key);if(cached)return cached;
+   const key=storefront+':'+id,cached=context.freshCatalog?null:cache.get(key);if(cached)return cached;
    const items=await songs(storefront,{ids:id},context),value=items.filter(s=>s.catalog_id===id);
    if(value.length)cache.set(key,value);return value;
   },

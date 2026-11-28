@@ -13,6 +13,7 @@ export function verifiedCatalogProof(proof,request){
   &&accepted?.catalog_id===(request.catalog_id??accepted?.catalog_id)&&/^\d{1,20}$/.test(accepted?.catalog_id??'')
   &&accepted.artist===request.artist&&accepted.title===request.title&&(accepted.album??null)===(request.album??null)&&accepted.duration===request.duration
   &&Number.isFinite(request.duration)&&Array.isArray(proof.catalog_items)&&proof.catalog_items.every(i=>i&&typeof i==='object'&&/^\d{1,20}$/.test(i.catalog_id??''))&&proof.catalog_items.some(i=>i.catalog_id===accepted.catalog_id)
+  &&(proof.catalog_has_lyrics==null||typeof proof.catalog_has_lyrics==='boolean')
   &&Array.isArray(proof.searches)&&proof.searches.length>0&&proof.searches.length<=8
   &&proof.searches.every(s=>s&&typeof s.artist==='string'&&s.artist&&typeof s.title==='string'&&s.title&&Number.isFinite(s.duration));
 }
@@ -22,6 +23,9 @@ const targetFields=['artist','title','album','duration','catalog_id','artist_ent
 export const sourceTarget=(target={})=>Object.fromEntries(targetFields.filter(k=>target[k]!==undefined).map(k=>[k,structuredClone(target[k])]));
 export function createVerifiedContextCache({redis,getFn=getCached,setFn=setLyricsCached,waitUntilFn=()=>{},now=Date.now,ttlMs=21600000,cacheTimeoutMs=300,policy}={}){
  const memory=new BoundedCache({now,ttlMs,maxEntryBytes:131072}),writes=new Map(),keyFor=(request,kind)=>'lyrics:verified-context:v1:'+hash(JSON.stringify({kind,request:contextSignature(request),policy}));
+ const reusable=value=>value.catalogRefreshRequired===true?null:structuredClone(value);
+ const outranks=(a,b)=>a.metadata.acquisition_started_at>b.metadata.acquisition_started_at
+  ||(a.metadata.acquisition_started_at===b.metadata.acquisition_started_at&&a.catalogRefreshRequired===true&&b.catalogRefreshRequired!==true);
  const valid=(value,request,kind)=>{try{return value?.version===1&&value.kind===kind&&value.signature===contextSignature(request)&&same(value.policy,policy)
   &&Number.isFinite(value.metadata?.acquisition_started_at)&&Number.isFinite(value.verifiedAtMS)&&value.verifiedAtMS<=now()+5000&&Number.isFinite(value.expiresAtMS)&&value.expiresAtMS>now()
   &&value.expiresAtMS-value.verifiedAtMS<=ttlMs&&Array.isArray(value.hints)&&value.hints.length<=1
@@ -30,12 +34,15 @@ export function createVerifiedContextCache({redis,getFn=getCached,setFn=setLyric
   &&(kind==='catalog'?Array.isArray(value.aliases)&&value.aliases.length<=8&&value.aliases.every(a=>a&&typeof a.artist==='string'&&typeof a.title==='string'&&Number.isFinite(a.duration))&&verifiedCatalogProof(value.resolution,request):value.proof?.version==='verified-spotify-source-1'&&/^[a-f0-9]{64}$/.test(value.proof.sourceHash??''));}catch{return false;}};
  return {
   async read(request,kind='catalog'){
-   const key=keyFor(request,kind),local=memory.get(key);if(local&&valid(local,request,kind))return structuredClone(local);
-   if(!redis||cacheUnavailable(redis))return null;
+   const key=keyFor(request,kind),local=memory.get(key),localValid=valid(local,request,kind);
+   // On a lyric-cache miss, shared Apple context can revoke a warm instance's
+   // catalog proof. Spotify source hints retain their local fast path.
+   if((kind!=='catalog'&&localValid)||!redis||cacheUnavailable(redis))return localValid?reusable(local):null;
    const stored=await withDeadline(()=>getFn(redis,key),cacheTimeoutMs).catch(error=>{suspendCache(redis,error);return null;});
-   const latest=memory.get(key);
-   if(latest&&valid(latest,request,kind)&&(!valid(stored,request,kind)||(latest.metadata?.acquisition_started_at??0)>=(stored.metadata?.acquisition_started_at??0)))return structuredClone(latest);
-   if(!valid(stored,request,kind))return null;memory.set(key,stored,{ttlMs:stored.expiresAtMS-now()});return structuredClone(stored);
+   const latest=memory.get(key),storedValid=valid(stored,request,kind);
+   if(valid(latest,request,kind)&&(!storedValid||!outranks(stored,latest)))return reusable(latest);
+   if(!storedValid)return null;
+   memory.set(key,stored,{ttlMs:stored.expiresAtMS-now()});return reusable(stored);
   },
   catalog(request,aliases,acquisitionStartedAt){
    if(!verifiedCatalogProof(aliases?.resolution,request))return null;
@@ -47,12 +54,19 @@ export function createVerifiedContextCache({redis,getFn=getCached,setFn=setLyric
   },
   hint(context,candidate,acquisitionStartedAt=context?.metadata?.acquisition_started_at){
    if(!context||!['LRCAPI','NeteaseAPI','QQMusicAPI'].includes(candidate.api?.name)||!/^\d{1,20}$/.test(String(candidate.song?.id??''))||candidate.timingCorrection?.status==='untimed_fallback')return context;
-   return {...context,metadata:{acquisition_started_at:acquisitionStartedAt},hints:[{provider:candidate.api.name,id:String(candidate.song.id),signature:sourceSignature(candidate.song),target:sourceTarget(candidate.target)}]};
+   // A new source observation cannot renew older Apple catalog proof.
+   const metadata=context.kind==='catalog'?context.metadata:{acquisition_started_at:acquisitionStartedAt};
+   return {...context,metadata,hints:[{provider:candidate.api.name,id:String(candidate.song.id),signature:sourceSignature(candidate.song),target:sourceTarget(candidate.target)}]};
+  },
+  requireCatalogRefresh(context,acquisitionStartedAt){
+   // Use the same acquisition ordering as a positive update, so a late
+   // fallback cannot displace a newer verified context.
+   this.save({...context,catalogRefreshRequired:true,hints:[],metadata:{acquisition_started_at:acquisitionStartedAt}});
   },
   save(context){
    if(!context||!valid(context,context.request,context.kind))return;
    const key=keyFor(context.request,context.kind),remaining=context.expiresAtMS-now(),previous=memory.get(key);
-   if(previous?.metadata?.acquisition_started_at>context.metadata?.acquisition_started_at)return;
+   if(previous&&outranks(previous,context))return;
    memory.set(key,structuredClone(context),{ttlMs:remaining});
    if(redis&&!cacheUnavailable(redis)){
     const work=(writes.get(key)??Promise.resolve()).then(()=>withDeadline(()=>setFn(redis,key,context,Math.max(0,context.expiresAtMS-now())/1000),cacheTimeoutMs)).catch(error=>suspendCache(redis,error));

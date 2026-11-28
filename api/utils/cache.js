@@ -68,15 +68,20 @@ export async function setLyricsCached(redis, key, data, ttl) {
     local previous = redis.call('GET', KEYS[1])
     if previous then
       local ok, value = pcall(cjson.decode, previous)
-      if ok and value.metadata and tonumber(value.metadata.acquisition_started_at or 0) > tonumber(ARGV[2]) then
-        return 0
+      if ok and value.metadata then
+        local previousStart = tonumber(value.metadata.acquisition_started_at or 0)
+        local incomingStart = tonumber(ARGV[2])
+        if previousStart > incomingStart or
+          (previousStart == incomingStart and value.catalogRefreshRequired == true and ARGV[4] ~= '1') then
+          return 0
+        end
       end
     end
     redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[3])
     return 1
   `;
   try {
-    await redis.eval(script, [key], [JSON.stringify(data), data.metadata.acquisition_started_at, Math.max(1, Math.floor(ttl))]);
+    await redis.eval(script, [key], [JSON.stringify(data), data.metadata.acquisition_started_at, Math.max(1, Math.floor(ttl)), data.catalogRefreshRequired===true?'1':'0']);
   } catch (error) { suspendCache(redis, error); }
 }
 

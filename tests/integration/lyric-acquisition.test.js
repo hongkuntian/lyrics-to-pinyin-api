@@ -34,6 +34,113 @@ test('verified catalog and fresh LRCLIB ID survive a new function instance witho
  assert.equal(f.stats.catalog,0);assert.equal(f.stats.search,0);assert.equal(f.stats.id,1);assert.equal(f.stats.lyrics,0);
  assert.equal(second.body.metadata.catalog_resolution.requested.storefront,'us');const after=f.contexts()[0][1];assert.equal(after.verifiedAtMS,before.verifiedAtMS);assert.equal(after.expiresAtMS,before.expiresAtMS);
 });
+test('an unconfirmed instrumental invalidates a warm catalog context across instances',async()=>{
+ const native={...request,title:'原來的歌'};
+ let localizedAvailable=false;
+ const f=fixture({resolveCatalogAliasesFn:async r=>{
+  const aliases=localizedAvailable?[native]:[];
+  const resolution=proof(r);
+  if(localizedAvailable){
+   resolution.searches.push(native);
+   resolution.catalog_has_lyrics=true;
+  }
+  Object.defineProperty(aliases,'resolution',{value:resolution});
+  return aliases;
+ }});
+ assert.equal((await f.call(f.make())).body.quality.instrumental,false);
+ f.clearContent();
+ f.api.getRecording=async()=>({song:{...song},lyrics:{lines:[],instrumental:true}});
+ f.api.searchSong=async(_,title)=>title===native.title?{...song,title,id:81}:song;
+ f.api.getLyrics=async id=>id===81?structuredClone(words):{lines:[],instrumental:true};
+ const fallback=await f.call(f.make());
+ assert.equal(fallback.statusCode,200);
+ assert.equal(fallback.body.quality.instrumental,true);
+ assert.equal(fallback.body.metadata.selection_revision,undefined);
+ assert.equal(f.values.size,1);
+ const invalidated=f.contexts()[0][1];
+ assert.equal(invalidated.catalogRefreshRequired,true);
+ assert.deepEqual(invalidated.hints,[]);
+ localizedAvailable=true;
+ const recovered=await f.call(f.make());
+ assert.equal(recovered.body.song.id,81);
+ assert.equal(recovered.body.quality.synced,true);
+ assert.equal(recovered.body.metadata.catalog_resolution.requested.catalog_id,request.catalog_id);
+ assert.equal(f.contexts()[0][1].catalogRefreshRequired,undefined);
+});
+test('an explicit contradictory refresh retires earlier instrumental cache authority',async()=>{
+ const native={...request,title:'原來的歌'};
+ let hasCatalogLyrics=false,hasProviderLyrics=false;
+ const f=fixture({resolveCatalogAliasesFn:async r=>{
+  const aliases=[native],resolution={...proof(r),catalog_has_lyrics:hasCatalogLyrics};
+  resolution.searches.push(native);
+  Object.defineProperty(aliases,'resolution',{value:resolution});
+  return aliases;
+ }});
+ const seeded=await f.call(f.make());
+ assert.equal(seeded.body.quality.instrumental,false);
+ const [key]=[...f.values.keys()].filter(key=>!key.startsWith('lyrics:verified-context:'));
+ const oldInstrumental=structuredClone(seeded.body);
+ oldInstrumental.song.id=99;
+ oldInstrumental.lines=[];
+ oldInstrumental.quality={instrumental:true,synced:false,partial:false};
+ delete oldInstrumental.lyric_structure;
+ delete oldInstrumental.metadata.lyric_structure;
+ f.values.set(key,oldInstrumental);
+ f.api.getRecording=async()=>({song:{...song},lyrics:{lines:[],instrumental:true}});
+ f.api.searchSong=async(_,title)=>title===native.title?(hasProviderLyrics?{...song,title,id:81}:null):song;
+ f.api.getLyrics=async id=>id===81?structuredClone(words):{lines:[],instrumental:true};
+ f.reset();
+ const instance=f.make();
+ const ordinary=await f.call(instance);
+ assert.equal(ordinary.body.song.id,42);
+ assert.equal(ordinary.body.metadata.selection_revision,undefined);
+ assert.equal(f.stats.catalog,0);
+ const alreadyWarm=f.make();
+ assert.equal((await f.call(alreadyWarm)).body.quality.instrumental,true);
+ hasCatalogLyrics=true;
+ const refreshed=await f.call(instance,{...request,options:{refresh:true}});
+ assert.equal(refreshed.body.quality.instrumental,true);
+ assert.equal(refreshed.body.metadata.selection_revision,undefined);
+ assert.equal(f.contexts()[0][1].catalogRefreshRequired,true);
+ hasProviderLyrics=true;
+ for(const service of [alreadyWarm,instance,f.make()]){
+  const recovered=await f.call(service);
+  assert.equal(recovered.body.song.id,81);
+  assert.equal(recovered.body.quality.synced,true);
+ }
+});
+test('catalog proof survives a lyric miss for another service instance',async()=>{
+ const f=fixture();
+ f.api.searchSong=async()=>null;
+ assert.equal((await f.call(f.make())).statusCode,404);
+ assert.equal(f.stats.catalog,1);
+ assert.equal((await f.call(f.make())).statusCode,404);
+ assert.equal(f.stats.catalog,1);
+});
+test('an explicit null album cannot let a warm provider hint preempt a verified literal target',async()=>{
+ const input={...request,album:null},literal={...request,title:input.title,album:undefined};
+ const alias={...literal,title:'原來的歌'};
+ const alternate={...song,album:undefined,title:alias.title,id:81};
+ let literalAvailable=false;
+ const lrclib={name:'LRCAPI',searchSong:async(_,title)=>literalAvailable&&title===input.title?{...song,album:undefined}:null,
+  getLyrics:async()=>({lines:[],instrumental:true})};
+ const netease={name:'NeteaseAPI',searchSong:async(_,title)=>title===alias.title?alternate:null,
+  getLyrics:async()=>structuredClone(words),getRecording:async()=>({song:alternate,lyrics:structuredClone(words)})};
+ const f=fixture({getAvailableAPIsFn:()=>[lrclib,netease],resolveCatalogAliasesFn:async r=>{
+  const aliases=[alias],resolution={...proof(r),catalog_has_lyrics:false,searches:[literal,alias]};
+  Object.defineProperty(aliases,'resolution',{value:resolution});
+  return aliases;
+ }});
+ assert.equal((await f.call(f.make(),input)).body.song.id,81);
+ assert.equal(f.contexts()[0][1].hints[0].provider,'NeteaseAPI');
+ f.clearContent();
+ literalAvailable=true;
+ const result=await f.call(f.make(),input);
+ assert.equal(result.statusCode,200);
+ assert.equal(result.body.song.id,42);
+ assert.equal(result.body.quality.instrumental,true);
+ assert.deepEqual(result.body.lines,[]);
+});
 test('expired, malformed and old-policy context fall back to catalog and ordinary discovery; refresh bypasses hints',async()=>{
  for(const mutation of [x=>delete x.aliases,x=>x.resolution.searches=[null],x=>x.hints=[null],x=>delete x.hints[0].target,x=>x.policy.selection='old',x=>x.expiresAtMS=999]){
   const f=fixture();await f.call(f.make());f.clearContent();const [key,value]=f.contexts()[0];mutation(value);f.values.set(key,value);f.reset();

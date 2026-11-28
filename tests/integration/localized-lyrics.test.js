@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createMusicRomanizeService as createMusicRomanizeHandler} from '../../api/music-romanize.js';
+import {generateKeyPairSync} from 'node:crypto';
+import {createMusicRomanizeService as createMusicRomanizeHandler,RESPONSE_VERSION,SELECTION_REVISION} from '../../api/music-romanize.js';
 import {createMockReq,createMockRes} from '../helpers/mock-http.js';
 import {resolveCatalogAliases} from '../../api/utils/catalog-aliases.js';
+import {createAppleCatalog} from '../../api/utils/apple-catalog.js';
+import {frames,streamResponse} from '../helpers/stream-http.js';
 const request={artist:'Eric Chou',title:'Unbreakable Love',duration:258.264,catalog_id:'1321295664'};
 const localized={artist:'周興哲',title:'永不失聯的愛',album:'如果雨之後',duration:258.264,catalog_id:'1321295664'};
 
@@ -141,6 +144,181 @@ test('catalog evidence failure cannot suppress a timed or instrumental result',a
   const res=await run(api,request,{resolveCatalogAliasesFn:()=>assert.fail('no optional lookup needed')});
   assert.equal(res.statusCode,200);
  }
+});
+
+test('Heroine repairs a cached instrumental result through its verified Japanese title',async()=>{
+ const request={artist:'back number',title:'Heroine',album:'Heroine - EP',duration:270.04,catalog_id:'1451566361',storefront:'ca'};
+ const localized={...request,title:'ヒロイン',album:'ヒロイン - EP',storefront:'jp'};
+ const lyrics={lines:[{text:'これはテストの歌です',timestamp:12},{text:'ここでもう一度歌う',timestamp:20}]};
+ const queries=[];
+ const lrclib={name:'LRCAPI',searchSong:async(_,title)=>{
+  queries.push(title);
+  return title===request.title?{...request,id:25176047}:null;
+ },getLyrics:async()=>({instrumental:true,lines:[]})};
+ const netease={name:'NeteaseAPI',searchSong:async(_,title)=>title===localized.title?{...localized,id:1345494884}:null,
+  getLyrics:async()=>lyrics};
+ const appleCatalog={lookup:async(_,country)=>[{...(country==='jp'?localized:request),storefront:country,provenance:'apple_music',has_lyrics:true}]};
+ const stale={song:{id:25176047},quality:{instrumental:true,synced:false,partial:false},lines:[],
+  metadata:{version:RESPONSE_VERSION,selection_revision:SELECTION_REVISION,timestamp:new Date().toISOString(),
+   lyric_structure:{version:'lyric-annotations-3',sourceRows:[],speakers:[],occurrences:[]}}};
+ let cacheReads=0;
+ const handler=createMusicRomanizeHandler({redis:{},getCachedFn:async()=>{cacheReads++;return stale;},setCachedFn:async()=>{},waitUntilFn:()=>{},
+  getContextFn:async()=>null,setContextFn:async()=>{},getAvailableAPIsFn:()=>[lrclib,netease],
+  lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
+  resolveCatalogAliasesFn:(r,c)=>resolveCatalogAliases(r,{...c,appleCatalog}),logger:{info(){},error(){}}});
+ const res=streamResponse();
+ await handler(createMockReq({body:{...request,options:{delivery:'progressive-v1'}}}),res);
+ assert.equal(cacheReads,1);
+ assert.deepEqual(queries,[request.title,localized.title]);
+ const delivery=frames(res);
+ assert.deepEqual(delivery.map(f=>f.event),['readable','complete']);
+ for(const {response} of delivery) {
+  assert.equal(response.song.id,1345494884);
+  assert.equal(response.metadata.source,'NeteaseAPI');
+  assert.equal(response.quality.instrumental,false);
+  assert.equal(response.quality.synced,true);
+  assert.deepEqual(response.lines.map(line=>line.timestamp),[12,20]);
+  assert.deepEqual(response.metadata.catalog_resolution.requested,{catalog_id:request.catalog_id,storefront:'ca'});
+  assert.equal(response.metadata.catalog_resolution.catalog_has_lyrics,undefined);
+  assert.equal(response.metadata.recording_match.title,request.title);
+ }
+});
+
+test('explicit refresh fetches updated lyrics evidence through the Apple adapter',async()=>{
+ let hasLyrics=false,songFetches=0;
+ const recording={artist:'back number',title:'Heroine',album:'Heroine - EP',duration:270.04,catalog_id:'1451566361',storefront:'ca'};
+ const native={...recording,title:'ヒロイン',album:'ヒロイン - EP'};
+ const {privateKey}=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
+ const appleCatalog=createAppleCatalog({teamID:'fixture',keyID:'fixture',privateKey:privateKey.export({type:'pkcs8',format:'pem'}),
+  fetchFn:async url=>{
+   const path=new URL(url).pathname;
+   if(path.includes('/storefronts/'))return {ok:true,json:async()=>({data:[{attributes:{defaultLanguageTag:'en-US'}}]})};
+   songFetches++;
+   const {title,artist,album}=path.includes('/catalog/jp/')?native:recording;
+   return {ok:true,json:async()=>({data:[{id:recording.catalog_id,type:'songs',
+    attributes:{name:title,artistName:artist,albumName:album,durationInMillis:270040,hasLyrics}}]})};
+  }});
+ const api={name:'LRCAPI',searchSong:async(_,title)=>title===native.title?{...native,id:2}:{...recording,id:1},
+  getLyrics:async id=>id===1?{instrumental:true,lines:[]}:{lines:[{text:'これはテストの歌です',timestamp:12}]}};
+ const handler=createMusicRomanizeHandler({redis:null,getAvailableAPIsFn:()=>[api],
+  lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
+  resolveCatalogAliasesFn:(r,c)=>resolveCatalogAliases(r,{...c,appleCatalog}),logger:{info(){},error(){}}});
+ const initial=createMockRes();
+ await handler(createMockReq({body:recording}),initial);
+ assert.equal(initial.body.quality.instrumental,true);
+ const firstFetches=songFetches;
+ hasLyrics=true;
+ const refreshed=createMockRes();
+ await handler(createMockReq({body:{...recording,options:{refresh:true}}}),refreshed);
+ assert.ok(songFetches>firstFetches);
+ assert.equal(refreshed.body.song.id,2);
+ assert.equal(refreshed.body.lines[0].timestamp,12);
+});
+
+for(const conflicting of [false,true]){
+test(`a verified instrumental keeps the original query with ${conflicting?'conflicting':'negative'} catalog lyric evidence`,async()=>{
+ const recording={artist:'back number',title:'Heroine (Instrumental)',album:'Heroine - EP',duration:270.04,catalog_id:'1451566370',storefront:'ca'};
+ const japanese={...recording,title:'ヒロイン (Karaoke Mix)',album:'ヒロイン - EP'};
+ const catalog={lookup:async(_,country)=>[{...(['us','jp'].includes(country)?japanese:country==='hk'?{...recording,album:'Heroine'}:recording),
+  storefront:country,provenance:'apple_music',has_lyrics:conflicting&&country==='jp'}]};
+ const queried=[];
+ const lrclib={name:'LRCAPI',searchSong:async(_,title,{album})=>{
+  queried.push(JSON.stringify([title,album]));
+  return title===recording.title&&album===recording.album?{...recording,id:3013720}:null;
+ },getLyrics:async()=>({instrumental:true,lines:[]})};
+ const netease={name:'NeteaseAPI',searchSong:async(_,title)=>title===japanese.title?{...japanese,id:1345488797}:null,
+  getLyrics:async()=>({lines:[{text:'これはテストの歌です',timestamp:12}]})};
+ const fetchFn=async()=>({ok:true,json:async()=>({results:[{kind:'song',trackId:Number(recording.catalog_id),
+  artistName:recording.artist,trackName:recording.title,collectionName:recording.album,trackTimeMillis:270040}]})});
+ for(const catalog_id of [recording.catalog_id,undefined])for(const progressive of [false,true]) {
+  const handler=createMusicRomanizeHandler({redis:null,getAvailableAPIsFn:()=>[lrclib,netease],
+   lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
+   resolveCatalogAliasesFn:(r,c)=>resolveCatalogAliases(r,{...c,appleCatalog:catalog,fetchFn}),logger:{info(){},error(){}}});
+  const res=progressive?streamResponse():createMockRes();
+  await handler(createMockReq({body:{...recording,catalog_id,options:progressive?{delivery:'progressive-v1'}:{}}}),res);
+  assert.equal(res.statusCode,200);
+  const responses=progressive?frames(res).map(f=>f.response):[res.body];
+  assert.equal(responses.length,progressive?2:1);
+  for(const response of responses) {
+   assert.equal(response.song.id,3013720);
+   assert.equal(response.metadata.source,'LRCAPI');
+   assert.deepEqual(response.metadata.catalog_resolution.requested,{catalog_id:catalog_id??null,storefront:recording.storefront});
+   assert.deepEqual(response.quality,{instrumental:true,synced:false,partial:false});
+   assert.deepEqual(response.lines,[]);
+   assert.equal(response.lyric_structure,undefined);
+   assert.equal(response.metadata.lyric_structure,undefined);
+   assert.equal(response.metadata.selection_revision,undefined);
+  }
+ }
+ assert.deepEqual([...new Set(queried)],[JSON.stringify([recording.title,recording.album])]);
+});
+}
+
+test('catalog recovery tries a literally different provider spelling for the same complete credits',async()=>{
+ const recording={artist:'Fixture Artist',title:'A Song (feat. Guest)',album:'A Record',duration:270,catalog_id:'777',storefront:'ca'};
+ const localized={...recording,artist:'Fixture Artist & Guest',title:'A Song'};
+ const appleCatalog={lookup:async(_,country)=>[{...(country==='jp'?localized:recording),storefront:country,provenance:'apple_music',has_lyrics:true}]};
+ const queries=[];
+ const api={name:'LRCAPI',searchSong:async(artist,title)=>{
+  queries.push([artist,title]);
+  return artist===localized.artist&&title===localized.title?{...localized,id:2}:{...recording,id:1};
+ },getLyrics:async id=>id===1?{instrumental:true,lines:[]}:{lines:[{text:'A test phrase',timestamp:12}]}};
+ const result=await run(api,recording,{resolveCatalogAliasesFn:(r,c)=>resolveCatalogAliases(r,{...c,appleCatalog})});
+ assert.equal(result.statusCode,200);
+ assert.deepEqual(queries,[[recording.artist,recording.title],[localized.artist,localized.title]]);
+ assert.equal(result.body.song.id,2);
+ assert.equal(result.body.lines[0].timestamp,12);
+});
+
+test('a slow verified alias leaves an uncached instrumental fallback and recovers on the next ordinary request',async t=>{
+ t.mock.timers.enable({apis:['Date','setTimeout']});
+ const english={...request,album:'The Chaos After You',storefront:'ca'};
+ const catalog={lookup:async(_,country)=>[{...(country==='tw'?localized:english),storefront:country,provenance:'apple_music',has_lyrics:true}]};
+ let startOriginal,startAlias,aliasSignal,stall=true;
+ const originalStarted=new Promise(resolve=>{startOriginal=resolve;});
+ const aliasStarted=new Promise(resolve=>{startAlias=resolve;});
+ const api={name:'LRCAPI',searchSong:async(_,title,{signal})=>{
+  if(title===localized.title){
+   if(!stall)return {...localized,id:2};
+   aliasSignal=signal;
+   startAlias();
+   return new Promise(()=>{});
+  }
+  if(stall){
+   startOriginal();
+   await new Promise(resolve=>setTimeout(resolve,9000));
+  }
+  return {...english,id:1};
+ },getLyrics:async id=>id===1?{instrumental:true,lines:[]}:{lines:[{text:'一起唱',timestamp:12}]}};
+ const stored=new Map();
+ const handler=createMusicRomanizeHandler({redis:{},getCachedFn:async(_,key)=>stored.get(key),
+  setCachedFn:async(_,key,response)=>stored.set(key,response),waitUntilFn:()=>{},getContextFn:async()=>null,setContextFn:async()=>{},
+  providerTimeoutMs:10000,speculativeDiscovery:false,getAvailableAPIsFn:()=>[api],
+  lookupReviewedRecordingFn:async()=>null,lookupListeningReviewedRecordingFn:async()=>null,lookupOfficialTranscriptionFn:async()=>null,
+  resolveCatalogAliasesFn:(r,c)=>resolveCatalogAliases(r,{...c,appleCatalog:catalog}),logger:{info(){},error(){}}});
+ const run=async()=>{
+  const res=createMockRes();
+  await handler(createMockReq({body:english}),res);
+  return res;
+ };
+ const work=run();
+ await originalStarted;
+ t.mock.timers.tick(9000);
+ await aliasStarted;
+ t.mock.timers.tick(6750);
+ const res=await work;
+ assert.equal(aliasSignal.aborted,true);
+ assert.equal(res.statusCode,200);
+ assert.equal(res.body.quality.instrumental,true);
+ assert.equal(res.body.lyric_structure,undefined);
+ assert.equal(res.body.metadata.selection_revision,undefined);
+ assert.equal(stored.size,0);
+ stall=false;
+ const recovered=await run();
+ assert.equal(recovered.statusCode,200);
+ assert.equal(recovered.body.quality.instrumental,false);
+ assert.equal(recovered.body.lines[0].timestamp,12);
+ assert.equal(recovered.body.metadata.selection_revision,SELECTION_REVISION);
 });
 
 test('the reported Douyin recording resolves through its Traditional Chinese catalog spelling',async()=>{

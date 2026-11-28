@@ -15,7 +15,8 @@ test('explicit instrumental is a successful separate state, not fabricated lyric
  const result=await invoke(make({lines:[],instrumental:true}));
  assert.equal(result.statusCode,200);assert.deepEqual(result.body.lines,[]);
  assert.equal(result.body.quality.instrumental,true);assert.equal(result.body.quality.synced,false);
- assert.equal(result.body.metadata.selection_revision,SELECTION_REVISION);
+ assert.equal(result.body.lyric_structure,undefined);
+ assert.equal(result.body.metadata.selection_revision,undefined);
 });
 test('credit-only source is not coverage and malformed timing preserves readable words',async()=>{
  assert.equal((await invoke(make({lines:[{text:'作词：Writer',timestamp:1}]}))).statusCode,404);

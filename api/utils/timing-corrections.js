@@ -44,6 +44,9 @@ function correctionRule(lyrics,request,rules) {
 // Invalidate only cached sources that need this repair. Keep the existing
 // selection contract so current apps can still cache unaffected recordings.
 export function lyricSourceNeedsRefresh(response,request,{rules=timingCorrections,recordingRejections}={}) {
+  // Older instrumental results can hide catalog-alias vocals and carry an
+  // empty source structure that native clients reject.
+  if(response?.quality?.instrumental===true&&(response.lyric_structure||response.metadata?.lyric_structure))return true;
   if(responseTimingNeedsRefresh(response))return true;
   const lines=response?.lines || [];
   if(lines.some(line=>isMusicNotePlaceholder(line.original))) return true;
