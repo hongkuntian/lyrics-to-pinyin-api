@@ -359,6 +359,14 @@ async function selectRecording(records,request,context,responses,failures,{measu
  const selected=findRecording(best,request);
  return measured&&!best.every(s=>s.lyricsData?.lines.some(l=>l.vocalTiming))?null:selected;
 }
+async function readSongAndLyric(value,context) {
+ const batch=await requestJSON(`${musicuOrigin}/cgi-bin/musicu.fcg`,{comm,
+  details:{module:'music.pf_song_detail_svr',method:'get_song_detail_yqq',param:{song_id:Number(value)}},
+  lyric:{module:'music.musichallSong.PlayLyricInfo',method:'GetPlayLyricInfo',param:lyricParam(value,1)}},context);
+ const response=batch.details;
+ if(!object(response)||response.code!==0||!object(response.data))throw providerError();
+ return {song:metadata(response.data.track_info,true),detail:response.data,lyric:batch.lyric??null};
+}
 export class QQMusicAPI extends BaseMusicAPI {
  constructor(){super('QQMusicAPI',['zh','yue','en','ja','ko','ru']);this.supportsVocalTiming=true;this.languageAgnosticDiscovery=true;}
  supportsLanguage(language){return typeof language==='string'&&/^[a-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(language);}
@@ -401,21 +409,25 @@ export class QQMusicAPI extends BaseMusicAPI {
  }
  async getRecording(songId,context={}) {
   const value=id(songId);cancelled(context.signal);if(!value)return null;
-  const batch=await requestJSON(`${musicuOrigin}/cgi-bin/musicu.fcg`,{comm,
-   details:{module:'music.pf_song_detail_svr',method:'get_song_detail_yqq',param:{song_id:Number(value)}},
-   lyric:{module:'music.musichallSong.PlayLyricInfo',method:'GetPlayLyricInfo',param:lyricParam(value,1)}},context);
-  const response=batch.details;if(!object(response))throw providerError();
-  if(response.code!==0||!object(response.data))throw providerError();const song=metadata(response.data.track_info,true);
+  const {song,detail,lyric}=await readSongAndLyric(value,context);
   if(!song||song.id!==value)throw mismatch();
   await recoverArtistIdentities(new Map([[value,song]]),context,context,{});
   if(!compatible(song,context))throw mismatch();
-  languageEvidence.set(song,qqLanguageObservations(song.id,response.data));
+  languageEvidence.set(song,qqLanguageObservations(song.id,detail));
   bindSheetPermission(song,context);
-  const lyrics=await fetchLyrics(song,context,batch.lyric??null);return {song,lyrics};
+  const lyrics=await fetchLyrics(song,context,lyric);return {song,lyrics};
  }
  async searchLyrics(query,context={}){return discover(query,context);}
- async previewLyrics(songId,query,context={}) {
-  const value=id(songId);if(!value)return null;const song=(await discover(query,context)).find(s=>s.id===value);
-  return song?{...song,lyricsData:await fetchLyrics(song,context)}:null;
+ async previewLyrics(songId,context={}) {
+  const value=id(songId);cancelled(context.signal);if(!value)return null;
+  const {song,lyric}=await readSongAndLyric(value,context);
+  if(song?.id!==value)return null;
+  try {
+   const lyrics=await fetchLyrics(song,context,lyric);
+   return lyrics?{song,lyrics}:null;
+  }catch(error){
+   if(error.code==='recording_mismatch')return null;
+   throw error;
+  }
  }
 }

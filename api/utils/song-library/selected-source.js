@@ -7,7 +7,7 @@ import {validVocalTiming} from '../vocal-timing.js';
 import {validLyricStructure,hasEmbeddedLyricCredits} from '../lyric-annotations.js';
 
 export const SELECTED_SOURCE_REVISION='selected-lyrics-learning-1';
-const providers={lrclib:'LRCLIB',netease:'NetEase',kugou:'Kugou'};
+const providers={lrclib:'LRCLIB',netease:'NetEase',kugou:'Kugou',qq:'QQ Music'};
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const text=(v,max=1024)=>typeof v==='string'&&v.trim().length>0&&v.length<=max&&!/[\u0000-\u001f\u007f\ud800-\udfff]/u.test(v);
 const item=v=>typeof v==='string'&&/^[1-9]\d{0,19}$/.test(v);

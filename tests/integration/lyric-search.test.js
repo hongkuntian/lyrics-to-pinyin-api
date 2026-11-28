@@ -57,15 +57,36 @@ test('empty, instrumental, oversized and wrong-ID previews cannot become readabl
 });
 
 test('additional providers require an explicit opt in and never change legacy search results',async()=>{
-  let kugou=0;
-  const service=fixture({searchKugou:async()=>{kugou++;return [{id:'7',title:'父親 (Live)',artist:'筷子兄弟',duration:310}];}});
+  let kugou=0,qq=0;
+  const service=fixture({
+    searchKugou:async()=>{kugou++;return [{id:'7',title:'父親 (Live)',artist:'筷子兄弟',duration:310}];},
+    searchQQ:async()=>{qq++;return [{id:'7',title:'父親',artist:'筷子兄弟',creditedArtistNames:['筷子兄弟'],album:'原版',duration:280}];}
+  });
   const old=await call(service,{action:'search_lyrics',query:'父亲',hints});
   assert.equal(kugou,0);assert.equal(old.body.candidates.every(c=>c.provider==='lrclib'),true);
-  const next=await call(service,{action:'search_lyrics',query:'父亲',hints,providers:['lrclib','netease','kugou']});
+  assert.equal(qq,0);
+  const next=await call(service,{action:'search_lyrics',query:'父亲',hints,providers:['lrclib','netease','kugou','qq']});
   assert.equal(next.statusCode,200);assert.equal(kugou,1);
+  assert.equal(qq,1);
   assert.equal(next.body.candidates.some(c=>c.provider==='kugou'&&c.itemID==='7'),true);
+  const source=next.body.candidates.find(c=>c.provider==='qq');
+  assert.equal(source.itemID,'7');assert.equal(source.title,'父親');assert.equal(source.album,'原版');
+  assert.equal(source.namesMatch,true);assert.equal(source.durationMatches,true);
+  assert.equal(source.lines,undefined);
   for(const providers of [[],['other'],['kugou','kugou'],'kugou'])
     assert.equal((await call(service,{action:'search_lyrics',query:'x',providers})).statusCode,400);
+});
+
+test('QQ preview preserves source cues without trusting the playback hints or a discovery query',async()=>{
+  const vocalTiming={end:3,segments:[{utf16Start:0,utf16Length:2,text:'原文',start:1,end:3}]};
+  const source={provider:'qq',itemID:'7',title:'Other version',artist:'Other artist',duration:30,
+    lines:[{text:'原文',timestamp:1,vocalTiming},{text:'下一行',timestamp:4}]};
+  const body={action:'preview_lyrics',provider:'qq',itemID:'7',hints};
+  const result=await call(fixture({previewQQ:async id=>{assert.equal(id,'7');return source;}}),body);
+  assert.equal(result.statusCode,200);
+  assert.deepEqual(result.body.candidate,source);
+  const wrong=await call(fixture({previewQQ:async()=>({...source,itemID:'8'})}),body);
+  assert.equal(wrong.statusCode,404);
 });
 
 test('Kugou preview reacquires the exact provider item using an untrusted discovery query',async()=>{

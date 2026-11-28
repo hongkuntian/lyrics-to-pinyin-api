@@ -65,6 +65,22 @@ function context(rows=[candidate()],lyrics={},extra={}) {
 }
 const search=ctx=>new QQMusicAPI().searchSong(ctx.artist,ctx.title,ctx);
 
+test('QQ manual preview resolves the exact ID and preserves measured cues independently of a playback recording',async()=>{
+ const api=new QQMusicAPI(),ctx=context([candidate()]);
+ const {song,lyrics}=await api.previewLyrics('123',ctx);
+ assert.equal(song.id,'123');
+ assert.equal(lyrics.timingSource.source,'qq:123:qrc');
+ assert.ok(lyrics.lines.every(l=>l.vocalTiming));
+ assert.equal(ctx.calls.length,1);
+ assert.equal(ctx.calls[0].payload.details.param.song_id,123);
+ assert.equal(ctx.calls[0].payload.lyric.param.songId,123);
+
+ const wrongDetail=context([candidate('123',{detailID:124})]);
+ assert.equal(await api.previewLyrics('123',wrongDetail),null);
+ const wrongLyrics=context([candidate()],{123:{fields:{songID:124}}});
+ assert.equal(await api.previewLyrics('123',wrongLyrics),null);
+});
+
 test('QQ soundtrack square brackets recover the unchanged measured sheet through search and fresh source IDs',async()=>{
  const row=candidate(),plain=context([row],{}, {fastRows:[row]});
  const expected=(await search(plain)).lyricsData;

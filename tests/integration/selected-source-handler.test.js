@@ -42,6 +42,19 @@ test('private source admission precedes cached derivatives and status recovery; 
  assert.equal((await s.call({action:'status',jobID:start.body.job.id})).body.code,'selected_source_unavailable');
 });
 
+test('an exact QQ source can be registered and reloaded as a private learning document',async t=>{
+ const s=await setup(t,{...candidate,provider:'qq'});
+ const other={...choice,provider:'qq'};
+ const registered=await s.call(other);
+ assert.equal(registered.code,200);
+ const doc=registered.body.document;
+ assert.equal(doc.selectedSource.provider,'qq');
+ assert.equal(doc.response.metadata.source,'QQ Music');
+ assert.equal((await s.store.document(doc.id)).response.lines[0].timestamp,null);
+ assert.equal((await s.call({...other,expectedTextHash:'0'.repeat(64)})).body.code,'selected_source_changed');
+ assert.equal(s.generations,0);
+});
+
 test('selected performed notice-looking words retain bound canonical proof through storage and new generation',async t=>{
  const {cleanLyrics}=await import('../../api/utils/lyric-quality.js');
  const {hasEmbeddedLyricCredits}=await import('../../api/utils/lyric-annotations.js');

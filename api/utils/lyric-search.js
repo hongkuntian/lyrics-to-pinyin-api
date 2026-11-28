@@ -3,6 +3,7 @@ import {fetchJSON,withDeadline} from './fetch-json.js';
 import {LRCAPI} from '../music-apis/lrclib.js';
 import {NeteaseAPI} from '../music-apis/netease.js';
 import {KugouAPI} from '../music-apis/kugou.js';
+import {QQMusicAPI} from '../music-apis/qq.js';
 import {cleanLyrics} from './lyric-quality.js';
 import {validLyricStructure} from './lyric-annotations.js';
 import {sameSpotifyRecordingNames,normalizeRecordingText} from './recording-match.js';
@@ -43,7 +44,7 @@ function score(candidate,hints) {
       -(isLatinScriptFallback({target:hints,lines:candidate.lines})?3:0)};
 }
 const rank=(candidate,hints)=>({...candidate,...(hints?score(candidate,hints):{namesMatch:false,durationMatches:false,score:0})});
-const lrclib=new LRCAPI(),netease=new NeteaseAPI(),kugou=new KugouAPI();
+const lrclib=new LRCAPI(),netease=new NeteaseAPI(),kugou=new KugouAPI(),qq=new QQMusicAPI();
 const sourceLines=(lyrics,duration=7200)=>{
   const lines=lyrics?.lines?.map(l=>({text:l.text,...(Number.isFinite(l.timestamp)&&l.timestamp>=0?{timestamp:l.timestamp}:{})}));
   if(!lines?.length||lines.length>250||lines.some(l=>!text(l.text,4000))||Buffer.byteLength(JSON.stringify(lines))>180000)return null;
@@ -98,11 +99,25 @@ async function previewKugou(id,signal,context) {
   const candidate=fromKugou(raw),lines=sourceLines(raw?.lyricsData,raw?.duration);
   return candidate&&lines?{...candidate,lines,...sourceEvidence(raw.lyricsData,lines)}:null;
 }
+async function searchQQ(query,hints,signal) {return qq.searchLyrics(query,{signal});}
+function fromQQ(raw) {
+  if(!raw||!sourceID(raw.id)||!text(raw.title)||!text(raw.artist,1024)||!finiteDuration(raw.duration))return null;
+  const artists=raw.creditedArtistNames;
+  return {provider:'qq',itemID:raw.id,title:raw.title,artist:raw.artist,duration:raw.duration,
+    ...(text(raw.album,1024)?{album:raw.album}:{}),
+    ...(Array.isArray(artists)&&artists.length&&artists.length<=32&&artists.every(a=>text(a,1024))?{artists}:{})};
+}
+async function previewQQ(id,signal) {
+  const raw=await qq.previewLyrics(id,{signal});
+  const candidate=fromQQ(raw?.song),lines=sourceLines(raw?.lyrics,candidate?.duration);
+  return candidate&&lines?{...candidate,lines,...sourceEvidence(raw.lyrics,lines)}:null;
+}
 
 /// Shared by explicit learning-source admission and the independent preview API.
 /// Returned words/labels come from fixed providers, never caller supplied text.
 export function createLyricSourceLoader(dependencies={}) {
-  const previews={lrclib:dependencies.previewLRCLIB??previewLRCLIB,netease:dependencies.previewNetEase??previewNetEase,kugou:dependencies.previewKugou??previewKugou};
+  const previews={lrclib:dependencies.previewLRCLIB??previewLRCLIB,netease:dependencies.previewNetEase??previewNetEase,
+    kugou:dependencies.previewKugou??previewKugou,qq:dependencies.previewQQ??previewQQ};
   return async({provider,itemID,query,hints},signal)=>{
     if(!Object.hasOwn(previews,provider)||!sourceID(itemID)||!validHints(hints)
       ||(query!==undefined&&!text(query))||(provider==='kugou'&&!text(query)))return null;
@@ -119,7 +134,9 @@ export function createLyricSourceLoader(dependencies={}) {
   };
 }
 export function createLyricSearchService(dependencies={}) {
-  const searchers={lrclib:dependencies.searchLRCLIB??searchLRCLIB,netease:dependencies.searchNetEase??searchNetEase,kugou:dependencies.searchKugou??searchKugou};
+  const searchers={lrclib:dependencies.searchLRCLIB??searchLRCLIB,netease:dependencies.searchNetEase??searchNetEase,
+    kugou:dependencies.searchKugou??searchKugou,qq:dependencies.searchQQ??searchQQ};
+  const sourceCandidate={lrclib:fromLRCLIB,netease:fromNetEase,kugou:fromKugou,qq:fromQQ};
   const loadSource=createLyricSourceLoader(dependencies);
   const timeout=dependencies.searchTimeoutMs??5000;
   return async(req,res)=>{
@@ -129,12 +146,12 @@ export function createLyricSearchService(dependencies={}) {
     if(body.action==='search_lyrics') {
       const providers=body.providers??['lrclib','netease'];
       if(!keys(body,['action','query','hints','providers'])||!text(body.query)||!validHints(body.hints)
-        ||!Array.isArray(providers)||!providers.length||providers.length>3||new Set(providers).size!==providers.length
+        ||!Array.isArray(providers)||!providers.length||providers.length>Object.keys(searchers).length||new Set(providers).size!==providers.length
         ||providers.some(p=>!Object.hasOwn(searchers,p)))return fail();
       const pages=await Promise.all(providers.map(async provider=>{
         const search=searchers[provider];
         try {const raw=await withDeadline(signal=>search(body.query,body.hints,signal),timeout);
-          return {provider,candidates:(Array.isArray(raw)?raw:[]).slice(0,300).map(r=>provider==='lrclib'?fromLRCLIB(r,body.hints):provider==='kugou'?fromKugou(r):fromNetEase(r)).filter(Boolean)};
+          return {provider,candidates:(Array.isArray(raw)?raw:[]).slice(0,300).map(r=>sourceCandidate[provider](r,body.hints)).filter(Boolean)};
         }catch{return {provider,candidates:[],failed:true};}
       }));
       const unavailable=pages.filter(p=>p.failed).map(p=>p.provider);
